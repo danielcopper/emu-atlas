@@ -3206,6 +3206,291 @@
           ]
         }
       }
+    },
+    {
+      "name": "emudeck-mame-reads-the-mame-ini-inside-its-own-deploy",
+      "rationale": "EmuDeck installs MAME as the org.mamedev.MAME flatpak, and into the user installation (installEmuFP.sh:32 runs `flatpak install flathub \"$ID\" -y --user`), so this launch's /app is that app's deployed tree and no directory on this host. The compiled search path's second element is /app/share/mame/ini — the Flathub build define (SDL_INI_PATH, org.mamedev.MAME.yaml:33), and the same manifest installs a real mame.ini there (:68) — so with no ~/.mame/mame.ini the file the deploy carries is the one the emulator opens. The launch's sandbox carries the app id its XDG homes were built from, so that element resolves against the running deploy exactly as RetroDECK's does, the user installation searched before the system one. Read as a host path instead, the element finds nothing and the answer falls through to the compiled relative sta below the %STARTDIR% — probed and empty where the emulator has a file (#317). The fixture gives the deployed mame.ini a state_directory of its own so that reading is visible: the value Flathub ships names the same directory the compiled fallback already reaches, which is why the misreading survived on a real machine. The file's own inipath line moves nothing — the second parse re-probes and reaches it again.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.local/share/flatpak/app/org.mamedev.MAME/current/active/files/share/mame/ini/mame.ini": "homepath                  $HOME/.mame\ninipath                   $HOME/.mame;/app/share/mame/ini\nstate_directory           /home/deck/Emulation/saves/mame/states\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/mame/states",
+          "/home/deck/Applications"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/Emulation/saves/mame/states/jaguar",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-an-app-path-on-a-launch-that-runs-no-flatpak-is-refused",
+      "rationale": "The other arm of #317. EmuDeck's DuckStation is the AppImage under ~/Applications and the settings table names no flatpak app id for it, so nothing establishes a package a /app value could name — and /app is exactly that, the tree a flatpak mounts for the app it is running. So the value is refused with emulator-config-path-untranslatable and the stated value in data.path, the vocabulary every other sandbox-spelled value already reaches, instead of being stated verbatim as a directory this host reads. The fixture keeps a real directory at that host path to pin the rule as one about the spelling rather than about existence: a launch atlas cannot place inside a sandbox is not told about whatever the machine happens to keep at /app, which is the boundary the rule draws. The configured value is synthetic: no EmuDeck script writes an /app path into settings.ini, so this pins the shape rather than a case seen in the wild — any /app value on a launch without an app id answers this way on the placement routes, whichever emulator states it. The firmware route builds its own arrangement-wide sandbox and carries an untranslatable value as the sandbox-path-untranslated caveat beside an answer that still stands, so this refusal is not what it emits.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n    <command label=\"DuckStation (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh -w z:%ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": "",
+          "/home/deck/.local/share/duckstation/settings.ini": "[Folders]\nSaveStates = /app/share/duckstation/states\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/app/share/duckstation/states"
+        ],
+        "entry_savestate_query": {
+          "system": "psx",
+          "label": "DuckStation (Standalone)"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "emulator": "DUCKSTATION",
+              "config": "/home/deck/.local/share/duckstation/settings.ini",
+              "path": "/app/share/duckstation/states"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-flatpak-launch-reads-its-own-xdg-spellings-as-that-apps-trees",
+      "rationale": "The launch runs inside org.mamedev.MAME's sandbox, so the paths the emulator writes there are that sandbox's own spellings — /var/config is where flatpak binds the app's config home, the same bind RetroDECK's live retroarch.cfg names its override directory by. Reading such a value as a host path answers about /var/config, a directory of the runtime's filesystem that nothing on this machine shares. --filesystem=host does not change that: it grants the sandbox the host's tree, which is why a HOST spelling in the same file stays the path it names, and says nothing about where the sandbox's own bind points lead. So with the app id established the value translates into ~/.var/app/<id>/config and the states land in the tree the emulator really opens. The app id is the whole hinge — a launch without one leaves the value standing as /var/config/mame/sta (#317).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.mame/mame.ini": "state_directory           /var/config/mame/sta\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/org.mamedev.MAME",
+          "/home/deck/.var/app/org.mamedev.MAME/config/mame/sta"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.var/app/org.mamedev.MAME/config/mame/sta/jaguar",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-flatpak-launch-refuses-a-value-only-its-sandbox-can-spell",
+      "rationale": "The bind's twin. /run/user is the sandbox's own private runtime directory, and unlike /var/config it maps to nothing this host can read — so the value is refused with emulator-config-path-untranslatable and the stated value in data.path rather than answered with a directory the emulator never opens. The refusal follows from the launch being placed in a sandbox at all, which is what the app id establishes: without one the same line reads as a plain host path, which is the honest answer there because an AppImage really does run outside every sandbox (#317). The fixture keeps a real directory at that host path so the refusal is pinned to the spelling rather than to a missing directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.mame/mame.ini": "state_directory           /run/user/1000/mame/sta\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/org.mamedev.MAME",
+          "/run/user/1000/mame/sta"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "emulator": "MAME",
+              "config": "/home/deck/.mame/mame.ini",
+              "path": "/run/user/1000/mame/sta"
+            }
+          }
+        }
+      }
     }
   ]
 }

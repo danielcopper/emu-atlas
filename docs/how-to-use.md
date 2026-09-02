@@ -876,11 +876,21 @@ config that reads fine but states an absolute directory only the emulator's sand
 answer still stands around it, said as the outcome where nothing else anchors, with the stated value in `data.path`.
 `data.path` is always the primary value; where one refusal covers several stated files (xemu's save answer, naming a
 disk image and an EEPROM), `data.paths` additionally lists every untranslatable value — the disk image first, then the
-EEPROM — whenever more than one is named. Savestates are their own wiring and their own card family
-(`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it, and an emulator without a
-savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
-save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
-marks the rows neither family has examined).
+EEPROM — whenever more than one is named. Which spellings translate follows from the launch: where atlas can place it
+inside a sandbox, that app's bind points lead to its own trees below `~/.var/app` and `/app` leads to its deployed
+files, while the sandbox-only prefixes left over are refused. Where it cannot — an AppImage, an unpacked binary, a
+native install — every spelling but `/app` is the host path it names, and `/app` alone is still refused rather than
+probed as an ordinary directory of this machine, because it names a deployed package no launch here runs (#317). One
+seam does not follow that rule: the firmware answers read one sandbox for the whole arrangement, and it knows the
+_arrangement's_ app, never the emulator's own. On RetroDECK those are the same app — its emulators are components inside
+its Flatpak — so nothing is lost there. On EmuDeck an emulator that runs as a Flatpak runs as its own, which that seam
+does not know, so a standalone emulator's sandbox-spelled firmware paths are not resolved against its own trees: an
+`/app` value lands nowhere and rides the `sandbox-path-untranslated` caveat beside an answer that still stands, and the
+rest read as host paths. Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225):
+the same entry answers `savestate_location` through it, and an emulator without a savestate card keeps the
+`standalone-unsupported` refusal there even where its save answers (since #284 every save-carded emulator carries a
+savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal marks the rows neither family has
+examined).
 
 **Dolphin and PrimeHack read every answer above through a per-game layer, and they say so.** While a game runs, both
 load `<id>.ini` from _two_ GameSettings directories over the whole configuration — the user's own
@@ -1117,13 +1127,13 @@ as its one declared file and `savestate-inside-image` carries the image path and
 `vm-YYYYMMDDhhmmss`); a machine with no disk configured cannot snapshot at all and the question refuses with that fact
 named. MAME's states root is `state_directory` out of whichever `mame.ini` the launch's `-inipath` names (else the
 compiled `$HOME/.mame;/app/share/mame/ini` search path (the Flathub build define, byte-proven in the shipped binary —
-not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy, and RetroDECK's carries no
-`share/mame` at all) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under
-`~/.mame/sta`, not under the arrangement's tree), with one subdirectory per machine below it — the command's positional
-system word, or the ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`,
-each `<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver
-is flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a
-warning.
+not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy — RetroDECK's carries no
+`share/mame` at all, while on EmuDeck the deploy is MAME's own `org.mamedev.MAME` flatpak, which ships a `mame.ini`
+there) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under `~/.mame/sta`, not
+under the arrangement's tree), with one subdirectory per machine below it — the command's positional system word, or the
+ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`, each `<slot>.sta`.
+Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver is flagged
+`MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a warning.
 
 #### MAME's per-system ini layer is read, not announced
 
