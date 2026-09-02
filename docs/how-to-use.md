@@ -1659,15 +1659,18 @@ value there wins outright. `[Filenames] BIOS` is a name: `FullpathToBios` joins 
 than opened where it points — the leading separator is swallowed. So in one file, one absolute value is a path and the
 other is not, and atlas composes each the way the emulator does.
 
-**xemu shows which files a card deliberately leaves out.** Four paths sit in its machine settings and only three are
-firmware: the boot ROM, the flash image and the hard disk each refuse the start when missing. The EEPROM does not appear
-in the firmware answer at all, because the emulator generates one where none exists and it is the console's own settings
-— the save answer already names it as a settings group, and stating it twice would file save data under firmware. The
-hard disk _is_ in both answers on purpose: the console needs one to start, and every save lives inside it, so each
-answer names it and says which aspect it means. One more shape can appear here: a _relative_ value in those settings is
-opened by the xemu process from wherever it was started, so it has no destination this answer could state — the file
-drops out of `requirements` and rides the `firmware-path-launch-dependent` caveat instead, whose data carries the key,
-the value as written, and the `<cwd>`-templated path a launcher's working directory completes.
+**xemu shows which files a card deliberately leaves out.** Five paths sit in its machine settings and only three are
+firmware: the boot ROM, the flash image and the hard disk, the three xemu's own documentation calls necessary to run it
+at all. Only one of them actually holds the launch — a flash image the emulator cannot open — while a missing boot ROM
+or hard disk is reported without holding it, which is why `need: "required"` is joined by prose that says what each
+absence costs. The EEPROM does not appear in the firmware answer at all, because the emulator generates one where none
+exists and it is the console's own settings — the save answer already names it as a settings group, and stating it twice
+would file save data under firmware. The disc path does not appear either: it is content. The hard disk _is_ in both
+answers on purpose: xemu asks for one, and every save lives inside it, so each answer names it and says which aspect it
+means. One more shape can appear here: a _relative_ value in those settings is opened by the xemu process from wherever
+it was started, so it has no destination this answer could state — the file drops out of `requirements` and rides the
+`firmware-path-launch-dependent` caveat instead, whose data carries the key, the value as written, and the
+`<cwd>`-templated path a launcher's working directory completes.
 
 **DuckStation names no file at all**, which is the third way a card can state its probes and the one that changes what
 `verify` means. `[BIOS] SearchDirectory` names a directory, three per-region keys may name an image inside it, and where

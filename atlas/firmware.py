@@ -3482,15 +3482,35 @@ def _pcsx2_standalone_core(
     )
 
 
-# xemu v0.8.135 — four files sit in ``[sys.files]`` and only three are
-# firmware. The boot ROM, the flash image and the hard disk each refuse the
-# start when missing, in the emulator's own words; the EEPROM is generated
-# where none exists and belongs to the save answer, which already states it.
-_XEMU_FILE_KEYS = (
-    "sys.files/bootrom_path",
-    "sys.files/flashrom_path",
-    "sys.files/hdd_path",
-)
+# xemu v0.8.135 — five paths sit in ``[sys.files]`` and only three are
+# firmware: the boot ROM, the flash image and the hard disk, the files xemu's
+# own documentation calls necessary to run the emulator at all. The EEPROM is
+# generated where none exists and belongs to the save answer, which already
+# states it; the disc is content.
+#
+# What an empty setting costs, per file. All three are ``required`` — need
+# states what the emulator asks for — but of the three only the flash image
+# holds the launch: its failure clears ``autostart`` (vl.c:3046-3050), while
+# an unreadable boot ROM or hard disk is queued into xemu's UI and the machine
+# is built without it (:2985-3007, :3061-3074, at v0.8.135). Each sentence
+# speaks only for its own file: several of these caveats can stand side by
+# side, so none of them may claim the outcome of the launch as a whole.
+_XEMU_MISSING_CONSEQUENCE = {
+    "sys.files/bootrom_path": (
+        "this file does not hold the launch: its absence costs the MCPX boot ROM over "
+        "the flash image, not the start"
+    ),
+    "sys.files/flashrom_path": (
+        "this is the one of the three that does hold the launch: xemu does not start "
+        "the console without it"
+    ),
+    "sys.files/hdd_path": (
+        "this file does not hold the launch: its absence costs the hard disk, not the start"
+    ),
+}
+
+# The keys are the map's, so the two cannot drift apart (order is the map's).
+_XEMU_FILE_KEYS = tuple(_XEMU_MISSING_CONSEQUENCE)
 
 
 def xemu_file_value(document: Mapping[str, Any], key: str) -> str | None:
@@ -3499,10 +3519,11 @@ def xemu_file_value(document: Mapping[str, Any], key: str) -> str | None:
     *key* may be the bare setting (``hdd_path``) or a card's own address for it
     (``sys.files/hdd_path``); the last segment is the name inside the table.
 
-    Public in this module because the save route reads the same four settings
-    out of the same file and had its own copy of these four lines — two
-    readings of one table that could drift apart while both looked right.
-    ``installations`` imports ``firmware``, so the shared one lives here.
+    Public in this module because the save and savestate routes read two of
+    the same settings out of the same file (``hdd_path`` and ``eeprom_path``,
+    installations.py:6764-6765 and :9875) and had their own copy of these four
+    lines — two readings of one table that could drift apart while both looked
+    right. ``installations`` imports ``firmware``, so the shared one lives here.
     """
     files = document.get("sys", {})
     files = files.get("files", {}) if isinstance(files, Mapping) else {}
@@ -3540,15 +3561,17 @@ def _xemu_standalone_core(
     xdg_pinned: bool,
     verify: bool,
 ) -> tuple[CoreFirmware, list[Caveat]]:
-    """xemu's expectations: the three files in ``[sys.files]`` that refuse the start.
+    """xemu's expectations: the three files in ``[sys.files]`` its documentation asks for.
 
     Each is a plain path the configuration states outright — no defaults, no
     composition — so the reading is short and the interesting part is which of
-    the four keys belong here at all. The EEPROM does not: xemu generates one
+    the five keys belong here at all. The EEPROM does not: xemu generates one
     where none exists, and it is the console's own settings, which the save
-    answer already states. The hard disk does, and is claimed by both answers
-    on purpose: a console does not start without one, and every save lives
-    inside it.
+    answer already states. The disc does not either — it is content. The hard
+    disk does, and is claimed by both answers on purpose: xemu asks for one,
+    and every save lives inside it. What ``need`` does not say is how hard
+    each launch gate is, which is why the empty-setting caveat states the
+    consequence per file rather than once for all three.
     """
     del xdg_pinned  # xemu states one base, so no launch has a root to pick
     # Which home the file sits under is the settings table's to say — xemu's
@@ -3577,8 +3600,8 @@ def _xemu_standalone_core(
             caveats.append(
                 Caveat(
                     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
-                    f"{entry.label}'s {key} names no file — the setting is empty, and the "
-                    "console refuses to start without this one",
+                    f"{entry.label}'s {key} names no file — the setting is empty, and "
+                    f"{_XEMU_MISSING_CONSEQUENCE[key]}",
                     {
                         "label": entry.label,
                         "token": card.token,
@@ -3606,7 +3629,7 @@ def _xemu_standalone_core(
                     "system/vl.c:2983-3095, and opened with plain fopen/access, "
                     "vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — a "
                     "property of the launch, not of the machine, so no destination is "
-                    f"stated for a file the launch does require; fill '{HOLE_CWD}' with "
+                    f"stated for a file the emulator does ask for; fill '{HOLE_CWD}' with "
                     "the launcher's working directory to complete the path",
                     {
                         "label": entry.label,

@@ -686,21 +686,24 @@ its BIOS root and leaves the choice to the user. So an empty name is stated with
 the directory a BIOS belongs in, rather than being passed over — a PlayStation 2 boots nothing until one is picked, and
 that is worth saying.
 
-xemu (v0.8.135) is the third, and its interest is which keys belong here at all. Four files sit in `[sys.files]` and
-only three are firmware: the MCPX boot ROM, the flash image and the hard disk each refuse the start when missing, and
-the shipped binary says so in whole strings. The fourth, `eeprom_path`, is left to the save answer on purpose — xemu
-**generates** an EEPROM where none exists, and it holds the console's own settings, which the standalone save card
-already states as a named settings group; claiming it here too would file save data under firmware and state one file
-twice. The hard disk is the opposite case and is claimed by both answers deliberately: a console does not start without
-one, and every save lives inside it, so each answer names it and says which aspect it means. Note also where xemu keeps
-its settings — under the **data** home, not the config one — which is why a card's resolver receives both bases and
-takes the one its emulator uses. A **relative** value has no destination here at all: xemu opens it relative to its own
-process's working directory (verbatim into the QEMU options, system/vl.c:2983-3095; plain fopen/access probes,
-vl.c:2527-2535 with osdep.h:645-653 at v0.8.135), and a firmware requirement's `path` is contractually the absolute
-observed destination — so the file stays out of the requirement list and the `firmware-path-launch-dependent` caveat
-carries the anchor as data: the key, the declared value, and the `<cwd>`-templated path the launcher's working directory
-completes. The placement families state the same fact as their `working_directory` root; this is that fact in the
-firmware grammar's own words.
+xemu (v0.8.135) is the third, and its interest is which keys belong here at all. Five paths sit in `[sys.files]` and
+only three are firmware: the MCPX boot ROM, the flash image and the hard disk, the files xemu's own documentation calls
+necessary to run the emulator at all, each with its failure message in the shipped binary as a whole string. What they
+are **not** is three launch gates. Of the three, only a flash image the emulator cannot open clears `autostart`; a boot
+ROM or hard disk it cannot read is reported into the UI without holding the launch. So `need` states what the emulator
+asks for and each entry's own prose states what its absence costs. Of the other two paths, `eeprom_path` is left to the
+save answer on purpose — xemu **generates** an EEPROM where none exists, and it holds the console's own settings, which
+the standalone save card already states as a named settings group; claiming it here too would file save data under
+firmware and state one file twice. And `dvd_path` is the disc, which is content rather than firmware. The hard disk is
+claimed by both answers deliberately: xemu asks for one, and every save lives inside it, so each answer names it and
+says which aspect it means. Note also where xemu keeps its settings — under the **data** home, not the config one —
+which is why a card's resolver receives both bases and takes the one its emulator uses. A **relative** value has no
+destination here at all: xemu opens it relative to its own process's working directory (verbatim into the QEMU options,
+system/vl.c:2983-3095; plain fopen/access probes, vl.c:2527-2535 with osdep.h:645-653 at v0.8.135), and a firmware
+requirement's `path` is contractually the absolute observed destination — so the file stays out of the requirement list
+and the `firmware-path-launch-dependent` caveat carries the anchor as data: the key, the declared value, and the
+`<cwd>`-templated path the launcher's working directory completes. The placement families state the same fact as their
+`working_directory` root; this is that fact in the firmware grammar's own words.
 
 DuckStation (the fork build frozen 2024-09-19) is the fourth, and the only `search` card: it names **no file**.
 `[BIOS] SearchDirectory` names a directory — read the same `LoadPathFromSettings` way, so an unset value is `bios` below
