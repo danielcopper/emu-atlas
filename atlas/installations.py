@@ -14148,8 +14148,11 @@ class _CatalogueQueries:
         the user added by hand translates without any table knowing it.
 
         *vocabulary* is one of :data:`atlas.platforms.KNOWN_PLATFORM_VOCABULARIES`
-        and anything else raises — the set is atlas's own and closed. A *value*
-        no crosswalk row carries answers no platforms, no matches and the
+        and anything else raises — the set is atlas's own and closed. *value* is
+        a string, and a numeric id passes as its decimal string: a client
+        holding IGDB's numeric ``igdb_id`` asks with ``str(igdb_id)``, and a
+        non-string value raises rather than being coerced. A *value* no
+        crosswalk row carries answers no platforms, no matches and the
         ``platform-unmapped`` caveat: "no platform corresponds" is an answer,
         and inventing a folder name out of the raw id is exactly the failure
         this question exists to prevent.
