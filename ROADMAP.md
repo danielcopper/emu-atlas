@@ -142,7 +142,23 @@ The four firmware entry points ship: live `.info` declarations from the installe
 - **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
-  side.
+  side. The requirement side of the same substructure shipped with #346: a requirement whose file is byte-identical to
+  the copy the distribution's own prepare step places states `supplied_by`, off `atlas/data/distribution_supplied.json`.
+  Every name in that list is one an `UnclaimedFile` can carry too — `prboom.wad` and `capsimg.so` are unclaimed on the
+  reference machine, because no installed core's `.info` declares them — so the same equality is what this bullet needs
+  on the unclaimed side.
+- **The copy list covers one component's prepare step, and two more write into the firmware root.** The entries in
+  `distribution_supplied.json` are the RetroArch component's, and each is a `cp` whose source stays on disk to be
+  hashed. Two other steps place files there and each is blocked on something different. PPSSPP's own component extracts
+  `ppsspp_foss_bios.tar.gz` into `$bios_path/PPSSPP` (`components/ppsspp/component_prepare.sh:37`,
+  `--strip-components=1 assets/`) — the same destination the RetroArch entry already covers, so what lands there has two
+  origins and only one of them leaves a file to compare against; this one wants the archive-member comparison the
+  unclaimed half above needs anyway. xemu copies `xbox_hdd.qcow2` to the firmware root when it is absent
+  (`components/xemu/component_prepare.sh:32`, guarded by the `-f` test on `:31`) from `$component_extras`, its own
+  `components/xemu/rd_extras` (`:6`) — and that one is a plain `cp` whose source is shipped, so an entry would state
+  `supplied_by` today. What stops it is the route, not the file: `xbox_hdd.qcow2` is a standalone card's requirement
+  (`standalone_firmware.json`, `XEMU`, `sys.files/hdd_path`), and the provenance check runs on the declaration route
+  alone, so nothing would ask. Its source root is also per-component rather than the one `source_root` a card states.
 - **A repeated key states nothing.** `.info` files go through RetroArch's parser, where the first of a repeated key wins
   and the later line sets nothing — silently, on both sides. One shipped `.info` on the reference machine does this
   (`FreeIntvTSOverlay`, a `firmware1_path` typed as a second `firmware0_path`), so the file names a file the answer

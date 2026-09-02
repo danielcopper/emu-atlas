@@ -926,6 +926,44 @@ route. Three absences are deliberate, spelled out in the file's own spec: PCSX2 
 configuration value rather than by link, and the legacy rows in `component_update.sh` files are migrations for layouts
 the pinned version no longer prepares.
 
+## `distribution_supplied.json` — which files a distribution places into the firmware root itself
+
+Read by `atlas.distribution_supplied`, behind a firmware requirement's `supplied_by` (issue #346). A firmware root is
+not all the user's: RetroDECK's RetroArch component copies whole trees into it on prepare and reset — Dolphin's `Sys`,
+blueMSX's machine ROMs, the PPSSPP assets, ECWolf's data pack — and one of them, `dolphin-emu/Sys/codehandler.bin`, is
+declared **required** firmware by `dolphin_libretro.info` while no `System.dat` entry covers it. From the outside it was
+indistinguishable from a dump the user dropped there, which is how a consumer's "delete this BIOS" action removed a file
+no firmware library carries.
+
+The table is the world-knowledge half and deliberately the smallest one: per distribution, the list of trees and files
+**one component's** preparation step copies — for RetroDECK the RetroArch component's — each entry citing the
+`component_prepare.sh` line that copies it. Other components write into the same root by other means, and ROADMAP
+section 6 names the two that do; this list is not a census. It states nothing at all about any machine. Whether the file
+at a destination really is that copy is decided live, by hashing the shipped file and the placed file — so an entry is a
+place to look, never a claim that something is there.
+
+An entry is `kind` (`tree`, a whole directory, so everything below the destination has a counterpart below the source;
+or `file`, one file matched exactly — the kind says what the copy places, and is deliberately not read off the `cp`
+flag, since RetroDECK spells both with `cp -rf` and uses `cp -f` on one line only), `source` (relative to
+`source_root`), `destination` (relative to the firmware root), `purpose` and `citation`. Source and destination are
+recorded separately because they differ: RetroDECK's `MSX/Databases` lands as `Databases` and its `Amiga/capsimg.so` as
+`capsimg.so`. `source_root` is spelled the way the distribution spells it — inside its Flatpak sandbox — because that is
+the path its own script names; the resolver translates it through the same sandbox map every other configured path goes
+through.
+
+Two rules the loader enforces, both about ambiguity: no destination appears twice, and no destination sits inside
+another entry's tree, because one placed file must resolve to exactly one shipped file. And unlike
+`content_tree_wiring.json` beside it, **the version pin is provenance, not a gate**: that table records a promise, which
+can only be measured against the version that made it, while this one records where to look and the answer is then read
+off the live tree — a table that has fallen behind a release under-reports, and the equality behind a statement it does
+make was still measured. The one thing a stale entry can still get wrong is the **repair** it implies: if a release
+stops copying a tree while going on shipping it, the bytes still match and "the component prepare puts this back" no
+longer holds. That is what the pin is for reading at a release.
+
+`tests/test_deployed_citations.py` reads every entry back against the deployed script: the cited line must still be a
+`cp`, its source must still be the entry's below the extras root, and its destination must still be the entry's below
+`$bios_path`.
+
 ## `launch_formats.json` — formats that need an installation step before anything launches
 
 Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the launchability question (issue #36). The

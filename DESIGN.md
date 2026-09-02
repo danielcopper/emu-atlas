@@ -100,6 +100,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    "unchecked" (we did not look), "unknown" (we looked and cannot tell) and
 #    "not-comparable" (we looked, the bytes differ, and that settles nothing —
 #    the identity is an archive) are three different answers.
+#    A third axis joins neither of them:
+#      supplied_by  whose file is at the destination — the distribution's own
+#                   copy, or nothing stated
+#    Set exactly when the bytes there equal the bytes the distribution's own
+#    preparation step copies in — some of those files, Dolphin's
+#    codehandler.bin among them, no firmware library carries at all.
 #    Having no declaration at all is a caveat on an EMPTY
 #    answer, because empty is honest and "nothing missing" would be a lie —
 #    and which empty it is has its own field:
@@ -495,6 +501,18 @@ visible in `system_source`, and marked as derived where the core spans systems.
   positive establishes what a negative cannot. The statement lives in the table with its own provenance and reviewed
   date — never in a run-time guess from the file extension, which is a container format and not a claim about a file's
   role.
+- **A requirement says when the file at its destination is the distribution's own copy.** RetroDECK's RetroArch
+  component prepare copies whole trees into the firmware root — Dolphin's `Sys`, blueMSX's machine ROMs, the PPSSPP
+  assets — and a file that arrived that way is restored by that same prepare, and some of them (Dolphin's
+  `codehandler.bin`) no firmware library carries at all, so a consumer's "delete this BIOS" action must not treat it as
+  the user's. The world-knowledge half is the narrowest possible: `distribution_supplied.json` records only which trees
+  and files that one component's script copies, read line by line with a `file:line` citation each, and every statement
+  then rests on an equality read off the machine — the shipped file and the placed file are hashed. Unlike the wiring
+  table beside it the version pin is provenance rather than a gate, because a table that has fallen behind a release
+  under-reports and the equality behind a statement it does make was still measured; the one thing a stale entry can
+  still get wrong is the repair it implies, if a release stops copying a tree it goes on shipping. Nothing is stated for
+  a file that differs from the shipped one, for a destination no entry covers, or for a distribution atlas has read no
+  copy step for. Which other components write into that root is ROADMAP section 6's open point.
 - **A derived system assignment is stated, not hidden.** Only the per-file override table knows which machine a firmware
   dump belongs to, and it is `[D]`, deliberately incomplete, and not to be completed by hand — boot-ROM variants arrive
   with every core release. Everything else files a file by what its whole _core_ is called, which holds exactly while

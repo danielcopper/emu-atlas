@@ -1898,6 +1898,7 @@ for core in answer.cores:
                                        #   — or None, when nothing is there to check
             req.identity               # the packaged identity, or None; req.identity.kind is 'file' | 'archive'
             req.satisfied              # True | False | None       — present AND nothing contradicts it
+            req.supplied_by            # the distribution's own copy, or None — see below
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
 ```
@@ -1938,6 +1939,45 @@ is a withheld verdict, `satisfied` is `None`, and an exact hit on such a file st
 `requirements_met` as your traffic light: `True` only when everything required is there and nothing established
 contradicts it, `False` when something is missing or has wrong bytes, `None` when it could not be established — never
 coerce `None` to green.
+
+### Some of it is the distribution's, not the user's — `supplied_by`
+
+A firmware root holds more than dumps a user put there. RetroDECK's RetroArch component prepare copies whole trees into
+it — Dolphin's `Sys` folder, blueMSX's machine ROMs, the PPSSPP assets, ECWolf's data pack — and `dolphin_libretro.info`
+declares one of them (`dolphin-emu/Sys/codehandler.bin`) as **required** firmware. No firmware library has that file.
+`supplied_by` is set exactly where the bytes at the destination are the bytes the distribution ships:
+
+```python
+req.supplied_by.distribution   # 'retrodeck' — who would put it back
+req.supplied_by.source         # the shipped file on this host, the one that was hashed
+req.supplied_by.card_version   # the revision of the packaged copy list that named the pair
+```
+
+**Two consequences for a client that offers to delete or replace firmware.** Such a file is restored by the
+distribution's own component prepare — the repair is a component reset, not a download, and for the file this started
+with no library carries it at all. And it is never the user's to lose: a "remove this BIOS" action over it throws away
+part of the installation, which is the sighting the field exists for.
+
+It is stated whether or not you passed `verify`, because the question is _whose file is this_ rather than _are the bytes
+right_, and it is bounded: only a destination the copy list covers is ever hashed. It is a third axis and never a value
+of `checked` — on a RetroDECK, `ecwolf.pk3` is `supplied_by` RetroDECK **and** `not-comparable`, and both statements
+stand.
+
+`None` claims nothing at all, and it is the ordinary value: the file differs from the shipped one (it is the user's,
+whatever it is), no entry covers this destination, or atlas has read no copy step for this distribution — RetroDECK is
+the only one so far, so every other arrangement answers `None` throughout. Two caveats say the question was asked and
+could not be answered, one per side of the comparison — neither `None` may be read as "the user's file":
+
+| caveat                                | what it means                                                                                        | which file could not be read |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `firmware-supplied-source-unreadable` | the shipped copy could not be read — no deploy, an unreadable tree, or bytes that will not come back | the distribution's           |
+| `firmware-unreadable`                 | the file at the destination is there and its bytes will not come back                                | the one at `req.path`        |
+
+The first carries `path` (the destination) and `source` (the shipped file in the distribution's own spelling); the
+second carries `path` alone. `firmware-unreadable` is the same code the identity check uses for the same fact, and it is
+stated once per requirement however many routes tried to read those bytes — so it also appears without `verify`, over
+files the packaged table has no identity for, which is what three of the five supplied files on the reference machine
+are.
 
 The download flow runs off content, not names:
 

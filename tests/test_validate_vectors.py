@@ -48,6 +48,13 @@ SAVES = "/mnt/sd/retrodeck/saves"
 BIOS = "/mnt/sd/retrodeck/bios"
 CORE_SO = "mgba_libretro.so"
 SYSTEM = "gb"
+# Where a supplied_by statement's shipped file lies on this host: inside the
+# Flatpak deploy, which is what makes it an absolute host path rather than the
+# distribution's own /app spelling.
+DEPLOY_EXTRAS = (
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck"
+    "/components/retroarch/rd_extras"
+)
 
 INSTALLATION = {
     "kind": "retrodeck",
@@ -106,6 +113,15 @@ def _identity(**overrides) -> Vector:
     return {"md5": "0" * 32, "sha1": "1" * 40, "size": 256, "kind": "file", **overrides}
 
 
+def _supplied(**overrides) -> Vector:
+    return {
+        "distribution": "retrodeck",
+        "source": f"{DEPLOY_EXTRAS}/dolphin-emu/Sys/codehandler.bin",
+        "card_version": "1",
+        **overrides,
+    }
+
+
 def _requirement(**overrides) -> Vector:
     return {
         "core_so": CORE_SO,
@@ -120,6 +136,7 @@ def _requirement(**overrides) -> Vector:
         "present": False,
         "checked": None,
         "satisfied": False,
+        "supplied_by": None,
         **overrides,
     }
 
@@ -940,6 +957,26 @@ REQUIREMENT_CASES = [
                                                                 checked="verified", satisfied=None)],
                                      requirements_met=None)]),
          "a verified file is satisfied", id="requirement-verified-not-satisfied"),
+    # supplied_by — whose file is at the destination. It stands only over a
+    # file, only for a distribution atlas has read a copy step for, and its
+    # source is the shipped file on this host so the equality can be re-checked.
+    case(_base_firmware(cores=[_core(requirements=[_requirement(supplied_by=_supplied())])]),
+         "supplied_by says the FILE at the destination", id="supplied-over-a-missing-file"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
+                                                                satisfied=True,
+                                                                supplied_by=_supplied(distribution="emudeck"))],
+                                     requirements_met=True)]),
+         "supplied_by distribution must be one of", id="supplied-by-an-unread-distribution"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
+                                                                satisfied=True,
+                                                                supplied_by=_supplied(source="rd_extras/x.bin"))],
+                                     requirements_met=True)]),
+         "supplied_by source must be the shipped file", id="supplied-source-not-a-host-path"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
+                                                                satisfied=True,
+                                                                supplied_by={"distribution": "retrodeck"})],
+                                     requirements_met=True)]),
+         "a supplied_by statement", id="supplied-by-missing-its-provenance"),
 ]
 
 
@@ -1193,6 +1230,11 @@ ACCEPTED_CASES = [
                                                                         checked="unchecked", satisfied=None)],
                                              requirements_met=None)]),
                  id="a-present-file-nobody-hashed"),
+    pytest.param(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                        checked="unknown", satisfied=True,
+                                                                        supplied_by=_supplied())],
+                                             requirements_met=True)]),
+                 id="a-file-the-distribution-placed-itself"),
     pytest.param(_base_firmware(cores=[_core(refused=[{"declared": "../escape.bin", "need": "required",
                                                        "reason": "firmware-path-escapes-root"}],
                                              requirements=[], requirements_met=None,

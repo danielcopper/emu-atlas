@@ -34,6 +34,7 @@ from .firmware import (
     FirmwareIdentification,
     FirmwareIdentity,
     FirmwareRequirement,
+    SuppliedBy,
 )
 from .installations import (
     CatalogueAnswer,
@@ -357,6 +358,29 @@ def _identity_contract(identity: FirmwareIdentity | None) -> dict[str, Any] | No
     }
 
 
+def _supplied_by_contract(supplied: SuppliedBy | None) -> dict[str, Any] | None:
+    """Whose file is at the destination — the distribution's own copy, or nothing stated.
+
+    All three fields are in, because all three are what a consumer acts on:
+    ``distribution`` says who would put it back, ``source`` is the shipped file
+    that was hashed (so the claim can be re-checked), and ``card_version`` says
+    which revision of the packaged copy list named the pair — the same
+    provenance an identity's table version carries, and the field that lets a
+    vendored older atlas be recognised as one.
+
+    ``null`` is the ordinary value and it claims nothing: not the distribution's
+    copy, no copy list for this distribution, and a destination no entry covers
+    all read the same way — atlas did not establish this file's provenance.
+    """
+    if supplied is None:
+        return None
+    return {
+        "distribution": supplied.distribution,
+        "source": supplied.source,
+        "card_version": supplied.card_version,
+    }
+
+
 def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
     return {
         "core_so": requirement.core_so,
@@ -371,6 +395,7 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
         "present": requirement.present,
         "checked": requirement.checked,
         "satisfied": requirement.satisfied,
+        "supplied_by": _supplied_by_contract(requirement.supplied_by),
     }
 
 
@@ -424,6 +449,13 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
       all that was checked. On the reference machine that is three requirements
       across two cores (blueMSX's databases and machine ROMs, Dolphin's
       ``codehandler.bin``).
+
+    ``supplied_by`` is none of those three: it is read rather than derived, and
+    it answers a different question from all of them — whose file is at the
+    destination. A file the distribution places itself is restored by its own
+    component prepare, and some of them (the Dolphin ``Sys`` tree RetroDECK
+    copies is the case it exists for) no firmware library carries at all — so a
+    client offering to delete or replace firmware must read it before acting.
     ``found`` is the path kind actually read, which ``present`` alone cannot
     carry (a directory at the destination is not a missing file), and
     ``refused`` names declarations atlas would not follow, with the reason,
