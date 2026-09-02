@@ -95,9 +95,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    name and the absolute destination, the packaged identity decides whether
 #    what lies there is the right thing. Two axes, never merged:
 #      need     required | optional            — what the emulator asks for
-#      checked  verified | mismatch | unchecked | unknown  — what the machine says
-#    "unchecked" (we did not look) and "unknown" (we looked and cannot tell) are
-#    different answers. Having no declaration at all is a caveat on an EMPTY
+#      checked  verified | mismatch | unchecked | unknown | not-comparable
+#                                               — what the machine says
+#    "unchecked" (we did not look), "unknown" (we looked and cannot tell) and
+#    "not-comparable" (we looked, the bytes differ, and that settles nothing —
+#    the identity is an archive) are three different answers.
+#    Having no declaration at all is a caveat on an EMPTY
 #    answer, because empty is honest and "nothing missing" would be a lie —
 #    and which empty it is has its own field:
 #      declaration  read | unreadable | absent | unsupported
@@ -479,11 +482,19 @@ visible in `system_source`, and marked as derived where the core spans systems.
   decisions derive from that snapshot.
 - **Firmware is emulator-centric.** A requirement is one `(core, declared file)` pair: the core decides the expected
   name and the absolute destination, the packaged identity decides whether what lies there is right. `need` (`required`
-  / `optional`) and `checked` (`verified` / `mismatch` / `unchecked` / `unknown`) are independent axes, and neither
-  `unchecked` vs `unknown` nor "core needs nothing" vs "core unknown" may collapse — the second pair is told apart by
-  `installed` plus a caveat, never by list length. A file nobody declares is not a requirement at all; it is an
-  `UnclaimedFile`, identified by **content**, and save data the rule cards claim never appears there. Hash checking is
-  opt-in (`verify=`): policy and caching belong to the caller, not the library.
+  / `optional`) and `checked` (`verified` / `mismatch` / `unchecked` / `unknown` / `not-comparable`) are independent
+  axes, and neither `unchecked` vs `unknown` nor "core needs nothing" vs "core unknown" may collapse — the second pair
+  is told apart by `installed` plus a caveat, never by list length. A file nobody declares is not a requirement at all;
+  it is an `UnclaimedFile`, identified by **content**, and save data the rule cards claim never appears there. Hash
+  checking is opt-in (`verify=`): policy and caching belong to the caller, not the library.
+- **A packaged identity says what kind of thing it is, and that decides what a difference means.** 24 of the 388
+  identities are archives — MAME romset sets, plus data packs and program jars released and versioned with the project
+  that builds their core — whose whole-file hash pins one packaging of one version, so bytes that differ from it are the
+  ordinary state of a correct file. Those entries carry `kind: archive` with the reason their bytes move, and a
+  difference answers `not-comparable` with no verdict rather than `mismatch`; an exact hit still verifies, because a
+  positive establishes what a negative cannot. The statement lives in the table with its own provenance and reviewed
+  date — never in a run-time guess from the file extension, which is a container format and not a claim about a file's
+  role.
 - **A derived system assignment is stated, not hidden.** Only the per-file override table knows which machine a firmware
   dump belongs to, and it is `[D]`, deliberately incomplete, and not to be completed by hand — boot-ROM variants arrive
   with every core release. Everything else files a file by what its whole _core_ is called, which holds exactly while
@@ -530,8 +541,8 @@ visible in `system_source`, and marked as derived where the core spans systems.
 ## Open questions
 
 - The catalogue API when multiple frontends coexist on one EmuDeck install.
-- Whether `checked` needs a fifth value for artifacts whose whole-file hash is not a meaningful identity — MAME-style
-  romset zips hash differently per romset version and merge mode. 21 of the 388 packaged identities are archives or data
-  packs; deciding this needs per-entry provenance in the table, not an extension heuristic.
+- Whether an archive's _contents_ can ever be compared member by member. The fifth `checked` value settled the
+  whole-file question; going further needs a source that states which ROMs a correct set holds, and `System.dat` carries
+  one md5 per name and no member list.
 - Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only) — revisit with the
   feature-detection extension (ROADMAP: card variants), which reworks the probe anyway.

@@ -204,9 +204,14 @@ KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "pack
 KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
-IDENTITY_FIELDS = {"md5", "sha1", "size"}
+IDENTITY_FIELDS = {"md5", "sha1", "size", "kind"}
+# What kind of thing a packaged identity is. It decides what a difference
+# from the pinned bytes means, so it is contract, not decoration — and
+# `archive_reason` deliberately is not: why the bytes moved travels on the
+# caveat that rides with `not-comparable`.
+KNOWN_IDENTITY_KINDS = {"file", "archive"}
 KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
-KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown"}
+KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown", "not-comparable"}
 GRANULARITY_FIELDS = {"value", "mode", "readings", "alternatives"}
 READING_FIELDS = {"key", "value", "options_file"}
 ALTERNATIVE_FIELDS = {"mode", "options", "values"}
@@ -332,6 +337,7 @@ KNOWN_CAVEAT_CODES = {
     "standalone-unsupported",
     "emulator-catalogue-unavailable",
     "firmware-unreadable",
+    "firmware-identity-not-comparable",
     "firmware-content-unidentified",
     "system-unknown",
     "system-not-in-catalogue",
@@ -1305,6 +1311,8 @@ def _validate_identity(name: str, identity: Any, what: str) -> None:
             fail(f"{name}: {what} {key} must be a non-empty string")
     if not isinstance(identity["size"], int) or identity["size"] < 0:
         fail(f"{name}: {what} size must be a non-negative integer")
+    if identity["kind"] not in KNOWN_IDENTITY_KINDS:
+        fail(f"{name}: {what} kind must be one of {sorted(KNOWN_IDENTITY_KINDS)}")
 
 
 def _validate_requirement_fields(
@@ -1384,23 +1392,71 @@ def _validate_absent_requirement(name: str, found: str, checked: Any, satisfied:
         fail(f"{name}: with found={found!r} the requirement's satisfied must be {expected!r}")
 
 
-def _validate_file_requirement(
-    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool
-) -> None:
-    """A file is at the destination: what was checked settles what is satisfied."""
+# What each `checked` value obliges `satisfied` to be, and the sentence that
+# says why. Every value settles `satisfied` on its own except `unknown`, whose
+# answer depends on whether an identity exists at all — so that one is computed
+# in `_satisfied_for` and the four that are constants live here. The two halves
+# together must cover KNOWN_FIRMWARE_CHECKED exactly, and a test pins that: a
+# sixth value arriving with no rule would otherwise be validated by nothing.
+SATISFIED_BY_CHECKED: dict[str, tuple[Any, str]] = {
+    # The invariant a present-but-wrong file used to slip through.
+    "mismatch": (False, "a file whose bytes are known to be wrong is never satisfied, present or not"),
+    # Its counterpart, and the reason the fifth value exists: over an archive
+    # identity a difference from the pinned bytes is a packaging, so it is
+    # neither a verdict (`mismatch`) nor an all-clear.
+    "not-comparable": (None, "'not-comparable' establishes nothing, so satisfied must be null"),
+    "unchecked": (None, "an identity that exists and was not verified is not an all-clear"),
+    "verified": (True, "a verified file is satisfied"),
+}
+
+
+def _refuse_unreachable_checked(name: str, identity: Any, checked: Any, *, hash_checked: bool) -> None:
+    """Could this ``checked`` value have been produced at all, on this run?
+
+    Both rules are about the *reach* of the check rather than its outcome, and
+    both run before any verdict rule — so a value the run could never have
+    reached is reported as that, not as a wrong ``satisfied``.
+    """
     if identity is None and checked != "unknown":
         fail(f"{name}: with no known identity the bytes cannot be established — checked must be 'unknown'")
     if identity is not None and not hash_checked and checked != "unchecked":
         fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
-    # The invariant a present-but-wrong file used to slip through.
-    if checked == "mismatch" and satisfied is not False:
-        fail(f"{name}: a file whose bytes are known to be wrong is never satisfied, present or not")
-    if checked == "unknown" and satisfied is not (None if identity is not None else True):
-        fail(f"{name}: 'unknown' is undetermined when an identity exists and settled when none can")
-    if checked == "unchecked" and satisfied is not None:
-        fail(f"{name}: an identity that exists and was not verified is not an all-clear")
-    if checked == "verified" and satisfied is not True:
-        fail(f"{name}: a verified file is satisfied")
+
+
+def _refuse_not_comparable_over_a_dump(name: str, identity: Any) -> None:
+    """Only an archive identity can withhold the verdict; a dump's bytes compare."""
+    # An absent identity already failed the reachability rule above; naming it
+    # again is what keeps the lookup below honest rather than assumed.
+    if identity is None or identity["kind"] != "archive":
+        fail(f"{name}: only an archive identity can be 'not-comparable' — a dump's bytes do compare")
+
+
+def _satisfied_for(identity: Any, checked: Any) -> tuple[Any, str]:
+    """What ``satisfied`` must be for this ``checked``, and why."""
+    if checked == "unknown":
+        return (
+            None if identity is not None else True,
+            "'unknown' is undetermined when an identity exists and settled when none can",
+        )
+    return SATISFIED_BY_CHECKED[checked]
+
+
+def _validate_file_requirement(
+    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool
+) -> None:
+    """A file is at the destination: what was checked settles what is satisfied.
+
+    Two questions in order, because they fail differently: whether the run could
+    have reached this ``checked`` at all, and then what that value obliges
+    ``satisfied`` to be. The verdict rules are one per value and mutually
+    exclusive, so exactly one of them ever applies.
+    """
+    _refuse_unreachable_checked(name, identity, checked, hash_checked=hash_checked)
+    if checked == "not-comparable":
+        _refuse_not_comparable_over_a_dump(name, identity)
+    expected, why = _satisfied_for(identity, checked)
+    if satisfied is not expected:
+        fail(f"{name}: {why}")
 
 
 def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) -> None:

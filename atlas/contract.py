@@ -337,9 +337,24 @@ def installation_contract(installation: Installation) -> dict[str, Any]:
 
 
 def _identity_contract(identity: FirmwareIdentity | None) -> dict[str, Any] | None:
+    """One packaged identity: the bytes it pins, and what kind of thing they are.
+
+    ``kind`` is in because it decides what a difference from those bytes means
+    — for a ``file`` a ``mismatch``, for an ``archive`` a ``not-comparable``
+    that judges nothing — and a consumer cannot derive it from the three fields
+    above it. ``archive_reason`` and ``table_version`` stay out: *which* drift
+    moved the bytes, and which version of the curated list called it a drift,
+    are explanations rather than the thing a consumer branches on, and both
+    travel on the caveat that rides with the value, where the explanations live.
+    """
     if identity is None:
         return None
-    return {"md5": identity.md5, "sha1": identity.sha1, "size": identity.size}
+    return {
+        "md5": identity.md5,
+        "sha1": identity.sha1,
+        "size": identity.size,
+        "kind": identity.kind,
+    }
 
 
 def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:

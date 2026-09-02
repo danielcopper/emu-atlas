@@ -225,20 +225,21 @@ data cites, at the line it cites. Drift announces itself instead of waiting to b
   `libretro_info_path` (sandbox paths translated to the Flatpak deployment, limited to cores whose `.so` is actually
   there) and each requirement states its **absolute destination** under the live `system_directory` whether or not a
   file is sitting there. Two axes stay apart: `need` is `required` / `optional`, `checked` is `verified` / `mismatch` /
-  `unchecked` (identity known, not asked about) / `unknown` (cannot be established) — "we did not look" is never the
-  same answer as "we looked and cannot tell". `requirements_met` is `true` only when every required file is there and
-  atlas _established_ that it is the right one: a present file with the wrong bytes makes it `false`, and one that was
-  never verified — the default — makes it `null`, so a green light is asked for rather than assumed. A core that is
-  installed and declares nothing answers "needs nothing"; one whose `.info` cannot be read answers
-  `declaration="unreadable"`, one that is not here answers `"absent"`, and a standalone emulator — installed, but
-  outside the resolver's coverage — answers `"unsupported"` — the same empty list never means four things.
-  `identify_firmware` runs the download flow off content: one md5 comes back with every name it is known as and every
-  destination on this machine that wants it. Files nobody declares are listed separately and identified by bytes; save
-  data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded outright. Where a file's system had to be
-  derived from what its whole core is called — the per-file table is derived and deliberately incomplete — that
-  emulator's entry says so and names the files, and a core shipping no `systemname` at all is its own stated case. An
-  empty answer distinguishes "this identifier is unknown here" from "nothing declares firmware for it"; the two mean
-  different things to a client.
+  `unchecked` (identity known, not asked about) / `unknown` (cannot be established) / `not-comparable` (the bytes differ
+  and the identity is an archive, whose hash pins a packaging rather than a content) — "we did not look" is never the
+  same answer as "we looked and cannot tell", and neither is "we looked and it settles nothing". `requirements_met` is
+  `true` only when every required file is there and atlas _established_ that it is the right one: a present file with
+  the wrong bytes makes it `false`, and one that was never verified — the default — makes it `null`, so a green light is
+  asked for rather than assumed. A core that is installed and declares nothing answers "needs nothing"; one whose
+  `.info` cannot be read answers `declaration="unreadable"`, one that is not here answers `"absent"`, and a standalone
+  emulator — installed, but outside the resolver's coverage — answers `"unsupported"` — the same empty list never means
+  four things. `identify_firmware` runs the download flow off content: one md5 comes back with every name it is known as
+  and every destination on this machine that wants it. Files nobody declares are listed separately and identified by
+  bytes; save data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded outright. Where a file's
+  system had to be derived from what its whole core is called — the per-file table is derived and deliberately
+  incomplete — that emulator's entry says so and names the files, and a core shipping no `systemname` at all is its own
+  stated case. An empty answer distinguishes "this identifier is unknown here" from "nothing declares firmware for it";
+  the two mean different things to a client.
 - `installation.systems()` enumerates what the frontend catalogue declares,
   `installation.launchable(system, content_path)` answers whether a file would launch as that system's content and why
   not, and `installation.screenshot_location(...)` keeps screenshots out of every sync's file set — each with the same

@@ -103,7 +103,7 @@ def _granularity(**overrides) -> Vector:
 
 
 def _identity(**overrides) -> Vector:
-    return {"md5": "0" * 32, "sha1": "1" * 40, "size": 256, **overrides}
+    return {"md5": "0" * 32, "sha1": "1" * 40, "size": 256, "kind": "file", **overrides}
 
 
 def _requirement(**overrides) -> Vector:
@@ -886,6 +886,8 @@ REQUIREMENT_CASES = [
          "md5 must be a non-empty string", id="requirement-identity-empty-md5"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(identity=_identity(size=-1))])]),
          "size must be a non-negative integer", id="requirement-identity-negative-size"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(identity=_identity(kind="zip"))])]),
+         "kind must be one of", id="requirement-identity-kind-unknown"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(satisfied="no")], requirements_met=None)]),
          "satisfied must be true, false, or null", id="requirement-satisfied-type"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(checked="verified")], requirements_met=None)]),
@@ -914,6 +916,17 @@ REQUIREMENT_CASES = [
                                                                 checked="mismatch", satisfied=True)],
                                      requirements_met=True)]),
          "a file whose bytes are known to be wrong is never satisfied", id="requirement-mismatch-satisfied"),
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
+                                                                checked="not-comparable", satisfied=None)],
+                                     requirements_met=None)]),
+         "only an archive identity can be 'not-comparable'", id="requirement-not-comparable-over-a-dump"),
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                identity=_identity(kind="archive"),
+                                                                checked="not-comparable", satisfied=True)],
+                                     requirements_met=True)]),
+         "'not-comparable' establishes nothing", id="requirement-not-comparable-satisfied"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
                                                                 satisfied=None)], requirements_met=None)]),
          "'unknown' is undetermined when an identity exists", id="requirement-unknown-verdict-wrong"),
@@ -1400,6 +1413,18 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_firmware_checked_vocabularies_match(self):
         assert validate_vectors.KNOWN_FIRMWARE_CHECKED == self._exported("CHECKED_")
+
+    def test_the_identity_kind_vocabularies_match(self):
+        assert validate_vectors.KNOWN_IDENTITY_KINDS == self._exported("IDENTITY_")
+
+    def test_every_checked_value_has_a_satisfied_rule(self):
+        # The verdict table settles four of the values and `unknown` is
+        # computed, because its answer depends on whether an identity exists.
+        # A sixth value arriving with no rule would be looked up in the table
+        # and crash mid-validation, so the two halves are pinned to cover the
+        # vocabulary exactly.
+        ruled = set(validate_vectors.SATISFIED_BY_CHECKED) | {"unknown"}
+        assert ruled == validate_vectors.KNOWN_FIRMWARE_CHECKED
 
     def test_the_firmware_region_vocabulary_is_the_cards_own(self):
         # The region words come from the one emitting card's region_keys —

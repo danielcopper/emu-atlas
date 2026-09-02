@@ -1,7 +1,7 @@
 """Tests for atlas.firmware — emulators, their firmware, and what is on disk.
 
 The model is proven from data along its two axes: ``need`` is what an emulator
-asks for, ``present``/``checked`` is what the machine answers, and the four
+asks for, ``present``/``checked`` is what the machine answers, and the five
 ``checked`` values stay apart. Two classes carry the load. The first is
 :class:`TestNoDeclarationIsNeverSatisfied`: having no declaration must never
 look like nothing missing. The second is :class:`TestPartialReaderIsNotMisled`
@@ -32,6 +32,7 @@ from atlas.firmware import (
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
     CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
     CAVEAT_FIRMWARE_DECLARATION_UNREAD,
+    CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
@@ -46,7 +47,10 @@ from atlas.firmware import (
     CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
+    CHECKED_NOT_COMPARABLE,
+    CHECKED_UNCHECKED,
     CHECKED_UNKNOWN,
+    CHECKED_VERIFIED,
     DECLARATION_ABSENT,
     DECLARATION_UNSUPPORTED,
     DECLARATION_READ,
@@ -231,18 +235,28 @@ firmware2_path = "nds7.bin"
 firmware2_opt = "true"
 """
 
+# ECWolf declares one required file and it is a data pack shipped with the core
+# — the arrangement that first showed a `mismatch` meaning nothing.
+ECWOLF_INFO = """
+display_name = "Wolfenstein 3D (ECWolf)"
+systemname = "Wolfenstein 3D Game Engine"
+firmware_count = 1
+firmware0_desc = "ecwolf.pk3 (ECWolf System File)"
+firmware0_path = "ecwolf.pk3"
+"""
+
 TABLE = json.dumps(
     {
         "_meta": {"generated_from": "test", "version": "0", "generated_at": "2026-01-01"},
         "files": {
-            "scph5501.bin": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8},
-            "dc/dc_boot.bin": {"md5": "cc" * 16, "sha1": "dd" * 20, "size": 4},
+            "scph5501.bin": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "file"},
+            "dc/dc_boot.bin": {"md5": "cc" * 16, "sha1": "dd" * 20, "size": 4, "kind": "file"},
             # One content, two canonical names — the gambatte/SameBoy case.
-            "gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
-            "dmg_boot.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
+            "gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5, "kind": "file"},
+            "dmg_boot.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5, "kind": "file"},
             # No per-file rule covers this one, so a core declaring it is filed
             # by its systemname — the derived case, reachable by content.
-            "gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6},
+            "gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6, "kind": "file"},
         },
     }
 )
@@ -254,6 +268,11 @@ def _blob(content: bytes) -> dict[str, str | int]:
         "sha1": hashlib.sha1(content).hexdigest(),
         "size": len(content),
     }
+
+
+def _entry(content: bytes, **stamp: str) -> dict[str, str | int]:
+    """*content* as one packaged table entry — the blob plus what kind it is."""
+    return {**_blob(content), "kind": "file", **stamp}
 
 
 def _machine(files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: object) -> FixtureMachine:
@@ -555,7 +574,7 @@ class TestPerCoreAnswer:
         # Verified, so the answer can be earned: the optional file is absent and
         # that alone must not make the core fail.
         content = b"12345678"
-        table = json.dumps({"_meta": {}, "files": {"scph5501.bin": _blob(content)}})
+        table = json.dumps({"_meta": {}, "files": {"scph5501.bin": _entry(content)}})
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
         context = FirmwareContext(
             root=BIOS_DIR,
@@ -604,7 +623,11 @@ class TestPerCoreAnswer:
 
 
 class TestCheckedAxis:
-    """The four values of ``checked`` — and that none of them collapse."""
+    """The values of ``checked`` — and that none of them collapse.
+
+    The fifth, ``not-comparable``, has its own class below: it is the only
+    one that depends on what kind of identity the table carries.
+    """
 
     def test_nothing_there_means_nothing_to_check(self):
         machine = _machine()
@@ -629,7 +652,7 @@ class TestCheckedAxis:
     def test_matching_bytes_verify(self):
         content = b"12345678"
         table = json.dumps(
-            {"_meta": {}, "files": {"scph5501.bin": {**_blob(content), "md5": hashlib.md5(content).hexdigest()}}}
+            {"_meta": {}, "files": {"scph5501.bin": {**_entry(content), "md5": hashlib.md5(content).hexdigest()}}}
         )
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(content)})
         context = FirmwareContext(
@@ -673,6 +696,247 @@ class TestCheckedAxis:
         )
 
 
+ARCHIVE_MD5 = "ab" * 16
+ARCHIVE_SHA1 = "cd" * 20
+ARCHIVE_SIZE = 64
+
+
+ARCHIVE_LIST_VERSION = "7"
+
+
+def _archive_table(reason: str = "core-bundled", *, list_version: str | None = ARCHIVE_LIST_VERSION) -> str:
+    meta = {} if list_version is None else {"archive_identities_version": list_version}
+    return json.dumps(
+        {
+            "_meta": meta,
+            "files": {
+                "ecwolf.pk3": {
+                    "md5": ARCHIVE_MD5,
+                    "sha1": ARCHIVE_SHA1,
+                    "size": ARCHIVE_SIZE,
+                    "kind": "archive",
+                    "archive_reason": reason,
+                }
+            },
+        }
+    )
+
+
+def _archive_answer(
+    pk3: FixtureFileSpec,
+    *,
+    verify: bool = True,
+    reason: str = "core-bundled",
+    list_version: str | None = ARCHIVE_LIST_VERSION,
+):
+    """The ECWolf machine with *pk3* at the destination, asked about its one file."""
+    machine = FixtureMachine(
+        {
+            f"{INFO_DIR}/ecwolf_libretro.info": ECWOLF_INFO,
+            f"{INFO_DIR}/ecwolf_libretro.so": {"status": "invalid-text"},
+            f"{BIOS_DIR}/ecwolf.pk3": pk3,
+        }  # type: ignore[arg-type]
+    )
+    context = FirmwareContext(
+        root=BIOS_DIR,
+        cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
+        hashes=load_hashes(_archive_table(reason, list_version=list_version)),
+    )
+    return firmware_for_core(machine, context, core_so="ecwolf_libretro.so", verify=verify)
+
+
+class TestArchiveIdentitiesWithhold:
+    """The fifth value: an archive's bytes differ, and that is not a verdict.
+
+    A whole-file hash over a MAME romset or a core's data pack pins one
+    packaging of one version, so a difference from it is the ordinary state of
+    a correct file — the ``ecwolf.pk3`` sighting that gave a present, right
+    file the word ``mismatch``. The answer withholds instead, and says why.
+    """
+
+    def test_bytes_that_differ_answer_not_comparable(self):
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_NOT_COMPARABLE
+
+    def test_a_wrong_size_reaches_the_same_answer_without_a_digest(self):
+        # The free pre-filter is the other way into the branch, and it must not
+        # answer 'mismatch' on the way.
+        answer = _archive_answer({"md5": ARCHIVE_MD5, "sha1": ARCHIVE_SHA1, "size": ARCHIVE_SIZE + 1})
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_NOT_COMPARABLE
+
+    def test_nothing_is_established_so_the_file_is_not_satisfied_either_way(self):
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        assert _by_name(answer)["ecwolf.pk3"].satisfied is None
+
+    def test_a_required_file_nobody_judged_leaves_the_core_undecided(self):
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        assert answer.cores[0].requirements_met is None
+
+    def test_the_answer_says_why_it_withheld(self):
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE]
+
+    def test_the_caveat_names_the_file_and_the_drift(self):
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        data = answer.caveats[0].data
+        assert data["file_name"] == "ecwolf.pk3"
+        assert data["path"] == f"{BIOS_DIR}/ecwolf.pk3"
+        assert data["archive_reason"] == "core-bundled"
+
+    def test_a_romset_says_romset(self):
+        answer = _archive_answer(
+            {"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE}, reason="romset"
+        )
+        assert answer.caveats[0].data["archive_reason"] == "romset"
+
+    def test_the_caveat_names_the_list_version_that_stated_the_kind(self):
+        # Which reading called this an archive is part of the answer, the way
+        # the system-assignment caveats carry their own table's version.
+        answer = _archive_answer({"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE})
+        assert answer.caveats[0].data["table_version"] == ARCHIVE_LIST_VERSION
+
+    def test_a_table_that_states_no_list_version_carries_none(self):
+        # An older vendored table is a fact about that table, not a reason to
+        # report the version this atlas happens to know.
+        answer = _archive_answer(
+            {"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE}, list_version=None
+        )
+        assert answer.caveats[0].data["table_version"] == ""
+
+    def test_an_exact_hit_is_still_a_verdict(self):
+        # The asymmetry: a positive establishes that this IS the pinned
+        # packaging of the pinned version, and throwing that away would cost a
+        # real answer.
+        answer = _archive_answer({"md5": ARCHIVE_MD5, "sha1": ARCHIVE_SHA1, "size": ARCHIVE_SIZE})
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_VERIFIED
+
+    def test_an_exact_hit_carries_no_caveat(self):
+        answer = _archive_answer({"md5": ARCHIVE_MD5, "sha1": ARCHIVE_SHA1, "size": ARCHIVE_SIZE})
+        assert answer.caveats == ()
+
+    def test_without_verification_it_is_unchecked_not_not_comparable(self):
+        # 'not-comparable' is a result of looking. Not looking has its own word.
+        answer = _archive_answer(
+            {"md5": "00" * 16, "sha1": "00" * 20, "size": ARCHIVE_SIZE}, verify=False
+        )
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_UNCHECKED
+
+    def test_unreadable_bytes_stay_unknown(self):
+        # A read failure is not a comparison that came out inconclusive: the
+        # unreadable answer wins, and its own caveat says so.
+        answer = _archive_answer({"size": ARCHIVE_SIZE})
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_UNKNOWN
+
+    def test_unreadable_bytes_carry_the_read_failure_caveat(self):
+        answer = _archive_answer({"size": ARCHIVE_SIZE})
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_UNREADABLE]
+
+    def test_the_kind_is_stated_even_where_no_check_ran(self):
+        answer = _archive_answer(
+            {"md5": ARCHIVE_MD5, "sha1": ARCHIVE_SHA1, "size": ARCHIVE_SIZE}, verify=False
+        )
+        identity = _by_name(answer)["ecwolf.pk3"].identity
+        assert identity is not None
+        assert identity.kind == "archive"
+
+    def test_a_whole_file_dump_still_answers_mismatch(self):
+        # The regression direction: nothing about the new value may soften the
+        # verdict a real dump earns.
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": 8}})
+        answer = firmware_for_core(
+            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+        )
+        assert _by_name(answer)["scph5501.bin"].checked == CHECKED_MISMATCH
+
+
+class TestTheTableStatesEveryKind:
+    """``kind`` is read strictly: a table that never learned it is refused.
+
+    Defaulting a missing ``kind`` to ``file`` would answer ``mismatch`` over an
+    archive again, silently, which is the whole defect. So the loader refuses
+    the table instead — the same shape of refusal a missing digest gets.
+    """
+
+    def _table(self, entry: dict[str, object]) -> str:
+        return json.dumps({"_meta": {}, "files": {"neogeo.zip": entry}})
+
+    def test_an_entry_without_a_kind_is_refused(self):
+        text = self._table({"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8})
+        with pytest.raises(ValueError, match="kind must be one of"):
+            load_hashes(text)
+
+    def test_a_kind_outside_the_vocabulary_is_refused(self):
+        text = self._table({"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "zip"})
+        with pytest.raises(ValueError, match="kind must be one of"):
+            load_hashes(text)
+
+    def test_an_archive_that_states_no_reason_is_refused(self):
+        text = self._table({"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "archive"})
+        with pytest.raises(ValueError, match="archive_reason must be one of"):
+            load_hashes(text)
+
+    def test_an_archive_reason_outside_the_vocabulary_is_refused(self):
+        text = self._table(
+            {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "archive", "archive_reason": "big"}
+        )
+        with pytest.raises(ValueError, match="archive_reason must be one of"):
+            load_hashes(text)
+
+    def test_a_dump_that_claims_a_reason_is_refused(self):
+        text = self._table(
+            {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "file", "archive_reason": "romset"}
+        )
+        with pytest.raises(ValueError, match="only an archive carries an archive_reason"):
+            load_hashes(text)
+
+    def test_the_error_names_the_entry(self):
+        text = self._table({"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8})
+        with pytest.raises(ValueError, match="^neogeo.zip: "):
+            load_hashes(text)
+
+    def test_an_identity_carries_the_version_of_the_table_it_came_from(self):
+        text = json.dumps(
+            {
+                "_meta": {"archive_identities_version": "9"},
+                "files": {"neogeo.zip": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "file"}},
+            }
+        )
+        identity = load_hashes(text).for_path("neogeo.zip")
+        assert identity is not None
+        assert identity.table_version == "9"
+
+    def test_the_packaged_table_states_its_list_version(self):
+        assert load_hashes().archive_identities_version
+
+    def test_an_archive_entry_reaches_the_identity_with_its_reason(self):
+        identity = load_hashes(self._table(
+            {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8, "kind": "archive", "archive_reason": "romset"}
+        )).for_path("neogeo.zip")
+        assert identity is not None
+        assert identity.archive_reason == "romset"
+
+    def test_the_packaged_table_states_both_kinds_and_nothing_else(self):
+        packaged = load_hashes()
+        kinds = {entry.kind for name in packaged.names() if (entry := packaged.get(name)) is not None}
+        assert kinds == {"file", "archive"}
+
+
+class TestIdentityRefusesAStateThatWouldLie:
+    """The dataclass holds the same rule the table does, at every construction."""
+
+    def test_an_unknown_kind_is_refused(self):
+        with pytest.raises(ValueError, match="kind must be one of"):
+            FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, kind="zip")  # type: ignore[arg-type]
+
+    def test_an_archive_must_state_why_its_bytes_move(self):
+        with pytest.raises(ValueError, match="archive_reason must be one of"):
+            FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, kind="archive")
+
+    def test_a_dump_may_not_claim_a_reason(self):
+        with pytest.raises(ValueError, match="only an archive carries an archive_reason"):
+            FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, kind="file", archive_reason="romset")
+
+
 class TestRequirementInvariants:
     """The dataclass refuses states that would lie."""
 
@@ -684,7 +948,7 @@ class TestRequirementInvariants:
                 found="missing", checked="verified",
             )
 
-    def test_a_present_file_must_state_one_of_the_four(self):
+    def test_a_present_file_must_state_one_of_the_five(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
@@ -1270,7 +1534,7 @@ class TestInventory:
 
     def test_an_unclaimed_file_is_recognised_by_content(self):
         content = b"boot!"
-        table = json.dumps({"_meta": {}, "files": {"gb_bios.bin": _blob(content)}})
+        table = json.dumps({"_meta": {}, "files": {"gb_bios.bin": _entry(content)}})
         machine = _machine({f"{BIOS_DIR}/mystery-name.bin": _blob(content)})
         context = FirmwareContext(
             root=BIOS_DIR,
@@ -2067,8 +2331,8 @@ def _gb_machine(files: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMa
 
 
 def test_identity_equality_is_content_equality():
-    left = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
-    right = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, known_as=("x",))
+    left = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, kind="file", known_as=("x",))
+    right = FirmwareIdentity(md5="a" * 32, sha1="b" * 40, size=4, kind="file", known_as=("x",))
     assert left == right
 
 

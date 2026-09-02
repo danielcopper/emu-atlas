@@ -1194,9 +1194,16 @@ Shape:
 
 ```json
 {
-  "_meta": { "generated_from": "...", "version": "5.0.0", "generated_at": "2026-02-27" },
+  "_meta": {
+    "generated_from": "...",
+    "version": "6.0.0",
+    "generated_at": "2026-02-27",
+    "archive_identities_version": "2",
+    "archive_identities_reviewed": "2026-09-02"
+  },
   "files": {
-    "scph5501.bin": { "md5": "...", "sha1": "...", "size": 524288 }
+    "scph5501.bin": { "md5": "...", "sha1": "...", "size": 524288, "kind": "file" },
+    "neogeo.zip": { "md5": "...", "sha1": "...", "size": 1859335, "kind": "archive", "archive_reason": "romset" }
   }
 }
 ```
@@ -1215,11 +1222,35 @@ Shape:
   `dmg_boot.bin` and nothing else.
 - The table covers only what `System.dat` covers. A declared file with no entry here is a **normal** state, not a gap in
   the data — `atlas.firmware` reports it as present with `checked` = `unknown`, never as verified.
-- **Not every identity is a whole-file dump.** 21 entries are archives or data packs (MAME-style romset zips such as
-  `neogeo.zip` and `dc/naomi.zip`, plus `scummvm.zip`, `Dinothawr.zip`, `ecwolf.pk3`, `prboom.wad`). A romset zip hashes
-  differently per romset version and merge mode, and a data pack tracks its core's version, so a `mismatch` on one of
-  these says less than it appears to. The table does not yet distinguish those entries from real dumps; doing so needs
-  per-entry provenance, not a guess from the file extension (ROADMAP, block 6).
+- `kind` — `file` or `archive`, on **every** entry. It says whether these bytes are comparable whole-file at all, which
+  decides what a difference from them means: over a `file` a `mismatch`, over an `archive` a `not-comparable` that
+  states no verdict. It is on every entry rather than only on the archives so that counting them is mechanical.
+- `archive_reason` — on an `archive` and nowhere else, one of two words for why its bytes move apart from its content:
+  - `romset` — a MAME-style BIOS or device set (`neogeo.zip`, `cchip.zip`, Flycast's `dc/*.zip` boards). The whole-file
+    bytes follow the romset version **and** the merge mode it was built under (split / merged / non-merged), so two
+    correct copies of one BIOS can hash differently.
+  - `core-bundled` — a data pack or program archive released and versioned with the project that builds the core
+    (`ecwolf.pk3`, `Dinothawr.zip`, `prboom.wad`, `scummvm.zip`, the three FreeJ2ME `.jar` builds). Its bytes can change
+    with a core release. "Bundled" is about versioning, not shipping: the RetroDECK Flatpak carries `ecwolf.pk3` and
+    `prboom.wad` under `rd_extras/` and not one `.jar`, and `freej2me-lr.jar` is declared as _required_ firmware, which
+    is the mark of a file the user supplies.
+- `_meta.archive_identities_version` / `_meta.archive_identities_reviewed` — the version and review date of that curated
+  list, versioned the way `FIRMWARE_SYSTEM_OVERRIDE` is. The list itself lives in the generator; what lives here is the
+  kinds it stamped, which is why the version rides along with them: a consumer vendoring an older table must be able to
+  read the version that actually stamped it, and `atlas.firmware` takes it from here rather than compiling in a copy. It
+  reaches an answer through the `firmware-identity-not-comparable` caveat's `data["table_version"]`.
+- **24 of the 388 entries are archives**, and which 24 is a **table statement, not a heuristic.** `System.dat` pins an
+  md5 over the whole file and says nothing about what that file is, so the list is atlas's own `[D]` reading, curated in
+  `scripts/generate_firmware_hashes.py` (`ARCHIVE_IDENTITIES`). Each line names its own evidence, and there are four
+  kinds of it: the declaring core's own `firmware<N>_desc` where a shipped `.info` declares the file; that core's
+  `notes` / `description` where its `.info` declares no firmware but names the file in prose; _sibling of a declared
+  file from the same release_, where the table carries an undeclared file beside a declared one under a name and size
+  that place it in the same release (`freej2me.jar`, `freej2me-sdl.jar`); and — for `scummvm.zip` alone — atlas's own
+  inference, where no shipped `.info` mentions the file and no declared sibling stands beside it, so the reading rests
+  on the successor files the core declares instead. Three of the 24 lines rest on one of those last two routes, and each
+  says so. Nothing in atlas decides an identity's kind from a file extension; the guard in
+  `tests/test_firmware_hashes_data.py` is the only place a suffix decides anything about a firmware identity, and it
+  fails until a new `.zip` / `.pk3` / `.wad` / `.jar` name has a reviewed line.
 
 ## Upstream source
 
@@ -1236,6 +1267,21 @@ git clone https://github.com/libretro/libretro-database ~/src/libretro-database
 
 python scripts/generate_firmware_hashes.py --database ~/src/libretro-database
 ```
+
+It has a second mode, and the two are mutually exclusive on the command line:
+
+```sh
+python scripts/generate_firmware_hashes.py --restamp
+```
+
+`--restamp` reads the committed table and rewrites only what the script states about it — the `kind` / `archive_reason`
+pair and the three `_meta` fields the script owns (`version`, `archive_identities_version`,
+`archive_identities_reviewed`) — copying every identity through untouched. Both modes write through the same serializer,
+so neither produces a formatting diff. Which mode applies is decided by what changed: a change to `ARCHIVE_IDENTITIES`
+or to the schema is a `--restamp`, because it must not wait on a fresh upstream checkout and must not smuggle an
+identity change in beside it; new or changed identities from upstream are a `--database` run. `_meta.generated_at` is
+carried through by a restamp — no upstream data was read, so a fresh date would be a claim about where the identities
+came from.
 
 `duckstation_bios.json` is generated the same way, from the emulator's own source at the revision its card pins:
 
