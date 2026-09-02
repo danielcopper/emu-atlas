@@ -134,6 +134,14 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 - **Detection labels markers, it does not partition.** EmuDeck _is_ a configured `org.libretro.RetroArch` — both
   descriptions of the same RetroArch are true at once, so marker checks are ordered (EmuDeck before "a bare RetroArch")
   and a handle may carry more than one description.
+- **An identifier is the key; the name beside it is presentation.** `kind` and `supplied_by.distribution` are
+  `retrodeck`, `emudeck`, `bare_retroarch_flatpak`, `bare_retroarch_native`, and they stay what a consumer branches on.
+  Each also serializes a `label` — the spelling the project uses for itself, `RetroDECK` where the identifier reads
+  `retrodeck` — because the alternative on the consumer's side is title-casing a string it did not write, and that
+  produces a name the project does not use. The spellings are packaged world knowledge, cited to the project's own text
+  and versioned like every other table (`atlas/data/distribution_labels.json`); no machine states them as names. Nothing
+  in atlas branches on one either, and an identifier the table does not cover raises rather than falling back to itself
+  — a gap is a build mistake, not a default.
 - **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
   status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
   present-but-broken installation (unreadable marker, unmounted SD card, stale EmuDeck whose claimed RetroArch config is

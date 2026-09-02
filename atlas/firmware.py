@@ -90,6 +90,7 @@ from .core_info import (
     parse_core_info,
     unread_reason,
 )
+from .distribution_labels import distribution_label
 from .distribution_supplied import lookup_distribution_supplied
 from .esde import KIND_LIBRETRO
 from .machine import (
@@ -1321,6 +1322,17 @@ class SuppliedBy:
     distribution: str
     source: str
     card_version: str
+
+    @property
+    def label(self) -> str:
+        """The name ``distribution`` writes for itself — to show, never to match.
+
+        Derived rather than stored, because it is a fact about the identifier
+        and not about this file: the pair cannot drift apart if there is only
+        one of it (:mod:`atlas.distribution_labels`). A consumer renders this
+        beside "provided by" and keeps branching on ``distribution``.
+        """
+        return distribution_label(self.distribution)
 
 
 @dataclass(frozen=True, slots=True)

@@ -966,6 +966,17 @@ class TestRequirementInvariants:
                 checked=None,
             )
 
+    def test_the_distribution_states_the_name_it_writes_for_itself(self):
+        # Derived from the identifier rather than stored beside it, so the two
+        # cannot disagree — 'retrodeck' is the key, 'RetroDECK' the word to show.
+        supplied = SuppliedBy(distribution="retrodeck", source="/ship/a.bin", card_version="1")
+        assert supplied.label == "RetroDECK"
+
+    def test_a_distribution_nothing_spells_is_an_error_and_not_a_guess(self):
+        supplied = SuppliedBy(distribution="retrodek", source="/ship/a.bin", card_version="1")
+        with pytest.raises(ValueError, match="no packaged spelling"):
+            _ = supplied.label
+
     def test_only_a_file_can_be_the_distributions_own_copy(self):
         # A provenance statement over a destination with nothing at it would be
         # about a file that does not exist.

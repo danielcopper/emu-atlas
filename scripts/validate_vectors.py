@@ -107,7 +107,7 @@ AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
 FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
 IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
-INSTALLATION_FIELDS = {"kind", "kinds", "root", "health"}
+INSTALLATION_FIELDS = {"kind", "label", "kinds", "root", "health"}
 PLACEMENT_FIELDS = {
     "dir",
     "root_kind",
@@ -194,9 +194,10 @@ FIRMWARE_REQUIREMENT_FIELDS = {
 }
 # Whose file is at the destination, when it is the distribution's own copy.
 # `source` is the shipped file that was hashed — a host path, so the claim can
-# be re-checked — and `card_version` the revision of the packaged copy list
-# that named the pair.
-SUPPLIED_BY_FIELDS = {"distribution", "source", "card_version"}
+# be re-checked — `card_version` the revision of the packaged copy list that
+# named the pair, and `label` how that distribution spells its own name, the one
+# field here for rendering rather than branching.
+SUPPLIED_BY_FIELDS = {"distribution", "label", "source", "card_version"}
 # The distributions atlas has read a copy step for. A closed set, like the
 # console regions: a word outside it is a claim no packaged card backs.
 KNOWN_SUPPLYING_DISTRIBUTIONS = {"retrodeck"}
@@ -244,7 +245,19 @@ NO_CATALOGUE_CODES = {
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",
 }
-KNOWN_KINDS = {"retrodeck", "emudeck", "bare_retroarch_flatpak", "bare_retroarch_native"}
+# Each installation kind, and the name that distribution writes for itself —
+# packaged world knowledge on atlas's side (atlas/data/distribution_labels.json),
+# hand-copied here like every other vocabulary in this file. The label is
+# presentation: a client renders it and branches on the identifier beside it.
+# Every kind has one, which is why the kind vocabulary is these keys rather than
+# a second list — a kind with no label is not a kind atlas can answer for.
+KNOWN_DISTRIBUTION_LABELS = {
+    "retrodeck": "RetroDECK",
+    "emudeck": "EmuDeck",
+    "bare_retroarch_flatpak": "RetroArch (Flatpak)",
+    "bare_retroarch_native": "RetroArch (native)",
+}
+KNOWN_KINDS = set(KNOWN_DISTRIBUTION_LABELS)
 KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
 BLOB_FIELDS = {"md5", "sha1", "size"}
 KNOWN_HEALTH_ISSUES = {
@@ -892,6 +905,24 @@ def _validate_appimage_entry(name: str, path: str, inner: Any, value: Any) -> No
         )
 
 
+def _validate_distribution_label(name: str, identifier: str, label: Any, where: str) -> None:
+    """The label beside an identifier is that identifier's packaged spelling.
+
+    Checked against the table rather than merely for being a string, because a
+    label is what a person reads: a vector free to state any spelling would let
+    a port render ``Retrodeck`` and still pass, which is the exact defect the
+    field exists to remove. The identifier is validated by the caller — this
+    speaks only for the name beside it, and refuses a label the table has no
+    spelling to hold against, which is a gap in the table rather than in the
+    vector.
+    """
+    expected = KNOWN_DISTRIBUTION_LABELS.get(identifier)
+    if expected is None:
+        fail(f"{name}: nothing spells {identifier!r}, so its {where} label states a name nobody set")
+    if label != expected:
+        fail(f"{name}: {where} label for {identifier!r} must be {expected!r}, got {label!r}")
+
+
 def _validate_installations(name: str, installations: Any) -> None:
     if not isinstance(installations, list):
         fail(f"{name}: expected.installations must be a list")
@@ -899,6 +930,7 @@ def _validate_installations(name: str, installations: Any) -> None:
         _require_exact(name, inst, INSTALLATION_FIELDS, "each installation")
         if inst["kind"] not in KNOWN_KINDS:
             fail(f"{name}: installation kind must be one of {sorted(KNOWN_KINDS)}, got {inst['kind']!r}")
+        _validate_distribution_label(name, inst["kind"], inst["label"], "installation")
         kinds = inst["kinds"]
         if not isinstance(kinds, list) or not kinds or not all(k in KNOWN_KINDS for k in kinds):
             fail(f"{name}: installation kinds must be a non-empty list of known kinds, got {kinds!r}")
@@ -1395,7 +1427,7 @@ def _validate_supplied_by(name: str, entry: Any) -> None:
     if entry["found"] != "file":
         fail(f"{name}: supplied_by says the FILE at the destination is the distribution's copy")
     _require_exact(name, supplied, SUPPLIED_BY_FIELDS, "a supplied_by statement")
-    for key in ("distribution", "source", "card_version"):
+    for key in ("distribution", "label", "source", "card_version"):
         if not isinstance(supplied[key], str) or not supplied[key]:
             fail(f"{name}: supplied_by {key} must be a non-empty string")
     if supplied["distribution"] not in KNOWN_SUPPLYING_DISTRIBUTIONS:
@@ -1403,6 +1435,7 @@ def _validate_supplied_by(name: str, entry: Any) -> None:
             f"{name}: supplied_by distribution must be one of "
             f"{sorted(KNOWN_SUPPLYING_DISTRIBUTIONS)}"
         )
+    _validate_distribution_label(name, supplied["distribution"], supplied["label"], "supplied_by")
     if not supplied["source"].startswith("/"):
         fail(f"{name}: supplied_by source must be the shipped file's absolute path on this host")
 

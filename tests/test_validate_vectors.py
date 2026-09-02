@@ -58,6 +58,7 @@ DEPLOY_EXTRAS = (
 
 INSTALLATION = {
     "kind": "retrodeck",
+    "label": "RetroDECK",
     "kinds": ["retrodeck"],
     "root": "/mnt/sd/retrodeck",
     "health": [],
@@ -116,6 +117,7 @@ def _identity(**overrides) -> Vector:
 def _supplied(**overrides) -> Vector:
     return {
         "distribution": "retrodeck",
+        "label": "RetroDECK",
         "source": f"{DEPLOY_EXTRAS}/dolphin-emu/Sys/codehandler.bin",
         "card_version": "1",
         **overrides,
@@ -581,6 +583,8 @@ INSTALLATION_CASES = [
          "each installation must be exactly the fields", id="installation-stray-field"),
     case(_vector({"installations": [{**INSTALLATION, "kind": "nope"}]}),
          "installation kind must be one of", id="installation-unknown-kind"),
+    case(_vector({"installations": [{**INSTALLATION, "label": "Retrodeck"}]}),
+         "installation label for 'retrodeck' must be", id="installation-mis-spelled-label"),
     case(_vector({"installations": [{**INSTALLATION, "kinds": []}]}),
          "installation kinds must be a non-empty list", id="installation-empty-kinds"),
     case(_vector({"installations": [{**INSTALLATION, "kinds": ["nope"]}]}),
@@ -977,6 +981,11 @@ REQUIREMENT_CASES = [
                                                                 supplied_by={"distribution": "retrodeck"})],
                                      requirements_met=True)]),
          "a supplied_by statement", id="supplied-by-missing-its-provenance"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
+                                                                satisfied=True,
+                                                                supplied_by=_supplied(label="Retrodeck"))],
+                                     requirements_met=True)]),
+         "supplied_by label for 'retrodeck' must be", id="supplied-by-a-mis-spelled-label"),
 ]
 
 
@@ -1489,6 +1498,15 @@ class TestTheVocabularyIsOneVocabulary:
             if not name.startswith("_") and isinstance(member, type) and isinstance(vars(member).get("kind"), str)
         }
         assert validate_vectors.KNOWN_KINDS == kinds
+
+    def test_the_distribution_spellings_match(self):
+        # The validator renders no label itself, but it holds every vector's to
+        # the packaged spelling — so its copy of the table is one more list that
+        # can drift, and a drifted one would pass a corpus atlas cannot produce.
+        from atlas.distribution_labels import load_distribution_labels
+
+        packaged = {kind: record.label for kind, record in load_distribution_labels().items()}
+        assert validate_vectors.KNOWN_DISTRIBUTION_LABELS == packaged
 
 
 class TestACodesNameIsItsString:

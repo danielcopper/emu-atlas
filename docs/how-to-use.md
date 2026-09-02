@@ -189,6 +189,35 @@ A machine can carry several arrangements at once; each answers only for itself (
 `kinds` can carry more than one description — EmuDeck _is_ a configured RetroArch Flatpak, so its handle claims both. An
 empty list means nothing was detected.
 
+### The name to show a person — `label`
+
+`kind` is an identifier and reads like one. When you put it in front of a user, ask atlas for the name the project
+writes for itself instead of title-casing the identifier — which would produce `Retrodeck` for a project that spells
+itself `RetroDECK`:
+
+```python
+atlas.distribution_label(inst.kind)   # 'RetroDECK'
+atlas.distribution_label("emudeck")   # 'EmuDeck'
+```
+
+The serialized form carries it beside the identifier, so a client reading contract JSON never has to ask separately:
+
+```python
+atlas.installation_contract(inst)
+# {'kind': 'retrodeck', 'label': 'RetroDECK', 'kinds': ['retrodeck'], 'root': ..., 'health': []}
+```
+
+**A distribution's `label` is presentation and never a key.** Branch on `kind`, match on `kind`, store `kind` — this
+label is for rendering only, and it may be re-spelled the day a project re-spells itself. (`label` elsewhere in the
+contract is a different field with a different job: a catalogue entry's `label` and a firmware core's are the names
+those things carry on this machine, and a caveat's `data["label"]` names the emulator the caveat is about.) The two bare
+RetroArch kinds show where the words come from and where they stop: `RetroArch` is the program's own spelling, while the
+qualifier in `RetroArch (Flatpak)` and `RetroArch (native)` is atlas's, because one program in two packagings has one
+name and you still need to tell the two installations apart. Every spelling is packaged with the source it was read from
+(`atlas/data/distribution_labels.json`); `atlas.load_distribution_labels()` hands you the whole table, citations
+included. An identifier the table does not cover raises rather than falling back — a gap is a build mistake, and
+returning the identifier would put the string this field exists to replace into your UI without a sound.
+
 A detected installation can be broken. Health is structural, never a boolean:
 
 ```python
@@ -298,7 +327,7 @@ works the same way the answers do, label plus the question's own serializer:
 
 ```python
 atlas.installation_answers_contract(everywhere.savefile_location(content_path=rom_path), atlas.savefile_placement_contract)
-# [{'installation': {'kind': 'retrodeck', 'kinds': [...], 'root': ..., 'health': []},
+# [{'installation': {'kind': 'retrodeck', 'label': 'RetroDECK', 'kinds': [...], 'root': ..., 'health': []},
 #   'answer': {'dir': '/run/media/deck/Emulation/retrodeck/saves/n64', ...}}, ...]
 ```
 
@@ -1962,9 +1991,13 @@ declares one of them (`dolphin-emu/Sys/codehandler.bin`) as **required** firmwar
 
 ```python
 req.supplied_by.distribution   # 'retrodeck' — who would put it back
+req.supplied_by.label          # 'RetroDECK' — the same distribution, spelled for a person to read
 req.supplied_by.source         # the shipped file on this host, the one that was hashed
 req.supplied_by.card_version   # the revision of the packaged copy list that named the pair
 ```
+
+`label` is the one of the four you only render — "provided by RetroDECK", never a string to compare; `distribution`
+stays the key, and both serialize (see [The name to show a person](#the-name-to-show-a-person--label)).
 
 **Two consequences for a client that offers to delete or replace firmware.** Such a file is restored by the
 distribution's own component prepare — the repair is a component reset, not a download, and for the file this started

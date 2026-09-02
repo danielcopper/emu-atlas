@@ -967,6 +967,55 @@ longer holds. That is what the pin is for reading at a release.
 `cp`, its source must still be the entry's below the extras root, and its destination must still be the entry's below
 `$bios_path`.
 
+## `distribution_labels.json` — how a distribution spells its own name
+
+Read by `atlas.distribution_labels`, behind the `label` an answer states beside a distribution identifier — an
+installation's `kind` and a firmware requirement's `supplied_by.distribution` (issue #353). Those two are where a
+distribution identifier reaches a consumer as something to render; a caveat's `data` carries bare kinds and stays
+unaffected. The identifiers are machine-shaped on purpose (`retrodeck`, `bare_retroarch_flatpak`), and the first
+consumer rendering one verbatim is what this table answers: title-casing on the consumer's side turns `retrodeck` into
+`Retrodeck` for a project that writes `RetroDECK`, and it has to guess again at every new identifier.
+
+No machine states a spelling as a **name**. The strings do occur — EmuDeck's marker lives under a directory called
+`EmuDeck`, the bare Flatpak's application id is `org.libretro.RetroArch` and its configured paths repeat it, and
+RetroDECK's marker names `RetroDECK` as the repository it updates from — but each of those is a path segment, an
+application id or a repository name. Reading a display name out of them answers `retroarch` for a native install, whose
+config directory is spelled lowercase, and leaves nothing to tell the two RetroArch installations apart. So it is world
+knowledge like the rest of this directory: packaged, versioned, and cited to the project's own text.
+
+```json
+"bare_retroarch_flatpak": {
+  "label": "RetroArch (Flatpak)",
+  "spelling": "RetroArch",
+  "citation": "the program's own README at libretro/RetroArch 0630231f…: the title '# RetroArch' (README.md:3) and the sentence under it … The '(Flatpak)' half is atlas's own qualifier …"
+}
+```
+
+- `spelling` — the name as the cited source writes it.
+- `citation` — where it was read: the repository, the **commit** the README was read at, and the lines quoted. A commit,
+  not the blob hash `gh api …/readme` hands back — that one resolves to no revision a reader can open.
+- `label` — what atlas presents. It is the spelling itself wherever one name is enough (`RetroDECK`, `EmuDeck`), and
+  adds a qualifier where two kinds are one program in two packagings: RetroArch spells no difference between its Flatpak
+  and a native install, so the words telling them apart are atlas's and say so in the citation.
+
+Two rules make the file honest rather than merely present. **The loader requires the cited spelling to survive verbatim
+inside the label** — a label may say more than its source does (`RetroArch (Flatpak)`), never something else
+(`Retroarch`), which is the one defect a citation alone would not catch. And **a kind with no entry is a table error**:
+`distribution_label` raises instead of handing back the identifier or a title-cased guess, and two tests derive the
+identifiers that need an entry — the handle classes' kinds, and the distributions `distribution_supplied.json` names —
+rather than listing them by hand.
+
+The label is presentation and nothing branches on it, in atlas or in a consumer. Two comparisons exist and both are
+gates: the loader's, above, and `scripts/validate_vectors.py` holding every vector's label to the packaged spelling, so
+a corpus cannot state `Retrodeck` and pass. That is also why a label carries no version into an answer the way a copy
+list's `card_version` does: no decision rests on which revision of this table was read. The file's `version` and
+`reviewed` say when the spellings were last read against their sources, which is what re-reading them needs.
+
+One name, two jobs — this file's `label` is not the `label` in `arrangement_evidence.json` beside it. That one is a
+sentence fragment written to read inside caveat prose ("no live installation of **an EmuDeck arrangement** has been
+observed"); this one is the project's own display name, which a client renders on its own. They coincide for `retrodeck`
+and for nothing else.
+
 ## `launch_formats.json` — formats that need an installation step before anything launches
 
 Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the launchability question (issue #36). The
