@@ -128,6 +128,15 @@ The four firmware entry points ship: live `.info` declarations from the installe
   and no member list, so nothing packaged says which ROMs a correct `neogeo.zip` holds. Atlas would have to open the
   archive and own a second source of truth for its contents. Until such a source exists, "present, and its packaging
   differs" is the strongest true statement about these files.
+- **What lies inside a declared folder is unanswered.** `declared_kind` says when a core opens a declaration as a
+  directory (`FIRMWARE_DECLARED_DIRECTORY`, LRPS2's `pcsx2/bios` the first row), and a present folder therefore answers
+  `satisfied: None`: the shape is right and nothing about its contents is established. The images in `pcsx2/bios` do
+  have packaged identities — `firmware_hashes.json` carries 73 `pcsx2/bios/…` entries — so a later step could answer
+  which of them are there and whether any of them boots, the way the DuckStation search family already answers a
+  directory of unnamed BIOS images. What it needs first is the core's own acceptance rule read at the shipped revision —
+  LRPS2 keeps a listed file only when its size is between 4 and 8 MiB and `IsBIOS` recognises it
+  (`libretro/main.cpp:1809-1819` at 14d19f8) — because "an image atlas recognises" and "an image this core would boot"
+  are different claims. The table itself grows one core at a time and only from source.
 - **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary

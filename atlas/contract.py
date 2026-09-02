@@ -390,6 +390,7 @@ def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
         "file_name": requirement.file_name,
         "path": requirement.path,
         "declared": requirement.declared,
+        "declared_kind": requirement.declared_kind,
         "identity": _identity_contract(requirement.identity),
         "found": requirement.found,
         "present": requirement.present,
@@ -462,7 +463,12 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
     so a dropped file can never make a core look complete. ``path`` is the
     **resolved** destination and ``declared`` the string the core spelled: two
     declarations that land on one file are one place, and the name the core
-    opens is still stated.
+    opens is still stated. ``declared_kind`` is the third of that group and
+    says what the core does with the name: opens it as a file, or lists it as a
+    folder. Like ``declared`` it is about the declaration rather than what was
+    found, so it stands over an empty destination — which is where it earns its
+    keep, because ``found: "missing"`` on a folder declaration is a folder to
+    create rather than a file to fetch.
 
     A core's ``requirements`` list is a conjunction, and one entry may be an
     ``alternatives`` group instead of a requirement — see

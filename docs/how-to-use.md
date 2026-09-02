@@ -1906,6 +1906,7 @@ for core in answer.cores:
         for req in reqs:
             req.file_name, req.path    # what the core opens, and the absolute resolved destination
             req.need                   # 'required' | 'optional'   — what the emulator asks for
+            req.declared_kind          # 'file' | 'directory'      — what the core OPENS the path at
             req.present                # True | False | None       — what lies at the destination
             req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | 'not-comparable'
                                        #   — or None, when nothing is there to check
@@ -1923,6 +1924,30 @@ one emulator emits it — DuckStation, whose per-region BIOS keys are read one-p
 plain requirements. The group's own `satisfied` is the honest lift over the region atlas cannot read: `True` when every
 option is met, `False` when every option fails, `None` for the mixed group, and `requirements_met` folds it in through
 exactly that.
+
+**Some cores open a declaration as a folder, and `declared_kind` says which.** `firmwareN_path` is a bare string with no
+type, no other typed field in a `.info` holds the difference, and RetroArch's own presence check is one stat that
+answers alike for a file and a directory. The `firmwareN_desc` beside the path does sometimes say it in prose — LRPS2's
+reads `'pcsx2/bios' folder` — but a description is what a packager wrote, so atlas does not read it. The answer comes
+from a curated table in `atlas/firmware.py` instead, one row per `(core, declared path)`, each read from that core's own
+source at the shipped version. LRPS2's `pcsx2/bios` is the first row: the core lists that folder to find out which BIOS
+images it has. It is a property of the _declaration_, so it holds when nothing is there, which is the case a consumer
+acts on:
+
+- `found: "missing"` with `declared_kind: "directory"` is **create this folder**, not fetch this file. Without the field
+  the two are the same word, and the user who has not created the folder is exactly the one who needs the instruction.
+- `found: "directory"` there is the right shape and carries no caveat. `satisfied` stays `None` all the same: which
+  images lie inside the folder is a question this answer does not ask, so nothing about it is established.
+- `found: "file"` there is the wrong shape, and it is stated rather than hedged: the core lists that path and a plain
+  file has no inside, so `satisfied` is `False` and `firmware-path-not-a-directory` carries the path plus the
+  `table_version` that made the call. `checked` stays `"unknown"` — nothing was hashed, because no packaged identity can
+  belong to a folder.
+
+Everything the table does not name is `declared_kind: "file"`. That is a default, not a finding — nothing has been read
+about such a declaration — and what it buys you is that a declaration with no row answers exactly as it did before the
+table existed. The mirror image of the wrong-shape case is `firmware-path-obstructed`: a directory sitting where a
+**file** declaration points, which establishes nothing either way and is still not a missing file. It rides every route,
+not just the `.info` one, so its message says what was read rather than what the table holds.
 
 `unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
