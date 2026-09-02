@@ -47,6 +47,13 @@ works the same way): no module imports the package by its own name, and no packa
 a convention — `tests/test_relocation.py` holds both halves, sweeping the shipped source for the self-naming shapes and
 importing a copy under a parent package in an interpreter that provably cannot see an installed `atlas`.
 
+The copy also runs on the host's interpreter, and a frozen runtime is not a whole interpreter: a PyInstaller bundle
+ships the stdlib modules its build analysis reached, so availability there is a per-module question rather than a
+per-version one. Decky Loader's bundle carries `pyexpat` but not the `xml.etree` wrapper around it, and atlas, which
+imported that wrapper, failed there at import time (issue #339). Since v0.5.1 the XML reads go through `atlas/_xml.py`:
+the same expat ElementTree itself parses with, in ElementTree's shape. Zero runtime dependencies is one half of "a
+directory copy runs where the consumer runs"; keeping atlas's own stdlib surface small is the other.
+
 ### Proving the copy against a release
 
 A directory copy carries no dist-info to ask, so the package states its own version:
@@ -95,10 +102,21 @@ sys.modules["backports.zstd"] = importlib.import_module("_vendor.backports.zstd"
 the import machinery consults `sys.modules` before it searches anywhere. The copy stays literal; nothing in it is
 patched.
 
-That is the shape the first consumer plans (danielcopper/romm-tender#1660): Decky Loader's embedded Python and the
-plugin's pin are 3.11, and the manylinux x86_64 `backports.zstd` wheel goes in beside the atlas copy — the consumer's
-stated plan, not a result measured here. atlas itself neither ships nor imports the backport: the probe is discovery,
-not a dependency.
+The first consumer has measured the runtime side of this on its own bundle and published what it found
+([danielcopper/romm-tender#1660](https://github.com/danielcopper/romm-tender/issues/1660#issuecomment-5481535804)) —
+that consumer's measurement on that consumer's runtime, not a result verified here. Decky Loader 3.2.6 is a PyInstaller
+bundle embedding CPython 3.11, and it runs a plugin backend as a re-exec'd child of that same binary; it already imports
+third-party cp311 extension modules of its own, so one more imported extension module is not a new capability for that
+runtime. The `cp311-cp311-manylinux2014_x86_64` wheel of `backports.zstd` 1.7.0 fits it: the extension module declares
+no `NEEDED` entry for libpython (it resolves the CPython symbols it uses out of the host process), needs only libc and
+libpthread, and asks for no versioned glibc symbol above `GLIBC_2.14`. The licence is PSF-2.0, unpacked the wheel is 1.4
+MB of which the extension module is 960 KB, and the `_cffi/` fallback the wheel also carries is inert in that wheel,
+because the `_zstd_cffi` module that fallback imports is not included.
+
+The codec's single reader is also why that consumer does not ship the backport in its first cut: shipping without the
+codec degrades only EmuDeck's catalogue answer, and `emulator-catalogue-sealed` says so where it does, which puts the
+wheel in the later wave that brings that consumer's EmuDeck surface. atlas itself neither ships nor imports the
+backport: the probe is discovery, not a dependency.
 
 ## The standard query pattern
 
