@@ -354,11 +354,16 @@ If your catalogue speaks a public vocabulary — IGDB, libretro's database names
 translates it, and qualifies the translation by this installation:
 
 ```python
-answer = inst.systems_for_platform("igdb", "dc")     # slug or numeric id, both match
+answer = inst.systems_for_platform("igdb", "dc")     # slug or numeric id as a string, both match
 # answer.platforms == ('dreamcast',)                  ← the crosswalk half: what the id corresponds to
 # answer.matches   == (PlatformSystemMatch(system='dreamcast', status='declared',
 #                                          platforms=('dreamcast',), tags_source='catalogue'),)
 ```
+
+The platform value is a string in every vocabulary, so a numeric id passes as its decimal string: holding IGDB's numeric
+`igdb_id`, ask with `str(igdb_id)`. An unknown vocabulary and a non-string value both raise `ValueError`, and nothing is
+coerced on the way in — `str()` of `None`, `True` or `7.0` is `'None'`, `'True'` or `'7.0'`, so atlas states what it
+wanted rather than reporting `platform-unmapped` for a value that was never a key.
 
 The question is answered from its two rightful places. What the id _corresponds to_ is world knowledge — a pinned,
 source-cited crosswalk (`atlas/data/platform_ids_crosswalk.json`), keyed on ES-DE's **platform** vocabulary and, for

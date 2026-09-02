@@ -4,7 +4,9 @@ Two things are held down: the loader refuses a table it cannot place (every
 refusal is an identity a question could otherwise answer out of), and the
 matching rules are exactly the documented ones — numeric id or slug for IGDB,
 the database name verbatim for libretro, digits for the two scraper columns.
-The machine-qualified half lives on the handles and is proven by the vectors.
+The machine-qualified half lives on the handles and is proven by the vectors —
+except the value boundary, which refuses instead of answering and so has no
+vector to live in: a handle asks it here, where the consumer meets it.
 """
 
 from __future__ import annotations
@@ -13,6 +15,8 @@ import json
 
 import pytest
 
+import atlas
+from atlas.machine import FixtureMachine
 from atlas.platforms import (
     KNOWN_PLATFORM_VOCABULARIES,
     PLATFORM_CROSSWALK_SCHEMA,
@@ -134,3 +138,62 @@ class TestTheLookupsSpeakTheDocumentedRules:
 
     def test_the_vocabularies_are_the_documented_four(self):
         assert KNOWN_PLATFORM_VOCABULARIES == ("igdb", "libretro", "screenscraper", "thegamesdb")
+
+
+class TestTheValueBoundaryRefusesRatherThanCoerces:
+    """Issue #338: the natural call of a consumer holding a numeric id.
+
+    A server product publishes its platforms as IGDB's numeric ids, so
+    ``systems_for_platform("igdb", 7)`` is the call its client reaches for.
+    Only the type is refused, and it is refused by name: ``None``, ``True`` and
+    ``7.0`` carry no key at all, so a stated refusal beats the silently empty
+    answer a ``str()`` would produce. The empty string is the other side — a
+    value no platform carries, which is a question with an answer.
+    """
+
+    def test_a_numeric_id_passed_as_an_int_is_refused(self):
+        with pytest.raises(ValueError, match="expected a string"):
+            platforms_for("igdb", 7)  # type: ignore[arg-type]
+
+    def test_the_refusal_names_the_vocabulary_and_the_value(self):
+        # The message is the fix instruction. Without the vocabulary and the
+        # value in it, the consumer is back to probing for what was wanted.
+        with pytest.raises(ValueError) as refusal:
+            platforms_for("igdb", 7)  # type: ignore[arg-type]
+        assert "'igdb'" in str(refusal.value)
+        assert "got 7" in str(refusal.value)
+
+    def test_a_bool_is_no_more_a_string_than_an_int(self):
+        with pytest.raises(ValueError, match="expected a string"):
+            platforms_for("igdb", True)  # type: ignore[arg-type]
+
+    def test_none_is_refused_rather_than_read_as_no_value(self):
+        with pytest.raises(ValueError, match="expected a string"):
+            platforms_for("igdb", None)  # type: ignore[arg-type]
+
+    def test_a_float_is_refused_though_its_str_looks_numeric(self):
+        # The case a coercion would get quietly wrong: str(7.0) is "7.0", a
+        # shape no crosswalk row carries, so it would answer nothing found.
+        with pytest.raises(ValueError, match="expected a string"):
+            platforms_for("igdb", 7.0)  # type: ignore[arg-type]
+
+    def test_the_decimal_string_of_a_numeric_id_is_the_key(self):
+        # The rule the first consumer had to find by probing: hold IGDB's
+        # numeric id, ask with str(id).
+        igdb_id = 24
+        assert "gba" in platforms_for("igdb", str(igdb_id))
+
+    def test_an_empty_value_stays_a_question_with_an_answer(self):
+        # Only the type is refused. "" is not a caller bug, it is a value no
+        # platform carries — and that has an answer already.
+        assert platforms_for("igdb", "") == ()
+
+    def test_a_whitespace_value_stays_a_question_with_an_answer(self):
+        assert platforms_for("libretro", "   ") == ()
+
+    def test_the_refusal_carries_through_an_installation(self):
+        # Where the consumer actually stands: the handle's question, not the
+        # module's. Nothing about the machine changes the boundary's answer.
+        handle = atlas.RetroDeck("/home/deck", FixtureMachine({}))
+        with pytest.raises(ValueError, match="expected a string"):
+            handle.systems_for_platform("igdb", 7)  # type: ignore[arg-type]
