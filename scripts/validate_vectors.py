@@ -190,7 +190,16 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "present",
     "checked",
     "satisfied",
+    "supplied_by",
 }
+# Whose file is at the destination, when it is the distribution's own copy.
+# `source` is the shipped file that was hashed — a host path, so the claim can
+# be re-checked — and `card_version` the revision of the packaged copy list
+# that named the pair.
+SUPPLIED_BY_FIELDS = {"distribution", "source", "card_version"}
+# The distributions atlas has read a copy step for. A closed set, like the
+# console regions: a word outside it is a claim no packaged card backs.
+KNOWN_SUPPLYING_DISTRIBUTIONS = {"retrodeck"}
 # An entry of a core's requirements list may be an alternatives group instead
 # of a requirement — one launch needs exactly one of its options, the console
 # region decides — discriminated by its single key, the way `unresolved` and
@@ -338,6 +347,7 @@ KNOWN_CAVEAT_CODES = {
     "emulator-catalogue-unavailable",
     "firmware-unreadable",
     "firmware-identity-not-comparable",
+    "firmware-supplied-source-unreadable",
     "firmware-content-unidentified",
     "system-unknown",
     "system-not-in-catalogue",
@@ -1370,6 +1380,33 @@ def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
     # spelling of 'declared'.
 
 
+def _validate_supplied_by(name: str, entry: Any) -> None:
+    """The provenance statement: whose file is at the destination.
+
+    It stands only over a file — a provenance claim about a path with nothing
+    at it would be about a file that does not exist — and its ``source`` is
+    absolute, because it names the shipped copy on this host so the equality
+    behind the claim can be re-checked. ``null`` needs no justification: it is
+    the ordinary value and claims nothing.
+    """
+    supplied = entry["supplied_by"]
+    if supplied is None:
+        return
+    if entry["found"] != "file":
+        fail(f"{name}: supplied_by says the FILE at the destination is the distribution's copy")
+    _require_exact(name, supplied, SUPPLIED_BY_FIELDS, "a supplied_by statement")
+    for key in ("distribution", "source", "card_version"):
+        if not isinstance(supplied[key], str) or not supplied[key]:
+            fail(f"{name}: supplied_by {key} must be a non-empty string")
+    if supplied["distribution"] not in KNOWN_SUPPLYING_DISTRIBUTIONS:
+        fail(
+            f"{name}: supplied_by distribution must be one of "
+            f"{sorted(KNOWN_SUPPLYING_DISTRIBUTIONS)}"
+        )
+    if not supplied["source"].startswith("/"):
+        fail(f"{name}: supplied_by source must be the shipped file's absolute path on this host")
+
+
 def _validate_requirement_presence(name: str, entry: Any) -> None:
     found = entry["found"]
     if found not in KNOWN_PATH_KINDS:
@@ -1491,6 +1528,7 @@ def _validate_requirement(
     _validate_requirement_path(name, entry, root)
     _validate_requirement_presence(name, entry)
     _validate_requirement_verdict(name, entry, hash_checked=hash_checked)
+    _validate_supplied_by(name, entry)
 
 
 def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, hash_checked: bool) -> None:

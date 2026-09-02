@@ -97,6 +97,7 @@ from .firmware import (
     FirmwareAnswer,
     FirmwareContext,
     FirmwareIdentification,
+    SandboxTranslation,
     SYSTEMS_WITHOUT_CATALOGUE_ID,
     load_hashes,
     read_core_declarations,
@@ -11930,6 +11931,8 @@ def _retroarch_firmware_context(
     extra_sources: tuple[str, ...] = (),
     standalone_homes: _XdgHomes | None = None,
     standalone_sandbox: _Sandbox | None = None,
+    distribution: str | None = None,
+    distribution_sandbox: SandboxTranslation | None = None,
 ) -> FirmwareContext:
     """One live read of everything a firmware answer needs, for any arrangement.
 
@@ -11954,6 +11957,13 @@ def _retroarch_firmware_context(
     directory lands. It rides beside *standalone_homes* because the two are
     one fact about the same launch, and an arrangement that establishes no
     homes resolves no card that would ask.
+
+    *distribution* and *distribution_sandbox* are the pair that lets a
+    requirement say the file at its destination is the distribution's own copy:
+    which distribution this is, in the copy list's vocabulary, and how that
+    distribution's bundled paths read from this host. Only an arrangement that
+    ships files into the firmware root passes them — a bare RetroArch ships
+    none, so nothing is asked there.
     """
     machine = sandbox.machine
     # The dropped lines are read here, not only the values: once an absent key
@@ -12069,6 +12079,8 @@ def _retroarch_firmware_context(
         standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
         standalone_sandbox=standalone_sandbox,
         standalone_xdg_pinned=standalone_homes is not None and standalone_homes.xdg_pinned,
+        distribution=distribution,
+        distribution_sandbox=distribution_sandbox,
     )
 
 
@@ -15472,8 +15484,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         files (:meth:`_cfg_sandbox`) — this context's one read of those files,
         and the ``system_directory`` read below goes through the same sandbox
         the source line describes.
+
+        RetroDECK's own sandbox map is passed twice, under one local, because
+        the two uses are the same fact: it is how a standalone emulator's
+        configured paths read from this host, and it is how the ``/app`` tree
+        RetroDECK copies its own firmware out of does.
         """
         sandbox, environment_sources = self._cfg_sandbox()
+        deploy = self._sandbox()
         return _retroarch_firmware_context(
             sandbox=sandbox,
             global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
@@ -15483,7 +15501,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             arrangement_version=_marker_version(config),
             extra_sources=environment_sources,
             standalone_homes=self._xdg_homes(),
-            standalone_sandbox=self._sandbox(),
+            standalone_sandbox=deploy,
+            distribution=self.kind,
+            distribution_sandbox=deploy,
         )
 
     def _read_firmware_context(self) -> FirmwareContext:

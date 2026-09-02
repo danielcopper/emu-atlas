@@ -2,7 +2,7 @@
   "family": "machines",
   "schema": 3,
   "spec": "DESIGN.md — firmware: an emulator-centric answer, live declarations against packaged identities",
-  "description": "Whole fixture machines in; the canonical firmware serializations (atlas/contract.py firmware_contract, identification_contract) out, asserted with exact equality. A firmware answer is about EMULATORS: each installed core states what it wants, where each file goes as an absolute path, and what is actually lying there. Two axes stay apart — need (required/optional) is what an emulator asks for, checked (verified/mismatch/unchecked/unknown) is what the machine answers, and 'we did not look' never collapses into 'we looked and cannot tell'. The load-bearing pair is firmware-core-that-declares-nothing-answers-nothing-needed against firmware-core-not-installed-is-unknown-not-nothing: the same empty list, opposite meanings, and only the installed flag plus a caveat tells them apart. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with. A core's requirements list is a conjunction, and one entry may be an 'alternatives' group — a single-key object whose options are full requirements each carrying 'regions', the console regions whose launch it serves, disjoint across the group: one launch needs exactly one option, the running disc's region decides, and a region no option lists has nothing stated for it.",
+  "description": "Whole fixture machines in; the canonical firmware serializations (atlas/contract.py firmware_contract, identification_contract) out, asserted with exact equality. A firmware answer is about EMULATORS: each installed core states what it wants, where each file goes as an absolute path, and what is actually lying there. Two axes stay apart — need (required/optional) is what an emulator asks for, checked (verified/mismatch/unchecked/unknown/not-comparable) is what the machine answers, and 'we did not look' never collapses into 'we looked and cannot tell'. The load-bearing pair is firmware-core-that-declares-nothing-answers-nothing-needed against firmware-core-not-installed-is-unknown-not-nothing: the same empty list, opposite meanings, and only the installed flag plus a caveat tells them apart. Firmware blobs are stated as {md5, sha1, size} because firmware is not text and its identity is exactly what a real file would answer with. A core's requirements list is a conjunction, and one entry may be an 'alternatives' group — a single-key object whose options are full requirements each carrying 'regions', the console regions whose launch it serves, disjoint across the group: one launch needs exactly one option, the running disc's region decides, and a region no option lists has nothing stated for it. A third axis joins them and never merges with either: supplied_by says WHOSE file is at the destination, and it is set exactly when the bytes there equal the bytes the distribution's own preparation step copies in (atlas/data/distribution_supplied.json). It is read whether or not verification was asked for, because a consumer deciding whether a file is safe to delete needs it on a cheap answer too, and it is null wherever nothing was established — not the distribution's copy, no copy list for this distribution, no entry for this destination.",
   "vectors": [
     {
       "name": "firmware-core-that-declares-nothing-answers-nothing-needed",
@@ -196,7 +196,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -215,7 +216,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -296,7 +298,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -315,7 +318,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -344,7 +348,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "sameboy_libretro.so",
@@ -363,7 +368,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -415,7 +421,8 @@
               "found": "missing",
               "present": false,
               "checked": null,
-              "satisfied": false
+              "satisfied": false,
+              "supplied_by": null
             },
             {
               "core_so": "gambatte_libretro.so",
@@ -434,7 +441,8 @@
               "found": "file",
               "present": true,
               "checked": "unchecked",
-              "satisfied": null
+              "satisfied": null,
+              "supplied_by": null
             }
           ],
           "caveats": [
@@ -513,7 +521,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "mismatch",
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -601,7 +610,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -696,7 +706,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -715,7 +726,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -945,7 +957,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mgba_libretro.so",
@@ -964,7 +977,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1052,7 +1066,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "covered_libretro.so",
@@ -1071,7 +1086,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1148,7 +1164,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "skyemu_libretro.so",
@@ -1167,7 +1184,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "skyemu_libretro.so",
@@ -1181,7 +1199,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1261,7 +1280,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "bluemsx_libretro.so",
@@ -1275,7 +1295,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1368,7 +1389,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -1387,7 +1409,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1471,7 +1494,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -1490,7 +1514,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "mismatch",
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1563,7 +1588,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "not-comparable",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1652,7 +1678,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "not-comparable",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1741,7 +1768,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1821,7 +1849,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -1834,6 +1863,745 @@
               "code": "arrangement-unverified",
               "data": {
                 "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-the-distributions-own-copy-is-said-to-be-its-own",
+      "rationale": "Issue #346's sighting. dolphin_libretro declares dolphin-emu/Sys/codehandler.bin as REQUIRED, System.dat carries no identity for it, so checked is 'unknown' and satisfied stays true — and from the outside the file was indistinguishable from a dump the user dropped there, which is how a consumer's 'delete this BIOS' threw away a file no library can give back. RetroDECK copies its whole dolphin-emu tree into the firmware root (component_prepare.sh:61), the placed file's md5 equals the shipped one's, and supplied_by says so: the distribution, the shipped file on this host, and the copy list revision that named the pair. Remove the supplied lookup from the declaration route and this vector goes red.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": {
+                    "distribution": "retrodeck",
+                    "source": "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin",
+                    "card_version": "1"
+                  }
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-file-that-differs-from-the-shipped-one-is-the-users",
+      "rationale": "The same destination, the same size, other bytes. Nothing is stated: whatever is there, it is not the copy RetroDECK places, and atlas has no business guessing whose it is. Equal sizes are on purpose — the size read is only the free pre-filter, and the md5 is what decides, so a mechanism that stopped at the size would state a supplied file here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "9c9f7b1a0b0d4e0f8a7c6b5d4e3f2a10",
+            "sha1": "1111111111111111111111111111111111111111",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-name-the-copy-list-does-not-carry-is-never-supplied",
+      "rationale": "scph5501.bin sits in the firmware root and a byte-identical file of the same name sits in RetroDECK's extras tree — and the copy list has no entry for it, because no line of component_prepare.sh copies it. So nothing is stated. The match is the card's destinations, never a probe for a same-named file beside the shipped ones: an implementation that searched the extras tree by name would call a PlayStation BIOS the distribution's own here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-shipped-tree-that-cannot-be-looked-at-is-stated",
+      "rationale": "The destination is covered by the copy list and the shipped tree cannot be reached — the stat below rd_extras/dolphin-emu fails. Whether the file here is RetroDECK's copy or the user's is then unestablished, and that is a degradation, so it is a caveat carrying the destination and the shipped file in RetroDECK's own spelling — never a silent null that would read as 'not the distribution's'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "inaccessible": [
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-supplied-source-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                "source": "/app/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-shipped-file-whose-bytes-will-not-come-back-is-stated",
+      "rationale": "The other half of the same degradation, and a different branch: the shipped file stats fine and its bytes do not come back (the chmod-000 file). The size pre-filter passes — both are 9248 bytes — so the comparison gets as far as the digest and fails there, and the same caveat says so. A mechanism that treated an unreadable source as 'not equal' would answer null here and lose the difference between 'not the distribution's copy' and 'could not tell'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin": {
+            "status": "unreadable",
+            "size": 9248
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-supplied-source-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                "source": "/app/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-a-supplied-archive-is-supplied-and-still-not-comparable",
+      "rationale": "The two statements are different questions and both stand. ecwolf.pk3 is RetroDECK's own copy (component_prepare.sh:62) — the placed bytes are the shipped bytes — and those bytes are not the ones System.dat pins, which over an archive identity settles nothing: checked is 'not-comparable', satisfied is null, and supplied_by is set. Whose file it is and whether its bytes are the pinned ones must never collapse into one field; folding provenance into 'checked' is exactly what this vector refuses.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/ecwolf.pk3": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 178755
+          },
+          "/mnt/sd/retrodeck/bios/ecwolf.pk3": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 178755
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "ecwolf_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/mnt/sd/retrodeck/bios/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "not-comparable",
+                  "satisfied": null,
+                  "supplied_by": {
+                    "distribution": "retrodeck",
+                    "source": "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/ecwolf.pk3",
+                    "card_version": "1"
+                  }
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-identity-not-comparable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/ecwolf.pk3",
+                "file_name": "ecwolf.pk3",
+                "archive_reason": "core-bundled",
+                "table_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-an-unreadable-destination-is-stated-with-nothing-to-check-against",
+      "rationale": "codehandler.bin has no packaged identity, so the identity check never reads a byte and cannot state anything about this file — but the provenance check does read it, because RetroDECK's copy list covers the destination and the shipped file is the same size. The bytes do not come back, so neither what the file is nor whose copy it is can be established, and that is a degradation: firmware-unreadable, with supplied_by null. On the reference machine three of the five supplied files have no identity, codehandler.bin among them, so this is the ordinary shape of the case rather than a corner. Let the provenance route answer null without stating anything and this vector goes red — the answer would then read as 'not the distribution's copy'.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "status": "unreadable",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "dolphin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-firmware-an-unreadable-destination-is-stated-once-not-twice",
+      "rationale": "The same unreadable destination where the identity check DOES run: ecwolf.pk3 has a packaged identity, verification was asked for, and the size matches the pinned one, so that check reads the bytes first and fails. One fact, one caveat — the provenance check sees that the read already happened and came back empty, and neither reads the file again nor states it a second time. Two firmware-unreadable entries here would be the defect; so would zero.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ecwolf_libretro.info": "display_name = \"Wolfenstein 3D (ECWolf)\"\nsystemname = \"Wolfenstein 3D Game Engine\"\ndatabase = \"Wolfenstein 3D\"\nfirmware_count = 1\nfirmware0_desc = \"ecwolf.pk3 (ECWolf System File)\"\nfirmware0_path = \"ecwolf.pk3\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ecwolf_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/ecwolf.pk3": {
+            "md5": "00000000000000000000000000000000",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 178755
+          },
+          "/mnt/sd/retrodeck/bios/ecwolf.pk3": {
+            "status": "unreadable",
+            "size": 178755
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "installation": "retrodeck",
+          "kind": "core",
+          "core_so": "ecwolf_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "ecwolf_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "ecwolf_libretro.so",
+                  "system": "ports",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ecwolf.pk3",
+                  "path": "/mnt/sd/retrodeck/bios/ecwolf.pk3",
+                  "declared": "ecwolf.pk3",
+                  "identity": {
+                    "md5": "c011b428819eea4a80b455c245a5a04d",
+                    "sha1": "9259b87edfe9b9f6d0749788a75a6ccf158f50aa",
+                    "size": 178755,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/ecwolf.pk3"
               }
             }
           ]
@@ -1903,7 +2671,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -1922,7 +2691,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2004,7 +2774,8 @@
                   "found": "directory",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -2023,7 +2794,8 @@
                   "found": "inaccessible",
                   "present": null,
                   "checked": null,
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2154,7 +2926,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -2173,7 +2946,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2251,7 +3025,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [
@@ -2488,7 +3263,8 @@
                   "found": "directory",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2573,7 +3349,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -2592,7 +3369,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2817,7 +3595,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -2968,7 +3747,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3060,7 +3840,8 @@
                   "found": "directory",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3164,7 +3945,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3245,7 +4027,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3340,7 +4123,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [
@@ -3434,7 +4218,8 @@
                   "found": "inaccessible",
                   "present": null,
                   "checked": null,
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3601,7 +4386,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3693,7 +4479,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3785,7 +4572,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -3877,7 +4665,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -4066,7 +4855,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -4149,7 +4939,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -4223,7 +5014,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -4301,7 +5093,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -4380,7 +5173,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [
@@ -4911,7 +5705,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "verified",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5101,7 +5896,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5174,7 +5970,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5244,7 +6041,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5389,7 +6187,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5476,7 +6275,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5563,7 +6363,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5646,7 +6447,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "flycast_libretro.so",
@@ -5665,7 +6467,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "flycast_libretro.so",
@@ -5684,7 +6487,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5773,7 +6577,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "smsplus_libretro.so",
@@ -5792,7 +6597,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5886,7 +6692,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -5977,7 +6784,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6068,7 +6876,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6154,7 +6963,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6242,7 +7052,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6343,7 +7154,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6485,7 +7297,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6648,7 +7461,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -6667,7 +7481,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6830,7 +7645,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -6849,7 +7665,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -6936,7 +7753,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 },
                 {
                   "core_so": "gambatte_libretro.so",
@@ -6955,7 +7773,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7132,7 +7951,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7226,7 +8046,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7318,7 +8139,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -7332,7 +8154,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -7346,7 +8169,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7518,7 +8342,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -7532,7 +8357,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -7546,7 +8372,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7640,7 +8467,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -7654,7 +8482,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8002,7 +8831,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8090,7 +8920,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8261,7 +9092,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8347,7 +9179,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8512,7 +9345,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -8526,7 +9360,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -8540,7 +9375,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8811,7 +9647,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -8825,7 +9662,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -8839,7 +9677,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -8932,7 +9771,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -9032,7 +9872,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -9134,7 +9975,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -9632,6 +10474,7 @@
                       "present": false,
                       "checked": null,
                       "satisfied": false,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -9649,6 +10492,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-j",
                         "pal"
@@ -9758,6 +10602,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -9775,6 +10620,7 @@
                       "present": false,
                       "checked": null,
                       "satisfied": false,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-j"
                       ]
@@ -9792,6 +10638,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "pal"
                       ]
@@ -9899,6 +10746,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": null,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -9916,6 +10764,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-j",
                         "pal"
@@ -10030,6 +10879,7 @@
                       "present": false,
                       "checked": null,
                       "satisfied": false,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -10134,6 +10984,7 @@
                       "present": false,
                       "checked": null,
                       "satisfied": false,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -10247,6 +11098,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-j"
                       ]
@@ -10264,6 +11116,7 @@
                       "present": false,
                       "checked": null,
                       "satisfied": false,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -10281,6 +11134,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "pal"
                       ]
@@ -10473,7 +11327,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -10569,7 +11424,8 @@
                   "found": "missing",
                   "present": false,
                   "checked": null,
-                  "satisfied": false
+                  "satisfied": false,
+                  "supplied_by": null
                 },
                 {
                   "core_so": null,
@@ -10583,7 +11439,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -10691,6 +11548,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-u"
                       ]
@@ -10708,6 +11566,7 @@
                       "present": true,
                       "checked": "unknown",
                       "satisfied": true,
+                      "supplied_by": null,
                       "regions": [
                         "ntsc-j",
                         "pal"
@@ -10809,7 +11668,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -10996,7 +11856,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unknown",
-                  "satisfied": true
+                  "satisfied": true,
+                  "supplied_by": null
                 }
               ],
               "refused": [],

@@ -90,6 +90,7 @@ from .core_info import (
     parse_core_info,
     unread_reason,
 )
+from .distribution_supplied import lookup_distribution_supplied
 from .esde import KIND_LIBRETRO
 from .machine import (
     DIGEST_MD5,
@@ -244,6 +245,15 @@ CAVEAT_FIRMWARE_UNREADABLE = "firmware-unreadable"
 # ``unknown``: the value says what atlas will not claim, the caveat says why,
 # and its ``archive_reason`` says which kind of drift moved the bytes.
 CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE = "firmware-identity-not-comparable"
+# A destination the distribution's own copy list covers, whose shipped
+# counterpart could not be read — the deploy is not there, the tree cannot be
+# looked at, or the file's bytes will not come back. So whether the file at
+# that destination is the distribution's own copy stays unestablished, and the
+# ``supplied_by`` that would have carried the answer is ``None`` for a reason
+# rather than in silence. Its subject is the *shipped* file: an unreadable
+# destination is the requirement's own observation to state
+# (:data:`CAVEAT_FIRMWARE_UNREADABLE`), not this one's.
+CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE = "firmware-supplied-source-unreadable"
 CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
 # The marked-word code: a requirement's ``system`` is one of atlas's own
@@ -1278,6 +1288,42 @@ def catalogue_vocabulary_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class SuppliedBy:
+    """The file at this destination is the distribution's own copy, and here is the one it copied.
+
+    What a consumer does with it is the reason it exists. A file this is stated
+    for is **restored by the distribution's own component prepare**, which is
+    where the copy at this destination came from — so the repair for a missing
+    or damaged one is a reset of that component, not a download. Some of these
+    files no library carries at all: Dolphin's ``Sys/codehandler.bin`` is the
+    sighting, declared as required firmware, covered by no ``System.dat`` entry,
+    and deleted by a consumer's "remove this BIOS" action as though the user
+    had put it there. Others ``System.dat`` does know — ``ecwolf.pk3`` is one,
+    and it is a requirement here — and they are still not the user's to lose,
+    because deleting one removes part of the installation rather than a dump
+    that can be fetched back. A client that offers to delete or replace firmware
+    must say so either way.
+
+    ``source`` is the shipped copy **as this host reads it** — the file that was
+    hashed — so a caller can look at it. ``distribution`` is the arrangement
+    kind that ships it, and ``card_version`` the revision of the packaged copy
+    list that named the pair, carried the way an identity carries its
+    ``table_version``: the list ships inside the data file, so a vendored older
+    atlas reports the reading it actually holds.
+
+    Its absence claims nothing. Nothing is stated for a file that differs from
+    the shipped one (it is the user's, whatever it is), for a destination no
+    copy list covers, and for a distribution atlas has no list for — three
+    different silences with one honest reading, that atlas did not establish
+    this file's provenance.
+    """
+
+    distribution: str
+    source: str
+    card_version: str
+
+
+@dataclass(frozen=True, slots=True)
 class FirmwareRequirement:
     """One (core, declared file) pair — the atom of the whole model.
 
@@ -1299,6 +1345,13 @@ class FirmwareRequirement:
     not ``unknown`` (it could not be established), and ``not-comparable`` (the
     bytes differ and the identity is an archive, so the difference judges
     nothing) is not ``mismatch`` — none of the three is a verdict.
+
+    ``supplied_by`` is a third axis and not a fourth value of the second: it
+    says whose file is at the destination, never whether it is right. A
+    distribution that places a file into the firmware root itself (RetroDECK's
+    Dolphin ``Sys`` tree) leaves something no library can give back, and stating
+    that is what keeps a "delete this BIOS" action from throwing it away
+    (:class:`SuppliedBy`).
 
     ``regions`` is ``None`` on an ordinary requirement — every launch needs
     this file — and names the console regions whose launch this file serves on
@@ -1325,6 +1378,14 @@ class FirmwareRequirement:
     found: PathKind
     checked: FirmwareChecked | None
     regions: tuple[str, ...] | None = None
+    # Provenance, not a verdict: whether the file at ``path`` is the copy the
+    # distribution places itself (:class:`SuppliedBy`). It rides last because
+    # it is additive to every existing construction — and it is deliberately
+    # *not* folded into ``checked``, which answers a different question. A
+    # supplied file can be verified, not-comparable or unknown all the same;
+    # ecwolf.pk3 on a RetroDECK is supplied *and* not-comparable, and both
+    # statements stand.
+    supplied_by: SuppliedBy | None = None
 
     def __post_init__(self) -> None:
         if self.need not in FIRMWARE_NEEDS:
@@ -1345,6 +1406,11 @@ class FirmwareRequirement:
                 )
         elif self.checked is not None:
             raise ValueError("FirmwareRequirement: nothing is there to check, so checked must be None")
+        if self.supplied_by is not None and self.found != KIND_FILE:
+            raise ValueError(
+                "FirmwareRequirement: supplied_by states that the FILE at the destination is the "
+                f"distribution's copy, and found is {self.found!r}"
+            )
 
     @property
     def present(self) -> bool | None:
@@ -1773,6 +1839,15 @@ class FirmwareContext:
     # root of an emulator that picks one by whether XDG_CONFIG_HOME is set —
     # inside a sandbox it always is, so there is nothing left to probe.
     standalone_xdg_pinned: bool = False
+    # Which distribution this arrangement is, in the copy list's vocabulary
+    # (:mod:`atlas.distribution_supplied`), and how that distribution's own
+    # bundled paths read from this host. Both ``None`` on an arrangement that
+    # ships nothing into the firmware root — a bare RetroArch — and then no
+    # requirement is asked the supplied question at all. They ride as a pair
+    # because the card is useless without the map that reaches its tree: the
+    # source paths it states are the distribution's own spellings.
+    distribution: str | None = None
+    distribution_sandbox: SandboxTranslation | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1864,9 +1939,44 @@ def save_artifact_paths() -> frozenset[str]:
     return _SAVE_ARTIFACTS
 
 
+@dataclass(frozen=True, slots=True)
+class _ObservedBytes:
+    """What one observation learned about the destination's own bytes.
+
+    Three states in two fields, and the third state is why they are two:
+    ``md5`` is the digest where one was read, ``unreadable`` says the read
+    happened and came back empty, and *neither set* says no read happened at
+    all. Collapsing the last two would cost the caller both ways — a route that
+    reads the same file afterwards would hash it a second time, and would state
+    an unreadable file's caveat a second time after the read that already
+    carried it.
+    """
+
+    md5: str | None = None
+    unreadable: bool = False
+
+
+def _unreadable_bytes(path: str) -> Caveat:
+    """The file is there and its bytes will not come back — whichever route found out.
+
+    One code for one fact, and the message names both consequences because two
+    routes reach it. The identity check reaches it when a declared file with a
+    packaged identity cannot be hashed; the provenance check reaches it when
+    that same file cannot be compared against the distribution's own copy — and
+    that one runs over files the table knows nothing about, where a sentence
+    about an unestablished identity would describe a check that never ran.
+    """
+    return Caveat(
+        CAVEAT_FIRMWARE_UNREADABLE,
+        f"{path} is there and its bytes cannot be read, so neither what the file is nor whose copy "
+        "it is can be established — this is a read failure, not a verdict on the file",
+        {"path": path},
+    )
+
+
 def _observe(
     machine: Machine, path: str, identity: FirmwareIdentity | None, *, verify: bool, file_name: str
-) -> tuple[PathKind, FirmwareChecked | None, Caveat | None]:
+) -> tuple[PathKind, FirmwareChecked | None, Caveat | None, _ObservedBytes]:
     """What the machine says about one destination: what is there, and how sure we are.
 
     All four path kinds are distinct answers, because the caller acts on each
@@ -1888,6 +1998,10 @@ def _observe(
     requirement's own rather than one derived here from a resolved path. It is
     required rather than defaulted for exactly that reason: a default would be a
     second, quieter source for a name the caller already holds.
+
+    The fourth return value is what this look learned about the destination's
+    own bytes (:class:`_ObservedBytes`), for the provenance check that runs
+    after it and would otherwise read the same file again.
     """
     kind = machine.path_kind(path)
     if kind == KIND_INACCESSIBLE:
@@ -1900,6 +2014,7 @@ def _observe(
                 "is unknown — this is not an absent file",
                 {"path": path},
             ),
+            _ObservedBytes(),
         )
     if kind == KIND_DIRECTORY:
         # Not necessarily wrong: LRPS2 declares "pcsx2/bios" and means the
@@ -1916,34 +2031,26 @@ def _observe(
                 "established, and it is not a missing file",
                 {"path": path},
             ),
+            _ObservedBytes(),
         )
     if kind != KIND_FILE:
-        return kind, None, None
+        return kind, None, None, _ObservedBytes()
     if identity is None:
         # Nothing to check against — and that is not the same as "not checked".
-        return KIND_FILE, CHECKED_UNKNOWN, None
+        return KIND_FILE, CHECKED_UNKNOWN, None, _ObservedBytes()
     if not verify:
-        return KIND_FILE, CHECKED_UNCHECKED, None
+        return KIND_FILE, CHECKED_UNCHECKED, None, _ObservedBytes()
     # Size is a free pre-filter: a wrong size settles the question without
     # reading a byte of the file.
     size = machine.file_size(path)
     if size is not None and size != identity.size:
-        return _differs(identity, path, file_name)
+        return (*_differs(identity, path, file_name), _ObservedBytes())
     digest = machine.file_digest(path, DIGEST_MD5)
     if digest is None:
-        return (
-            KIND_FILE,
-            CHECKED_UNKNOWN,
-            Caveat(
-                CAVEAT_FIRMWARE_UNREADABLE,
-                f"{path} is there but its bytes cannot be read, so its identity stays unestablished — "
-                "this is a read failure, not a verdict on the file",
-                {"path": path},
-            ),
-        )
+        return KIND_FILE, CHECKED_UNKNOWN, _unreadable_bytes(path), _ObservedBytes(unreadable=True)
     if digest.lower() == identity.md5.lower():
-        return KIND_FILE, CHECKED_VERIFIED, None
-    return _differs(identity, path, file_name)
+        return KIND_FILE, CHECKED_VERIFIED, None, _ObservedBytes(md5=digest)
+    return (*_differs(identity, path, file_name), _ObservedBytes(md5=digest))
 
 
 def _differs(
@@ -1983,6 +2090,116 @@ def _differs(
                 "table_version": identity.table_version,
             },
         ),
+    )
+
+
+def _supplied_source_unreadable(path: str, source: str) -> Caveat:
+    """The shipped counterpart could not be read, so the provenance stays open.
+
+    *source* is the shipped file in the **distribution's own spelling** — the
+    path its script names, inside its sandbox. That spelling exists whether or
+    not the tree translates to anything on this host, which is exactly the
+    state this caveat reports, and it identifies the file the distribution
+    ships regardless of where a host happens to keep the deploy.
+    """
+    return Caveat(
+        CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE,
+        f"{path} sits where this distribution copies its own {source}, and that shipped file cannot "
+        "be read from here — so whether the file here is the distribution's copy or the user's is "
+        "unestablished; this is a read failure, not a statement about either file",
+        {"path": path, "source": source},
+    )
+
+
+def _shipped_file(
+    machine: Machine, sandbox: SandboxTranslation, source_root: str, source: str
+) -> tuple[str | None, bool]:
+    """``(the shipped file as this host reads it, whether reading the tree failed)``.
+
+    Three outcomes, and the middle one is why the extras root is translated
+    once and the file joined onto it rather than the whole path translated in
+    one step: that would collapse "this deploy carries no such file" and "this
+    deploy cannot be read at all" into the same ``None``, and those two must
+    not be one answer. A user's own file inside a copied directory *is* the
+    middle case, and it is not the distribution's.
+    """
+    host_root = sandbox.translate(source_root)
+    if host_root is None:
+        return None, True
+    host_source = os.path.join(host_root, source)
+    kind = machine.path_kind(host_source)
+    if kind == KIND_FILE:
+        return host_source, False
+    return None, kind != KIND_MISSING
+
+
+def _supplied_by(
+    machine: Machine, context: FirmwareContext, path: str, here: _ObservedBytes
+) -> tuple[SuppliedBy | None, Caveat | None]:
+    """Is the file at *path* the copy this distribution places itself?
+
+    The statement is made from the machine and only from the machine: the
+    packaged card says where the distribution keeps its own copy, and the two
+    files are then hashed. Equal bytes state it; anything else states nothing.
+    The size read in between is the free pre-filter the verification route uses
+    for the same reason — a difference settles it without reading a byte — and
+    it is decisive only when **both** sizes came back, because a size that
+    could not be read is not a difference.
+
+    Asked whether or not ``verify`` was, because it is not a verification: it
+    answers *whose file this is*, and a consumer's delete-this-BIOS decision
+    needs that answer as much on a cheap listing as on a checked one. The cost
+    is bounded by the card — only a destination one of its entries covers
+    reaches a digest at all, and only where the two sizes have not already
+    ruled the equality out.
+
+    *here* is what the observation before it already learned about the
+    destination's own bytes, and it settles both halves of reading them twice.
+    A digest it read is reused rather than computed again. A read it made that
+    came back empty has already carried :data:`CAVEAT_FIRMWARE_UNREADABLE`, so
+    this route says nothing and returns at once — but where no read happened,
+    which is every file the packaged table has no identity for and every
+    unverified answer, the read happens **here** and an empty one is stated
+    under that same code. Whose file it is is as unestablishable as what it is
+    when the bytes will not come back, and a silent ``None`` would read as
+    "not the distribution's".
+    """
+    if here.unreadable:
+        return None, None
+    root = context.root
+    card = lookup_distribution_supplied(context.distribution)
+    sandbox = context.distribution_sandbox
+    if root is None or card is None or sandbox is None or not _stays_under(root, path):
+        return None, None
+    # The firmware-root bound is the module's own predicate, never a second
+    # spelling of it; ``relpath`` over two resolved absolute paths is then pure
+    # string work, and the root itself comes back as "." — a destination no
+    # entry names. What bounds the *source* side is the copy list's loader,
+    # which takes no source that is not a clean relative path.
+    source = card.source_of(os.path.relpath(path, root))
+    if source is None:
+        return None, None
+    spelled = f"{card.source_root}/{source}"
+    host_source, unreadable = _shipped_file(machine, sandbox, card.source_root, source)
+    if host_source is None:
+        return None, _supplied_source_unreadable(path, spelled) if unreadable else None
+    shipped_size = machine.file_size(host_source)
+    here_size = machine.file_size(path)
+    if shipped_size is not None and here_size is not None and shipped_size != here_size:
+        return None, None
+    shipped_digest = machine.file_digest(host_source, DIGEST_MD5)
+    if shipped_digest is None:
+        return None, _supplied_source_unreadable(path, spelled)
+    here_digest = here.md5 if here.md5 is not None else machine.file_digest(path, DIGEST_MD5)
+    if here_digest is None:
+        return None, _unreadable_bytes(path)
+    if here_digest.lower() != shipped_digest.lower():
+        return None, None
+    return (
+        SuppliedBy(
+            distribution=card.distribution, source=host_source, card_version=card.card_version
+        ),
+        None,
     )
 
 
@@ -2040,9 +2257,13 @@ def _stays_under(root: str, path: str) -> bool:
     purpose: RetroDECK links ``bios/pcsx2/bios`` back to the firmware root so
     LRPS2 finds its folder, and that declaration resolves to the root exactly.
 
-    Every place atlas decides to read, hash, or report something is bounded by
-    this one predicate, so the bound cannot drift between the declaration side
-    and the scan side.
+    Every read, hash and report atlas makes **inside the firmware root** is
+    bounded by this one predicate, so the bound cannot drift between the
+    declaration side and the scan side. The one read outside it is the
+    provenance check's, which opens the distribution's own shipped tree
+    (:func:`_shipped_file`); that side is bounded where its paths come from
+    instead — the copy list's loader refuses a source that is not a clean
+    relative path, so nothing a card states can climb out of the extras root.
     """
     prefix = root if root.endswith("/") else f"{root}/"
     return path == root or path.startswith(prefix)
@@ -2221,11 +2442,19 @@ def _requirements_for(
             continue
         path = destination.path
         identity = context.hashes.for_path(declaration.path)
-        found, checked, caveat = _observe(
+        found, checked, caveat, here = _observe(
             machine, path, identity, verify=verify, file_name=declaration.file_name
         )
         if caveat is not None:
             answer_caveats.append(caveat)
+        # Whose file this is, asked of the destination itself and only where
+        # one is there: a provenance statement about a path with no file at it
+        # would be a claim about a file that does not exist.
+        supplied, supplied_caveat = (
+            _supplied_by(machine, context, path, here) if found == KIND_FILE else (None, None)
+        )
+        if supplied_caveat is not None:
+            answer_caveats.append(supplied_caveat)
         requirements.append(
             FirmwareRequirement(
                 core_so=core.core_so,
@@ -2239,6 +2468,7 @@ def _requirements_for(
                 identity=identity,
                 found=found,
                 checked=checked,
+                supplied_by=supplied,
             )
         )
     return (
@@ -2774,7 +3004,7 @@ def _packaged_standalone_core(
         base = data_home if declared.base == "data" else config_home
         composed = os.path.join(base, declared.subdir, declared.name)
         path = resolve_links(machine, composed) or composed
-        found, checked, caveat = _observe(machine, path, None, verify=verify, file_name=declared.name)
+        found, checked, caveat, _ = _observe(machine, path, None, verify=verify, file_name=declared.name)
         if caveat is not None:
             answer_caveats.append(caveat)
         requirements.append(
@@ -2935,7 +3165,7 @@ def _melonds_probe(
         return _ConfigProbe(entry_caveats=(untranslated,))
     composed = melonds.local_file_path(config_home, host, flatpak)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(
+    found, checked, observed, _ = _observe(
         machine, path, None, verify=verify, file_name=os.path.basename(value)
     )
     return _ConfigProbe(
@@ -3221,7 +3451,7 @@ def _pcsx2_standalone_core(
     # translate.
     composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(
+    found, checked, observed, _ = _observe(
         machine, path, None, verify=verify, file_name=os.path.basename(composed)
     )
     requirement = FirmwareRequirement(
@@ -3395,7 +3625,7 @@ def _xemu_standalone_core(
             caveats.append(untranslated)
             continue
         path = resolve_links(machine, host) or host
-        found, checked, observed = _observe(
+        found, checked, observed, _ = _observe(
             machine, path, None, verify=verify, file_name=os.path.basename(value)
         )
         if observed is not None:
@@ -3485,7 +3715,7 @@ def _duckstation_named_image(
     """
     composed = qt_ini.path_combine(bios_dir, name)
     path = resolve_links(machine, composed) or composed
-    found, checked, observed = _observe(
+    found, checked, observed, _ = _observe(
         machine, path, None, verify=verify, file_name=os.path.basename(composed)
     )
     requirement = FirmwareRequirement(
@@ -4010,7 +4240,7 @@ def _duckstation_search(
         # content check was asked for at all. Stating one would carry
         # ``satisfied: true`` about bytes nobody read.
         return [], caveats, []
-    found, checked, observed = _observe(
+    found, checked, observed, _ = _observe(
         machine, pick.chosen.path, None, verify=False, file_name=os.path.basename(pick.chosen.path)
     )
     requirement = FirmwareRequirement(

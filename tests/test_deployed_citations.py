@@ -57,6 +57,15 @@ BARE_CITATION = re.compile(r"(?<!/)\b(component_[a-z_]+\.sh):(\d+)(?:-(\d+))?")
 ASSIGNMENT = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*$')
 REFERENCE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 DIR_PREP = re.compile(r'dir_prep\s+"([^"]*)"\s+"([^"]*)"')
+# The copy the supplied-firmware card records, in both `cp` spellings the
+# script uses. The flag does not say whether a tree or a file is placed —
+# RetroDECK writes `cp -rf` over both and reserves `cp -f` for one line — which
+# is why the card records the kind and this pattern reads neither.
+COPY = re.compile(r'cp\s+-[a-zA-Z]+\s+"([^"]*)"\s+"([^"]*)"')
+# The distribution-wide variables, which no component_functions.sh defines —
+# `rd_components` among them, and the supplied card's source_root is spelled
+# against exactly that one.
+ALL_VARS = COMPONENTS.parent.parent / "libexec" / "all_vars.sh"
 
 # What a wiring row's `base` is spelled as once the component's own variables
 # are expanded. RetroDECK's roots stay symbolic — where they point is the
@@ -224,6 +233,30 @@ SETTINGS_FILES = [
     for token, entry in load_emulator_settings().items()
     for name, file in entry.files.items()
 ]
+SUPPLIED = json.loads((DATA / "distribution_supplied.json").read_text(encoding="utf-8"))
+SUPPLIED_ENTRIES = [
+    (block["source_root"], entry, component, script, int(first))
+    for block in SUPPLIED["distributions"].values()
+    for entry in block["entries"]
+    for component, script, first, _last in CITATION.findall(entry["citation"])
+]
+
+
+def _distribution_variables(component: str) -> dict[str, str]:
+    """The component's own assignments plus the distribution-wide ones.
+
+    An entry's source is spelled against ``$rd_components``, which
+    ``component_functions.sh`` never defines — so expanding with the component
+    table alone would leave the variable in and compare two strings that both
+    still carry it, which is a check that cannot fail.
+    """
+    table = dict(_variables(component))
+    if ALL_VARS.is_file():
+        for line in ALL_VARS.read_text(encoding="utf-8").splitlines():
+            match = ASSIGNMENT.match(line)
+            if match:
+                table.setdefault(match.group(1), match.group(2))
+    return table
 
 
 def _deployed() -> bool:
@@ -265,6 +298,53 @@ class TestTheWiredTreesStillSayWhatTheRowsState:
             f"{component}/{script}:{line} links to {emulator!r} and the row states {expected!r} "
             "— the emulator side of the pair moved, so every answer that walks this link is "
             "pointing at the old place"
+        )
+
+
+class TestTheCopiedFilesStillSayWhatTheCardStates:
+    """Pass one and a half: the ``cp`` at the cited line, both sides, expanded.
+
+    The supplied-firmware card's whole claim is "this line copies that tree
+    there", and a claim shaped like code is checked as code: the source is
+    read against the distribution's own extras root and the destination
+    against ``$bios_path``, so a release that renames a shipped tree, drops a
+    copy, or changes where one lands fails here instead of quietly making
+    every ``supplied_by`` over it unstatable.
+    """
+
+    @pytest.mark.parametrize(
+        ("source_root", "entry", "component", "script", "line"),
+        SUPPLIED_ENTRIES,
+        ids=[f"{e['destination']}" for _, e, _, _, _ in SUPPLIED_ENTRIES],
+    )
+    def test_the_cited_line_copies_what_the_entry_states(
+        self, source_root, entry, component, script, line
+    ):
+        lines = _lines(component, script)
+        if lines is None:
+            pytest.skip(f"{component}/{script} is not deployed")
+        if not ALL_VARS.is_file():
+            pytest.skip(f"{ALL_VARS} is not deployed")
+        assert line <= len(lines), (
+            f"{component}/{script} has {len(lines)} lines and the entry for "
+            f"{entry['destination']!r} cites :{line} — the script moved under the citation"
+        )
+        text = lines[line - 1]
+        copy = COPY.search(text)
+        assert copy is not None, (
+            f"{component}/{script}:{line} is not a cp any more: {text.strip()!r} — the copy list's "
+            f"entry for {entry['destination']!r} cites a line that no longer places it"
+        )
+        table = _distribution_variables(component)
+        source, destination = (_expand(side, table) for side in copy.groups())
+        assert source == f"{source_root}/{entry['source']}", (
+            f"{component}/{script}:{line} copies {source!r} and the entry states "
+            f"{source_root}/{entry['source']!r} — the shipped tree moved, so the file the "
+            "resolver hashes against is not the one this distribution places"
+        )
+        assert destination.rstrip("/") == f"{BASE_VARIABLES['bios']}/{entry['destination']}", (
+            f"{component}/{script}:{line} places it at {destination!r} and the entry states it "
+            f"below the firmware root as {entry['destination']!r} — the destination moved"
         )
 
 
@@ -344,6 +424,22 @@ def test_the_citations_are_really_read_where_retrodeck_is_deployed():
     assert read, (
         f"RetroDECK is deployed at {COMPONENTS} and not one cited script was read from it — "
         "either the components moved or this whole file is silently checking nothing"
+    )
+
+
+def test_the_copy_pass_really_reads_the_distributions_own_variables():
+    # The same all-skip guard the two passes above carry, plus the one this
+    # pass alone can fail silently on: with all_vars.sh gone every case skips,
+    # and with $rd_components unexpanded both sides of the source comparison
+    # would still carry the variable and agree for the wrong reason.
+    if not _deployed():
+        pytest.skip(f"nothing is deployed at {COMPONENTS}")
+    assert SUPPLIED_ENTRIES, "the supplied-firmware card cites no component script at all"
+    table = _distribution_variables("retroarch")
+    assert "$" not in _expand("$retroarch_extras_path", table), (
+        f"RetroDECK is deployed and $retroarch_extras_path still expands to "
+        f"{_expand('$retroarch_extras_path', table)!r} — the copy pass would then compare two "
+        "strings that both carry the variable, which is a check that cannot fail"
     )
 
 

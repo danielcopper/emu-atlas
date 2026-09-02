@@ -6987,7 +6987,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],
@@ -7118,7 +7119,8 @@
                   "found": "file",
                   "present": true,
                   "checked": "unchecked",
-                  "satisfied": null
+                  "satisfied": null,
+                  "supplied_by": null
                 }
               ],
               "refused": [],

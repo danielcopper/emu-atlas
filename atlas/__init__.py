@@ -116,6 +116,7 @@ from .firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
     RefusedDeclaration,
+    SuppliedBy,
     UnclaimedFile,
 )
 from .installations import (
@@ -218,6 +219,7 @@ from .firmware import (
     CAVEAT_FIRMWARE_ROOT_UNUSABLE,
     CAVEAT_FIRMWARE_SCAN_INCOMPLETE,
     CAVEAT_FIRMWARE_SEARCH_UNVERIFIED,
+    CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_INFO_PATH_UNRESOLVED,
     CAVEAT_NO_FIRMWARE_DECLARATION,
@@ -259,6 +261,12 @@ from .content_tree_wiring import (
     WiringRow,
     load_content_tree_wiring,
     lookup_content_tree_wiring,
+)
+from .distribution_supplied import (
+    DistributionSupplied,
+    SuppliedEntry,
+    load_distribution_supplied,
+    lookup_distribution_supplied,
 )
 from .installations import (
     HEALTH_ISSUE_CATALOGUE_INVALID,
@@ -484,6 +492,7 @@ __all__ = [
     "FirmwareAlternatives",
     "FirmwareIdentification",
     "FirmwareIdentity",
+    "SuppliedBy",
     "UnclaimedFile",
     "RefusedDeclaration",
     "Caveat",
@@ -631,6 +640,11 @@ __all__ = [
     "WiringRow",
     "load_content_tree_wiring",
     "lookup_content_tree_wiring",
+    # Distribution-supplied firmware (which files RetroDECK places itself)
+    "DistributionSupplied",
+    "SuppliedEntry",
+    "load_distribution_supplied",
+    "lookup_distribution_supplied",
     # Typed outcome codes
     "UNRESOLVED_CORE_NOT_INSTALLED",
     "UNRESOLVED_STANDALONE",
@@ -698,6 +712,7 @@ __all__ = [
     "CAVEAT_FIRMWARE_ROOT_UNUSABLE",
     "CAVEAT_FIRMWARE_SCAN_INCOMPLETE",
     "CAVEAT_FIRMWARE_SEARCH_UNVERIFIED",
+    "CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE",
     "CAVEAT_FIRMWARE_UNREADABLE",
     "CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE",
     "CAVEAT_FRONTEND_MARKER_MISMATCH",

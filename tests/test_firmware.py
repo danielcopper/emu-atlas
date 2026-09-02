@@ -70,6 +70,7 @@ from atlas.firmware import (
     FirmwareContext,
     FirmwareIdentity,
     FirmwareRequirement,
+    SuppliedBy,
     destination_under,
     firmware_for_core,
     firmware_for_system,
@@ -963,6 +964,17 @@ class TestRequirementInvariants:
                 need="undeclared", file_name="a.bin",  # type: ignore[arg-type]
                 path="/bios/a.bin", declared="a.bin", description="", identity=None, found="missing",
                 checked=None,
+            )
+
+    def test_only_a_file_can_be_the_distributions_own_copy(self):
+        # A provenance statement over a destination with nothing at it would be
+        # about a file that does not exist.
+        supplied = SuppliedBy(distribution="retrodeck", source="/ship/a.bin", card_version="1")
+        with pytest.raises(ValueError, match="supplied_by"):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", system_source="systemname", need="required",
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
+                found="missing", checked=None, supplied_by=supplied,
             )
 
 
