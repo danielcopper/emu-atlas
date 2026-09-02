@@ -2525,7 +2525,7 @@
     },
     {
       "name": "emudeck-melonds-answers-from-the-flatpaks-own-homes",
-      "rationale": "EmuDeck has melonDS only as a flatpak, and melonds.sh performs no probe — it runs net.kuribo64.melonDS outright (melonds.sh:4) — so the launcher pins the flatpak variant and the answer reads the app's own XDG homes below ~/.var/app, not the host's. The card names the app id; EmuDeck grants the flatpak --filesystem=host (installEmuFP.sh:33), so the configured path is the host path it spells. The legacy INI EmuDeck writes is 1.1's migration source while no TOML exists.",
+      "rationale": "EmuDeck has melonDS only as a flatpak, and melonds.sh performs no probe — it runs net.kuribo64.melonDS outright (melonds.sh:4) — so the launcher pins the flatpak variant and the answer reads the app's own XDG homes below ~/.var/app, not the host's. The card names the app id; EmuDeck grants the flatpak --filesystem=host (installEmuFP.sh:33), so a configured HOST path is the path it spells — the sandbox's own spellings still lead into the app's trees. The legacy INI EmuDeck writes is 1.1's migration source while no TOML exists.",
       "input": {
         "home": "/home/deck",
         "files": {
