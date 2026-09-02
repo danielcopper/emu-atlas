@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.6.0](https://github.com/danielcopper/emu-atlas/compare/v0.5.1...v0.6.0) (2026-09-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** every serialized firmware requirement gains a `supplied_by` field, an object or null, so a consumer asserting on the exact requirement shape breaks. A new caveat code, `firmware-supplied-source-unreadable`, rides with it, and `firmware-unreadable` now also appears on unverified answers. `FirmwareRequirement` gains `supplied_by` as a trailing optional field. Newly exported from the package: `SuppliedBy`, `DistributionSupplied`, `SuppliedEntry`, `load_distribution_supplied`, `lookup_distribution_supplied` and `CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE`.
+* **firmware:** `checked` has a fifth value, `not-comparable`, which replaces `mismatch` wherever the identity is an archive — a consumer branching on the four old values must handle it, and must never render it as a failure. Every serialized firmware identity gains a `kind` field. The public dataclasses `FirmwareIdentity` and `FirmwareHash` both gain `kind` as a required field, on `FirmwareIdentity` ahead of `known_as`, so code that constructs either breaks. A new caveat code, `firmware-identity-not-comparable`, rides with the new value. The packaged firmware_hashes.json schema is 6.0.0, its `_meta` carries two new fields, and it is read strictly: a table without `kind` on every entry is refused rather than defaulted.
+
+### Features
+
+* **firmware:** a requirement states when the file at its destination is the distribution's own copy ([#348](https://github.com/danielcopper/emu-atlas/issues/348)) ([5ac322d](https://github.com/danielcopper/emu-atlas/commit/5ac322d486110b6d98f029368e9fbd5bdb12aa43)), closes [#346](https://github.com/danielcopper/emu-atlas/issues/346)
+* **firmware:** identities state their kind, and archives get a checked value that withholds the verdict ([#347](https://github.com/danielcopper/emu-atlas/issues/347)) ([ec06f85](https://github.com/danielcopper/emu-atlas/commit/ec06f85f4162200bd175e62af1f4dd64bf9ea99a)), closes [#337](https://github.com/danielcopper/emu-atlas/issues/337)
+
+
+### Bug Fixes
+
+* **platforms:** a non-string platform value is refused by name, not by AttributeError ([#343](https://github.com/danielcopper/emu-atlas/issues/343)) ([baa1dfc](https://github.com/danielcopper/emu-atlas/commit/baa1dfce9047c358d1577062a5b3aa9ea329b5f6)), closes [#338](https://github.com/danielcopper/emu-atlas/issues/338)
+
+
+### Documentation
+
+* **vendoring:** cite the consumer's measured Decky runtime facts ([#345](https://github.com/danielcopper/emu-atlas/issues/345)) ([d89a5eb](https://github.com/danielcopper/emu-atlas/commit/d89a5ebfb9d5012bb285fcd1bb3726c60419b73f))
+
 ## [0.5.1](https://github.com/danielcopper/emu-atlas/compare/v0.5.0...v0.5.1) (2026-09-01)
 
 
