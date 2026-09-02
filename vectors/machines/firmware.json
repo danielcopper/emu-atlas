@@ -9292,7 +9292,7 @@
     },
     {
       "name": "retrodeck-xemu-needs-three-files-and-generates-the-fourth",
-      "rationale": "Four files sit in xemu's [sys.files] and only three are firmware. The MCPX boot ROM, the flash image and the hard disk each refuse the start when missing, and the emulator says so itself in whole strings the shipped binary carries. The fourth, eeprom_path, is left to the save answer on purpose: xemu generates an EEPROM where none exists, and it holds the console's own settings, which the standalone save card already states as a named settings group. The hard disk is the opposite case and is claimed by both answers deliberately — a console does not start without one, and every save lives inside it.",
+      "rationale": "Five paths sit in xemu's [sys.files] and only three are firmware. The MCPX boot ROM, the flash image and the hard disk are the files xemu's own documentation calls necessary to run the emulator at all, and the shipped binary carries each one's failure message as a whole string — but of the three only the flash image's failure actually holds the launch, which is why the card states the consequence per file rather than once for all three. eeprom_path is left to the save answer on purpose: xemu generates an EEPROM where none exists, and it holds the console's own settings, which the standalone save card already states as a named settings group. dvd_path is the disc, which is content. The hard disk is claimed by both answers deliberately — xemu asks for one, and every save lives inside it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9410,7 +9410,7 @@
     },
     {
       "name": "xemu-an-empty-machine-setting-names-no-file-to-place",
-      "rationale": "None of the four settings has a compiled default (config_spec.yml:359-364 — plain strings), so an unset one names nothing at all. Each is refused by name with firmware-path-names-no-file rather than answered with an invented path, and the answer still says which of the three the console is missing.",
+      "rationale": "None of the five settings has a compiled default path (config_spec.yml:359-364 — plain strings, and a string with no default of its own compiles to the empty one), so an unset one names nothing at all. Each is refused by name with firmware-path-names-no-file rather than answered with an invented path, and each caveat says what that particular file's absence costs — the flash image is the one xemu will not start the console without.",
       "input": {
         "home": "/home/deck",
         "files": {
