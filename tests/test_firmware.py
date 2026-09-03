@@ -34,8 +34,11 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
     CAVEAT_FIRMWARE_DECLARATION_UNREAD,
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_CANDIDATE,
+    CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
     CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
+    CAVEAT_FIRMWARE_IMAGE_CONTRADICTED,
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
+    CAVEAT_FIRMWARE_IMAGE_UNLISTED,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
@@ -67,6 +70,7 @@ from atlas.firmware import (
     FIRMWARE_DECLARED_DIRECTORY_VERSION,
     FIRMWARE_SYSTEM_OVERRIDE,
     NEED_REQUIRED,
+    READER_PS2_BIOS_HEADER,
     SYSTEMNAME_MAP_VERSION,
     SYSTEMNAME_TO_SLUG,
     SYSTEMS_WITHOUT_CATALOGUE_ID,
@@ -103,6 +107,7 @@ from atlas.machine import (
     FixtureMachine,
     GlobResult,
     PathKind,
+    Ps2BiosHeaderResult,
     ReadResult,
 )
 from atlas.placement import CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
@@ -287,6 +292,22 @@ PS2_IMAGE_USA: dict[str, str | int] = {"md5": "5a" * 16, "sha1": "6b" * 20, "siz
 PS2_IMAGE_SIZE = 4194304
 LRPS2_SO = "pcsx2_libretro.so"
 LRPS2_FOLDER = f"{BIOS_DIR}/pcsx2/bios"
+# A file of a size LRPS2 keeps whose bytes the test table does not list.
+PS2_UNLISTED: dict[str, str | int] = {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE}
+# The two strings the ROMDIR walk yields for the two packaged images the test
+# table names — version strings spelling what the table's own file names spell
+# (ps2-0200e-20040614.bin: v02.00, Europe, 2004-06-14) — and the fields the
+# core's format builds from the first.
+PS2_HEADER_EUR = {"romver": "0200EC20040614", "serial": "fixture-eu"}
+PS2_HEADER_USA = {"romver": "0160AC20010427", "serial": "fixture-us"}
+PS2_FIELDS_EUR = {
+    "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+    "zone": "Europe",
+    "version": "02.00",
+    "date": "2004-06-14",
+    "serial": "fixture-eu",
+}
+NOT_A_BIOS = "not-a-bios"
 
 
 def _blob(content: bytes) -> dict[str, str | int]:
@@ -1289,13 +1310,23 @@ class TestADeclarationStatesItsOwnShape:
         """LRPS2 keeps ``MIN_BIOS_SIZE <= size <= MAX_BIOS_SIZE`` (main.cpp:1815 at 14d19f8)."""
         row = declared_directory_of("pcsx2", "pcsx2/bios")
         assert row is not None
-        assert row == DeclaredDirectory(identities="pcsx2/bios/", min_size=4 * 1024 * 1024, max_size=8 * 1024 * 1024)
+        assert row == DeclaredDirectory(
+            identities="pcsx2/bios/",
+            min_size=4 * 1024 * 1024,
+            max_size=8 * 1024 * 1024,
+            reader=READER_PS2_BIOS_HEADER,
+        )
         assert row.accepts_size(4 * 1024 * 1024 - 1) is False
         assert row.accepts_size(4 * 1024 * 1024) is True
         assert row.accepts_size(8 * 1024 * 1024) is True
         assert row.accepts_size(8 * 1024 * 1024 + 1) is False
         # An unknown size is not a yes: the core's filter reads a stat that came back.
         assert row.accepts_size(None) is False
+
+    def test_a_row_names_only_a_content_read_the_resolver_makes(self):
+        """A row promising a read nobody implemented fails at construction, not at the first folder."""
+        with pytest.raises(ValueError, match="reader"):
+            DeclaredDirectory(identities="pcsx2/bios/", min_size=1, max_size=2, reader="crc-table")
 
     def test_the_packaged_images_under_the_prefix_are_of_a_size_the_row_accepts(self):
         """The 73 packaged identities are a subset of what the core accepts, and reachable by content."""
@@ -1320,14 +1351,18 @@ class TestADeclarationStatesItsOwnShape:
         assert under.name == "pcsx2/bios/ps2-0200e-20040614.bin"
 
     def test_a_recognised_image_inside_the_folder_satisfies_the_declaration(self):
-        answer, folder = self._lrps2({f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR})
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR},
+        )
         assert folder.declared_kind == DECLARED_DIRECTORY
         assert folder.found == "directory"
         assert folder.present is True
         # No packaged identity belongs to a folder, so the byte axis stays where it was.
         assert folder.checked == CHECKED_UNKNOWN
         assert folder.identity is None
-        # The verdict is over the contents: by content, under the table's own name.
+        # The verdict is over the contents: by the core's own header read, and
+        # named under the table's own name where the table lists the bytes.
         assert folder.satisfied is True
         assert answer.cores[0].requirements_met is True
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_IDENTIFIED]
@@ -1337,7 +1372,9 @@ class TestADeclarationStatesItsOwnShape:
             "md5": "77" * 16,
             "table": "0",
             "core_so": LRPS2_SO,
+            **PS2_FIELDS_EUR,
         }
+        assert "reads as 'Europe  v02.00(14/06/2004)  Console fixture-eu'" in answer.caveats[0].message
 
     def test_every_recognised_image_is_stated_and_none_is_picked(self):
         """Two is more choice, not a conflict.
@@ -1350,7 +1387,11 @@ class TestADeclarationStatesItsOwnShape:
             {
                 f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR,
                 f"{LRPS2_FOLDER}/scph39001.bin": PS2_IMAGE_USA,
-            }
+            },
+            ps2_bios_headers={
+                f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR,
+                f"{LRPS2_FOLDER}/scph39001.bin": PS2_HEADER_USA,
+            },
         )
         assert folder.satisfied is True
         identified = [c for c in answer.caveats if c.code == CAVEAT_FIRMWARE_IMAGE_IDENTIFIED]
@@ -1394,28 +1435,180 @@ class TestADeclarationStatesItsOwnShape:
         assert folder.satisfied is False
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_CANDIDATE]
 
-    def test_a_right_sized_file_the_table_does_not_know_is_not_a_verdict(self):
+    def test_a_right_sized_file_that_fails_the_cores_own_test_is_no_image(self):
+        """The verdict the core makes: read the way it reads, and no RESET/ROMVER table found."""
         answer, folder = self._lrps2(
-            {f"{LRPS2_FOLDER}/scph39001.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE}}
+            {f"{LRPS2_FOLDER}/scph39001.bin": PS2_UNLISTED},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph39001.bin": NOT_A_BIOS},
         )
-        assert folder.satisfied is None
-        assert answer.cores[0].requirements_met is None
-        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED]
+        assert folder.satisfied is False
+        assert answer.cores[0].requirements_met is False
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE]
         assert answer.caveats[0].data == {
             "dir": LRPS2_FOLDER,
             "candidates": "1",
             "paths": f"{LRPS2_FOLDER}/scph39001.bin",
+            "core_so": LRPS2_SO,
+            "table_version": FIRMWARE_DECLARED_DIRECTORY_VERSION,
+        }
+        assert answer.caveats[0].message.startswith(f"one file in {LRPS2_FOLDER} is of a size")
+        # Read, found to be no BIOS, and nobody's: the unclaimed scan may list it.
+        assert answer.cores[0].folder_claims == ()
+
+    def test_a_right_sized_file_the_table_does_not_list_is_an_image_by_its_header(self):
+        """The table is a subset of what the core accepts; the header is the core's own test."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph39001.bin": PS2_UNLISTED},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph39001.bin": PS2_HEADER_EUR},
+        )
+        assert folder.satisfied is True
+        assert answer.cores[0].requirements_met is True
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_UNLISTED]
+        assert answer.caveats[0].data == {
+            "path": f"{LRPS2_FOLDER}/scph39001.bin",
+            **PS2_FIELDS_EUR,
+            "md5": "00" * 16,
             "table": "0",
             "core_so": LRPS2_SO,
         }
-        assert answer.caveats[0].message.startswith(f"one file in {LRPS2_FOLDER} is of a size")
+        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
 
-    def test_an_unrecognised_file_beside_a_recognised_image_casts_no_doubt(self):
+    def test_an_image_whose_digest_could_not_be_taken_is_an_image_and_a_stated_read_failure(self):
+        """The header is the verdict and stands; the digest that was never taken is a read failure, not a miss."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph39001.bin": {"size": PS2_IMAGE_SIZE}},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph39001.bin": PS2_HEADER_EUR},
+        )
+        assert folder.satisfied is True
+        assert answer.cores[0].requirements_met is True
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_UNLISTED, CAVEAT_FIRMWARE_UNREADABLE]
+        # An empty md5 is the data's own word for "the table was not consulted".
+        assert answer.caveats[0].data == {
+            "path": f"{LRPS2_FOLDER}/scph39001.bin",
+            **PS2_FIELDS_EUR,
+            "md5": "",
+            "table": "0",
+            "core_so": LRPS2_SO,
+        }
+        # Worded without a table lookup nobody made.
+        assert "files no identity" not in answer.caveats[0].message
+        assert "could not be hashed" in answer.caveats[0].message
+        assert answer.caveats[1].data == {"path": f"{LRPS2_FOLDER}/scph39001.bin"}
+        assert "beside a header that came back" in answer.caveats[1].message
+        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+
+    def test_a_rejected_candidate_whose_digest_could_not_be_taken_is_still_no_image(self):
+        """The header's verdict stands; the digest that was never taken is stated, and reopens nothing."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph39001.bin": {"size": PS2_IMAGE_SIZE}},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph39001.bin": NOT_A_BIOS},
+        )
+        assert folder.satisfied is False
+        assert answer.cores[0].requirements_met is False
+        assert [c.code for c in answer.caveats] == [
+            CAVEAT_FIRMWARE_UNREADABLE,
+            CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
+        ]
+        assert answer.caveats[0].data == {"path": f"{LRPS2_FOLDER}/scph39001.bin"}
+        assert "does not read as a PS2 BIOS, and its bytes could not be hashed" in answer.caveats[0].message
+        assert answer.caveats[1].data["paths"] == f"{LRPS2_FOLDER}/scph39001.bin"
+        # Stated here, so the unclaimed scan — which hashes what it lists and
+        # would state the same failure — must not state it again.
+        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+
+    def test_the_inventory_does_not_restate_a_rejected_candidates_untaken_digest(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+                f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+                f"{BIOS_DIR}/other.bin": {"size": PS2_IMAGE_SIZE},
+            },
+            symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+            ps2_bios_headers={f"{BIOS_DIR}/other.bin": NOT_A_BIOS},
+        )
+        answer = firmware_inventory(machine, _context(machine), verify=True)
+        folder = next(r for r in answer.requirements if r.declared == "pcsx2/bios")
+        assert folder.satisfied is False
+        assert [c.code for c in answer.caveats] == [
+            CAVEAT_FIRMWARE_UNREADABLE,
+            CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
+        ]
+        assert answer.unclaimed == ()
+
+    def test_a_table_hit_the_header_denies_is_a_contradiction_not_a_green(self):
+        """Two reads over one file disagree; neither is taken over the other."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": NOT_A_BIOS},
+        )
+        assert folder.satisfied is None
+        assert answer.cores[0].requirements_met is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_CONTRADICTED]
+        assert answer.caveats[0].data == {
+            "path": f"{LRPS2_FOLDER}/scph70004.bin",
+            "image": "ps2-0200e-20040614.bin",
+            "md5": "77" * 16,
+            "core_so": LRPS2_SO,
+            "table": "0",
+            "table_version": FIRMWARE_DECLARED_DIRECTORY_VERSION,
+        }
+        # Stated here, so the unclaimed scan must not state it again as an identified file.
+        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
+
+    def test_an_image_beside_a_contradiction_still_satisfies(self):
         answer, folder = self._lrps2(
             {
                 f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR,
-                f"{LRPS2_FOLDER}/other.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE},
-            }
+                f"{LRPS2_FOLDER}/scph39001.bin": PS2_IMAGE_USA,
+            },
+            ps2_bios_headers={
+                f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR,
+                f"{LRPS2_FOLDER}/scph39001.bin": NOT_A_BIOS,
+            },
+        )
+        assert folder.satisfied is True
+        assert [c.code for c in answer.caveats] == [
+            CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
+            CAVEAT_FIRMWARE_IMAGE_CONTRADICTED,
+        ]
+
+    def test_a_header_that_cannot_be_read_is_a_read_failure_whatever_the_table_says(self):
+        """The header is the read that decides; a table hit beside a failed one names nothing."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": "unreadable"},
+        )
+        assert folder.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_UNREADABLE]
+        assert answer.caveats[0].data == {"path": f"{LRPS2_FOLDER}/scph70004.bin"}
+        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
+
+    def test_a_listed_file_with_no_header_answer_is_a_read_that_did_not_happen(self):
+        """A fixture that forgot the key proves nothing about the file, and says so as unread."""
+        answer, folder = self._lrps2({f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR})
+        assert folder.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_UNREADABLE]
+
+    def test_the_header_is_not_read_without_a_content_check(self):
+        """A declared header that would fail the read leaves no trace: nothing read it."""
+        answer, folder = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": "unreadable"},
+            verify=False,
+        )
+        assert folder.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_SEARCH_UNVERIFIED]
+
+    def test_a_file_that_fails_the_test_beside_a_recognised_image_casts_no_doubt(self):
+        answer, folder = self._lrps2(
+            {
+                f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR,
+                f"{LRPS2_FOLDER}/other.bin": PS2_UNLISTED,
+            },
+            ps2_bios_headers={
+                f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR,
+                f"{LRPS2_FOLDER}/other.bin": NOT_A_BIOS,
+            },
         )
         assert folder.satisfied is True
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_IDENTIFIED]
@@ -1461,7 +1654,8 @@ class TestADeclarationStatesItsOwnShape:
             {
                 f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR,
                 f"{LRPS2_FOLDER}/locked.bin": {"status": "unreadable", "size": PS2_IMAGE_SIZE},
-            }
+            },
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR},
         )
         assert folder.satisfied is True
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_IDENTIFIED, CAVEAT_FIRMWARE_UNREADABLE]
@@ -1502,6 +1696,7 @@ class TestADeclarationStatesItsOwnShape:
                 f"{BIOS_DIR}/scph70004.bin": PS2_IMAGE_EUR,
             },
             symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+            ps2_bios_headers={f"{BIOS_DIR}/scph70004.bin": PS2_HEADER_EUR},
         )
         assert folder.path == BIOS_DIR
         assert folder.found == "directory"
@@ -1514,8 +1709,8 @@ class TestADeclarationStatesItsOwnShape:
 
         A recognised image and a candidate whose bytes could not be read are
         the declaration's — stated once, by the read that saw them — and stay
-        out of ``unclaimed``; a candidate read and not recognised, and a
-        sibling the size filter dropped, are nobody's and are listed.
+        out of ``unclaimed``; a candidate read and failing the core's test,
+        and a sibling the size filter dropped, are nobody's and are listed.
         """
         machine = _machine(
             {
@@ -1523,10 +1718,11 @@ class TestADeclarationStatesItsOwnShape:
                 f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
                 f"{BIOS_DIR}/scph70004.bin": PS2_IMAGE_EUR,
                 f"{BIOS_DIR}/locked.bin": {"status": "unreadable", "size": PS2_IMAGE_SIZE},
-                f"{BIOS_DIR}/other.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE},
+                f"{BIOS_DIR}/other.bin": PS2_UNLISTED,
                 f"{BIOS_DIR}/scph1001.bin": _blob(b"a PlayStation image is 512 KiB, not 4 MiB"),
             },
             symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+            ps2_bios_headers={f"{BIOS_DIR}/scph70004.bin": PS2_HEADER_EUR, f"{BIOS_DIR}/other.bin": NOT_A_BIOS},
         )
         answer = firmware_inventory(machine, _context(machine), verify=True)
         folder = next(r for r in answer.requirements if r.declared == "pcsx2/bios")
@@ -1547,12 +1743,17 @@ class TestADeclarationStatesItsOwnShape:
                 f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
                 f"{BIOS_DIR}/store/scph70004.bin": PS2_IMAGE_EUR,
                 f"{BIOS_DIR}/store/locked.bin": {"status": "unreadable", "size": PS2_IMAGE_SIZE},
-                f"{BIOS_DIR}/other.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE},
+                f"{BIOS_DIR}/other.bin": PS2_UNLISTED,
             },
             symlinks={
                 f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR,
                 f"{BIOS_DIR}/ps2.bin": f"{BIOS_DIR}/store/scph70004.bin",
                 f"{BIOS_DIR}/locked.bin": f"{BIOS_DIR}/store/locked.bin",
+            },
+            # Headers are keyed by the file the bytes belong to — the link's target.
+            ps2_bios_headers={
+                f"{BIOS_DIR}/store/scph70004.bin": PS2_HEADER_EUR,
+                f"{BIOS_DIR}/other.bin": NOT_A_BIOS,
             },
         )
         answer = firmware_inventory(machine, _context(machine), verify=True)
@@ -1583,7 +1784,7 @@ class TestADeclarationStatesItsOwnShape:
             f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
             f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR,
         }
-        machine = _machine(tree)
+        machine = _machine(tree, ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR})
         for verify, code, verdict in (
             (False, CAVEAT_FIRMWARE_SEARCH_UNVERIFIED, None),
             (True, CAVEAT_FIRMWARE_IMAGE_IDENTIFIED, True),
@@ -1598,8 +1799,12 @@ class TestADeclarationStatesItsOwnShape:
 
     def test_the_count_sentences_read_for_one_file_and_for_many(self):
         """The two counted messages are written around the count, never with a '(s)'."""
-        unknown = {"md5": "00" * 16, "sha1": "00" * 20, "size": PS2_IMAGE_SIZE}
-        three = {f"{LRPS2_FOLDER}/a.bin": unknown, f"{LRPS2_FOLDER}/b.bin": unknown, f"{LRPS2_FOLDER}/c.bin": unknown}
+        three: dict[str, FixtureFileSpec] = {
+            f"{LRPS2_FOLDER}/a.bin": PS2_UNLISTED,
+            f"{LRPS2_FOLDER}/b.bin": PS2_UNLISTED,
+            f"{LRPS2_FOLDER}/c.bin": PS2_UNLISTED,
+        }
+        no_bios = {path: NOT_A_BIOS for path in three}
         answer, _ = self._lrps2({f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR}, verify=False)
         assert answer.caveats[0].message.startswith(
             f"{LRPS2_FOLDER} holds one file of a size this core accepts, and whether it is a BIOS is a question "
@@ -1610,15 +1815,19 @@ class TestADeclarationStatesItsOwnShape:
             f"{LRPS2_FOLDER} holds 3 files of a size this core accepts; which of them is a BIOS is a question "
             "about their bytes"
         )
-        answer, _ = self._lrps2({f"{LRPS2_FOLDER}/a.bin": unknown})
-        assert answer.caveats[0].code == CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED
-        assert answer.caveats[0].message.startswith(f"one file in {LRPS2_FOLDER} is of a size")
-        assert answer.caveats[0].message.endswith(
-            "so whether it boots is not established; this is not a verdict against it"
+        answer, _ = self._lrps2(
+            {f"{LRPS2_FOLDER}/a.bin": PS2_UNLISTED}, ps2_bios_headers={f"{LRPS2_FOLDER}/a.bin": NOT_A_BIOS}
         )
-        answer, _ = self._lrps2(three)
-        assert answer.caveats[0].message.startswith(f"3 files in {LRPS2_FOLDER} are of a size")
-        assert answer.caveats[0].message.endswith("this is not a verdict against them")
+        assert answer.caveats[0].code == CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE
+        assert answer.caveats[0].message.startswith(
+            f"one file in {LRPS2_FOLDER} is of a size this core accepts and it does not read as a PS2 BIOS"
+        )
+        assert "fails it — so the listing" in answer.caveats[0].message
+        answer, _ = self._lrps2(three, ps2_bios_headers=no_bios)
+        assert answer.caveats[0].message.startswith(
+            f"3 files in {LRPS2_FOLDER} are of a size this core accepts and none of them reads as a PS2 BIOS"
+        )
+        assert "fails every one — so the listing" in answer.caveats[0].message
         assert answer.caveats[0].data["candidates"] == "3"
         assert answer.caveats[0].data["paths"] == ", ".join(sorted(three))
 
@@ -2797,6 +3006,10 @@ class _CountingMachine:
     def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult:
         self._count("read_appimage_text")
         return self._inner.read_appimage_text(path, inner_path)
+
+    def read_ps2_bios_header(self, path: str) -> Ps2BiosHeaderResult:
+        self._count("read_ps2_bios_header")
+        return self._inner.read_ps2_bios_header(path)
 
     def glob(self, pattern: str) -> GlobResult:
         self._count("glob")

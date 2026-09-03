@@ -3440,7 +3440,7 @@
               "code": "firmware-path-not-a-directory",
               "data": {
                 "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
-                "table_version": "2"
+                "table_version": "3"
               }
             }
           ]
@@ -3449,7 +3449,7 @@
     },
     {
       "name": "firmware-the-second-declaration-of-the-same-core-is-still-a-file",
-      "rationale": "The regression witness for the table's key, and the shipped .info verbatim: LRPS2 declares two paths and the table names exactly one of them, so the same core answers declared_kind=directory for pcsx2/bios and declared_kind=file for pcsx2/resources/GameIndex.yaml. A file declaration the table does not name is answered exactly as it was before the table existed — present, no packaged identity, checked=unknown, satisfied=true — because 'file' is the default a declaration nobody has read from source gets, not a reading of this one. The folder half is judged by its contents since #356: the image inside is of a size the core keeps and its bytes are a packaged pcsx2/bios/ identity, so it is satisfied and named, and requirements_met is true because both halves are established — the expectation moved from null once the folder was read rather than only found.",
+      "rationale": "The regression witness for the table's key, and the shipped .info verbatim: LRPS2 declares two paths and the table names exactly one of them, so the same core answers declared_kind=directory for pcsx2/bios and declared_kind=file for pcsx2/resources/GameIndex.yaml. A file declaration the table does not name is answered exactly as it was before the table existed — present, no packaged identity, checked=unknown, satisfied=true — because 'file' is the default a declaration nobody has read from source gets, not a reading of this one. The folder half is judged by its contents: the image inside is of a size the core keeps, its ROMDIR header reads as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), and its bytes are a packaged pcsx2/bios/ identity, so it is satisfied and named under the table's name with the header's fields beside it; requirements_met is true because both halves are established.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3468,6 +3468,12 @@
           "kind": "core",
           "core_so": "pcsx2_libretro.so",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "romver": "0160AC20010427",
+            "serial": "fixture-us"
+          }
         }
       },
       "expected": {
@@ -3544,7 +3550,12 @@
                 "image": "ps2-0160a-20010427.bin",
                 "md5": "b107b5710042abe887c0f6175f6e94bb",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "USA     v01.60(27/04/2001)  Console fixture-us",
+                "zone": "USA",
+                "version": "01.60",
+                "date": "2001-04-27",
+                "serial": "fixture-us"
               }
             }
           ]
@@ -3553,7 +3564,7 @@
     },
     {
       "name": "firmware-a-recognised-image-inside-the-listed-folder-satisfies-the-declaration",
-      "rationale": "The folder LRPS2 lists holds one file of a size the core keeps (4-8 MiB, libretro/main.cpp:1810-1816 at 14d19f8) and its bytes are a packaged pcsx2/bios/ identity, so the declaration is satisfied and the image is named under the table's own name — the file's own name is scph70004.bin, and the core accepts any name, so the identification is by content. found and present keep describing the folder, checked stays 'unknown' because no packaged identity belongs to a folder, and satisfied is the verdict over the contents; requirements_met follows it. One image is what the core needs: LoadBIOS opens one file (BiosTools.cpp:281).",
+      "rationale": "The folder LRPS2 lists holds one file of a size the core keeps (4-8 MiB, libretro/main.cpp:1810-1816 at 14d19f8). Its ROMDIR header reads as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), which is the verdict, and its bytes are a packaged pcsx2/bios/ identity, which is the name: satisfied is true and firmware-image-identified carries the table's name beside the header's own fields — zone, version, date and serial as the version string spells them, and the description the core builds from them (BiosTools.cpp:147-155). The file's own name is scph70004.bin, and the core accepts any name, so the verdict and the name are both by content. found and present keep describing the folder, checked stays 'unknown' because no packaged identity belongs to a folder, and requirements_met follows satisfied. One image is what the core needs: LoadBIOS opens one file (BiosTools.cpp:281).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3571,6 +3582,12 @@
           "kind": "core",
           "core_so": "pcsx2_libretro.so",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -3631,7 +3648,12 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
               }
             }
           ]
@@ -3640,7 +3662,7 @@
     },
     {
       "name": "firmware-two-recognised-images-are-two-statements-and-one-verdict",
-      "rationale": "Two recognised images in the listed folder are more choice, not a conflict: the core offers them all as pcsx2_bios option values, up to 127 — the fill loop stops one short of the 128-slot RETRO_NUM_CORE_OPTION_VALUES_MAX to leave room for the terminator — and defaults to the first (libretro/main.cpp:1828-1834 at 14d19f8; libretro.h:6394), and one is enough to boot. So the verdict is one satisfied and the statements are two — one firmware-image-identified per image, in path order, none of them picked over the other, because which one boots is a configuration choice this answer does not read.",
+      "rationale": "Two images in the listed folder are more choice, not a conflict: each is read the way the core reads it and passes the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), and the core offers them all as pcsx2_bios option values, up to 127 — the fill loop stops one short of the 128-slot RETRO_NUM_CORE_OPTION_VALUES_MAX to leave room for the terminator — and defaults to the first (libretro/main.cpp:1828-1834 at 14d19f8; libretro.h:6394), and one is enough to boot. So the verdict is one satisfied and the statements are two — one firmware-image-identified per image, in path order, each under the table's name with its own header's fields, none of them picked over the other, because which one boots is a configuration choice this answer does not read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3662,6 +3684,16 @@
           "kind": "core",
           "core_so": "pcsx2_libretro.so",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "romver": "0160AC20010427",
+            "serial": "fixture-us"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -3722,7 +3754,12 @@
                 "image": "ps2-0160a-20010427.bin",
                 "md5": "b107b5710042abe887c0f6175f6e94bb",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "USA     v01.60(27/04/2001)  Console fixture-us",
+                "zone": "USA",
+                "version": "01.60",
+                "date": "2001-04-27",
+                "serial": "fixture-us"
               }
             },
             {
@@ -3732,7 +3769,12 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
               }
             }
           ]
@@ -3818,7 +3860,7 @@
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
                 "core_so": "pcsx2_libretro.so",
                 "need": "required",
-                "table_version": "2"
+                "table_version": "3"
               }
             }
           ]
@@ -3905,7 +3947,7 @@
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
                 "core_so": "pcsx2_libretro.so",
                 "need": "required",
-                "table_version": "2"
+                "table_version": "3"
               }
             }
           ]
@@ -4089,7 +4131,7 @@
     },
     {
       "name": "firmware-a-right-sized-file-whose-bytes-cannot-be-read-is-carried-as-unread",
-      "rationale": "A file of a size LRPS2 keeps whose stat succeeds and whose bytes will not come back — the chmod-000 file. It is carried as a read failure, never as 'bytes the table does not know': firmware-unreadable names the file, no firmware-content-unidentified is stated, and the verdict stays null because nothing else in the folder is recognised. The core would try to read the same file and fail the same way.",
+      "rationale": "A file of a size LRPS2 keeps whose stat succeeds and whose bytes will not come back — the chmod-000 file. Neither read the folder makes over a candidate happens — not the digest, not the ROMDIR header check — and that is carried as a read failure, never as a finding about the file: firmware-unreadable names the file, no verdict is stated over it, and satisfied stays null because nothing else in the folder passes the check. The core would try to read the same file and fail the same way.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4171,8 +4213,8 @@
       }
     },
     {
-      "name": "firmware-a-right-sized-file-the-table-does-not-know-is-not-a-verdict",
-      "rationale": "LRPS2 opens 'pcsx2/bios' as a folder and lists it non-recursively (libretro/main.cpp:1807 at 14d19f8), so the directory at the destination is the right shape and carries no firmware-path-obstructed caveat — and since #356 its contents are the verdict. The one file inside is of a size the core keeps (4-8 MiB, main.cpp:1810-1816) and its bytes match none of the packaged identities under pcsx2/bios/. That is not a verdict against it: the core validates an image by reading its ROMDIR header (BiosTools.cpp:62-106), which atlas does not read, and the table lists only what System.dat lists. So satisfied stays null with firmware-content-unidentified naming the folder, the count and the file, and the core answers null. The expectation moved from 'a folder establishes nothing' to this once the folder was read: the file's bytes are now stated as unrecognised rather than unasked.",
+      "name": "firmware-a-right-sized-file-that-fails-the-cores-own-test-is-no-image",
+      "rationale": "LRPS2 opens 'pcsx2/bios' as a folder and lists it non-recursively (libretro/main.cpp:1807 at 14d19f8), and its contents are the verdict. The one file inside is of a size the core keeps (4-8 MiB, main.cpp:1810-1816), so the core would hand it to IsBIOS (main.cpp:1818), and atlas hands it to the same read: LoadBiosVersion's walk over the ROMDIR table (pcsx2/ps2/BiosTools.cpp:60-173) ends without a ROMVER record — the file ends first, or the table names none — and the core returns false (:65-66, :162-163). That is a verdict, not a gap: the file was read the way the core reads it and fails the one content test the listing makes, so satisfied is false with firmware-directory-holds-no-image naming the folder, the count, the file and the row's version, and the core answers requirements_met false. Its bytes match no packaged identity either, which is beside the point — the table names an image, the header decides one — and a file that is no BIOS by the core's own test is nobody's, so it stays out of the folder's claims.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4190,6 +4232,393 @@
           "kind": "core",
           "core_so": "pcsx2_libretro.so",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": "not-a-bios"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-directory-holds-no-image",
+              "data": {
+                "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                "candidates": "1",
+                "paths": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "core_so": "pcsx2_libretro.so",
+                "table_version": "3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-rejected-candidate-whose-digest-could-not-be-taken-is-still-no-image",
+      "rationale": "The one file inside is of a size the core keeps, its ROMDIR header does not read as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), and its bytes could not be hashed — modeled as a blob with a size and no digest. The header is the core's own test and its verdict stands: satisfied is false and firmware-directory-holds-no-image names the folder and the file, as it does for any rejected candidate. The digest that was never taken is carried as a read failure, never as bytes the table does not know: firmware-unreadable states it beside the rejection, because the one thing that read could have added — a table hit the header denies, which firmware-image-contradicted would have stated — could not be checked. It reopens nothing: an untaken digest moves no verdict — the two routes to null are a header read that did not come back and a table hit the header denies, and this candidate is neither. The file is claimed by the folder read, because the unclaimed scan hashes what it lists and would state the same failure a second time.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": "not-a-bios"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin"
+              }
+            },
+            {
+              "code": "firmware-directory-holds-no-image",
+              "data": {
+                "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                "candidates": "1",
+                "paths": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "core_so": "pcsx2_libretro.so",
+                "table_version": "3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-image-the-table-does-not-list-is-named-by-its-own-header",
+      "rationale": "The one file inside is of a size the core keeps (4-8 MiB, libretro/main.cpp:1810-1816 at 14d19f8) and its ROMDIR header reads as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8) — version 02.30, Europe, 2008-02-20 as the version string spells them, and the description the core builds from them (BiosTools.cpp:147-155). Its bytes match no packaged identity under pcsx2/bios/: the packaged table lists what System.dat lists, a subset of what the header check accepts, and the listing's one content test is IsBIOS (main.cpp:1818) — no hash is consulted. So the declaration is satisfied — the core would offer this file as a pcsx2_bios option value (main.cpp:1819) — and firmware-image-unlisted names it by its own header, with the table version it is absent from, where firmware-image-identified would have carried the table's name; the file is claimed by the folder read like any image it stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "md5": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "romver": "0230EC20080220",
+            "serial": "fixture-x"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-image-unlisted",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "description": "Europe  v02.30(20/02/2008)  Console fixture-x",
+                "zone": "Europe",
+                "version": "02.30",
+                "date": "2008-02-20",
+                "serial": "fixture-x",
+                "md5": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+                "table": "6.0.0",
+                "core_so": "pcsx2_libretro.so"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-image-whose-digest-could-not-be-taken-is-an-image-and-a-stated-read-failure",
+      "rationale": "The one file inside is of a size the core keeps, its ROMDIR header reads as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), and its bytes could not be hashed — a read failure beside a header that came back, the shape an I/O error beyond the ROMDIR table takes on a real machine, modeled here as a blob with a size and no digest. The header is the verdict and stands: satisfied is true and firmware-image-unlisted names the image by its own header, worded without a table lookup nobody made. The digest that was never taken is carried as a read failure, never as bytes the table does not know: firmware-unreadable states it beside the image, so a reader of the answer sees that what the packaged table calls these bytes stays unestablished, and the file is claimed by the folder read like any image it stated. Its data says so on its own: md5 is empty where the digest was never taken, and the table version rides beside it as the table that was not consulted.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin": {
+            "romver": "0230EC20080220",
+            "serial": "fixture-x"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-image-unlisted",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "description": "Europe  v02.30(20/02/2008)  Console fixture-x",
+                "zone": "Europe",
+                "version": "02.30",
+                "date": "2008-02-20",
+                "serial": "fixture-x",
+                "md5": "",
+                "table": "6.0.0",
+                "core_so": "pcsx2_libretro.so"
+              }
+            },
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-table-hit-the-header-denies-is-a-contradiction-not-a-green",
+      "rationale": "The one file inside hashes to a packaged pcsx2/bios/ identity — the table calls these bytes ps2-0200e-20040614.bin — and its ROMDIR header does not read as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8). Two reads over one file disagree, and neither is taken over the other: the table hit is a name, the header is the core's own test, and a green over a contradiction would be a guess. So satisfied is null, firmware-image-contradicted carries both findings — the table's name and digest with the table version, and the row's version that made the header the verdict — and the file is claimed by the folder read, so the unclaimed scan does not restate it as an identified file with the contradiction left out.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": "not-a-bios"
         }
       },
       "expected": {
@@ -4244,12 +4673,188 @@
               }
             },
             {
-              "code": "firmware-content-unidentified",
+              "code": "firmware-image-contradicted",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin",
+                "image": "ps2-0200e-20040614.bin",
+                "md5": "dc752f160044f2ed5fc1f4964db2a095",
+                "core_so": "pcsx2_libretro.so",
+                "table": "6.0.0",
+                "table_version": "3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-header-that-cannot-be-read-is-a-read-failure-whatever-the-table-says",
+      "rationale": "The one file inside hashes to a packaged pcsx2/bios/ identity, and the ROMDIR read the core makes over it — the read that decides — does not come back. A read failure is stated as that and only that: firmware-unreadable names the file, no identity is claimed for it, because the table's name rides beside a header that read and this one did not, and satisfied is null with the file claimed by the folder read. The same statement the chmod-000 file earns, reached from the other read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": "unreadable"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declared-header-is-not-read-without-a-content-check",
+      "rationale": "A folder holding one file of a size the core keeps, asked without verify, on a fixture whose header read would fail. The answer is null with firmware-search-unverified and nothing else: the header check is a content read, and a question asked without a content check makes none — a firmware-unreadable here would prove the read happened. The verified twin of this fixture is firmware-a-header-that-cannot-be-read-is-a-read-failure-whatever-the-table-says.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": false
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": "unreadable"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-search-unverified",
               "data": {
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
                 "candidates": "1",
-                "paths": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
-                "table": "6.0.0",
+                "need": "required",
                 "core_so": "pcsx2_libretro.so"
               }
             }
@@ -4849,7 +5454,7 @@
                 "dir": "/mnt/sd/retrodeck/bios",
                 "core_so": "pcsx2_libretro.so",
                 "need": "required",
-                "table_version": "2"
+                "table_version": "3"
               }
             }
           ]
@@ -4858,7 +5463,7 @@
     },
     {
       "name": "retrodeck-lrps2-lists-the-linked-bios-root-and-the-size-filter-drops-the-ps1-image",
-      "rationale": "RetroDECK links pcsx2/bios onto the BIOS root, so the folder LRPS2 lists IS the root and the requirement's path is the root exactly. The listing happens at that resolved path and non-recursively (libretro/main.cpp:1807 at 14d19f8), so the siblings of every other system are seen too — here a 512 KiB PlayStation image beside one PS2 image. The size filter comes first (main.cpp:1815): the PS1 image is dropped by its stat before a byte is read, the PS2 image is of a size the core keeps and its bytes are a packaged pcsx2/bios/ identity, so the declaration is satisfied and only that image is named. Without the resolved path and the size-first order, a linked root would either be missed or have its PS1 dumps hashed for nothing.",
+      "rationale": "RetroDECK links pcsx2/bios onto the BIOS root, so the folder LRPS2 lists IS the root and the requirement's path is the root exactly. The listing happens at that resolved path and non-recursively (libretro/main.cpp:1807 at 14d19f8), so the siblings of every other system are seen too — here a 512 KiB PlayStation image beside one PS2 image. The size filter comes first (main.cpp:1815): the PS1 image is dropped by its stat before a byte is read, the PS2 image is of a size the core keeps, its ROMDIR header reads as a PS2 BIOS by the check the core makes itself (IsBIOS → LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:325-335, :60-173 at 14d19f8), and its bytes are a packaged pcsx2/bios/ identity, so the declaration is satisfied and only that image is named — under the table's name, with the header's fields beside it. Without the resolved path and the size-first order, a linked root would either be missed or have its PS1 dumps read for nothing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4887,6 +5492,12 @@
           "kind": "core",
           "core_so": "pcsx2_libretro.so",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/retrodeck/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -4941,7 +5552,107 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-lrps2-a-linked-root-holding-another-emulators-disk-image-holds-no-image",
+      "rationale": "RetroDECK links pcsx2/bios onto the BIOS root, so the folder LRPS2 lists is the root, and every other system's files are listed beside whatever PS2 image is there. Here none is: the 512 KiB PlayStation image is dropped by the size filter (libretro/main.cpp:1815 at 14d19f8) before a byte is read, and the one file of an accepted size is another emulator's disk image, which the core would hand to IsBIOS (main.cpp:1818) and IsBIOS would reject — its bytes hold no ROMDIR table for LoadBiosVersion to find (pcsx2/ps2/BiosTools.cpp:60-173). Read the same way, atlas answers the same: satisfied is false, firmware-directory-holds-no-image names the root and the file, and the core answers requirements_met false. A null here would read 'unknown' for a machine whose folder holds no PS2 BIOS, on the layout the verdict was built for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.info": "display_name = \"Sony - PlayStation 2 (LRPS2)\"\nsystemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "size": 524288
+          },
+          "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2": {
+            "md5": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+            "size": 4718592
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios"
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2": "not-a-bios"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": null,
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/mnt/sd/retrodeck/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-directory-holds-no-image",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/bios",
+                "candidates": "1",
+                "paths": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "core_so": "pcsx2_libretro.so",
+                "table_version": "3"
               }
             }
           ]
@@ -4950,7 +5661,7 @@
     },
     {
       "name": "retrodeck-lrps2-inventory-a-file-the-folder-read-stated-is-not-stated-again-as-unclaimed",
-      "rationale": "RetroDECK links pcsx2/bios onto the BIOS root, so the folder LRPS2 lists and the root the unclaimed scan walks are one directory, and two reads meet the same files. Ownership decides who states each: the folder read recognises the PS2 image and finds the 4 MiB chmod-000 file unreadable, so both are that declaration's — firmware-image-identified and firmware-unreadable once each, and neither in unclaimed. The right-sized file whose bytes the table does not list is nobody's: the folder read counts it, and no unidentified caveat is stated because an image was recognised; the scan lists it with no identity, which is not a repeat. The 512 KiB PlayStation image is dropped by the size filter before a byte is read and is unclaimed like any other sibling. Without the ownership rule the same file would be stated twice, once by each read.",
+      "rationale": "RetroDECK links pcsx2/bios onto the BIOS root, so the folder LRPS2 lists and the root the unclaimed scan walks are one directory, and two reads meet the same files. Ownership decides who states each: the folder read passes the PS2 image through the core's own header check and finds the 4 MiB chmod-000 file unreadable, so both are that declaration's — firmware-image-identified and firmware-unreadable once each, and neither in unclaimed. The right-sized file that fails the header check and matches no packaged identity is nobody's: the folder read read it and found no BIOS, and states nothing about it: the no-image code is stated only when every candidate was read and rejected, and here an image passed. The scan lists it with no identity, which is not a repeat. The 512 KiB PlayStation image is dropped by the size filter before a byte is read and is unclaimed like any other sibling. Without the ownership rule the same file would be stated twice, once by each read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4989,6 +5700,13 @@
         "firmware_query": {
           "kind": "inventory",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/retrodeck/bios/unknown.bin": "not-a-bios",
+          "/mnt/sd/retrodeck/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -5061,7 +5779,12 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
               }
             },
             {
@@ -5076,7 +5799,7 @@
     },
     {
       "name": "retrodeck-lrps2-inventory-a-linked-candidate-is-claimed-by-its-target",
-      "rationale": "Two of the files LRPS2 lists on the linked BIOS root are links into store/: the packaged PS2 image and a 4 MiB chmod-000 file. The folder read states them under the names it listed — ps2.bin and locked.bin, what the core lists and opens through the link — and claims what they resolve to, because the unclaimed scan compares resolved paths: it meets the same two entries, resolves them into store/, and skips both. So firmware-image-identified and firmware-unreadable are stated once each under the listed names, neither store/ target appears in unclaimed, and the right-sized unknown file directly in the root is listed with no identity. Claimed in the listed spelling instead, the scan would state the locked file a second time and list both targets as unclaimed.",
+      "rationale": "Two of the files LRPS2 lists on the linked BIOS root are links into store/: the packaged PS2 image and a 4 MiB chmod-000 file. The folder read states them under the names it listed — ps2.bin and locked.bin, what the core lists and opens through the link — reads the image's header at the target, where the bytes are, and claims what they resolve to, because the unclaimed scan compares resolved paths: it meets the same two entries, resolves them into store/, and skips both. So firmware-image-identified and firmware-unreadable are stated once each under the listed names, neither store/ target appears in unclaimed, and the right-sized file directly in the root that fails the header check is listed with no identity. Claimed in the listed spelling instead, the scan would state the locked file a second time and list both targets as unclaimed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5112,6 +5835,13 @@
         "firmware_query": {
           "kind": "inventory",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/retrodeck/bios/unknown.bin": "not-a-bios",
+          "/mnt/sd/retrodeck/bios/store/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -5172,7 +5902,12 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
               }
             },
             {
@@ -5301,7 +6036,7 @@
     },
     {
       "name": "retrodeck-a-catalogue-listing-lrps2-twice-states-the-recognised-image-once",
-      "rationale": "The same doubled catalogue asked with verify: the one file inside is a packaged pcsx2/bios/ identity, so both entries' rows are satisfied and both cores answer requirements_met true, while firmware-image-identified names the image once — the second entry takes the verdict its row needs without restating what the first read established.",
+      "rationale": "The same doubled catalogue asked with verify: the one file inside passes the core's own header check and is a packaged pcsx2/bios/ identity, so both entries' rows are satisfied and both cores answer requirements_met true, while firmware-image-identified names the image once — the second entry takes the verdict its row needs without restating what the first read established.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5324,6 +6059,12 @@
           "kind": "system",
           "system": "ps2",
           "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/retrodeck/bios/pcsx2/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
         }
       },
       "expected": {
@@ -5404,7 +6145,12 @@
                 "image": "ps2-0200e-20040614.bin",
                 "md5": "dc752f160044f2ed5fc1f4964db2a095",
                 "table": "6.0.0",
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
               }
             }
           ]

@@ -32,7 +32,7 @@ flowchart TB
         esde["atlas.esde<br/><small>ES-DE es_systems.xml</small>"]
     end
 
-    seam["atlas.machine — the seam<br/><small>every operation reports its outcome:<br/>read_text · glob · path_kind · readlink · query_core · file_size · file_digest · read_appimage_text</small>"]
+    seam["atlas.machine — the seam<br/><small>every operation reports its outcome:<br/>read_text · glob · path_kind · readlink · query_core · file_size · file_digest · read_appimage_text · read_ps2_bios_header</small>"]
     real["RealMachine<br/><small>the running machine</small>"]
     fixture["FixtureMachine<br/><small>a machine as plain data</small>"]
 

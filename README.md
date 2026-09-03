@@ -48,11 +48,11 @@ Four principles, fixed before any code:
   picking a winner would be the guess.
 - **All machine access goes through an injected seam.** The library never touches the machine directly; it asks a narrow
   machine protocol (`read_text`, `glob`, `path_kind`, `readlink`, `query_core`, `file_size`, `file_digest`,
-  `read_appimage_text`) whose every operation reports an explicit outcome — missing is not unreadable is not invalid
-  text — because the emulators make those distinctions and health reporting depends on them. In production the seam is
-  the real machine. In tests and conformance vectors it is a fixture machine — files, directories, symlinks, AppImage
-  contents and core answers as plain data — so detection, config parsing, and override chains are all provable from
-  data, failure states included.
+  `read_appimage_text`, `read_ps2_bios_header`) whose every operation reports an explicit outcome — missing is not
+  unreadable is not invalid text — because the emulators make those distinctions and health reporting depends on them.
+  In production the seam is the real machine. In tests and conformance vectors it is a fixture machine — files,
+  directories, symlinks, AppImage contents, BIOS headers and core answers as plain data — so detection, config parsing,
+  and override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<content_dir>` when the layout keys on the ROM's own folder and no ROM was named, `<library_name>` when
   the core would not load, `<save_id>` where the emulator keys the save off a serial or title id it reads from the ROM

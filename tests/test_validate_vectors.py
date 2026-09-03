@@ -436,6 +436,27 @@ INPUT_PATH_CASES = [
     case(_with(_vector(), symlinks={"/a": 7}), "input.symlinks must be an object", id="symlinks-target-type"),
 ]
 
+A_BLOB = {"md5": "77" * 16, "size": 4194304}
+A_ROMVER = "0200EC20040614"
+
+INPUT_PS2_BIOS_HEADER_CASES = [
+    case(_with(_vector(), ps2_bios_headers=[]), "input.ps2_bios_headers must be an object", id="headers-not-object"),
+    case(_with(_vector(), ps2_bios_headers={"/a": "not-a-bios"}), "must name a declared file",
+         id="header-on-undeclared-file"),
+    case(_with(_vector(), files={"/a": {"status": "unreadable", "size": 4}}, ps2_bios_headers={"/a": "not-a-bios"}),
+         "sits on an unreadable file", id="header-on-unreadable-file"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": "corrupt"}), "state must be one of",
+         id="header-state-unknown"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER}}),
+         "must be a state or an object with exactly", id="header-missing-serial"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": 14, "serial": ""}}),
+         "romver and serial must be strings", id="header-field-type"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": "0200E", "serial": ""}}),
+         "romver must be 14 characters", id="header-romver-length"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER, "serial": "x" * 16}}),
+         "serial must be at most 15 characters", id="header-serial-length"),
+]
+
 INPUT_CORE_CASES = [
     case(_with(_vector(), cores=[]), "input.cores must be an object", id="cores-not-object"),
     case(_with(_vector(), cores={"/a.so": {}}), "must be null or an object with a string library_name",
@@ -936,14 +957,14 @@ REQUIREMENT_CASES = [
                                                                 satisfied=True)],
                                      requirements_met=True)]),
          "a file where the core opens a folder", id="requirement-file-at-a-folder-declaration"),
-    # A folder the core lists is satisfied only by a recognised image inside
-    # it, and recognising one is a content read — so true without hash
-    # checking is a verdict the run could never have reached.
+    # A folder the core lists is satisfied only by an image the core's own
+    # header check passed, and that check is a content read — so true without
+    # a content check is a verdict the run could never have reached.
     case(_base_firmware(cores=[_core(requirements=[_requirement(declared_kind="directory", found="directory",
                                                                 present=True, checked="unknown",
                                                                 satisfied=True)],
                                      requirements_met=True)]),
-         "satisfied only by a recognised image inside it", id="requirement-folder-satisfied-without-hashing"),
+         "without a content check nothing was read", id="requirement-folder-satisfied-without-hashing"),
     # A directory where the core reads a FILE is in the way and establishes
     # nothing either way; only a folder declaration's directory carries a verdict.
     case(_base_firmware(cores=[_core(requirements=[_requirement(found="directory", present=True,
@@ -1097,6 +1118,7 @@ ALL_CASES = [
     *VECTOR_SHAPE_CASES,
     *INPUT_FILE_CASES,
     *INPUT_PATH_CASES,
+    *INPUT_PS2_BIOS_HEADER_CASES,
     *INPUT_CORE_CASES,
     *QUERY_CASES,
     *FIRMWARE_QUERY_CASES,

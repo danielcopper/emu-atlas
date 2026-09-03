@@ -5828,6 +5828,9 @@ class _CountingMachine:
     def read_appimage_text(self, path, inner_path):
         return self._inner.read_appimage_text(path, inner_path)
 
+    def read_ps2_bios_header(self, path):
+        return self._inner.read_ps2_bios_header(path)
+
     def glob(self, pattern):
         return self._inner.glob(pattern)
 
