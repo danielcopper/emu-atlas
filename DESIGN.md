@@ -107,8 +107,10 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    typed field in a .info holds it, its desc is a packager's prose, and
 #    RetroArch's own check is one stat that answers alike for both; everything
 #    uncurated is "file", the answer such a declaration got before the table
-#    existed. A missing folder is a folder to create, and a file where a folder
-#    is listed reaches nothing.
+#    existed. A missing folder is a folder to create, a file where a folder
+#    is listed reaches nothing, and a folder that is there is judged by what
+#    it holds, the way the core reads it: its own size filter first, then the
+#    packaged identities the row names — so `satisfied` is that verdict there.
 #    A fourth axis joins none of them:
 #      supplied_by  whose file is at the destination — the distribution's own
 #                   copy, or nothing stated
