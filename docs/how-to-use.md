@@ -1032,27 +1032,52 @@ both frontends start a game — or `user-auto-connect` is on; that list comes fr
 `user.xml` loads, keyed by the file's `id` attribute or the directory name's stem, and atlas reads each `user.xml` the
 same way, so the check is the emulator's own rather than a guess from directory names. So where that listing holds the
 recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** — composed from the
-identity, which the first save creates where no directory of that name exists yet. **Every user directory that exists
-stays a group of its own**, with the recorded id beside them as a `user-id` reading and as `configured_user` in the
-`core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded user's tree is the one
-named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as that user — the player
-picks); the recorded user has no tree here at all; whether it is set up could not be read (a `user.xml` atlas could not
-read); or the tree could not be listed and the answer claims nothing new. A plain launch of the emulator without
+identity, which the first save creates where no directory of that name exists yet. **Every user Vita3K itself would list
+is a group of its own** — a directory without a `user.xml`, or with one that does not parse, is no user the emulator
+opens and is stated under `skipped` instead — with the recorded id beside them as a `user-id` reading and as
+`configured_user` in the `core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded
+user's tree is the one named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as
+that user — the player picks); the recorded user has no tree here at all; whether it is set up could not be read (a
+`user.xml` atlas could not read, stated under `unestablished`); no user the emulator would list was found at all (the
+directories found are all skipped, and `users` names the stand-in); whether the emulator would list a user account here
+was not established (at least one directory found is one atlas could not decide and none is listed, whatever else was
+skipped); or the tree could not be listed and the answer claims nothing new. A plain launch of the emulator without
 `user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
 emulator's own config directory. Below the drive, saves are one directory per title id under `home/<user>/savedata`.
-Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home that exists is a
-group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at which is
-in force. Where the tree holds no user home at all, the caveat says exactly that — the directory named is the one the
-emulator would create on the first save, not one found here — and a tree that could not be listed carries
+Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home RPCS3 itself would
+list is a group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at
+which is in force. Where the tree holds no user home at all, the caveat says exactly that — the directory named is the
+one the emulator would create on the first save, not one found here — and a tree that could not be listed carries
 `save-dir-unlistable` of its own, so "which users exist is unknown" is something a client can branch on. Two more things
 ride along: the per-title directories keep their names refused (they are the games' own), and a _second_ place saves
 live rides as its own group — `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, outside the per-user
 tree entirely, with `files: null` because what lands there has not been read, and `file-set-spans-roots` saying a sync
 that walks only the per-user tree misses it. That card is also the first to read YAML, through a reader that names the
 keys it does not read rather than guessing (`atlas.yaml_scalars`).
+
+Both per-user surveys list the user root the way the emulators iterate it, then apply each emulator's own selection
+rule. The listing is a directory walk on both sides — RPCS3's `fs::dir` is `readdir` (File.cpp:2091-2108 at build
+7c6b3dcd), Vita3K's is `fs::directory_iterator` (get_users_list, user_management.cpp:87 at cb1f592c) — so a directory
+whose name starts with a period is reached like any other, and atlas lists it too, through a second glob for
+leading-period names. What each emulator then keeps differs. RPCS3's `GetUserAccounts` (user_account.cpp:35-66) keeps a
+directory when its name passes `check_user` and a `localusername` file is in it. `check_user` is
+`id = 0; if (user.size() == 8) std::from_chars(&user.front(), &user.back() + 1, id); return id;`
+(system_utils.cpp:59-69): eight bytes whose leading digits read as a non-zero number, the result code never looked at —
+so `1234abcd` passes and `00000000` does not — and the file test is `fs::is_file`, a stat that succeeds on something
+other than a directory (File.cpp:1064-1079). **Only the directories that listing keeps are RPCS3 groups**; the ones it
+passes over are stated under `skipped` in the `core-mode-unestablished` caveat's data, with the reason in its message,
+and a directory whose `localusername` atlas could not stat is stated under `unestablished` rather than decided either
+way. Where every directory found is passed over and none is unestablished, `reason` says no account the emulator would
+list was found — not that no directory was; where at least one directory found is one atlas could not decide instead,
+whatever else was passed over, `reason` says whether the emulator would list a user account here was not established.
+Vita3K's rule is the `user.xml` load described above (get_users_list, user_management.cpp:89), and the same three fates
+apply: a directory whose `user.xml` loads is a group, one without a `user.xml` or with one that does not parse is stated
+under `skipped`, and one whose `user.xml` atlas could not read is stated under `unestablished`; the recorded-user check
+then runs over that list. The stem that keys an id-less `user.xml` is `std::filesystem::path::stem`, which keeps a
+leading period and cuts at a later one — `.hidden.bak` keys `.hidden`, `..bak` keys `.`.
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's

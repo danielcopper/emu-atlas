@@ -548,33 +548,37 @@ drive, and `vfs.yml` states where that drive lives — `/dev_hdd0/`, composed of
 replaces everywhere it appears and which means the emulator's config directory when empty (vfs_config.cpp:14-62). It is
 the first card read through the YAML scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does
 not read rather than guessing at it. Below the drive the unit is `home/<user>/savedata`, one directory per title id; the
-active user is a runtime selection no file records, so **every user home that exists becomes its own group** and a
-caveat says which ones were found — the same stance the Dolphin card takes with its region trees. Where none exists the
-answer says so outright rather than presenting the compiled default as a home somebody found, and a tree that cannot be
-listed carries `save-dir-unlistable` rather than a clause glued onto another caveat's prose. A second save location is
-named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only the
-per-user tree would miss. It is a **directory**, so it is a group of its own with its names left open (`files: null`)
-beside `file-set-spans-roots` — not `save-inside-image`, which means the answer named a file and nothing inside it is
-addressable, the opposite of what is true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree —
-`pref-path` in `config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and saves at
-`ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user segment states every user directory
-that exists as its own group, the way RPCS3's does — but this emulator **does** write down the user it opened, as
-`user-id` in the same `config.yml` (select_and_open_user, user_management.cpp:329-331), and the record reaches further:
-`init_home` reopens the recorded user when the id is among the users the emulator itself listed and either the launch
-names an app on the command line — which is how a frontend launches — or `user-auto-connect` is on, and otherwise the
-user manager opens for the player to pick (gui.cpp:688-696); the list is built from the directories under `ux0/user`
-whose `user.xml` loads, keyed by the file's `id` attribute or, lacking one, the directory name's stem (get_users_list,
+active user is a runtime selection no file records, so **every user home RPCS3's own `GetUserAccounts` would list
+becomes its own group**, the ones it passes over stated as `skipped` — the same stance the Dolphin card takes with its
+region trees. Where none exists the answer says so outright rather than presenting the compiled default as a home
+somebody found, and a tree that cannot be listed carries `save-dir-unlistable` rather than a clause glued onto another
+caveat's prose. A second save location is named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2
+classics, which a sync walking only the per-user tree would miss. It is a **directory**, so it is a group of its own
+with its names left open (`files: null`) beside `file-set-spans-roots` — not `save-inside-image`, which means the answer
+named a file and nothing inside it is addressable, the opposite of what is true here. Vita3K (build 3996, commit
+`cb1f592c`): one key carries the whole tree — `pref-path` in `config.yml`, with everything the emulator keeps hanging
+off it as `ux0/…`, and saves at `ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user
+segment states every user directory the emulator itself would list as its own group, the ones it passes over as
+`skipped` — the way RPCS3's does — but this emulator **does** write down the user it opened, as `user-id` in the same
+`config.yml` (select_and_open_user, user_management.cpp:329-331), and the record reaches further: `init_home` reopens
+the recorded user when the id is among the users the emulator itself listed and either the launch names an app on the
+command line — which is how a frontend launches — or `user-auto-connect` is on, and otherwise the user manager opens for
+the player to pick (gui.cpp:688-696); the list is built from the directories under `ux0/user` whose `user.xml` loads,
+keyed by the file's `id` attribute or, lacking one, the directory name's stem (get_users_list,
 user_management.cpp:83-97), and the emulator's own writes keep that key equal to the directory name (save_user,
 user_management.cpp:145-158) — atlas reads each `user.xml` the same way, so the users it checks the record against are
 the emulator's own list. So the answer's headline `dir` names the recorded user's tree where that listing holds it —
 composed from the identity the user.xml states, created on the first save where no directory of that name exists yet —
 with the recorded id stated beside every tree as a reading and as `configured_user` in the caveat; a recorded user the
 listing does not hold moves nothing, the caveat's reason saying why (no tree of that name, a directory that is not set
-up as that user, or a `user.xml` that could not be read), and a tree that could not be listed keeps claiming nothing. An
-empty `pref-path` is a refusal rather than a guess: the emulator falls back to a default it derives at run time and
-writes nowhere (config.cpp:189-190). A configuration that exists and cannot be read refuses the whole question with
-`emulator-config-unreadable`; one that reads fine but states an absolute path only the emulator's sandbox can spell
-refuses with `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+up as that user, or a `user.xml` that could not be read); where nothing at all is listed the reason names one of three
+further facts instead — no user directory was found at all, no user account the emulator would list was found, or, where
+some directory's `user.xml` could not be looked at, whether the emulator would list a user account here was not
+established — and a tree that could not be listed keeps claiming nothing. An empty `pref-path` is a refusal rather than
+a guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A
+configuration that exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that
+reads fine but states an absolute path only the emulator's sandbox can spell refuses with
+`emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
 `sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
 (`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
 `data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at
