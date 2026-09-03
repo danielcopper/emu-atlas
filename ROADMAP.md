@@ -95,16 +95,16 @@ per-title unit, the second half of the rommapp/romm#3866 demand, #213), DuckStat
 (slots whose card type is read off the disk, #217) and melonDS — one `.sav` per game with the TOML/legacy-INI read and
 the first flatpak-variant answer on EmuDeck (#219), plus its BIOS expectations as the first `config_files` firmware card
 (#220: the paths are configuration values, and which of them a launch probes is `verifySetup`'s own live decision), and
-RPCS3 (#231: the save tree the emulated PS3's own VFS names, one directory per title id below every user home that
-exists — read through the YAML scalar reader of #229, which is what unblocked it), and Vita3K (#233: the `ux0` tree
-below `pref-path`, plus the extracted-binary launch variant EmuDeck installs it as), and DuckStation's BIOS expectations
-(#236: the first `search` firmware card — the emulator names no file, so the answer is a directory, the emulator's own
-size filter, and its recognition table packaged from source, with the pick stated only where a content check was asked
-for) and its cheat files as the mod row of the same emulator — the first tree stated as a configuration key rather than
-an XDG subpath, because the root it hangs off is the one the launch environment picks. Each sub-issue replaces the
-`Unresolved` standalone outcome for its emulator, save placement + BIOS expectations + config sources, on RetroDECK and
-EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own BIOS slice (`dev_flash`), PPSSPP
-deepening.
+RPCS3 (#231: the save tree the emulated PS3's own VFS names, one directory per title id below every user home the
+emulator lists — read through the YAML scalar reader of #229, which is what unblocked it), and Vita3K (#233: the `ux0`
+tree below `pref-path`, plus the extracted-binary launch variant EmuDeck installs it as), and DuckStation's BIOS
+expectations (#236: the first `search` firmware card — the emulator names no file, so the answer is a directory, the
+emulator's own size filter, and its recognition table packaged from source, with the pick stated only where a content
+check was asked for) and its cheat files as the mod row of the same emulator — the first tree stated as a configuration
+key rather than an XDG subpath, because the root it hangs off is the one the launch environment picks. Each sub-issue
+replaces the `Unresolved` standalone outcome for its emulator, save placement + BIOS expectations + config sources, on
+RetroDECK and EmuDeck both. Candidates next: Vita3K's texture directory and its firmware, RPCS3's own BIOS slice
+(`dev_flash`), PPSSPP deepening.
 
 ### 5. EmuDeck reality
 
