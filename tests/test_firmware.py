@@ -97,6 +97,7 @@ from atlas.firmware import (
     read_core_declarations,
     resolve_links,
     save_artifact_paths,
+    stated_once,
     system_decision,
     system_for,
 )
@@ -110,7 +111,7 @@ from atlas.machine import (
     Ps2BiosHeaderResult,
     ReadResult,
 )
-from atlas.placement import CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
+from atlas.placement import CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR, CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
 from atlas.systems import known_systems
 
 INFO_DIR = "/cores"
@@ -3590,3 +3591,51 @@ class TestAPartialReaderOfAGroupIsNotMisled:
         flattened = answer.requirements
         assert [r.file_name for r in flattened] == ["scph5501.bin", "scph5502.bin"]
         assert [r.regions for r in flattened] == [("ntsc-u",), ("ntsc-j", "pal")]
+
+
+class TestAnAnswerStatesAnObservationOnce:
+    """Two caveats with one code and one data are one statement, and the first stays.
+
+    A catalogue naming one core under two entries observes each destination
+    once per entry with identical data. What the answer keeps is decided by
+    ``code`` and ``data`` alone: a restatement in other words is dropped, the
+    same code over other data is another fact, another code over the same
+    data is one too, and a mapping-valued entry is keyed without being
+    hashed.
+    """
+
+    LOCKED = f"{BIOS_DIR}/locked.bin"
+    OTHER = f"{BIOS_DIR}/other.bin"
+
+    def test_a_restatement_in_other_words_is_dropped_and_the_first_kept(self):
+        first = Caveat(CAVEAT_FIRMWARE_UNREADABLE, "the sentence of the reader that saw it", {"path": self.LOCKED})
+        again = Caveat(CAVEAT_FIRMWARE_UNREADABLE, "the same fact, worded again", {"path": self.LOCKED})
+        assert stated_once((first, again)) == (first,)
+
+    def test_the_same_code_over_other_data_is_another_fact(self):
+        locked = Caveat(CAVEAT_FIRMWARE_UNREADABLE, "one file", {"path": self.LOCKED})
+        other = Caveat(CAVEAT_FIRMWARE_UNREADABLE, "another file", {"path": self.OTHER})
+        assert stated_once((locked, other, locked)) == (locked, other)
+
+    def test_another_code_over_the_same_data_is_another_fact(self):
+        unread = Caveat(CAVEAT_FIRMWARE_UNREADABLE, "its bytes failed", {"path": self.LOCKED})
+        obstructed = Caveat(CAVEAT_FIRMWARE_PATH_OBSTRUCTED, "a directory is there", {"path": self.LOCKED})
+        assert stated_once((unread, obstructed, unread)) == (unread, obstructed)
+
+    def test_a_mapping_valued_entry_is_keyed_by_its_items(self):
+        tally = Caveat(
+            CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+            "the tally",
+            {"count": "3", "emulators": {"DuckStation": "2", "SwanStation": "1"}},
+        )
+        reordered = Caveat(
+            CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+            "the tally, keys in another order",
+            {"emulators": {"SwanStation": "1", "DuckStation": "2"}, "count": "3"},
+        )
+        other = Caveat(
+            CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+            "another tally",
+            {"count": "1", "emulators": {"DuckStation": "1"}},
+        )
+        assert stated_once((tally, reordered, other)) == (tally, other)
