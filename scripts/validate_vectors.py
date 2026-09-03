@@ -388,6 +388,7 @@ KNOWN_CAVEAT_CODES = {
     "frontend-marker-mismatch",
     "firmware-path-obstructed",
     "firmware-path-not-a-directory",
+    "firmware-directory-holds-no-candidate",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
@@ -1553,6 +1554,35 @@ def _validate_file_at_a_folder_declaration(name: str, checked: Any, satisfied: A
         fail(f"{name}: a file where the core opens a folder is checked='unknown' with satisfied false")
 
 
+def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checked: bool) -> None:
+    """A directory is at the destination — what it settles depends on what the core opens there.
+
+    `checked` is 'unknown' either way: no packaged identity belongs to a
+    folder, so no bytes at the destination were weighed. Where the core reads
+    a FILE the directory is in the way and establishes nothing — `satisfied`
+    null. Where the core lists a FOLDER the directory is the right shape and
+    `satisfied` is the verdict over its contents, read the way the core reads
+    them: false when it holds no file of a size the core accepts (a stat, so
+    it needs no content check), null when files of an accepted size were not
+    hashed or matched nothing the table knows or the folder could not be
+    listed, and true only for a recognised image inside — which only a
+    content check can establish, so true without hash checking is a verdict
+    the run could never have reached.
+    """
+    if entry["checked"] != "unknown":
+        fail(f"{name}: a directory at the destination is checked='unknown' — no identity belongs to a folder")
+    satisfied = entry["satisfied"]
+    if entry["declared_kind"] != "directory":
+        if satisfied is not None:
+            fail(f"{name}: a directory where the core reads a file establishes nothing, so satisfied must be null")
+        return
+    if satisfied is True and not hash_checked:
+        fail(
+            f"{name}: a folder declaration is satisfied only by a recognised image inside it, "
+            "and without hash checking nothing was recognised"
+        )
+
+
 def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) -> None:
     found = entry["found"]
     checked = entry["checked"]
@@ -1565,12 +1595,7 @@ def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) 
     if checked not in KNOWN_FIRMWARE_CHECKED:
         fail(f"{name}: firmware requirement checked must be one of {sorted(KNOWN_FIRMWARE_CHECKED)}")
     if found == "directory":
-        # Something is there and nothing about it was established. That holds
-        # for both declaration shapes: where the core lists a folder this is
-        # the right thing and its contents are a later question, and where the
-        # core reads a file the directory is in the way.
-        if checked != "unknown" or satisfied is not None:
-            fail(f"{name}: a directory at the destination is checked='unknown' with satisfied null")
+        _validate_directory_at_the_destination(name, entry, hash_checked=hash_checked)
         return
     if entry["declared_kind"] == "directory":
         _validate_file_at_a_folder_declaration(name, checked, satisfied)

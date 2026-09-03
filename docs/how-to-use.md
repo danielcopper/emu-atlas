@@ -1940,7 +1940,8 @@ for core in answer.cores:
             req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | 'not-comparable'
                                        #   — or None, when nothing is there to check
             req.identity               # the packaged identity, or None; req.identity.kind is 'file' | 'archive'
-            req.satisfied              # True | False | None       — present AND nothing contradicts it
+            req.satisfied              # True | False | None       — present AND nothing contradicts it;
+                                       #   over a folder the core lists, the verdict about what it holds
             req.supplied_by            # the distribution's own copy, or None — see below
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
@@ -1965,8 +1966,10 @@ acts on:
 
 - `found: "missing"` with `declared_kind: "directory"` is **create this folder**, not fetch this file. Without the field
   the two are the same word, and the user who has not created the folder is exactly the one who needs the instruction.
-- `found: "directory"` there is the right shape and carries no caveat. `satisfied` stays `None` all the same: which
-  images lie inside the folder is a question this answer does not ask, so nothing about it is established.
+- `found: "directory"` there is the right shape and carries no caveat about the shape. The folder is what the core
+  lists, so `satisfied` is the verdict about what it _holds_, read the way the core reads it — see
+  [What a listed folder holds](#what-a-listed-folder-holds) — while `found` and `present` keep describing the folder and
+  `checked` stays `"unknown"`, because no packaged identity belongs to a folder.
 - `found: "file"` there is the wrong shape, and it is stated rather than hedged: the core lists that path and a plain
   file has no inside, so `satisfied` is `False` and `firmware-path-not-a-directory` carries the path plus the
   `table_version` that made the call. `checked` stays `"unknown"` — nothing was hashed, because no packaged identity can
@@ -1977,6 +1980,71 @@ about such a declaration — and what it buys you is that a declaration with no 
 table existed. The mirror image of the wrong-shape case is `firmware-path-obstructed`: a directory sitting where a
 **file** declaration points, which establishes nothing either way and is still not a missing file. It rides every route,
 not just the `.info` one, so its message says what was read rather than what the table holds.
+
+### What a listed folder holds
+
+A folder declaration's `satisfied` is earned the way the core earns its own answer. LRPS2 at the shipped 14d19f8 lists
+`<system>/pcsx2/bios` whenever the core has not yet read a `pcsx2_bios` value in this loaded instance (`setting_bios`
+empty, `libretro/main.cpp:1801`) — the first `retro_init` after the core is loaded, since the option is read at content
+load (`check_variables`, `main.cpp:360-365`, called from `retro_load_game` at `:1926`, after `retro_init` at `:1789`)
+and nothing clears it afterwards, so a re-init without unloading skips the listing — non-recursively with
+`FileSystem::FindFiles(..., "*", FILESYSTEM_FIND_FILES, ...)` and no hidden-files flag (`main.cpp:1807`), keeps only
+files with `4 MiB <= size <= 8 MiB` (`MIN_BIOS_SIZE` / `MAX_BIOS_SIZE`, `main.cpp:1810-1816`; the same constants in
+`pcsx2/ps2/BiosTools.cpp:31-32`), and validates each survivor by content with `IsBIOS` (`main.cpp:1818`;
+`BiosTools.cpp:325`), which reads the ROMDIR header (`BiosTools.cpp:62-106`) — no hash table anywhere. It needs exactly
+one image: the first found becomes the `pcsx2_bios` option's default (`main.cpp:1832-1834`), `LoadBIOS` opens one file
+(`BiosTools.cpp:281`), and when the configured one is absent `FindBiosImage` returns the first file passing `IsBIOS`
+regardless of region (`BiosTools.cpp:241-250`; the fallback `:270-278`). A configured image is opened with no size
+filter (`BiosTools.cpp:281-306`, only `filesize > 0`), so the size-based verdict below is a verdict about the
+auto-detect path; the option does not stop the listing — set, `LoadBIOS` opens the named file rather than the first the
+listing found (#360). Atlas lists the same folder at its resolved path, stats the sizes, hashes only the files of an
+accepted size, and matches them against the packaged identities filed under the `pcsx2/bios/` prefix — 73 of them, a
+_subset_ of what the header check accepts, because atlas does not read the header. The curated row states the prefix and
+the size range (`FIRMWARE_DECLARED_DIRECTORY`, version 2), and the caveats reuse the codes the DuckStation search
+already taught you:
+
+| the folder holds                                                             | `satisfied` | stated by                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a listing that failed                                                        | `None`      | `firmware-scan-incomplete` (`dir`, `unreadable`) — nothing about contents nobody saw                                                                                                                                                                                                                                                                                                                                                                     |
+| no file of an accepted size — empty, or only other sizes                     | `False`     | `firmware-directory-holds-no-candidate` (`dir`, `core_so`, `need`, `table_version`), with or without `verify`: the size is a stat and the core's own first filter, so it settles it                                                                                                                                                                                                                                                                      |
+| files of an accepted size, no `verify`                                       | `None`      | `firmware-search-unverified` (`dir`, `candidates`, `need`, `core_so`) — a content question not asked for content is not answered "yes"                                                                                                                                                                                                                                                                                                                   |
+| a recognised image, `verify`                                                 | `True`      | one `firmware-image-identified` per recognised image, in path order (`path`, `image`, `md5`, `table`, `core_so`) — all of them, none picked: the core offers them all as option values, up to 127 — the fill loop stops one short of the 128-slot `RETRO_NUM_CORE_OPTION_VALUES_MAX` to leave room for the terminator (`main.cpp:1828`, `:1833`; `libretro.h:6394`)                                                                                      |
+| accepted sizes, `verify`, and none of the bytes that came back is recognised | `None`      | `firmware-content-unidentified` (`dir`, `candidates`, `paths`, `table`, `core_so`) — the core validates by a header atlas does not read, so this is not a verdict against them; `candidates` here counts the files read and not recognised, where the same key on `firmware-search-unverified` counts every file of an accepted size, and `paths` names them, sorted and joined with `", "`, the shape `firmware-scan-incomplete` gives its `unreadable` |
+| a candidate whose bytes cannot be read, `verify`                             | as the rest | `firmware-unreadable` (`path`) per such file — a read failure, never "bytes the table does not know", and it does not suppress the row above; with nothing else recognised the verdict is `None`                                                                                                                                                                                                                                                         |
+
+`image` is the table's own name for the content (`ps2-0200e-20040614.bin`) whatever the file is called: the core accepts
+any name, so the identification is by bytes. `table` is the packaged table's schema version (its `_meta.version`).
+Several recognised images are more choice, not a conflict and not "better". `requirements_met` follows `satisfied` as it
+always has, and `hash_checked` says whether `verify` ran.
+
+A distribution may link the folder onto an ancestor — RetroDECK links `pcsx2/bios` onto the BIOS root — and then the
+listing at the resolved path sees every other system's dumps too. That is why the size test comes first, as it does in
+the core: a 512 KiB PlayStation image is dropped by its stat before a byte of it is read. `path` is the resolved
+destination and `declared` the declaration as spelled, so on RetroDECK `path` for `pcsx2/bios` is the BIOS root itself.
+
+**Why is `satisfied` `None`?** Every route to it, in one place:
+
+| route                                                                      | `found`        | `checked`        | what says so                       |
+| -------------------------------------------------------------------------- | -------------- | ---------------- | ---------------------------------- |
+| the destination could not be looked at                                     | `inaccessible` | `None`           | `firmware-path-inaccessible`       |
+| a directory sits where the core reads a file                               | `directory`    | `unknown`        | `firmware-path-obstructed`         |
+| a known identity, and `verify` was not passed                              | `file`         | `unchecked`      | `hash_checked: false`              |
+| a known identity whose bytes could not be read                             | `file`         | `unknown`        | `firmware-unreadable`              |
+| an archive identity whose bytes differ                                     | `file`         | `not-comparable` | `firmware-identity-not-comparable` |
+| a listed folder with candidates, and `verify` was not passed               | `directory`    | `unknown`        | `firmware-search-unverified`       |
+| a listed folder whose candidates match nothing the table knows             | `directory`    | `unknown`        | `firmware-content-unidentified`    |
+| a listed folder whose candidates' bytes could not be read, none recognised | `directory`    | `unknown`        | `firmware-unreadable`              |
+| a listed folder that could not be listed                                   | `directory`    | `unknown`        | `firmware-scan-incomplete`         |
+
+Nothing else reaches `None`. A file the table does not cover is `True` (nothing further can ever be established about
+it), a missing destination or a wrong shape is `False`, and a folder holding nothing of an accepted size is `False`.
+
+A file a folder declaration's read accounted for — an image it recognised, or a candidate whose bytes it could not read
+— is claimed by that declaration and stays out of `unclaimed`, stated once by the read that saw it. The claim is by
+resolved path, so a listed entry that is a link into another directory claims its target, while the caveat names the
+entry the listing saw — the name the core lists and opens through the link. A candidate it read and did not recognise is
+claimed by nobody, so the unclaimed scan states it wherever that scan reaches, and identifies it against the whole
+packaged table, which may know it under another prefix.
 
 `unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
@@ -2092,12 +2160,14 @@ directory, and a firmware question names no content.
 
 Two more say a directory could not be read, and both mean the answer is narrower than the machine:
 
-| caveat                        | what it means                                    | what to do                                             |
-| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------ |
-| `core-enumeration-incomplete` | the core directory could not be listed           | the core list is what was visible, not what is shipped |
-| `firmware-scan-incomplete`    | a scanned firmware directory could not be listed | `unclaimed` is partial; do not read it as a clean tree |
+| caveat                        | what it means                                    | what to do                                                                                                                                                                                               |
+| ----------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core-enumeration-incomplete` | the core directory could not be listed           | the core list is what was visible, not what is shipped                                                                                                                                                   |
+| `firmware-scan-incomplete`    | a scanned firmware directory could not be listed | `unclaimed` is partial; do not read it as a clean tree — and a listed folder that could not be listed answers `None`, while a BIOS search that could not list its directory states no requirement at all |
 
-Both carry `data["path"]` — the directory that could not be read.
+`core-enumeration-incomplete` carries `data["path"]`, the directory that could not be read. `firmware-scan-incomplete`
+carries `path` from the unclaimed scan, and `dir` plus `unreadable` from a folder declaration's listing or a DuckStation
+search — the directory asked for, and where the walk stopped short.
 
 ## Answers as plain JSON
 
@@ -2126,8 +2196,9 @@ Three subjects carry one, each because the first thing a client asks is exactly 
 The shape rule is the difference between them: a plain boolean only where the fact can always be established, and the
 third state wherever "cannot tell" is reachable.
 
-A summary combines fields — `satisfied` reads `found`, `checked`, `identity` and `need` together. The other booleans on
-these answers do something else, and none of them answers "is this good?":
+A summary combines fields — `satisfied` reads `found`, `checked`, `identity` and `need` together, and over a folder the
+core lists, what listing it established. The other booleans on these answers do something else, and none of them answers
+"is this good?":
 
 - **what the run did**: `hash_checked` (you passed `verify`), `answer.cores` being listed at all;
 - **what one field contains**: `file_set.complete` says the list is closed, not that the placement is usable (and it is
