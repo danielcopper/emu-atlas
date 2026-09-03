@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/danielcopper/emu-atlas/compare/v0.9.0...v0.9.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **firmware:** an observation made once per catalogue entry is stated once per answer ([#367](https://github.com/danielcopper/emu-atlas/issues/367)) ([0ca89fa](https://github.com/danielcopper/emu-atlas/commit/0ca89fa7bf2adcb55c945d68663585721b8e4c39)), closes [#361](https://github.com/danielcopper/emu-atlas/issues/361)
+
 ## [0.9.0](https://github.com/danielcopper/emu-atlas/compare/v0.8.0...v0.9.0) (2026-09-03)
 
 
