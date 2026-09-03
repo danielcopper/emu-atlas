@@ -14338,6 +14338,720 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-one-core-twice-states-an-unreadable-file-once",
+      "rationale": "The catalogue is modeled with two commands on one core for psx — the shape RetroDECK 0.10.9b's ES-DE catalogue has for ps2 (two commands on pcsx2_libretro.so, components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak), placed on a core whose declaration names a file with a packaged identity. The declared scph5501.bin is there and its bytes fail under verify. Each entry's read observes the same destination and the answer states firmware-unreadable once, whichever entry made it; both entries still answer their own row, present and checked unknown, satisfied null.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path>\n    <command label=\"Beetle PSX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n    <command label=\"Beetle PSX (again)\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "status": "unreadable",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX (again)",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/scph5501.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-lrps2-twice-states-the-file-in-the-folders-place-once",
+      "rationale": "RetroDECK 0.10.9b's ES-DE catalogue lists ps2 with two commands on pcsx2_libretro.so (components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak), and a plain file sits where the core opens the pcsx2/bios folder. Each entry's read observes the same destination and the answer states firmware-path-not-a-directory once, whichever entry made it; both entries still answer their own row, found file, satisfied false.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ps2</name><path>%ROMPATH%/ps2</path>\n    <command label=\"LRPS2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/pcsx2_libretro.so %ROM%</command>\n    <command label=\"PCSX2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/pcsx2_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.info": "display_name = \"Sony - PlayStation 2 (LRPS2)\"\nsystemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/pcsx2/bios": "not a folder\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": "LRPS2",
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/mnt/sd/retrodeck/bios/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": "pcsx2_libretro.so",
+              "label": "PCSX2",
+              "declaration": "read",
+              "requirements_met": false,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/mnt/sd/retrodeck/bios/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-not-a-directory",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/pcsx2/bios",
+                "table_version": "3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-one-core-twice-states-an-inaccessible-destination-once",
+      "rationale": "The catalogue is modeled with two commands on one core for psx — the shape RetroDECK 0.10.9b's ES-DE catalogue has for ps2 (two commands on pcsx2_libretro.so, components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak), placed on a core whose declaration names a file with a packaged identity. The declared scph5501.bin cannot be looked at. Each entry's read observes the same destination and the answer states firmware-path-inaccessible once, whichever entry made it; both entries still answer their own row, found inaccessible, satisfied null.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path>\n    <command label=\"Beetle PSX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n    <command label=\"Beetle PSX (again)\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": false
+        },
+        "inaccessible": [
+          "/mnt/sd/retrodeck/bios/scph5501.bin"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "inaccessible",
+                  "present": null,
+                  "checked": null,
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX (again)",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "inaccessible",
+                  "present": null,
+                  "checked": null,
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-inaccessible",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/scph5501.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-one-core-twice-states-an-obstructed-destination-once",
+      "rationale": "The catalogue is modeled with two commands on one core for psx — the shape RetroDECK 0.10.9b's ES-DE catalogue has for ps2 (two commands on pcsx2_libretro.so, components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak), placed on a core whose declaration names a file with a packaged identity. A directory sits at the declared scph5501.bin, where the core reads a file. Each entry's read observes the same destination and the answer states firmware-path-obstructed once, whichever entry made it; both entries still answer their own row, found directory, satisfied null.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path>\n    <command label=\"Beetle PSX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n    <command label=\"Beetle PSX (again)\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_psx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios/scph5501.bin"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "label": "Beetle PSX (again)",
+              "declaration": "read",
+              "requirements_met": null,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/mnt/sd/retrodeck/bios/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-path-obstructed",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/scph5501.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-one-core-twice-states-a-differing-archive-once",
+      "rationale": "The catalogue is modeled with two commands on one core — the shape RetroDECK 0.10.9b's ES-DE catalogue has for ps2 (two commands on pcsx2_libretro.so, components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak) — placed on Flycast, whose declaration names the dc/naomi.zip romset archive, with a naomi.zip whose size alone already differs from the pinned romset — the free pre-filter settles it before a byte is read, and an archive identity answers not-comparable rather than mismatch. Each entry's read observes the same destination and the answer states firmware-identity-not-comparable once, whichever entry made it; both entries still answer their own row, present, checked not-comparable, satisfied null.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>dreamcast</name><path>%ROMPATH%/dreamcast</path>\n    <command label=\"Flycast\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n    <command label=\"Flycast (again)\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.info": "display_name = \"Sega - Dreamcast/NAOMI (Flycast)\"\nsystemname = \"Sega Dreamcast\"\ndatabase = \"Sega - Dreamcast|Sega - Naomi|Sega - Naomi 2|Atomiswave\"\nfirmware_count = 1\nfirmware0_desc = \"dc/naomi.zip (Naomi Bios from MAME)\"\nfirmware0_path = \"dc/naomi.zip\"\nfirmware0_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/flycast_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/dc/naomi.zip": {
+            "md5": "526eda1e2a7920c92c88178789d71d84",
+            "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+            "size": 9317437
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "dreamcast",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "flycast_libretro.so",
+              "label": "Flycast",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "naomi",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "naomi.zip",
+                  "path": "/mnt/sd/retrodeck/bios/dc/naomi.zip",
+                  "declared": "dc/naomi.zip",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "526eda1e2a7920c92c88178789d71d84",
+                    "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+                    "size": 9321533,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "not-comparable",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            },
+            {
+              "core_so": "flycast_libretro.so",
+              "label": "Flycast (again)",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "flycast_libretro.so",
+                  "system": "naomi",
+                  "system_source": "override",
+                  "need": "optional",
+                  "file_name": "naomi.zip",
+                  "path": "/mnt/sd/retrodeck/bios/dc/naomi.zip",
+                  "declared": "dc/naomi.zip",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "526eda1e2a7920c92c88178789d71d84",
+                    "sha1": "c96711c01c0158f161791d6fbe75d88329e8ac0a",
+                    "size": 9321533,
+                    "kind": "archive"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "not-comparable",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-identity-not-comparable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/dc/naomi.zip",
+                "file_name": "naomi.zip",
+                "archive_reason": "romset",
+                "table_version": "2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-one-core-twice-states-an-unreadable-shipped-copy-once",
+      "rationale": "The catalogue is modeled with two commands on one core — the shape RetroDECK 0.10.9b's ES-DE catalogue has for ps2 (two commands on pcsx2_libretro.so, components/es-de/share/es-de/resources/systems/linux/es_systems.xml in the Flatpak) — placed on Dolphin, whose codehandler.bin RetroDECK copies from its own component tree, with that shipped copy unreadable. Each entry's read observes the same source and the answer states firmware-supplied-source-unreadable once, whichever entry made it; both entries still answer their own row.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path>\n    <command label=\"Dolphin\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/dolphin_libretro.so %ROM%</command>\n    <command label=\"Dolphin (again)\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/dolphin_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.info": "display_name = \"Nintendo - GameCube / Wii (Dolphin)\"\nsystemname = \"GameCube / Wii\"\nfirmware_count = 1\nfirmware0_desc = \"Dolphin 'Sys' folder\"\nfirmware0_path = \"dolphin-emu/Sys/codehandler.bin\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin": {
+            "status": "unreadable",
+            "size": 9248
+          },
+          "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin": {
+            "md5": "1f118b8735fcf40c20b38c3184eebfd9",
+            "sha1": "0000000000000000000000000000000000000000",
+            "size": 9248
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "gc",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": "Dolphin",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "dolphin_libretro.so",
+              "label": "Dolphin (again)",
+              "declaration": "read",
+              "requirements_met": true,
+              "requirements": [
+                {
+                  "core_so": "dolphin_libretro.so",
+                  "system": "gc",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "codehandler.bin",
+                  "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                  "declared": "dolphin-emu/Sys/codehandler.bin",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-assignment-derived",
+                  "data": {
+                    "core_so": "dolphin_libretro.so",
+                    "systemname": "GameCube / Wii",
+                    "files": "codehandler.bin",
+                    "database": "",
+                    "table_version": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-supplied-source-unreadable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/dolphin-emu/Sys/codehandler.bin",
+                "source": "/app/retrodeck/components/retroarch/rd_extras/dolphin-emu/Sys/codehandler.bin"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

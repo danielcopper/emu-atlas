@@ -2161,6 +2161,13 @@ in `core.caveats`: `core-not-installed`, and `standalone-unsupported` for one th
 covered (`declaration="unsupported"`). A system whose only emulator is standalone therefore answers
 `firmware-declaration-unknown` at the top and carries the reason on the core — branch on both collections.
 
+An answer's own caveat list states an identical observation once, whichever entry made it; each entry keeps its own
+`core.caveats`. Where a catalogue names one core under two entries — RetroDECK 0.10.9b's ES-DE catalogue lists ps2 with
+two of its commands on `pcsx2_libretro.so`, labelled `LRPS2` and `PCSX2`
+(`components/es-de/share/es-de/resources/systems/linux/es_systems.xml` in the Flatpak) — each entry answers its own
+rows, and a caveat the second entry would add to `answer.caveats` with the same `code` and `data` as one already there
+is dropped, the first occurrence kept.
+
 A per-system or per-core answer whose emulators were all read and declare nothing carries no such caveat: each entry
 says it itself with `declaration="read"` and an empty requirement list, which is the honest "needs nothing".
 
