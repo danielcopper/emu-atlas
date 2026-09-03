@@ -3389,6 +3389,7 @@
         "installations": [
           {
             "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
             "kinds": [
               "bare_retroarch_native"
             ],
@@ -3464,6 +3465,7 @@
         "installations": [
           {
             "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
             "kinds": [
               "bare_retroarch_native"
             ],
@@ -3547,6 +3549,7 @@
         "installations": [
           {
             "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
             "kinds": [
               "bare_retroarch_native"
             ],
