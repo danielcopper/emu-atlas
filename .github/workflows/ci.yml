@@ -51,9 +51,11 @@ jobs:
           pip install -e '.[dev]'
           python -m pytest tests -q
       - name: Type-check (basedpyright)
-        run: |
-          pip install basedpyright
-          basedpyright
+        # The version comes pinned through the dev extra installed above, so
+        # CI and a local `mise run setup` check with the same release — an
+        # unpinned install once backtracked to a years-old basedpyright and
+        # reported type errors the pinned one does not.
+        run: basedpyright
 
   package:
     runs-on: ubuntu-latest
