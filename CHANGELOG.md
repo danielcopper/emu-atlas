@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.7.0](https://github.com/danielcopper/emu-atlas/compare/v0.6.0...v0.7.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **vectors:** the three machine vectors #358 added — firmware-a-folder-declaration-with-nothing-there-is-a-folder-to-create, firmware-a-file-where-the-core-opens-a-folder-reaches-nothing and firmware-the-second-declaration-of-the-same-core-is-still-a-file — now assert the installation `label` field. They are unreleased (added after v0.6.0), so no pinned consumer holds the old expected block. No runtime answer changes.
+* **firmware:** every firmware requirement in the contract carries a new declared_kind field ("file" or "directory"). A directory at a declaration the table names no longer emits firmware-path-obstructed — on the reference machine that removes exactly the LRPS2 caveat and changes nothing else. A file at such a declaration emits the new firmware-path-not-a-directory code and answers satisfied false where it previously answered true.
+* **contract:** every installation block and every non-null supplied_by block gains a `label` field. The machine vectors assert expected blocks with exact equality, so a port that does not state it no longer passes the corpus — and scripts/validate_vectors.py holds the value to the packaged spelling, so a port that states a label of its own spelling fails the gate rather than passing with a name atlas never established. The package gains three public names: `distribution_label`, `load_distribution_labels` and `DistributionLabel`.
+
+### Features
+
+* **contract:** a distribution states the name it writes for itself beside its identifier ([#357](https://github.com/danielcopper/emu-atlas/issues/357)) ([2f9d57b](https://github.com/danielcopper/emu-atlas/commit/2f9d57be8dfa37cfb127b9d619922be8262c092c)), closes [#353](https://github.com/danielcopper/emu-atlas/issues/353)
+* **firmware:** a declaration states when the core opens it as a directory ([#358](https://github.com/danielcopper/emu-atlas/issues/358)) ([d46483a](https://github.com/danielcopper/emu-atlas/commit/d46483a56cc60358b3040962155f5c182658ebc4)), closes [#355](https://github.com/danielcopper/emu-atlas/issues/355)
+
+
+### Bug Fixes
+
+* **emudeck:** a configured path inside the emulator's own package is read where the launch runs one ([#351](https://github.com/danielcopper/emu-atlas/issues/351)) ([2b77065](https://github.com/danielcopper/emu-atlas/commit/2b7706512f00ebf2602f3584da922c3b35ac18bc)), closes [#317](https://github.com/danielcopper/emu-atlas/issues/317)
+* **firmware:** the xemu card says per file what a missing one actually costs ([#349](https://github.com/danielcopper/emu-atlas/issues/349)) ([2b9c0f9](https://github.com/danielcopper/emu-atlas/commit/2b9c0f954c57b6b19a0fd428f49bf85ecdaf8845)), closes [#293](https://github.com/danielcopper/emu-atlas/issues/293)
+* **vectors:** the three declared_kind vectors carry the installation label ([#359](https://github.com/danielcopper/emu-atlas/issues/359)) ([9e8eed7](https://github.com/danielcopper/emu-atlas/commit/9e8eed7b2b632ff77fc477bb2cdf6e256e1fe565))
+
 ## [0.6.0](https://github.com/danielcopper/emu-atlas/compare/v0.5.1...v0.6.0) (2026-09-02)
 
 
