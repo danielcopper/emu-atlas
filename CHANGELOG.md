@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/danielcopper/emu-atlas/compare/v0.8.0...v0.9.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** a folder declaration's satisfied answers false when every accepted-size candidate fails the core's own ROMDIR check and true when one passes it, listed by the packaged table or not; firmware-image-identified carries five more data keys; three codes join the vocabulary (firmware-image-unlisted, firmware-directory-holds-no-image, firmware-image-contradicted) and the folder route stops emitting firmware-content-unidentified; DeclaredDirectory requires a reader and the table's version is "3"; the Machine protocol gains read_ps2_bios_header and fixtures gain ps2_bios_headers.
+
+### Features
+
+* **firmware:** a folder candidate is read the way the core reads it — a PS2 BIOS by its ROMDIR header, or not ([#365](https://github.com/danielcopper/emu-atlas/issues/365)) ([e8c007d](https://github.com/danielcopper/emu-atlas/commit/e8c007daea5b3d2ce213da17630178e20a3e05e3)), closes [#364](https://github.com/danielcopper/emu-atlas/issues/364)
+
 ## [0.8.0](https://github.com/danielcopper/emu-atlas/compare/v0.7.0...v0.8.0) (2026-09-03)
 
 
