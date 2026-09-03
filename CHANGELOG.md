@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/danielcopper/emu-atlas/compare/v0.7.0...v0.8.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** the verdict semantics for directory declarations changed. A directory at a directory declaration no longer answers satisfied null unconditionally: it answers true with a recognised image inside, false when it holds no file of an accepted size (with or without verify), and null otherwise with the reason stated. On a RetroDECK whose linked BIOS root holds no file of an accepted size, LRPS2's requirement and requirements_met move from null to false; a root holding such a file that no packaged identity recognises stays null, now with the reason and the file stated. A new caveat code, firmware-directory-holds-no-candidate, joins the vocabulary, and firmware-image-identified, firmware-search-unverified, firmware-content-unidentified and firmware-scan-incomplete can now appear on the .info route's answer-level caveats for a declared folder's contents; firmware-unreadable already rode that route for a declared file's own bytes and now also states a folder's unreadable candidate. An image a folder read recognised, and a candidate it could not read, no longer appear in an inventory's unclaimed list. The firmware-path-not-a-directory caveat's table_version reads "2", and the vectors' expected blocks change accordingly. The vector validator refuses satisfied true over a directory declaration without hash checking, and refuses any verdict over a directory at a file declaration.
+
+### Features
+
+* **firmware:** a directory declaration is satisfied by a recognised image inside it, or not ([#362](https://github.com/danielcopper/emu-atlas/issues/362)) ([901ff10](https://github.com/danielcopper/emu-atlas/commit/901ff10eae63a24977b1e64dd66c45c6bcd31b57)), closes [#356](https://github.com/danielcopper/emu-atlas/issues/356)
+
 ## [0.7.0](https://github.com/danielcopper/emu-atlas/compare/v0.6.0...v0.7.0) (2026-09-03)
 
 
