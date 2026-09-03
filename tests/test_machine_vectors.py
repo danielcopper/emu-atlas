@@ -395,6 +395,7 @@ class TestTheGrammarRefusesContradictions:
 
     _INSTALLATION = {
         "kind": "retrodeck",
+        "label": "RetroDECK",
         "kinds": ["retrodeck"],
         "root": "/mnt/sd/retrodeck",
         "health": [],

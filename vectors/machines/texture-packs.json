@@ -43,6 +43,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -95,6 +96,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -146,6 +148,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -198,6 +201,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -253,6 +257,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -315,6 +320,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -358,6 +364,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -411,6 +418,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -472,6 +480,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -528,6 +537,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -583,6 +593,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -655,6 +666,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -663,6 +675,7 @@
           },
           {
             "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
             "kinds": [
               "bare_retroarch_native"
             ],
@@ -674,6 +687,7 @@
           {
             "installation": {
               "kind": "retrodeck",
+              "label": "RetroDECK",
               "kinds": [
                 "retrodeck"
               ],
@@ -692,6 +706,7 @@
           {
             "installation": {
               "kind": "bare_retroarch_native",
+              "label": "RetroArch (native)",
               "kinds": [
                 "bare_retroarch_native"
               ],
@@ -746,6 +761,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -853,6 +869,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -905,6 +922,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -965,6 +983,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1019,6 +1038,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1092,6 +1112,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1159,6 +1180,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1200,6 +1222,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1256,6 +1279,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1323,6 +1347,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1386,6 +1411,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1447,6 +1473,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1500,6 +1527,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1557,6 +1585,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -1614,6 +1643,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -1662,6 +1692,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -1717,6 +1748,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1766,6 +1798,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1813,6 +1846,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1863,6 +1897,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -1908,6 +1943,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -1961,6 +1997,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -2021,6 +2058,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -2078,6 +2116,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2131,6 +2170,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2173,6 +2213,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2243,6 +2284,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2306,6 +2348,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2353,6 +2396,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2400,6 +2444,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -2456,6 +2501,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2520,6 +2566,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2570,6 +2617,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -2636,6 +2684,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"
@@ -2680,6 +2729,7 @@
         "installations": [
           {
             "kind": "emudeck",
+            "label": "EmuDeck",
             "kinds": [
               "emudeck",
               "bare_retroarch_flatpak"

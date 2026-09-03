@@ -81,7 +81,14 @@ class TestInstallationContractCarriesTheFindings:
         assert installation_contract(_healthy())["health"] == []
 
     def test_identity_is_unchanged(self):
-        assert set(installation_contract(_healthy())) == {"kind", "kinds", "root", "health"}
+        assert set(installation_contract(_healthy())) == {"kind", "label", "kinds", "root", "health"}
+
+    def test_the_label_is_the_packaged_spelling_of_the_kind(self):
+        # Presentation beside the key: the identifier is 'retrodeck' and the
+        # project writes 'RetroDECK', which is a spelling a consumer could only
+        # guess at from the identifier — and would guess wrong.
+        handle = _healthy()
+        assert installation_contract(handle)["label"] == atlas.distribution_label(handle.kind)
 
 
 class TestTheSavestateFormOmitsGranularity:

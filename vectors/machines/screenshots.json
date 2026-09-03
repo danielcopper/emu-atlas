@@ -32,6 +32,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -74,6 +75,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],
@@ -119,6 +121,7 @@
         "installations": [
           {
             "kind": "retrodeck",
+            "label": "RetroDECK",
             "kinds": [
               "retrodeck"
             ],

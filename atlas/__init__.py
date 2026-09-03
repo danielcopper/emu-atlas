@@ -262,6 +262,11 @@ from .content_tree_wiring import (
     load_content_tree_wiring,
     lookup_content_tree_wiring,
 )
+from .distribution_labels import (
+    DistributionLabel,
+    distribution_label,
+    load_distribution_labels,
+)
 from .distribution_supplied import (
     DistributionSupplied,
     SuppliedEntry,
@@ -645,6 +650,10 @@ __all__ = [
     "SuppliedEntry",
     "load_distribution_supplied",
     "lookup_distribution_supplied",
+    # How a distribution spells its own name (presentation, never a key)
+    "DistributionLabel",
+    "distribution_label",
+    "load_distribution_labels",
     # Typed outcome codes
     "UNRESOLVED_CORE_NOT_INSTALLED",
     "UNRESOLVED_STANDALONE",
