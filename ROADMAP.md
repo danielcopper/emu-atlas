@@ -128,15 +128,16 @@ The four firmware entry points ship: live `.info` declarations from the installe
   and no member list, so nothing packaged says which ROMs a correct `neogeo.zip` holds. Atlas would have to open the
   archive and own a second source of truth for its contents. Until such a source exists, "present, and its packaging
   differs" is the strongest true statement about these files.
-- **What lies inside a declared folder is answered by size and by table, not by header.** A present folder declaration
-  is judged the way the core judges it — `FIRMWARE_DECLARED_DIRECTORY` version 2 states LRPS2's size filter and the
-  `pcsx2/bios/` identity prefix — so a recognised image inside satisfies it, a folder with nothing of an accepted size
-  fails it, and the rest stays `None` with the reason stated. What atlas does not do is read the ROMDIR header `IsBIOS`
-  validates by (`pcsx2/ps2/BiosTools.cpp:62-106` at 14d19f8): the packaged identities are a subset of what the core
-  accepts, so an image the table does not list is stated as unidentified rather than judged, and closing that gap needs
-  a binary read at the machine seam, which does not exist. The `pcsx2_bios` core option — set, `LoadBIOS` opens the
-  named file rather than the first the listing found — is a separate question (#360), and so is every other core's
-  folder declaration: the table grows one core at a time and only from source.
+- **What lies inside a declared folder is answered by the core's own read.** A present folder declaration is judged the
+  way the core judges it — `FIRMWARE_DECLARED_DIRECTORY` version 3 states LRPS2's size filter, the `pcsx2/bios/`
+  identity prefix, and the content read the row makes: the ROMDIR walk `IsBIOS` validates by
+  (`pcsx2/ps2/BiosTools.cpp:60-173` at 14d19f8), performed step for step by `atlas/ps2_bios.py` and asked of the machine
+  seam as `read_ps2_bios_header`. A file that passes the check satisfies the declaration whether or not the packaged
+  table lists it, a folder whose candidates all fail it is unmet, and under `verify` only a read that did not come back
+  or a table hit the header denies stays `None`; without it the row keeps answering `None` with the reason stated. What
+  is left is the `pcsx2_bios` core option — set, `LoadBIOS` opens the named file rather than the first the listing found
+  — which is a separate question (#360), and every other core's folder declaration: the table grows one core at a time
+  and only from source, and each row names the content read its core makes.
 - **Per-file system assignment.** `FIRMWARE_SYSTEM_OVERRIDE` is `[D]` and deliberately incomplete: it is atlas's own
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary

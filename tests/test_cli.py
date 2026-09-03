@@ -77,6 +77,7 @@ def _machine(inp) -> FixtureMachine:
         inaccessible=inp.get("inaccessible"),
         unlistable=inp.get("unlistable"),
         appimages=inp.get("appimages"),
+        ps2_bios_headers=inp.get("ps2_bios_headers"),
     )
 
 

@@ -34,6 +34,7 @@ INPUT_FIELDS_OPTIONAL = {
     "inaccessible",
     "unlistable",
     "appimages",
+    "ps2_bios_headers",
     "savefile_query",
     "aggregate_query",
     "catalogue_query",
@@ -389,6 +390,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-path-obstructed",
     "firmware-path-not-a-directory",
     "firmware-directory-holds-no-candidate",
+    "firmware-directory-holds-no-image",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
@@ -399,6 +401,8 @@ KNOWN_CAVEAT_CODES = {
     "firmware-content-contradictory",
     "firmware-content-unstated",
     "firmware-image-identified",
+    "firmware-image-unlisted",
+    "firmware-image-contradicted",
     "firmware-image-ambiguous",
     "firmware-search-unverified",
     "firmware-scan-incomplete",
@@ -865,6 +869,7 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_paths(name, inp)
     _validate_input_cores(name, inp.get("cores", {}))
     _validate_input_appimages(name, inp.get("appimages", {}))
+    _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
     _validate_input_queries(name, inp)
 
 
@@ -913,6 +918,53 @@ def _validate_appimage_entry(name: str, path: str, inner: Any, value: Any) -> No
             f"{name}: appimage {path!r} entry {inner!r} must be text or "
             f"{{'status': one of {sorted(APPIMAGE_ENTRY_STATES)}}}"
         )
+
+
+# The PS2 BIOS header modeling vocabulary — mirrored from FixtureMachine
+# (atlas/machine.py): the states RealMachine can report about a file it
+# opened, short of the two strings the ROMDIR walk yields. A header describes
+# a declared file's bytes, so its path names one, and not one declared
+# unreadable; a declared file with no header answers "missing" at the seam,
+# which the folder route states as a read that did not happen.
+PS2_BIOS_HEADER_STATES = {"unreadable", "not-a-bios"}
+PS2_BIOS_HEADER_FIELDS = {"romver", "serial"}
+# The lengths the core reads the two strings at (pcsx2/ps2/BiosTools.cpp:85,
+# :95 at 14d19f8): fourteen bytes of version, a serial of at most fifteen.
+PS2_BIOS_ROMVER_LENGTH = 14
+PS2_BIOS_SERIAL_LENGTH = 15
+
+
+def _validate_input_ps2_bios_headers(name: str, headers: Any, files: Any) -> None:
+    if not isinstance(headers, dict):
+        fail(f"{name}: input.ps2_bios_headers must be an object")
+    for path, spec in headers.items():
+        if not isinstance(path, str) or path not in files:
+            fail(f"{name}: ps2 bios header {path!r} must name a declared file")
+        file_spec = files[path]
+        if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+            fail(f"{name}: ps2 bios header {path!r} sits on an unreadable file, whose bytes answer no test")
+        _validate_ps2_bios_header_spec(name, path, spec)
+
+
+def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec not in PS2_BIOS_HEADER_STATES:
+            fail(
+                f"{name}: ps2 bios header {path!r} state must be one of "
+                f"{sorted(PS2_BIOS_HEADER_STATES)}, got {spec!r}"
+            )
+        return
+    if not isinstance(spec, dict) or set(spec) != PS2_BIOS_HEADER_FIELDS:
+        fail(
+            f"{name}: ps2 bios header {path!r} must be a state or an object with exactly "
+            f"{sorted(PS2_BIOS_HEADER_FIELDS)}"
+        )
+    if not all(isinstance(value, str) for value in spec.values()):
+        fail(f"{name}: ps2 bios header {path!r} romver and serial must be strings")
+    if len(spec["romver"]) != PS2_BIOS_ROMVER_LENGTH:
+        fail(f"{name}: ps2 bios header {path!r} romver must be {PS2_BIOS_ROMVER_LENGTH} characters")
+    if len(spec["serial"]) > PS2_BIOS_SERIAL_LENGTH:
+        fail(f"{name}: ps2 bios header {path!r} serial must be at most {PS2_BIOS_SERIAL_LENGTH} characters")
 
 
 def _validate_distribution_label(name: str, identifier: str, label: Any, where: str) -> None:
@@ -1563,11 +1615,13 @@ def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checke
     null. Where the core lists a FOLDER the directory is the right shape and
     `satisfied` is the verdict over its contents, read the way the core reads
     them: false when it holds no file of a size the core accepts (a stat, so
-    it needs no content check), null when files of an accepted size were not
-    hashed or matched nothing the table knows or the folder could not be
-    listed, and true only for a recognised image inside — which only a
-    content check can establish, so true without hash checking is a verdict
-    the run could never have reached.
+    it needs no content check) and when every candidate was read and fails
+    the core's own header check, null when files of an accepted size were not
+    read, when a candidate's header read did not come back, when the table
+    names a candidate the header denies and none passes, or when the folder
+    could not be listed, and true only for an image the core's own header
+    check passed — which only a content check can establish, so true without
+    hash checking is a verdict the run could never have reached.
     """
     if entry["checked"] != "unknown":
         fail(f"{name}: a directory at the destination is checked='unknown' — no identity belongs to a folder")
@@ -1578,8 +1632,8 @@ def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checke
         return
     if satisfied is True and not hash_checked:
         fail(
-            f"{name}: a folder declaration is satisfied only by a recognised image inside it, "
-            "and without hash checking nothing was recognised"
+            f"{name}: a folder declaration is satisfied only by an image the core's own header check passed, "
+            "and without a content check nothing was read"
         )
 
 
