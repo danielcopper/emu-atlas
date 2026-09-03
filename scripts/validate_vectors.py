@@ -177,6 +177,13 @@ KNOWN_REFUSAL_REASONS = {
     "firmware-root-unusable",
 }
 KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
+# What the CORE opens a declaration at, off the curated table in
+# atlas/firmware.py — a property of the declaration, so it stands whether or
+# not anything is at the destination. Two words, and `file` is the default a
+# declaration nobody has read from source gets: no typed field holds the
+# difference, and RetroArch's own presence check is one `path_is_valid` stat
+# that answers alike for both shapes.
+KNOWN_DECLARED_KINDS = {"file", "directory"}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
     "system",
@@ -185,6 +192,7 @@ FIRMWARE_REQUIREMENT_FIELDS = {
     "file_name",
     "path",
     "declared",
+    "declared_kind",
     "identity",
     "found",
     "present",
@@ -379,6 +387,7 @@ KNOWN_CAVEAT_CODES = {
     "emulator-list-derived",
     "frontend-marker-mismatch",
     "firmware-path-obstructed",
+    "firmware-path-not-a-directory",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
     "firmware-path-unresolvable",
@@ -1375,6 +1384,8 @@ def _validate_requirement_fields(
         fail(f"{name}: firmware requirement need must be one of {sorted(KNOWN_FIRMWARE_NEEDS)}")
     if entry["system_source"] not in KNOWN_SYSTEM_SOURCES:
         fail(f"{name}: firmware requirement system_source must be one of {sorted(KNOWN_SYSTEM_SOURCES)}")
+    if entry["declared_kind"] not in KNOWN_DECLARED_KINDS:
+        fail(f"{name}: firmware requirement declared_kind must be one of {sorted(KNOWN_DECLARED_KINDS)}")
     if entry["system_source"] == "none" and entry["system"] != "_unknown":
         fail(f"{name}: with no source for the system the slug must be '_unknown'")
 
@@ -1529,6 +1540,19 @@ def _validate_file_requirement(
         fail(f"{name}: {why}")
 
 
+def _validate_file_at_a_folder_declaration(name: str, checked: Any, satisfied: Any) -> None:
+    """A file sits where the core opens a folder — the shape settles it.
+
+    The core lists that path and reads what is inside; a regular file has no
+    inside, so nothing there is reachable however right the file itself looks.
+    That is established, which is why `satisfied` is false rather than null —
+    and it is not a byte verdict, so `checked` stays 'unknown': no identity was
+    weighed, and none could be.
+    """
+    if checked != "unknown" or satisfied is not False:
+        fail(f"{name}: a file where the core opens a folder is checked='unknown' with satisfied false")
+
+
 def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) -> None:
     found = entry["found"]
     checked = entry["checked"]
@@ -1541,10 +1565,15 @@ def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) 
     if checked not in KNOWN_FIRMWARE_CHECKED:
         fail(f"{name}: firmware requirement checked must be one of {sorted(KNOWN_FIRMWARE_CHECKED)}")
     if found == "directory":
-        # Something is there and nothing about it was established — a core may
-        # even have meant the folder (LRPS2 does).
+        # Something is there and nothing about it was established. That holds
+        # for both declaration shapes: where the core lists a folder this is
+        # the right thing and its contents are a later question, and where the
+        # core reads a file the directory is in the way.
         if checked != "unknown" or satisfied is not None:
             fail(f"{name}: a directory at the destination is checked='unknown' with satisfied null")
+        return
+    if entry["declared_kind"] == "directory":
+        _validate_file_at_a_folder_declaration(name, checked, satisfied)
         return
     _validate_file_requirement(name, entry["identity"], checked, satisfied, hash_checked=hash_checked)
 

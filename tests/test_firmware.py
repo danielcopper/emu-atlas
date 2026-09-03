@@ -36,6 +36,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
+    CAVEAT_FIRMWARE_PATH_NOT_A_DIRECTORY,
     CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
     CAVEAT_FIRMWARE_PATH_UNRESOLVABLE,
     CAVEAT_FIRMWARE_ROOT_UNUSABLE,
@@ -55,6 +56,10 @@ from atlas.firmware import (
     DECLARATION_UNSUPPORTED,
     DECLARATION_READ,
     DECLARATION_UNREADABLE,
+    DECLARED_DIRECTORY,
+    DECLARED_FILE,
+    FIRMWARE_DECLARED_DIRECTORY,
+    FIRMWARE_DECLARED_DIRECTORY_VERSION,
     FIRMWARE_SYSTEM_OVERRIDE,
     NEED_REQUIRED,
     SYSTEMNAME_MAP_VERSION,
@@ -71,6 +76,7 @@ from atlas.firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
     SuppliedBy,
+    declared_kind_of,
     destination_under,
     firmware_for_core,
     firmware_for_system,
@@ -1007,9 +1013,11 @@ class TestWhatTheMachineWouldNotSay:
         machine = _machine(dirs=[f"{BIOS_DIR}/scph5501.bin"])
         answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
         blocked = next(r for r in answer.requirements if r.file_name == "scph5501.bin")
-        # Something is there and nothing about it was established — LRPS2 even
-        # declares a folder on purpose, so this is not a missing file and not
-        # an invitation to delete anything.
+        # Something is there and nothing about it was established. No row of the
+        # curated table names this core and this path, so the declaration is a
+        # file — but the directory is still not a missing file and still not an
+        # invitation to delete anything.
+        assert blocked.declared_kind == DECLARED_FILE
         assert blocked.found == "directory"
         assert blocked.present is True
         assert blocked.checked == CHECKED_UNKNOWN
@@ -1215,6 +1223,138 @@ class TestWhatTheMachineWouldNotSay:
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE]
         # A required file atlas would not follow is never an all-clear.
         assert core.requirements_met is None
+
+
+class TestADeclarationStatesItsOwnShape:
+    """``declared_kind``: what the CORE opens the path at, table-stated, not guessed.
+
+    The declaration is the subject throughout — the field holds whether or not
+    anything is at the destination, which is the whole reason it is not derived
+    from what was found there.
+    """
+
+    def _lrps2(self, files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: object):
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+            f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+        }
+        tree.update(files or {})
+        machine = _machine(tree, **kwargs)
+        answer = firmware_for_core(machine, _context(machine), core_so="pcsx2_libretro.so", verify=True)
+        return answer, next(r for r in answer.requirements if r.declared == "pcsx2/bios")
+
+    def test_the_table_is_the_only_source(self):
+        # Keyed on the .so SHORT name, the spelling the rule cards use — and on
+        # the declared string, so one core's two declarations differ.
+        assert declared_kind_of("pcsx2_libretro", "pcsx2/bios") == DECLARED_DIRECTORY
+        assert declared_kind_of("pcsx2", "pcsx2/bios") == DECLARED_DIRECTORY
+        assert declared_kind_of("pcsx2_libretro", "pcsx2/resources/GameIndex.yaml") == DECLARED_FILE
+        # Another core declaring the same string is another question entirely.
+        assert declared_kind_of("play_libretro", "pcsx2/bios") == DECLARED_FILE
+
+    def test_every_row_keys_on_the_short_name(self):
+        """The mistake a future row would make: keying on the ``.so`` stem."""
+        for core, declared in FIRMWARE_DECLARED_DIRECTORY:
+            assert core, (core, declared)
+            assert not core.endswith("_libretro"), core
+            assert declared, (core, declared)
+            assert not declared.endswith("/"), declared
+
+    def test_a_folder_at_a_folder_declaration_is_the_right_shape(self):
+        answer, folder = self._lrps2({f"{BIOS_DIR}/pcsx2/bios/scph39001.bin": _blob(b"bios")})
+        assert folder.declared_kind == DECLARED_DIRECTORY
+        assert folder.found == "directory"
+        assert folder.present is True
+        # Nothing about the images inside it is established — a later question.
+        assert folder.checked == CHECKED_UNKNOWN
+        assert folder.satisfied is None
+        assert CAVEAT_FIRMWARE_PATH_OBSTRUCTED not in [c.code for c in answer.caveats]
+
+    def test_a_missing_folder_keeps_the_shape_that_says_what_to_create(self):
+        answer, folder = self._lrps2(dirs=[BIOS_DIR])
+        assert folder.found == "missing"
+        # The point of the field: 'missing' alone reads as an absent dump.
+        assert folder.declared_kind == DECLARED_DIRECTORY
+        assert folder.satisfied is False
+        assert answer.cores[0].requirements_met is False
+
+    def test_a_file_where_the_core_opens_a_folder_reaches_nothing(self):
+        answer, folder = self._lrps2({f"{BIOS_DIR}/pcsx2/bios": _blob(b"a dump in the folder's place")})
+        assert folder.found == "file"
+        assert folder.present is True
+        # Established, not withheld: the core lists this path and a file has no
+        # inside. And it is not a byte verdict — nothing was hashed.
+        assert folder.satisfied is False
+        assert folder.checked == CHECKED_UNKNOWN
+        assert folder.identity is None
+        wrong_shape = next(c for c in answer.caveats if c.code == CAVEAT_FIRMWARE_PATH_NOT_A_DIRECTORY)
+        assert wrong_shape.data == {
+            "path": f"{BIOS_DIR}/pcsx2/bios",
+            "table_version": FIRMWARE_DECLARED_DIRECTORY_VERSION,
+        }
+
+    def test_the_retrodeck_link_answers_the_root_without_a_hedge(self):
+        """RetroDECK links ``pcsx2/bios`` onto the firmware root — the stock case."""
+        answer, folder = self._lrps2(
+            {f"{BIOS_DIR}/scph1001.bin": _blob(b"in the tree")},
+            symlinks={f"{BIOS_DIR}/pcsx2/bios": BIOS_DIR},
+        )
+        assert folder.path == BIOS_DIR
+        assert folder.found == "directory"
+        assert [c.code for c in answer.caveats] == []
+
+    def test_a_declaration_the_table_does_not_name_is_a_file(self):
+        """The default, and nothing was read to reach it.
+
+        RetroArch draws no such distinction of its own — its presence check is
+        one ``path_is_valid`` stat over the composed name
+        (core_info.c:2381-2383), which answers alike for both shapes — so a
+        missing row costs exactly what atlas answered before the table.
+        """
+        machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
+        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        assert {r.declared_kind for r in answer.requirements} == {DECLARED_FILE}
+
+    def test_a_card_declared_requirement_is_a_file(self):
+        """A requirement built without the field is a file, not an error.
+
+        The card route never passes it (:func:`_packaged_standalone_core`), so
+        the default is what its requirements carry — pinned here on a directly
+        constructed requirement, which is the seam the default lives at.
+        """
+        assert (
+            FirmwareRequirement(
+                core_so=None,
+                system="wiiu",
+                system_source="card",
+                need=NEED_REQUIRED,
+                file_name="keys.txt",
+                path="/keys.txt",
+                declared="keys.txt",
+                description="title keys",
+                identity=None,
+                found="missing",
+                checked=None,
+            ).declared_kind
+            == DECLARED_FILE
+        )
+
+    def test_a_word_outside_the_vocabulary_is_refused(self):
+        with pytest.raises(ValueError, match="declared_kind"):
+            FirmwareRequirement(
+                core_so="x_libretro.so",
+                system="ps2",
+                system_source="systemname",
+                need=NEED_REQUIRED,
+                file_name="bios",
+                path="/bios/pcsx2/bios",
+                declared="pcsx2/bios",
+                description="",
+                identity=None,
+                found="missing",
+                checked=None,
+                declared_kind="folder",  # type: ignore[arg-type]
+            )
 
 
 class TestResolutionIsTheKernelsOrder:
