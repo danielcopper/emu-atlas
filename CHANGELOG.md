@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0](https://github.com/danielcopper/emu-atlas/compare/v0.9.1...v0.10.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** a user directory the emulator's own listing passes over — an RPCS3 home without a localusername file or whose name fails check_user, a Vita3K directory without a user.xml or with one that does not parse — is no longer a group or listed under `users`; it is stated under `skipped`. A directory whose deciding file atlas could not read at all — an RPCS3 home whose localusername stat failed, a Vita3K directory whose user.xml could not be read — was also a group on main and is now stated under `unestablished`, neither a group nor a skip. Where every directory found falls into one of those two states, `reason` no longer reads the way it did on main: a Vita3K machine whose only directory was recorded but unmatched used to read "the configured user is not set up here"; with that directory now skipped instead, `reason` reads "no user account the emulator would list was found", or, where a directory's deciding file could not be read, "whether the emulator would list a user account here was not established" — the two reason values this branch adds. The corrected fixtures changed their input, so the machines they described before leave the contract.
+
+### Bug Fixes
+
+* **saves:** list user roots the way the emulators do and keep the users they keep ([#372](https://github.com/danielcopper/emu-atlas/issues/372)) ([c6db1df](https://github.com/danielcopper/emu-atlas/commit/c6db1df84960beadfc30fd1ec6aa384714858af2)), closes [#282](https://github.com/danielcopper/emu-atlas/issues/282)
+
 ## [0.9.1](https://github.com/danielcopper/emu-atlas/compare/v0.9.0...v0.9.1) (2026-09-03)
 
 
