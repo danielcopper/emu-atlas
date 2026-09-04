@@ -228,7 +228,7 @@ class TestWhetherThisBuildTriesAFormatIsAReadingOrNothing:
         stated = next(
             c for c in answer.caveats if c.code == atlas.CAVEAT_PATCH_FORMATS_UNESTABLISHED
         )
-        assert stated.data == {"formats": "ips,bps,ups,xdelta"}
+        assert stated.data == {"formats": ("ips", "bps", "ups", "xdelta")}
 
     def test_a_machine_running_another_arrangement_version_is_not_handed_the_claim_unexamined(self):
         drifted = json.loads(RD_JSON)

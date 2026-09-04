@@ -1760,7 +1760,10 @@ class TestDolphinStandaloneSaves:
         assert not isinstance(p, atlas.Unresolved)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "uninterpreted" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_SLOT_DEVICE_UNINTERPRETED
+        # The two facts the sentence used to carry inside the reason string.
+        assert stated[0].data["slot"] == "A"
+        assert stated[0].data["value"] == "7"
 
     def test_a_configured_card_path_is_a_region_template(self):
         # The emulator replaces the region code in a configured filename
@@ -1804,7 +1807,8 @@ class TestDolphinStandaloneSaves:
         assert not isinstance(p, atlas.Unresolved)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "GCIFolderAPathOverride" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_SESSION_OVERRIDE_SET
+        assert stated[0].data["key"] == "GCIFolderAPathOverride"
 
     def test_the_savestate_question_answers_the_compiled_tree(self):
         # The refusal this asserted outlived its reason (#225): the states
@@ -1994,8 +1998,10 @@ class TestDolphinPerGameSettingsLayer:
             self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
         )
         assert stated.data["key"] == (
-            "[Core] MemcardAPath, [Core] MemcardBPath, "
-            "[Core] GCIFolderAPath, [Core] GCIFolderBPath"
+            "[Core] MemcardAPath",
+            "[Core] MemcardBPath",
+            "[Core] GCIFolderAPath",
+            "[Core] GCIFolderBPath",
         )
 
     def test_the_wii_answer_names_the_nand_root_key(self):
@@ -2007,7 +2013,7 @@ class TestDolphinPerGameSettingsLayer:
             self._entry(rd, system="wii").savefile_location(),
             atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
         )
-        assert stated.data["key"] == "[Dolphin.General] NANDRootPath"
+        assert stated.data["key"] == ("[Dolphin.General] NANDRootPath",)
 
     def test_the_texture_answer_names_the_load_path_key(self):
         rd = self._machine()
@@ -2015,7 +2021,7 @@ class TestDolphinPerGameSettingsLayer:
             self._entry(rd).texture_pack_location(),
             atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
         )
-        assert stated.data["key"] == "[Dolphin.General] LoadPath"
+        assert stated.data["key"] == ("[Dolphin.General] LoadPath",)
 
     def test_the_mod_answer_names_the_same_load_path_key(self):
         # One key re-points D_LOAD_IDX and the rebuild moves the hires-texture
@@ -2024,7 +2030,7 @@ class TestDolphinPerGameSettingsLayer:
         stated = self._caveat(
             self._entry(rd).mod_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
         )
-        assert stated.data["key"] == "[Dolphin.General] LoadPath"
+        assert stated.data["key"] == ("[Dolphin.General] LoadPath",)
 
     # -- what stays silent ----------------------------------------------------
 
@@ -2475,7 +2481,7 @@ class TestMameEdgeBranches:
         ).savestate_location()
         assert isinstance(p, atlas.SavestatePlacement)
         layer = next(c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD)
-        assert "source/vectrex.ini" in layer.data["files"]
+        assert any(f.endswith("source/vectrex.ini") for f in layer.data["files"])
 
 
 class TestMameSecondIniParse:
@@ -2696,7 +2702,7 @@ class TestMameDriverIniIsRead:
         assert self._leftover().data["read"] == f"{self.INI_DIR}/vectrex.ini"
 
     def test_a_leftover_layer_names_only_the_files_it_did_not_read(self):
-        assert self._leftover().data["files"] == f"{self.INI_DIR}/vertical.ini"
+        assert self._leftover().data["files"] == (f"{self.INI_DIR}/vertical.ini",)
 
     def test_a_leftover_layer_says_it_cannot_overturn_the_driver_ini(self):
         assert "governs only where the driver ini states none" in self._leftover().message
@@ -2716,7 +2722,7 @@ class TestMameDriverIniIsRead:
             ).caveats
             if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD
         )
-        assert layer.data["files"] == f"{self.INI_DIR}/VECTREX.ini"
+        assert layer.data["files"] == (f"{self.INI_DIR}/VECTREX.ini",)
 
     def test_an_absent_driver_ini_is_stated_by_name(self):
         layer = next(
@@ -2925,8 +2931,11 @@ class TestDuckstationPerGameSettingsLayer:
             self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
         )
         assert stated.data["key"] == (
-            "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, "
-            "[MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+            "[MemoryCards] Card1Type",
+            "[MemoryCards] Card2Type",
+            "[MemoryCards] Card1Path",
+            "[MemoryCards] Card2Path",
+            "[MemoryCards] UsePlaylistTitle",
         )
 
     def test_the_save_answer_says_an_absolute_card_path_leaves_the_directory(self):
@@ -3037,7 +3046,11 @@ class TestDuckstationPerGameSettingsLayer:
         stated = next(
             c for c in core.caveats if c.code == atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT
         )
-        assert stated.data["key"] == "[BIOS] PathNTSCU, [BIOS] PathNTSCJ, [BIOS] PathPAL"
+        assert stated.data["key"] == (
+            "[BIOS] PathNTSCU",
+            "[BIOS] PathNTSCJ",
+            "[BIOS] PathPAL",
+        )
 
     def test_the_firmware_answer_says_the_search_directory_cannot_move(self):
         # SearchDirectory goes through EmuFolders::LoadConfig, which is handed
@@ -3156,7 +3169,8 @@ class TestMoreStandaloneSaves:
         assert not isinstance(p, atlas.Unresolved)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "hdd_path" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_HDD_PATH_UNSET
+        assert "hdd_path" in stated[0].message
 
     def test_xemu_does_not_read_a_config_tree_copy_no_link_reaches(self):
         # The file sits where a distribution likes to keep it and nothing links
@@ -3262,7 +3276,8 @@ class TestMoreStandaloneSaves:
         assert p.granularity.value == atlas.GRANULARITY_PER_GAME_DIRECTORY
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "--mlc" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_MLC_LAUNCH_FLAG_OUTRANKS_CONFIG
+        assert "--mlc" in stated[0].message
 
     def test_cemu_with_unparseable_xml_refuses(self):
         p = self._answer("wiiu", files={CEMU_XML_PATH: "<content><mlc_path>"})
@@ -3350,7 +3365,8 @@ class TestMoreStandaloneSaves:
         assert not isinstance(p, atlas.Unresolved)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "use_virtual_sd" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_VIRTUAL_SD_DISABLED
+        assert "use_virtual_sd" in stated[0].message
 
     def test_azahar_with_an_unreadable_ini_refuses(self):
         p = self._answer("n3ds", files={AZAHAR_INI_PATH: {"status": "unreadable"}})
@@ -3701,7 +3717,7 @@ class TestMoreStandaloneSaves:
         # layer reaches the key at all: [EmuCore/GS] is read through
         # Pcsx2Config::LoadSave on the layered interface, while every [Folders]
         # key goes through EmuFolders::LoadConfig on the base layer alone.
-        assert stated[0].data["key"] == "[EmuCore/GS] LoadTextureReplacements"
+        assert stated[0].data["key"] == ("[EmuCore/GS] LoadTextureReplacements",)
         # Not the sibling that asserts they exist, and not silence.
         assert atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT not in [
             c.code for c in answer.caveats
@@ -4030,13 +4046,13 @@ RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
 # at build 7c6b3dcd); an RPCS3 that has run writes it itself (System.cpp:617).
 RPCS3_HOME = "/mnt/sd/hdd/home"
 RPCS3_LOCALUSERNAME = f"{RPCS3_HOME}/00000001/localusername"
-RPCS3_USER_UNRECORDED = "the active user account is not recorded on disk"
+RPCS3_USER_UNRECORDED = atlas.REASON_ACTIVE_USER_UNRECORDED
 IDLESS_USER_XML = '<?xml version="1.0"?>\n<user/>\n'
-VITA3K_NOT_SET_UP = "the configured user is not set up here"
-VITA3K_TREE_NAMED = "the configured user's tree is the one named"
+VITA3K_NOT_SET_UP = atlas.REASON_CONFIGURED_USER_NOT_SET_UP
+VITA3K_TREE_NAMED = atlas.REASON_CONFIGURED_USER_TREE_NAMED
 VITA3K_HIDDEN_SAVEDATA = "/mnt/sd/vita/ux0/user/.hidden/savedata"
 VITA3K_USER_00_XML = "/mnt/sd/vita/ux0/user/00/user.xml"
-NO_LISTED_USER = "no user account the emulator would list was found"
+NO_LISTED_USER = atlas.REASON_NO_LISTED_USER_ACCOUNT
 
 
 class TestTheUserAPerUserTreeWouldOpen:
@@ -4072,6 +4088,114 @@ class TestTheUserAPerUserTreeWouldOpen:
     def _readings(self, placement):
         assert placement.granularity is not None
         return {r.key: r.value for r in placement.granularity.readings}
+
+    # A file the scalar reader refuses whole, one per refusal code it answers
+    # with. Both per-user emulators read their configuration through that
+    # reader, so each refusal reaches a client as this code's ``reason``.
+    _WHOLE_FILE_REFUSALS = {
+        "second-document": "pref-path: /mnt/sd/vita\n---\npref-path: /elsewhere\n",
+        "anchor-or-alias": "pref-path: &here /mnt/sd/vita\n",
+        "tag": "pref-path: !!str /mnt/sd/vita\n",
+        "not-a-flat-mapping": "pref-path: /mnt/sd/vita\n  stray\n",
+        "substitution-unknown": "pref-path: $(NoSuchName)/vita\n",
+    }
+
+    @pytest.mark.parametrize("refusal", sorted(_WHOLE_FILE_REFUSALS))
+    def test_a_construct_the_reader_refuses_names_itself_in_the_reason(self, refusal):
+        """The refusal code IS the reason — a client learns which construct stopped it.
+
+        Asserted through the answer rather than through the reader, because
+        the reader's vocabulary and this code's ``data["reason"]`` are the same
+        vocabulary and nothing else holds them together.
+        """
+        outcome = self._answer("psvita", files={VITA3K_CONFIG_YML: self._WHOLE_FILE_REFUSALS[refusal]})
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert outcome.data["reason"] == refusal
+        assert outcome.data["config"] == VITA3K_CONFIG_YML
+
+    def test_a_substitution_that_never_settles_is_the_cycle_refusal(self):
+        # RPCS3 is the emulator whose file substitutes, so the cycle bound is
+        # reachable only there ($(EmulatorDir) is its own token).
+        outcome = self._answer(
+            # The lookup key is the whole token, the way RPCS3 spells
+            # $(EmulatorDir) as a key of its own — so a cycle is two keys
+            # naming each other.
+            "ps3",
+            files={RPCS3_VFS_YML: "/dev_hdd0/: $(A)\n$(A): $(B)\n$(B): $(A)\n"},
+        )
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert outcome.data["reason"] == "substitution-cycle"
+
+    def test_a_short_listing_does_not_let_the_recorded_user_take_the_headline(self):
+        """A home a failed listing handed back is not a home found here.
+
+        Two things reach that state. ``_per_user_listing`` globs twice, once
+        per pattern, and a real machine reads the directory once per call —
+        each read complete or empty, but separated in time, so a directory
+        that loses its read permission between them merges into a listing that
+        still carries matches. That is a live race, not a hypothetical. And
+        ``Machine`` is a protocol whose ``GlobResult`` permits the shape
+        outright, which the same merge handles. No fixture machine in the
+        vector family can produce either, so this test is what pins it.
+
+        What must hold: the survey still lists every home the short listing did
+        hand back — losing them would answer a narrower tree than was seen —
+        while ``dir`` stays on the compiled stand-in, because the sentence
+        beside it says the tree named is the one the emulator starts with and
+        an answer must not contradict its own message.
+        """
+        from atlas.machine import GLOB_INCOMPLETE, GlobResult
+
+        class HalfBlind(FixtureMachine):
+            """The hidden-name glob comes back short, the wildcard one does not."""
+
+            def glob(self, pattern: str) -> GlobResult:
+                result = super().glob(pattern)
+                if pattern.endswith("/.*"):
+                    return GlobResult(GLOB_INCOMPLETE, result.matches, (pattern[:-3],))
+                return result
+
+        root = "/mnt/sd/vita/ux0/user"
+        machine = HalfBlind(
+            {
+                **self.BASE,
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 05\n",
+                f"{root}/00/user.xml": self._user_xml("00"),
+                f"{root}/05/user.xml": self._user_xml("05"),
+            },
+            dirs=[
+                "/mnt/sd/retrodeck/saves",
+                f"{root}/00",
+                f"{root}/00/savedata",
+                f"{root}/05",
+                f"{root}/05/savedata",
+            ],
+        )
+        rd = atlas.detect(HOME, machine)[0]
+        p = rd.emulators_for("psvita").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{root}/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
+        # Both homes still reach the caller, as trees and in the survey.
+        assert caveat.data["users"] == ("00", "05")
+        assert caveat.data["configured_user"] == "05"
+        assert [g.dir for g in p.file_set.groups] == [
+            f"{root}/00/savedata",
+            f"{root}/05/savedata",
+        ]
+        assert any(c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE for c in p.caveats)
+        assert "the tree named is the one the emulator starts with" in caveat.message
+        # And the sentence must not deny the homes the data beside it lists.
+        assert "or none beyond those handed back is unknown here" in caveat.message
+
+    def test_every_refusal_the_reader_answers_with_is_reachable_as_a_reason(self):
+        # The pair above covers the vocabulary between them; this holds the
+        # claim mechanical, so a seventh refusal cannot be added unwitnessed.
+        covered = {*self._WHOLE_FILE_REFUSALS, "substitution-cycle"}
+        assert covered == set(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS) - {atlas.REASON_KEY_UNREAD}
 
     @staticmethod
     def _user_xml(user):
@@ -4117,7 +4241,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
         assert p.physical_dir is None
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_TREE_NAMED
         assert caveat.data["configured_user"] == "01"
         # The groups stay every tree found, in order — the headline moved, the
         # survey did not.
@@ -4146,7 +4270,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_TREE_NAMED
         # The survey still states what is on disk: 00's tree, nothing else.
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/00/savedata"]
 
@@ -4167,7 +4291,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == NO_LISTED_USER
         assert caveat.data["configured_user"] == "00"
-        assert caveat.data["skipped"] == "00"
+        assert caveat.data["skipped"] == ("00",)
         assert "has no user.xml" in caveat.message
         assert "stated as that rather than as a user found here" in caveat.message
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/00/savedata"]
@@ -4190,13 +4314,10 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/02/savedata"
         caveat = self._user_caveat(p)
-        assert (
-            caveat.data["reason"]
-            == "whether the configured user is set up here was not established"
-        )
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_SETUP_UNESTABLISHED
         assert caveat.data["configured_user"] == "01"
-        assert caveat.data["users"] == "02"
-        assert caveat.data["unestablished"] == "00"
+        assert caveat.data["users"] == ("02",)
+        assert caveat.data["unestablished"] == ("00",)
         assert "skipped" not in caveat.data
         assert "could not be read" in caveat.message
 
@@ -4215,11 +4336,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert (
-            caveat.data["reason"]
-            == "whether the emulator would list a user account here was not established"
-        )
-        assert caveat.data["unestablished"] == "00"
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["unestablished"] == ("00",)
         # The opening clause must not assert the negative its own reason
         # marks unestablished — "no directory here is a user" would be false
         # of exactly the directory the tail goes on to name as unsettled.
@@ -4243,12 +4361,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert (
-            caveat.data["reason"]
-            == "whether the emulator would list a user account here was not established"
-        )
-        assert caveat.data["skipped"] == "00"
-        assert caveat.data["unestablished"] == "01"
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["skipped"] == ("00",)
+        assert caveat.data["unestablished"] == ("01",)
         assert (
             "whether any directory here is a user Vita3K would list is not established"
             in caveat.message
@@ -4275,8 +4390,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == VITA3K_NOT_SET_UP
         assert caveat.data["configured_user"] == "01"
-        assert caveat.data["users"] == "00"
-        assert caveat.data["skipped"] == "01"
+        assert caveat.data["users"] == ("00",)
+        assert caveat.data["skipped"] == ("01",)
 
     def test_vita3k_the_identity_fallback_is_the_directory_stem(self):
         # An id-less user.xml keys the user by the directory's stem, not its
@@ -4294,7 +4409,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/01/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "the configured user's tree is the one named"
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_TREE_NAMED
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/01.bak/savedata"]
 
     def test_vita3k_the_stem_cuts_at_the_rightmost_period_like_the_filesystem(self):
@@ -4357,7 +4472,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.dir == VITA3K_HIDDEN_SAVEDATA
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == VITA3K_TREE_NAMED
-        assert caveat.data["users"] == ".hidden,00"
+        assert caveat.data["users"] == (".hidden", "00")
 
     def test_vita3k_a_leading_period_directory_without_user_xml_is_not_set_up(self):
         # Reached, and then skipped by the emulator's own rule — the same
@@ -4377,8 +4492,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == VITA3K_NOT_SET_UP
         assert "has no user.xml" in caveat.message
-        assert caveat.data["users"] == "00"
-        assert caveat.data["skipped"] == ".hidden"
+        assert caveat.data["users"] == ("00",)
+        assert caveat.data["skipped"] == (".hidden",)
 
     def test_vita3k_a_user_xml_that_does_not_parse_is_the_emulators_own_skip(self):
         # load_file fails on a malformed user.xml exactly as on a missing one
@@ -4397,7 +4512,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == NO_LISTED_USER
-        assert caveat.data["skipped"] == "00"
+        assert caveat.data["skipped"] == ("00",)
         assert "does not parse" in caveat.message
 
     def test_vita3k_two_passed_over_directories_each_keep_their_own_clause(self):
@@ -4414,7 +4529,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["skipped"] == "00,01"
+        assert caveat.data["skipped"] == ("00", "01")
         assert (
             "00, which has no user.xml, and 01, whose user.xml does not parse"
             in caveat.message
@@ -4438,7 +4553,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "the configured user is not set up here"
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_NOT_SET_UP
         assert 'answers to id "07" instead' in caveat.message
 
     def test_vita3k_a_recorded_user_without_a_tree_keeps_the_first_found(self):
@@ -4458,9 +4573,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "the configured user has no tree here"
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_HAS_NO_TREE
         assert caveat.data["configured_user"] == "02"
-        assert caveat.data["users"] == "00,01"
+        assert caveat.data["users"] == ("00", "01")
         assert "no directory of that name" in caveat.message
 
     def test_vita3k_a_recorded_user_over_an_empty_tree_stays_the_default(self):
@@ -4475,7 +4590,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "no user directory was found"
+        assert caveat.data["reason"] == atlas.REASON_NO_USER_DIRECTORY
         assert caveat.data["configured_user"] == "01"
         assert "the recorded user 01 included" in caveat.message
 
@@ -4488,7 +4603,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "which users exist here was not established"
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
         assert caveat.data["configured_user"] == "01"
 
     def test_vita3k_without_a_user_id_preselects_nobody(self):
@@ -4503,7 +4618,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert "configured_user" not in caveat.data
-        assert caveat.data["reason"] == "the configuration preselects no user"
+        assert caveat.data["reason"] == atlas.REASON_NO_USER_PRESELECTED
         assert self._readings(p)["user-id"] is None
 
     def test_vita3k_reads_the_auto_connect_switch_beside_it(self):
@@ -4533,7 +4648,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert "configured_user" not in caveat.data
-        assert "does not read" in caveat.data["reason"]
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_ID_UNREAD
+        assert "does not read" in caveat.message
 
     def test_an_empty_user_tree_does_not_claim_a_user_was_found(self):
         # The compiled default is what the emulator would create, not a home
@@ -4542,9 +4658,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n"})
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "no user directory was found"
+        assert caveat.data["reason"] == atlas.REASON_NO_USER_DIRECTORY
         assert "no user home exists" in caveat.message
-        assert "would create" in caveat.message
+        assert "creates at startup" in caveat.message
 
     def _unlistable_tree(self, system, files):
         rd = _retrodeck(
@@ -4581,7 +4697,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._unlistable_tree(system, files)
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "which users exist here was not established"
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
         assert "nothing has saved here yet" not in caveat.message
         assert "could not be listed" in caveat.message
         # And the two states it is not: neither existence sentence.
@@ -4611,7 +4727,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._answer("psvita", files={VITA3K_CONFIG_YML: "pref-path:\n  - /mnt/sd/vita\n"})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
-        assert p.data["reason"] == "pref-path is unread"
+        assert p.data["reason"] == atlas.REASON_KEY_UNREAD
+        assert p.data["key"] == "pref-path"
 
     def test_rpcs3_an_unread_drive_refuses_instead_of_the_compiled_default(self):
         # The key IS set; atlas did not read it. Answering the compiled default
@@ -4620,7 +4737,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/:\n  - /mnt/sd/hdd\n"})
         assert isinstance(p, atlas.Unresolved)
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
-        assert p.data["reason"] == "/dev_hdd0/ is unread"
+        assert p.data["reason"] == atlas.REASON_KEY_UNREAD
+        assert p.data["key"] == "/dev_hdd0/"
 
     def test_rpcs3_still_says_nothing_records_its_user(self):
         # The fix is Vita3K's alone: RPCS3 really does record no user.
@@ -4680,8 +4798,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == RPCS3_USER_UNRECORDED
-        assert caveat.data["users"] == "00000001"
-        assert caveat.data["skipped"] == "12345678"
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["skipped"] == ("12345678",)
         assert "12345678, which holds no localusername file" in caveat.message
         assert f"{RPCS3_HOME}/12345678/savedata" not in [g.dir for g in p.file_set.groups]
 
@@ -4695,8 +4813,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["users"] == "00000001"
-        assert caveat.data["skipped"] == ".hidden"
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["skipped"] == (".hidden",)
         assert (
             ".hidden, which is not named by eight bytes opening with a non-zero number"
             in caveat.message
@@ -4715,7 +4833,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["skipped"] == "00000000,12345678"
+        assert caveat.data["skipped"] == ("00000000", "12345678")
         assert (
             "00000000, which is not named by eight bytes opening with a non-zero number "
             "(check_user, system_utils.cpp:59-69 at build 7c6b3dcd), and 12345678, which "
@@ -4735,7 +4853,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["skipped"] == "12345678"
+        assert caveat.data["skipped"] == ("12345678",)
 
     def test_rpcs3_a_localusername_that_cannot_be_looked_at_is_unestablished(self):
         # The stat failed here; the emulator's own stat is not known to. So
@@ -4748,8 +4866,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
         assert caveat.data["reason"] == RPCS3_USER_UNRECORDED
-        assert caveat.data["users"] == "00000001"
-        assert caveat.data["unestablished"] == "12345678"
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["unestablished"] == ("12345678",)
         assert "skipped" not in caveat.data
         assert "whether RPCS3 lists 12345678 is not established" in caveat.message
 
@@ -4760,9 +4878,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         p = self._rpcs3(dirs=[f"{RPCS3_HOME}/12345678/savedata"])
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == "no user account the emulator would list was found"
-        assert caveat.data["users"] == "00000001"
-        assert caveat.data["skipped"] == "12345678"
+        assert caveat.data["reason"] == atlas.REASON_NO_LISTED_USER_ACCOUNT
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["skipped"] == ("12345678",)
         assert "no user home exists" not in caveat.message
         assert "no user account RPCS3 would list exists" in caveat.message
 
@@ -4773,11 +4891,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert (
-            caveat.data["reason"]
-            == "whether the emulator would list a user account here was not established"
-        )
-        assert caveat.data["unestablished"] == "12345678"
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["unestablished"] == ("12345678",)
         # The opening clause must not assert the negative its own reason
         # marks unestablished — "no user account exists" would be false of
         # exactly the directory the tail goes on to name as unsettled.
@@ -4797,12 +4912,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert (
-            caveat.data["reason"]
-            == "whether the emulator would list a user account here was not established"
-        )
-        assert caveat.data["skipped"] == "00000000"
-        assert caveat.data["unestablished"] == "12345678"
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["skipped"] == ("00000000",)
+        assert caveat.data["unestablished"] == ("12345678",)
         assert (
             "whether any user account RPCS3 would list exists below" in caveat.message
         )
@@ -4825,7 +4937,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(three, atlas.Unresolved)
         message = self._user_caveat(three).message
         assert "lists 12345678, 23456789, and 34567890 is not established — their localusername" in message
-        assert self._user_caveat(three).data["unestablished"] == "12345678,23456789,34567890"
+        assert self._user_caveat(three).data["unestablished"] == ("12345678", "23456789", "34567890")
 
     def test_the_listing_is_complete_only_when_both_globs_are(self):
         # The two globs share one walk on both machines, so nothing in the
@@ -5908,7 +6020,8 @@ class TestOverrideChainSemantics:
         assert p.dir == "/mnt/sd/retrodeck/saves"
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
             {
-                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "layer": atlas.CFG_LAYER_CORE_OVERRIDE,
+                "file": "config/PPSSPP/PPSSPP.cfg",
                 "configured": "/run/media/gone/saves",
                 "effective": "/mnt/sd/retrodeck/saves",
             }
@@ -5925,7 +6038,8 @@ class TestOverrideChainSemantics:
         assert p.dir == self.PLATFORM_DEFAULT
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
             {
-                "layer": "retroarch.cfg",
+                "layer": atlas.CFG_LAYER_GLOBAL,
+                "file": "retroarch.cfg",
                 "configured": "/run/media/gone/saves",
                 "effective": self.PLATFORM_DEFAULT,
             }
@@ -6022,7 +6136,8 @@ class TestOverrideChainSemantics:
         assert p.dir == "/mnt/sd/retrodeck/saves"  # not the platform default
         assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY] == [
             {
-                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "layer": atlas.CFG_LAYER_CORE_OVERRIDE,
+                "file": "config/PPSSPP/PPSSPP.cfg",
                 "configured": "",
                 "effective": "/mnt/sd/retrodeck/saves",
             }
@@ -6045,7 +6160,8 @@ class TestOverrideChainSemantics:
         invalid = [c for c in p.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
         assert [c.data for c in invalid] == [
             {
-                "layer": "retroarch.cfg",
+                "layer": atlas.CFG_LAYER_GLOBAL,
+                "file": "retroarch.cfg",
                 "configured": "/run/media/gone/saves",
                 "effective": "/mnt/sd/other",
             }
@@ -7863,7 +7979,7 @@ class TestPcsx2PerGameLayerPrecision:
             dirs=[layer],
         )
         stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
-        assert stated.data["key"].split(", ") == [
+        assert list(stated.data["key"]) == [
             "[MemoryCards] Slot1_Enable",
             "[MemoryCards] Slot1_Filename",
             "[MemoryCards] Slot2_Enable",
@@ -7895,7 +8011,7 @@ class TestPcsx2PerGameLayerPrecision:
             dirs=[layer],
         )
         stated = self._stated(p, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0]
-        keys = stated.data["key"].split(", ")
+        keys = list(stated.data["key"])
         assert all(k.startswith(("[MemoryCards] ", "[Pad] ")) for k in keys)
         assert not any(k.startswith("[Folders] ") for k in keys)
 
@@ -7918,7 +8034,7 @@ class TestPcsx2PerGameLayerPrecision:
         assert card is not None
         assert card.switch is not None
         assert self._stated(answer, atlas.CAVEAT_PER_GAME_OVERRIDES_PRESENT)[0].data["key"] == (
-            f"[{card.switch.section}] {card.switch.key}"
+            f"[{card.switch.section}] {card.switch.key}",
         )
 
     # ---- what the statement says the layer cannot do ----------------------

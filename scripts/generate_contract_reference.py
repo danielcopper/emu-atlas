@@ -3,7 +3,7 @@
 The reference answers one question per row: a consumer holding a serialized
 answer wants to know which fields come back, what they are called, which can be
 ``null``, and which caveat codes carry which data keys. Nothing here is
-hand-written — every cell is derived from one of four readings, and the page
+hand-written — every cell is derived from one of five readings, and the page
 says which reading spoke:
 
 - **the annotations** — :func:`typing.get_type_hints`, :func:`dataclasses.fields`
@@ -23,6 +23,15 @@ says which reading spoke:
   function returns. It names the shapes: which function produces which set of
   keys, which functions return more than one shape and so dispatch, and which
   key a serializer fills from a differently named attribute.
+- **the data registry** — ``atlas.ENUMERATED_DATA``, read as an
+  object rather than as source, because it is a mapping assembled from tuples
+  and reading it any other way would re-derive what the package already states.
+  It is the strongest reading about a value: ``Caveat.__post_init__`` and
+  ``Unresolved.__post_init__`` refuse anything outside the tuple it binds to a
+  ``(code, key)``, so the guarantee holds whether or not a vector exercises it.
+  Where the vectors say what a value *was*, this one says what it *can be*, and
+  the page states both — a pair the corpus has not reached keeps its guarantee
+  and says the corpus has not reached it.
 
 Joining the first two means matching a JSON key to the attribute it serializes.
 That match is by name, with two mechanical exceptions: a key filled by a list
@@ -539,6 +548,74 @@ def declared_vocabularies() -> dict[str, tuple[str, ...]]:
     for _, tree in package_modules():
         found.update(module_string_tuples(tree))
     return found
+
+
+def registered_enumerations() -> dict[tuple[str, str], str]:
+    """``(code, key)`` → the name of the tuple its value is refused against.
+
+    The fifth reading, and the strongest one about a data value:
+    ``atlas.ENUMERATED_DATA`` is what ``Caveat.__post_init__`` and
+    ``Unresolved.__post_init__`` check, so a pair listed there cannot carry a
+    value outside its tuple — no corpus coverage is needed to say so. The
+    vectors state what a value *was*; this one states what it *can be*.
+
+    The name is recovered by CONTENTS, which is why :func:`vocabulary_names`
+    states its preference rather than taking whatever it saw last.
+    """
+    return {
+        (code, key): (vocabulary_names().get(tuple(vocabulary)) or ["an unnamed tuple"])[0]
+        for (code, key), vocabulary in atlas.ENUMERATED_DATA.items()
+    }
+
+
+def vocabulary_names() -> dict[tuple[str, ...], list[str]]:
+    """Contents → every name this package gives that exact tuple, preference applied.
+
+    Two sources: the module-level literal tuples the AST reading collects, and
+    the package's exported names — the second is not redundant, because a tuple
+    assembled from others (``EMULATOR_CONFIG_UNREADABLE_REASONS`` is built by
+    splat) is invisible to an AST reading of literals.
+
+    An **exported** name wins outright where one exists: the merge below keys
+    both readings by contents and lets the exported list overwrite the private
+    one, so the private names are not candidates at all — the merge is the
+    preference, and nothing else is needed. Contents alone do not identify a
+    name here:
+    ``_BASES`` and ``_FILE_BASES`` are both ``('config', 'data')``, and
+    ``FIRMWARE_NEEDS`` and ``_FILE_NEEDS`` are both ``('required', 'optional')``
+    — so a reading that simply matched members would cite whichever it happened
+    to see last. The preference resolves those two, and where it does not
+    resolve, the list this returns has more than one entry and
+    :func:`ambiguous_vocabulary_names` stops the generation rather than letting
+    a cell name the wrong tuple.
+    """
+    exported: dict[tuple[str, ...], list[str]] = {}
+    private: dict[tuple[str, ...], list[str]] = {}
+    for name in sorted(atlas.__all__):
+        value = getattr(atlas, name)
+        if isinstance(value, tuple) and all(isinstance(item, str) for item in value):
+            exported.setdefault(tuple(value), []).append(name)
+    for name, members in sorted(declared_vocabularies().items()):
+        private.setdefault(tuple(members), []).append(name)
+    return {**private, **exported}
+
+
+def ambiguous_vocabulary_names(registered: Mapping[tuple[str, str], str]) -> list[str]:
+    """Registry tuples whose contents more than one name still claims.
+
+    Only the registry's own tuples are held to this: the page cites a name for
+    those and for nothing else, so a collision elsewhere in the package is not
+    this page's problem to refuse over.
+    """
+    names = vocabulary_names()
+    ambiguous: list[str] = []
+    for code, key in sorted(registered):
+        candidates = names.get(tuple(atlas.ENUMERATED_DATA[(code, key)]), [])
+        if len(candidates) > 1:
+            ambiguous.append(
+                f"{code}.{key}: {sorted(candidates)} all hold the same members, so the cell cannot name one"
+            )
+    return ambiguous
 
 
 @functools.cache
@@ -1160,7 +1237,9 @@ def describe_values(values: Sequence[Any], vocabularies: Mapping[str, tuple[str,
 
     A closed set is claimed only where a declared tuple holds exactly the
     observed values. Containing a few of a tuple's members is not evidence that
-    the tuple is the key's vocabulary, so those values are listed instead.
+    the tuple is the key's vocabulary, so those values are listed instead. A
+    value that is an array or an object is described by its shape: a tuple is
+    the key's own contents, never a vocabulary it draws from.
     """
     kinds = {json_type(v) for v in values}
     if kinds != {"string"}:
@@ -1276,9 +1355,47 @@ def contradictions(walks: Mapping[str, ShapeWalk]) -> list[str]:
     return found
 
 
+def shape_disagreements(witnessed: Mapping[str, "WitnessedCode"]) -> list[str]:
+    """``(code, key)`` pairs the corpus shows under two JSON types.
+
+    A client switches on the code and reads the key; if one pair is a string in
+    one answer and an array in another, the page cannot state a type and the
+    contract has none. Caught here rather than described, because a page that
+    printed "string, array" would be documenting the defect as a feature.
+    """
+    found: list[str] = []
+    for code in sorted(witnessed):
+        for key in sorted(witnessed[code].keys):
+            kinds = sorted({json_type(value) for value in witnessed[code].keys[key]})
+            if len(kinds) > 1:
+                found.append(f"{code}.{key}: the corpus carries {' and '.join(kinds)}")
+    return found
+
+
+def registry_disagreements(
+    witnessed: Mapping[str, "WitnessedCode"], registered: Mapping[tuple[str, str], str]
+) -> list[str]:
+    """Values the corpus shows that the construction-time registry would refuse.
+
+    The two readings must agree, and only one direction is a contradiction: a
+    registered pair the corpus has not reached is a coverage gap the page
+    states, while a value outside the tuple means the page would publish a
+    closed set that is not closed. Nothing should reach here — the constructor
+    raises first — so this fires only if the registry and the corpus were built
+    from different revisions.
+    """
+    found: list[str] = []
+    for (code, key), name in sorted(registered.items()):
+        allowed = set(atlas.ENUMERATED_DATA[(code, key)])
+        for value in witnessed.get(code, WitnessedCode()).keys.get(key, []):
+            if isinstance(value, str) and value not in allowed:
+                found.append(f"{code}.{key}: the corpus carries {value!r}, which `{name}` does not hold")
+    return found
+
+
 @dataclasses.dataclass(frozen=True)
 class Reference:
-    """What the four readings established, gathered once for the sections to render.
+    """What the five readings established, gathered once for the sections to render.
 
     Assembled by :func:`read_everything` and read-only from there on: a section
     states what is already known rather than reading the repository again, so
@@ -1289,6 +1406,7 @@ class Reference:
     prose: AttributeProse
     produced: dict[str, list[Shape]]
     vocabularies: dict[str, tuple[str, ...]]
+    enumerations: dict[tuple[str, str], str]
     sites: dict[str, CodeSites]
     unattributed_sites: int
     answers: dict[str, list[Any]]
@@ -1305,7 +1423,7 @@ class Reference:
 
 
 def read_everything() -> Reference:
-    """Run the four readings and walk every shape the corpus states."""
+    """Run the five readings and walk every shape the corpus states."""
     annotations = Annotations()
     produced = contract_shapes()
     sites, unattributed_sites = caveat_construction_sites()
@@ -1326,6 +1444,7 @@ def read_everything() -> Reference:
         prose=attribute_prose(annotations.seen_types),
         produced=produced,
         vocabularies=declared_vocabularies(),
+        enumerations=registered_enumerations(),
         sites=sites,
         unattributed_sites=unattributed_sites,
         answers=answers,
@@ -1402,11 +1521,13 @@ def corpus_header(reference: Reference) -> list[str]:
         "",
         *paragraph(
             "Regenerate with `python scripts/generate_contract_reference.py` (then `deno fmt`). Every cell below is "
-            "derived from one of four readings of this repository, and each says which one spoke: the **annotations** "
+            "derived from one of five readings of this repository, and each says which one spoke: the **annotations** "
             "on the answer types (what a field _can_ be), the **vectors** under `vectors/machines/` (what an answer "
             "_did_ carry), an AST scan of the **construction sites** in `atlas/` (which caveat data keys the source "
-            "itself spells out), and an AST scan of the **serializers** in `atlas/contract.py` (which function returns "
-            "which shape, and which key it fills from a differently named attribute). An attribute an answer type "
+            "itself spells out), an AST scan of the **serializers** in `atlas/contract.py` (which function returns "
+            "which shape, and which key it fills from a differently named attribute), and the **data registry** "
+            "`atlas.ENUMERATED_DATA` (which `(code, key)` values are refused at construction, whether or "
+            "not a vector exercises them). An attribute an answer type "
             "declares and no serialized answer carries is listed under "
             "[attributes no answer carries](#attributes-no-answer-carries) rather than described."
         ),
@@ -1759,28 +1880,69 @@ def caveat_codes(reference: Reference) -> list[str]:
     return lines
 
 
+def value_shape(values: Sequence[Any]) -> str:
+    """The one JSON type a ``(code, key)`` carries — the contract is one, not two.
+
+    :func:`shape_disagreements` fails the generation where the corpus shows two,
+    so by the time this renders there is exactly one to name.
+    """
+    return ", ".join(sorted({json_type(value) for value in values}))
+
+
+def refused_cell(vocabulary: str | None) -> str:
+    """The allowed-values cell: the tuple the constructors check, or nothing to say."""
+    return f"closed set `{vocabulary}`, refused at construction" if vocabulary else "—"
+
+
 def caveat_data_values(reference: Reference) -> list[str]:
-    """What each code's data keys actually held, across the whole corpus."""
-    rows = [
-        [
-            cell(f"`{code}`"),
-            cell(f"`{key}`"),
-            cell(describe_values(reference.witnessed[code].keys[key], reference.vocabularies)),
-        ]
-        for code in sorted(reference.witnessed)
-        for key in sorted(reference.witnessed[code].keys)
-    ]
+    """What each code's data keys actually held, and what they are allowed to hold."""
+    registered = reference.enumerations
+    rows: list[list[str]] = []
+    for code in sorted(reference.witnessed):
+        for key in sorted(reference.witnessed[code].keys):
+            values = reference.witnessed[code].keys[key]
+            vocabulary = registered.get((code, key))
+            observed = describe_values(values, reference.vocabularies)
+            allowed = refused_cell(vocabulary)
+            rows.append(
+                [cell(f"`{code}`"), cell(f"`{key}`"), cell(value_shape(values)), cell(allowed), cell(observed)]
+            )
+    # A registered pair the corpus never shows still belongs on the page: the
+    # guarantee holds whether or not a fixture exercises it, and saying nothing
+    # would read as "this key is free".
+    for (code, key), vocabulary in sorted(registered.items()):
+        if key in reference.witnessed.get(code, WitnessedCode()).keys:
+            continue
+        rows.append(
+            [
+                cell(f"`{code}`"),
+                cell(f"`{key}`"),
+                cell("string"),
+                cell(refused_cell(vocabulary)),
+                cell("not witnessed in the corpus"),
+            ]
+        )
     return [
         "## Caveat data values",
         "",
         *paragraph(
             "One row per data key, per code that carries it: a key that rides three codes is three rows, because what "
-            "it holds is the code's business and not the key's. A **closed set** is claimed only where a module-level "
-            "tuple in `atlas/` holds exactly the observed values; holding a few of a tuple's members is not evidence "
-            "that the tuple is the key's vocabulary, so those values are listed instead, or counted where there are "
-            "too many to list — the weaker and truthful claim."
+            "it holds is the code's business and not the key's — and so is its **type**, which is why the type is a "
+            "column. `options` is an array under `core-multi-option` and an object under `core-mode-unestablished`; "
+            "`key` is a string under a dozen codes and an array under the per-game-layer ones. One `(code, key)` "
+            "carries one type across the whole corpus, and a second type stops this generation rather than being "
+            "published as a choice."
         ),
-        *table(["code", "data key", "values observed"], rows),
+        *paragraph(
+            "**Refused at construction** names the tuple `atlas.ENUMERATED_DATA` binds to that pair: "
+            "`Caveat.__post_init__` and `Unresolved.__post_init__` raise on anything outside it, so the guarantee "
+            "holds whether or not a fixture exercises it — a pair the corpus has not reached says so in the last "
+            "column and keeps its guarantee. Where no registry entry exists, a **closed set** in the last column is "
+            "the weaker, corpus-only claim: a module-level tuple in `atlas/` holds exactly the observed values. "
+            "Holding a few of a tuple's members is not evidence that the tuple is the key's vocabulary, so those "
+            "values are listed instead, or counted where there are too many to list."
+        ),
+        *table(["code", "data key", "type", "allowed values", "values observed"], rows),
         "",
     ]
 
@@ -1801,13 +1963,23 @@ def build() -> tuple[list[str], list[str]]:
     """The generated page's lines, and the contradictions that must stop it."""
     reference = read_everything()
     lines = [line for section in SECTIONS for line in section(reference)]
-    return lines, contradictions(reference.walks)
+    failures = [
+        *contradictions(reference.walks),
+        *shape_disagreements(reference.witnessed),
+        *registry_disagreements(reference.witnessed, reference.enumerations),
+        *ambiguous_vocabulary_names(reference.enumerations),
+    ]
+    return lines, failures
 
 
 def main() -> None:
     lines, failures = build()
     if failures:
-        print("contract reference: the annotations and the vectors disagree —", file=sys.stderr)
+        # Four gates print here and they do not share a pair of readings: the
+        # null cross-check is annotations against vectors, the shape and
+        # registry checks are the corpus against itself and against the
+        # registry, and the naming check is the package against itself.
+        print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)
         raise SystemExit(1)

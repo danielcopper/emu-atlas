@@ -81,7 +81,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -225,7 +230,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -324,7 +334,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] NANDRootPath",
+                "key": [
+                  "[Dolphin.General] NANDRootPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -1381,8 +1393,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -1479,8 +1495,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameFileTitle",
-                "files": "Example Game (Europe)_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "Example Game (Europe)_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')",
                 "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
               }
@@ -1572,8 +1592,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameFileTitle",
-                "files": "Rock_Star: Vol.2 <Best>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "Rock_Star: Vol.2 <Best>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')",
                 "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
               }
@@ -1675,8 +1699,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -1777,8 +1805,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -1879,8 +1911,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -1979,7 +2015,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "DUCKSTATION",
-                "reason": "the DataRoot is decided by the launch environment"
+                "reason": "data-root-decided-by-launch"
               }
             },
             {
@@ -1987,8 +2023,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -2448,7 +2488,9 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "MELONDS",
-                "files": "<rom_stem>.sav",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
                 "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
                 "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
               }
@@ -2530,7 +2572,9 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "MELONDS",
-                "files": "<rom_stem>.sav",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
                 "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
                 "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
               }
@@ -2614,7 +2658,9 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "MELONDS",
-                "files": "<rom_stem>.sav",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
                 "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
                 "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
               }
@@ -2705,8 +2751,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ]
               }
             },
             {
@@ -2715,7 +2763,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -2812,8 +2860,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001,00000002"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001",
+                  "00000002"
+                ]
               }
             },
             {
@@ -2822,7 +2873,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -2913,8 +2964,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "which users exist here was not established",
-                "users": "00000001"
+                "reason": "user-listing-unestablished",
+                "users": [
+                  "00000001"
+                ]
               }
             },
             {
@@ -2923,7 +2976,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             },
             {
@@ -3018,8 +3071,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "no user directory was found",
-                "users": "00000001"
+                "reason": "no-user-directory",
+                "users": [
+                  "00000001"
+                ]
               }
             },
             {
@@ -3028,7 +3083,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3114,8 +3169,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "no user directory was found",
-                "users": "00000001"
+                "reason": "no-user-directory",
+                "users": [
+                  "00000001"
+                ]
               }
             },
             {
@@ -3124,7 +3181,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3217,8 +3274,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ]
               }
             },
             {
@@ -3227,7 +3286,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3317,9 +3376,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001",
-                "skipped": "12345678"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "skipped": [
+                  "12345678"
+                ]
               }
             },
             {
@@ -3328,7 +3391,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3419,9 +3482,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001",
-                "skipped": ".hidden"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "skipped": [
+                  ".hidden"
+                ]
               }
             },
             {
@@ -3430,7 +3497,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3527,8 +3594,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "12345678,1234abcd"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "12345678",
+                  "1234abcd"
+                ]
               }
             },
             {
@@ -3537,7 +3607,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3628,9 +3698,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001",
-                "skipped": "00000000"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "skipped": [
+                  "00000000"
+                ]
               }
             },
             {
@@ -3639,7 +3713,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3727,9 +3801,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "no user account the emulator would list was found",
-                "users": "00000001",
-                "skipped": "12345678"
+                "reason": "no-listed-user-account",
+                "users": [
+                  "00000001"
+                ],
+                "skipped": [
+                  "12345678"
+                ]
               }
             },
             {
@@ -3738,7 +3816,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3831,9 +3909,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "the active user account is not recorded on disk",
-                "users": "00000001",
-                "unestablished": "12345678"
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "unestablished": [
+                  "12345678"
+                ]
               }
             },
             {
@@ -3842,7 +3924,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -3933,9 +4015,13 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "RPCS3",
-                "reason": "whether the emulator would list a user account here was not established",
-                "users": "00000001",
-                "unestablished": "12345678"
+                "reason": "listed-user-account-unestablished",
+                "users": [
+                  "00000001"
+                ],
+                "unestablished": [
+                  "12345678"
+                ]
               }
             },
             {
@@ -3944,7 +4030,7 @@
                 "core": "RPCS3",
                 "mode": "hdd0",
                 "dir": "/mnt/sd/hdd0/savedata/vmc",
-                "files": ""
+                "files": []
               }
             }
           ],
@@ -4027,8 +4113,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configuration preselects no user",
-                "users": "00"
+                "reason": "no-user-preselected",
+                "users": [
+                  "00"
+                ]
               }
             }
           ],
@@ -4129,8 +4217,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configuration preselects no user",
-                "users": "00,01"
+                "reason": "no-user-preselected",
+                "users": [
+                  "00",
+                  "01"
+                ]
               }
             }
           ],
@@ -4231,8 +4322,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user's tree is the one named",
-                "users": "00,01",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00",
+                  "01"
+                ],
                 "configured_user": "01"
               }
             }
@@ -4334,8 +4428,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user's tree is the one named",
-                "users": "00,01",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00",
+                  "01"
+                ],
                 "configured_user": "01"
               }
             }
@@ -4437,8 +4534,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user has no tree here",
-                "users": "00,01",
+                "reason": "configured-user-has-no-tree",
+                "users": [
+                  "00",
+                  "01"
+                ],
                 "configured_user": "02"
               }
             }
@@ -4531,10 +4631,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "no user account the emulator would list was found",
-                "users": "00",
+                "reason": "no-listed-user-account",
+                "users": [
+                  "00"
+                ],
                 "configured_user": "00",
-                "skipped": "00"
+                "skipped": [
+                  "00"
+                ]
               }
             }
           ],
@@ -4628,10 +4732,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user is not set up here",
-                "users": "00",
+                "reason": "configured-user-not-set-up",
+                "users": [
+                  "00"
+                ],
                 "configured_user": "01",
-                "skipped": "01"
+                "skipped": [
+                  "01"
+                ]
               }
             }
           ],
@@ -4723,8 +4831,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "no user directory was found",
-                "users": "00",
+                "reason": "no-user-directory",
+                "users": [
+                  "00"
+                ],
                 "configured_user": "01"
               }
             }
@@ -4826,8 +4936,11 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user's tree is the one named",
-                "users": ".hidden,00",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  ".hidden",
+                  "00"
+                ],
                 "configured_user": ".hidden"
               }
             }
@@ -4922,10 +5035,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user is not set up here",
-                "users": "00",
+                "reason": "configured-user-not-set-up",
+                "users": [
+                  "00"
+                ],
                 "configured_user": ".hidden",
-                "skipped": ".hidden"
+                "skipped": [
+                  ".hidden"
+                ]
               }
             }
           ],
@@ -5018,8 +5135,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user's tree is the one named",
-                "users": ".hidden.bak",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  ".hidden.bak"
+                ],
                 "configured_user": ".hidden"
               }
             }
@@ -5113,8 +5232,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user is not set up here",
-                "users": "..bak",
+                "reason": "configured-user-not-set-up",
+                "users": [
+                  "..bak"
+                ],
                 "configured_user": "..bak"
               }
             }
@@ -5212,10 +5333,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "whether the configured user is set up here was not established",
-                "users": "01",
+                "reason": "configured-user-setup-unestablished",
+                "users": [
+                  "01"
+                ],
                 "configured_user": "00",
-                "unestablished": "00"
+                "unestablished": [
+                  "00"
+                ]
               }
             }
           ],
@@ -5310,10 +5435,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "whether the emulator would list a user account here was not established",
-                "users": "00",
+                "reason": "listed-user-account-unestablished",
+                "users": [
+                  "00"
+                ],
                 "configured_user": "01",
-                "unestablished": "00"
+                "unestablished": [
+                  "00"
+                ]
               }
             }
           ],
@@ -5408,10 +5537,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configured user is not set up here",
-                "users": "01",
+                "reason": "configured-user-not-set-up",
+                "users": [
+                  "01"
+                ],
                 "configured_user": "00",
-                "skipped": "00"
+                "skipped": [
+                  "00"
+                ]
               }
             }
           ],
@@ -5504,9 +5637,14 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "no user account the emulator would list was found",
-                "users": "00",
-                "skipped": "00,01"
+                "reason": "no-listed-user-account",
+                "users": [
+                  "00"
+                ],
+                "skipped": [
+                  "00",
+                  "01"
+                ]
               }
             }
           ],
@@ -5643,8 +5781,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "VITA3K",
-                "reason": "the configuration preselects no user",
-                "users": "00"
+                "reason": "no-user-preselected",
+                "users": [
+                  "00"
+                ]
               }
             }
           ],
@@ -5791,7 +5931,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -6002,7 +6147,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -6125,7 +6275,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Dolphin.General] NANDRootPath",
+                "key": [
+                  "[Dolphin.General] NANDRootPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -6228,7 +6380,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -6820,7 +6977,12 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -6952,7 +7114,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] NANDRootPath",
+                "key": [
+                  "[Dolphin.General] NANDRootPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -7063,14 +7227,24 @@
                 "core": "DOLPHIN",
                 "count": "2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath"
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ]
               }
             },
             {
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -7192,14 +7366,24 @@
               "data": {
                 "core": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath"
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ]
               }
             },
             {
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Core] MemcardAPath, [Core] MemcardBPath, [Core] GCIFolderAPath, [Core] GCIFolderBPath",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -7306,7 +7490,13 @@
                 "core": "DUCKSTATION",
                 "count": "2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
-                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+                "key": [
+                  "[MemoryCards] Card1Type",
+                  "[MemoryCards] Card2Type",
+                  "[MemoryCards] Card1Path",
+                  "[MemoryCards] Card2Path",
+                  "[MemoryCards] UsePlaylistTitle"
+                ]
               }
             },
             {
@@ -7314,8 +7504,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -7418,7 +7612,13 @@
               "data": {
                 "core": "DUCKSTATION",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
-                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+                "key": [
+                  "[MemoryCards] Card1Type",
+                  "[MemoryCards] Card2Type",
+                  "[MemoryCards] Card1Path",
+                  "[MemoryCards] Card2Path",
+                  "[MemoryCards] UsePlaylistTitle"
+                ]
               }
             },
             {
@@ -7426,8 +7626,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -7533,7 +7737,13 @@
               "data": {
                 "core": "DUCKSTATION",
                 "dir": "/app/gamesettings",
-                "key": "[MemoryCards] Card1Type, [MemoryCards] Card2Type, [MemoryCards] Card1Path, [MemoryCards] Card2Path, [MemoryCards] UsePlaylistTitle"
+                "key": [
+                  "[MemoryCards] Card1Type",
+                  "[MemoryCards] Card2Type",
+                  "[MemoryCards] Card1Path",
+                  "[MemoryCards] Card2Path",
+                  "[MemoryCards] UsePlaylistTitle"
+                ]
               }
             },
             {
@@ -7541,8 +7751,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -7644,8 +7858,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -7754,7 +7972,26 @@
                 "core": "PCSX2",
                 "count": "2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
+                "key": [
+                  "[MemoryCards] Slot1_Enable",
+                  "[MemoryCards] Slot1_Filename",
+                  "[MemoryCards] Slot2_Enable",
+                  "[MemoryCards] Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot2_Enable",
+                  "[MemoryCards] Multitap1_Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot3_Enable",
+                  "[MemoryCards] Multitap1_Slot3_Filename",
+                  "[MemoryCards] Multitap1_Slot4_Enable",
+                  "[MemoryCards] Multitap1_Slot4_Filename",
+                  "[MemoryCards] Multitap2_Slot2_Enable",
+                  "[MemoryCards] Multitap2_Slot2_Filename",
+                  "[MemoryCards] Multitap2_Slot3_Enable",
+                  "[MemoryCards] Multitap2_Slot3_Filename",
+                  "[MemoryCards] Multitap2_Slot4_Enable",
+                  "[MemoryCards] Multitap2_Slot4_Filename",
+                  "[Pad] MultitapPort1",
+                  "[Pad] MultitapPort2"
+                ]
               }
             }
           ],
@@ -7866,7 +8103,26 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
+                "key": [
+                  "[MemoryCards] Slot1_Enable",
+                  "[MemoryCards] Slot1_Filename",
+                  "[MemoryCards] Slot2_Enable",
+                  "[MemoryCards] Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot2_Enable",
+                  "[MemoryCards] Multitap1_Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot3_Enable",
+                  "[MemoryCards] Multitap1_Slot3_Filename",
+                  "[MemoryCards] Multitap1_Slot4_Enable",
+                  "[MemoryCards] Multitap1_Slot4_Filename",
+                  "[MemoryCards] Multitap2_Slot2_Enable",
+                  "[MemoryCards] Multitap2_Slot2_Filename",
+                  "[MemoryCards] Multitap2_Slot3_Enable",
+                  "[MemoryCards] Multitap2_Slot3_Filename",
+                  "[MemoryCards] Multitap2_Slot4_Enable",
+                  "[MemoryCards] Multitap2_Slot4_Filename",
+                  "[Pad] MultitapPort1",
+                  "[Pad] MultitapPort2"
+                ]
               }
             }
           ],
@@ -7981,7 +8237,26 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/app/gamesettings",
-                "key": "[MemoryCards] Slot1_Enable, [MemoryCards] Slot1_Filename, [MemoryCards] Slot2_Enable, [MemoryCards] Slot2_Filename, [MemoryCards] Multitap1_Slot2_Enable, [MemoryCards] Multitap1_Slot2_Filename, [MemoryCards] Multitap1_Slot3_Enable, [MemoryCards] Multitap1_Slot3_Filename, [MemoryCards] Multitap1_Slot4_Enable, [MemoryCards] Multitap1_Slot4_Filename, [MemoryCards] Multitap2_Slot2_Enable, [MemoryCards] Multitap2_Slot2_Filename, [MemoryCards] Multitap2_Slot3_Enable, [MemoryCards] Multitap2_Slot3_Filename, [MemoryCards] Multitap2_Slot4_Enable, [MemoryCards] Multitap2_Slot4_Filename, [Pad] MultitapPort1, [Pad] MultitapPort2"
+                "key": [
+                  "[MemoryCards] Slot1_Enable",
+                  "[MemoryCards] Slot1_Filename",
+                  "[MemoryCards] Slot2_Enable",
+                  "[MemoryCards] Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot2_Enable",
+                  "[MemoryCards] Multitap1_Slot2_Filename",
+                  "[MemoryCards] Multitap1_Slot3_Enable",
+                  "[MemoryCards] Multitap1_Slot3_Filename",
+                  "[MemoryCards] Multitap1_Slot4_Enable",
+                  "[MemoryCards] Multitap1_Slot4_Filename",
+                  "[MemoryCards] Multitap2_Slot2_Enable",
+                  "[MemoryCards] Multitap2_Slot2_Filename",
+                  "[MemoryCards] Multitap2_Slot3_Enable",
+                  "[MemoryCards] Multitap2_Slot3_Filename",
+                  "[MemoryCards] Multitap2_Slot4_Enable",
+                  "[MemoryCards] Multitap2_Slot4_Filename",
+                  "[Pad] MultitapPort1",
+                  "[Pad] MultitapPort2"
+                ]
               }
             }
           ],
@@ -8818,8 +9093,12 @@
               "data": {
                 "core": "DUCKSTATION",
                 "mode": "PerGameTitle",
-                "files": "<save_id>_1.mcd",
-                "files_without_save_id": "shared_card_1.mcd",
+                "files": [
+                  "<save_id>_1.mcd"
+                ],
+                "files_without_save_id": [
+                  "shared_card_1.mcd"
+                ],
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
               }
@@ -8950,6 +9229,730 @@
                 "key": "Card2Path",
                 "value": null,
                 "options_file": "/home/deck/.local/share/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-slot-holding-a-gba-adapter-names-the-slot-it-is-about",
+      "rationale": "EXI device 9 is the GBA cartridge adapter: its saves go onto the cartridge image the emulator is configured with, which this answer does not model. The slot letter is the fact a client acts on, so it is data (`slot`) beside the reason slug rather than a word inside a sentence — the other slot's statement stands on its own.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 8\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/<region>/Card B",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "reason": "slot-holds-agp-device",
+                "slot": "A"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "agp+folder",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderBPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-an-uninterpreted-slot-device-names-the-slot-and-the-value",
+      "rationale": "A device id this card cannot read leaves what sits in that slot unestablished. Both facts the sentence used to spell — which slot, and what the configuration actually says — are their own keys (`slot`, `value`), so a client reads the configured value without parsing it back out of English.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 7\nSlotB = 8\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/<region>/Card B",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "reason": "slot-device-uninterpreted",
+                "slot": "A",
+                "value": "7"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "unknown+folder",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "7",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderBPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-per-session-card-override-names-the-key-that-set-it",
+      "rationale": "GCIFolderAPathOverride is a per-session override a movie or netplay session sets: while one runs the cards live at its path, not at the answer's. Which of the two override keys is set is the fact, so it rides as `key` beside the reason slug.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 8\nSlotB = 8\nGCIFolderAPathOverride = /mnt/sd/session/cards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/<region>/Card A",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "reason": "session-override-set",
+                "key": "GCIFolderAPathOverride"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "core": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+folder",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderBPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card+folder",
+                "options": {
+                  "SlotA": "1"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-drive-key-stated-as-a-block-is-unread-not-absent",
+      "rationale": "vfs.yml states /dev_hdd0/ as a nested block, which the scalar reader does not read. The emulator reads a drive there, so the value is unread rather than unset, and the refusal says which key with `key` beside the `key-unread` reason — answering the compiled default would claim the file sets nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/:\n  path: /mnt/sd/hdd/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "emulator": "RPCS3",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
+              "reason": "key-unread",
+              "key": "/dev_hdd0/"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-user-id-stated-as-a-block-is-unread-not-absent",
+      "rationale": "config.yml states user-id as a nested block, which the scalar reader does not read — so which user the configuration preselects is unread here, not unset. The answer still stands on the emulator's own listing, and the reason says which of the two it is: reading it as unset would claim the file preselects nobody.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id:\n  stored: 00\nlle-modules: []\n",
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "configured-user-id-unread",
+                "users": [
+                  "00"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/retrodeck/storage/psvita/Vita3K/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-an-unlistable-user-root-names-the-stand-in-not-the-recorded-user",
+      "rationale": "The user root cannot be listed, and a directory for the recorded user 05 sits under it — which the failed listing never reached. The answer names the compiled stand-in 00, not 05: a home nobody could list is not a home found here, and stating the recorded user's tree would claim exactly what the failure left open. The reason says which users exist was not established, save-dir-unlistable says why, and configured_user still carries 05 because reading the configuration is a different read from listing the tree. What is new here is the RECORDED USER under an unreadable root: the RPCS3 vector pins the headline under one too, but with nothing in the configuration that could pull it elsewhere.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id: 05\nlle-modules: []\n",
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/05/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"05\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/05",
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/05/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        },
+        "unlistable": [
+          "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "user-listing-unestablished",
+                "users": [
+                  "00"
+                ],
+                "configured_user": "05"
+              }
+            },
+            {
+              "code": "save-dir-unlistable",
+              "data": {
+                "path": "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user",
+                "core": "VITA3K"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/retrodeck/storage/psvita/Vita3K/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "05",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
             "alternatives": []

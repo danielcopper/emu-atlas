@@ -1082,8 +1082,12 @@
               "data": {
                 "core": "flycast",
                 "mode": "VMU A1",
-                "files": "<save_id>.A1.bin",
-                "files_without_save_id": "Dreamcast Game (Europe).A1.bin",
+                "files": [
+                  "<save_id>.A1.bin"
+                ],
+                "files_without_save_id": [
+                  "Dreamcast Game (Europe).A1.bin"
+                ],
                 "files_established_for": "console",
                 "citation": "flycast@1dac369 oslib.cpp:38-67 (names; per-content applies per port, :40-41), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only, so port A1 never exists for arcade content)"
               }
@@ -1101,7 +1105,11 @@
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/bios/dc",
-                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin"
+                "files": [
+                  "vmu_save_B1.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_D1.bin"
+                ]
               }
             },
             {
@@ -1110,7 +1118,9 @@
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/bios/dc",
-                "files": "dc_nvmem.bin"
+                "files": [
+                  "dc_nvmem.bin"
+                ]
               }
             }
           ],
@@ -1230,8 +1240,18 @@
               "data": {
                 "core": "flycast",
                 "mode": "All VMUs",
-                "files": "<save_id>.A1.bin, <save_id>.B1.bin, <save_id>.C1.bin, <save_id>.D1.bin",
-                "files_without_save_id": "Multi Disc Game (Europe).A1.bin, Multi Disc Game (Europe).B1.bin, Multi Disc Game (Europe).C1.bin, Multi Disc Game (Europe).D1.bin",
+                "files": [
+                  "<save_id>.A1.bin",
+                  "<save_id>.B1.bin",
+                  "<save_id>.C1.bin",
+                  "<save_id>.D1.bin"
+                ],
+                "files_without_save_id": [
+                  "Multi Disc Game (Europe).A1.bin",
+                  "Multi Disc Game (Europe).B1.bin",
+                  "Multi Disc Game (Europe).C1.bin",
+                  "Multi Disc Game (Europe).D1.bin"
+                ],
                 "files_established_for": "console",
                 "citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)"
               }
@@ -1242,7 +1262,9 @@
                 "core": "flycast",
                 "mode": "All VMUs",
                 "dir": "/mnt/sd/retrodeck/bios/dc",
-                "files": "dc_nvmem.bin"
+                "files": [
+                  "dc_nvmem.bin"
+                ]
               }
             }
           ],
@@ -1964,8 +1986,12 @@
               "data": {
                 "core": "flycast",
                 "mode": "VMU A1",
-                "files": "<save_id>.A1.bin",
-                "files_without_save_id": "Dreamcast Game (Europe).A1.bin",
+                "files": [
+                  "<save_id>.A1.bin"
+                ],
+                "files_without_save_id": [
+                  "Dreamcast Game (Europe).A1.bin"
+                ],
                 "files_established_for": "console",
                 "citation": "flycast@1dac369 oslib.cpp:38-67 (names; per-content applies per port, :40-41), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only, so port A1 never exists for arcade content)"
               }
@@ -1976,7 +2002,11 @@
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
-                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin"
+                "files": [
+                  "vmu_save_B1.bin",
+                  "vmu_save_C1.bin",
+                  "vmu_save_D1.bin"
+                ]
               }
             },
             {
@@ -1985,7 +2015,9 @@
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
-                "files": "dc_nvmem.bin"
+                "files": [
+                  "dc_nvmem.bin"
+                ]
               }
             }
           ],
@@ -3431,14 +3463,19 @@
               "data": {
                 "core": "neocd",
                 "verdict": "multi-option",
-                "options": "neocd_per_content_saves"
+                "options": [
+                  "neocd_per_content_saves"
+                ]
               }
             },
             {
               "code": "file-set-across-systems",
               "data": {
                 "core": "neocd",
-                "systems": "neogeocd, neogeocdjp"
+                "systems": [
+                  "neogeocd",
+                  "neogeocdjp"
+                ]
               }
             },
             {
@@ -4213,12 +4250,12 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "invalid-save-directory",
               "data": {
-                "layer": "core override config/PPSSPP/PPSSPP.cfg",
+                "layer": "core-override",
+                "file": "config/PPSSPP/PPSSPP.cfg",
                 "configured": "/run/media/gone/saves",
                 "effective": "/mnt/sd/retrodeck/saves"
               }
@@ -4230,7 +4267,8 @@
                 "verdict": "suspect"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },
@@ -4292,7 +4330,10 @@
                 "core": "flycast",
                 "arrangement": "retrodeck",
                 "verification": "runtime-version-unknown",
-                "missing": "arrangement_version, core_library_version"
+                "missing": [
+                  "arrangement_version",
+                  "core_library_version"
+                ]
               }
             }
           ],
@@ -4469,12 +4510,12 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "invalid-save-directory",
               "data": {
-                "layer": "game override config/PPSSPP/Lumines (USA).cfg",
+                "layer": "game-override",
+                "file": "config/PPSSPP/Lumines (USA).cfg",
                 "configured": "/run/media/gone/saves",
                 "effective": "/mnt/sd/retrodeck/saves"
               }
@@ -4486,7 +4527,8 @@
                 "verdict": "suspect"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },
@@ -6174,7 +6216,10 @@
                   "code": "file-set-across-systems",
                   "data": {
                     "core": "mupen64plus_next",
-                    "systems": "n64, n64dd"
+                    "systems": [
+                      "n64",
+                      "n64dd"
+                    ]
                   }
                 }
               ],
@@ -6214,7 +6259,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -6371,7 +6419,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -6462,7 +6513,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -6536,7 +6590,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -6617,7 +6674,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -8650,7 +8710,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -8775,7 +8838,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -8850,7 +8916,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -8921,7 +8990,8 @@
             {
               "code": "invalid-save-directory",
               "data": {
-                "layer": "retroarch.cfg",
+                "layer": "global",
+                "file": "retroarch.cfg",
                 "configured": "~/saves",
                 "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
               }
@@ -8930,7 +9000,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -9003,7 +9076,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -11072,7 +11148,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],
@@ -11147,7 +11226,10 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": "n64, n64dd"
+                "systems": [
+                  "n64",
+                  "n64dd"
+                ]
               }
             }
           ],

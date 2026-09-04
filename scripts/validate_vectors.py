@@ -1026,23 +1026,44 @@ def _validate_caveats(name: str, caveats: Any) -> None:
         if caveat["code"] not in KNOWN_CAVEAT_CODES:
             fail(f"{name}: caveat code must be one of {sorted(KNOWN_CAVEAT_CODES)}, got {caveat['code']!r}")
         data = caveat["data"]
-        # Values are strings, except the one mapping-valued key the contract
-        # documents: the alternative-emulator code's ``emulators`` tally, an
-        # object of strings itself.
         if not isinstance(data, dict) or not all(
-            isinstance(k, str)
-            and (
-                isinstance(v, str)
-                or (
-                    k == "emulators"
-                    and caveat["code"] == "per-game-alternative-emulator"
-                    and isinstance(v, dict)
-                    and all(isinstance(dk, str) and isinstance(dv, str) for dk, dv in v.items())
-                )
-            )
-            for k, v in data.items()
+            isinstance(key, str) and _is_caveat_value(caveat["code"], key, value)
+            for key, value in data.items()
         ):
-            fail(f"{name}: caveat data must be an object of strings, got {data!r}")
+            fail(
+                f"{name}: caveat data values must each be a string, a list of strings, or one "
+                f"of the two documented tally objects, got {data!r}"
+            )
+
+
+# The only places a data value is an OBJECT of strings rather than a string or
+# a list of them. Two, and each is keyed to its own code so an object can never
+# turn up where a client does not expect one: the alternative-emulator tally,
+# which maps an emulator label to how many games select it, and the card-image
+# index options a Beetle PSX card refuses on, which map an option key to the
+# value read for it.
+OBJECT_VALUED_KEYS = {
+    ("per-game-alternative-emulator", "emulators"),
+    ("core-mode-unestablished", "options"),
+}
+
+
+def _is_caveat_value(code: str, key: str, value: Any) -> bool:
+    """The three shapes a caveat data value may have, and no fourth.
+
+    A string is one value; a list of strings is several, in the emitter's own
+    order (the file, key, region and format lists); and an object of strings is
+    a tally, allowed only at the pairs :data:`OBJECT_VALUED_KEYS` names.
+    """
+    if isinstance(value, str):
+        return True
+    if isinstance(value, list):
+        return all(isinstance(item, str) for item in value)
+    return (
+        (code, key) in OBJECT_VALUED_KEYS
+        and isinstance(value, dict)
+        and all(isinstance(dk, str) and isinstance(dv, str) for dk, dv in value.items())
+    )
 
 
 def _validate_file_set(name: str, file_set: Any) -> None:
@@ -1230,6 +1251,18 @@ def _validate_unresolved(name: str, outcome: Any, what: str) -> bool:
     _require_exact(name, unresolved, {"code", "data"}, f"{what}.unresolved")
     if unresolved["code"] not in KNOWN_UNRESOLVED_CODES:
         fail(f"{name}: unresolved code must be one of {sorted(KNOWN_UNRESOLVED_CODES)}")
+    # A refusal's data speaks the same value vocabulary a caveat's does, and it
+    # was never checked: the code alone passed while the block below it could
+    # have held anything at all.
+    data = unresolved["data"]
+    if not isinstance(data, dict) or not all(
+        isinstance(key, str) and _is_caveat_value(unresolved["code"], key, value)
+        for key, value in data.items()
+    ):
+        fail(
+            f"{name}: {what}.unresolved data values must each be a string, a list of strings, "
+            f"or one of the two documented tally objects, got {data!r}"
+        )
     return True
 
 

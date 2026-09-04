@@ -1012,8 +1012,14 @@
                   "data": {
                     "core_so": "mgba_libretro.so",
                     "systemname": "Game Boy/Game Boy Color/Game Boy Advance",
-                    "files": "gba_bios.bin",
-                    "database": "Nintendo - Game Boy|Nintendo - Game Boy Color|Nintendo - Game Boy Advance",
+                    "files": [
+                      "gba_bios.bin"
+                    ],
+                    "database": [
+                      "Nintendo - Game Boy",
+                      "Nintendo - Game Boy Color",
+                      "Nintendo - Game Boy Advance"
+                    ],
                     "table_version": "3"
                   }
                 }
@@ -1240,8 +1246,15 @@
                   "code": "core-without-systemname",
                   "data": {
                     "core_so": "skyemu_libretro.so",
-                    "files": "gba_bios.bin, nds7.bin",
-                    "database": "Nintendo - Nintendo DS|Nintendo - Game Boy|Nintendo - Game Boy Advance",
+                    "files": [
+                      "gba_bios.bin",
+                      "nds7.bin"
+                    ],
+                    "database": [
+                      "Nintendo - Nintendo DS",
+                      "Nintendo - Game Boy",
+                      "Nintendo - Game Boy Advance"
+                    ],
                     "table_version": "3"
                   }
                 }
@@ -2000,8 +2013,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -2091,8 +2106,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -2265,8 +2282,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -2363,8 +2382,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -2562,8 +2583,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -4122,7 +4145,9 @@
               "code": "firmware-scan-incomplete",
               "data": {
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
-                "unreadable": "/home/deck/.config/retroarch/system/pcsx2/bios"
+                "unreadable": [
+                  "/home/deck/.config/retroarch/system/pcsx2/bios"
+                ]
               }
             }
           ]
@@ -4293,7 +4318,9 @@
               "data": {
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
                 "candidates": "1",
-                "paths": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "paths": [
+                  "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin"
+                ],
                 "core_so": "pcsx2_libretro.so",
                 "table_version": "3"
               }
@@ -4388,7 +4415,9 @@
               "data": {
                 "dir": "/home/deck/.config/retroarch/system/pcsx2/bios",
                 "candidates": "1",
-                "paths": "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin",
+                "paths": [
+                  "/home/deck/.config/retroarch/system/pcsx2/bios/scph39001.bin"
+                ],
                 "core_so": "pcsx2_libretro.so",
                 "table_version": "3"
               }
@@ -5650,7 +5679,9 @@
               "data": {
                 "dir": "/mnt/sd/retrodeck/bios",
                 "candidates": "1",
-                "paths": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "paths": [
+                  "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2"
+                ],
                 "core_so": "pcsx2_libretro.so",
                 "table_version": "3"
               }
@@ -6596,7 +6627,10 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "nocount_libretro.so",
-                    "declared": "firmware0_path, firmware1_path",
+                    "declared": [
+                      "firmware0_path",
+                      "firmware1_path"
+                    ],
                     "firmware_count": ""
                   }
                 }
@@ -6691,7 +6725,9 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "overcount_libretro.so",
-                    "declared": "firmware1_path",
+                    "declared": [
+                      "firmware1_path"
+                    ],
                     "firmware_count": "1"
                   }
                 }
@@ -6786,7 +6822,9 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "letterslot_libretro.so",
-                    "declared": "firmwareA_path",
+                    "declared": [
+                      "firmwareA_path"
+                    ],
                     "firmware_count": "1"
                   }
                 }
@@ -6881,7 +6919,9 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "noindex_libretro.so",
-                    "declared": "firmware_path",
+                    "declared": [
+                      "firmware_path"
+                    ],
                     "firmware_count": "1"
                   }
                 }
@@ -6976,7 +7016,9 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "emptyslot_libretro.so",
-                    "declared": "firmware1_path",
+                    "declared": [
+                      "firmware1_path"
+                    ],
                     "firmware_count": "2"
                   }
                 }
@@ -7047,7 +7089,10 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "emptyonly_libretro.so",
-                    "declared": "firmware0_path, firmware5_path",
+                    "declared": [
+                      "firmware0_path",
+                      "firmware5_path"
+                    ],
                     "firmware_count": "1"
                   }
                 }
@@ -7814,7 +7859,10 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "nocount_libretro.so",
-                    "declared": "firmware0_path, firmware1_path",
+                    "declared": [
+                      "firmware0_path",
+                      "firmware1_path"
+                    ],
                     "firmware_count": ""
                   }
                 }
@@ -8035,7 +8083,9 @@
                   "code": "firmware-declaration-unread",
                   "data": {
                     "core_so": "gambatte_libretro.so",
-                    "declared": "firmware1_path",
+                    "declared": [
+                      "firmware1_path"
+                    ],
                     "firmware_count": "1"
                   }
                 }
@@ -8443,7 +8493,9 @@
               "code": "system-assignment-may-hide-cores",
               "data": {
                 "count": "1",
-                "cores": "fictional_libretro.so",
+                "cores": [
+                  "fictional_libretro.so"
+                ],
                 "system": "atari5200",
                 "table_version": "3"
               }
@@ -8528,9 +8580,11 @@
                   "code": "system-not-in-catalogue",
                   "data": {
                     "core_so": "numero_libretro.so",
-                    "files": "ti83.rom",
-                    "map_version": "2",
-                    "system": "ti83"
+                    "system": "ti83",
+                    "files": [
+                      "ti83.rom"
+                    ],
+                    "map_version": "2"
                   }
                 }
               ]
@@ -8618,9 +8672,11 @@
                   "code": "system-not-in-catalogue",
                   "data": {
                     "core_so": "ep128emu_core_libretro.so",
-                    "files": "exos21.rom",
-                    "map_version": "2",
-                    "system": "ep128"
+                    "system": "ep128",
+                    "files": [
+                      "exos21.rom"
+                    ],
+                    "map_version": "2"
                   }
                 }
               ]
@@ -8837,8 +8893,15 @@
                   "data": {
                     "core_so": "flycast_libretro.so",
                     "systemname": "Sega Dreamcast",
-                    "files": "dc_boot.bin",
-                    "database": "Sega - Dreamcast|Sega - Naomi|Sega - Naomi 2|Atomiswave",
+                    "files": [
+                      "dc_boot.bin"
+                    ],
+                    "database": [
+                      "Sega - Dreamcast",
+                      "Sega - Naomi",
+                      "Sega - Naomi 2",
+                      "Atomiswave"
+                    ],
                     "table_version": "3"
                   }
                 }
@@ -8950,8 +9013,13 @@
                   "data": {
                     "core_so": "smsplus_libretro.so",
                     "systemname": "Sega 8-bit",
-                    "files": "bios.sms",
-                    "database": "Sega - Game Gear|Sega - Master System - Mark III",
+                    "files": [
+                      "bios.sms"
+                    ],
+                    "database": [
+                      "Sega - Game Gear",
+                      "Sega - Master System - Mark III"
+                    ],
                     "table_version": "3"
                   }
                 }
@@ -9324,8 +9392,10 @@
                   "data": {
                     "core_so": "mkxp_libretro.so",
                     "systemname": "RPG Maker XP/VX/VX Ace Game Engine",
-                    "files": "soundfont.sf2",
-                    "database": "",
+                    "files": [
+                      "soundfont.sf2"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -9415,8 +9485,14 @@
                   "data": {
                     "core_so": "mednafen_pce_libretro.so",
                     "systemname": "PC Engine/SuperGrafx/CD",
-                    "files": "syscard3.pce",
-                    "database": "NEC - PC Engine SuperGrafx|NEC - PC Engine - TurboGrafx 16|NEC - PC Engine CD - TurboGrafx-CD",
+                    "files": [
+                      "syscard3.pce"
+                    ],
+                    "database": [
+                      "NEC - PC Engine SuperGrafx",
+                      "NEC - PC Engine - TurboGrafx 16",
+                      "NEC - PC Engine CD - TurboGrafx-CD"
+                    ],
                     "table_version": "3"
                   }
                 }
@@ -9519,7 +9595,9 @@
                   "data": {
                     "core_so": "numero_libretro.so",
                     "system": "ti83",
-                    "files": "ti83.rom",
+                    "files": [
+                      "ti83.rom"
+                    ],
                     "map_version": "2"
                   }
                 }
@@ -9665,7 +9743,9 @@
                   "data": {
                     "core_so": "numero_libretro.so",
                     "system": "ti83",
-                    "files": "ti83.rom",
+                    "files": [
+                      "ti83.rom"
+                    ],
                     "map_version": "2"
                   }
                 }
@@ -12416,9 +12496,12 @@
                   "code": "core-mode-unestablished",
                   "data": {
                     "core": "DUCKSTATION",
-                    "reason": "the console's region is the running disc's",
+                    "reason": "region-decided-by-disc",
                     "dir": "/mnt/sd/retrodeck/bios",
-                    "regions": "ntsc-u, pal"
+                    "regions": [
+                      "ntsc-u",
+                      "pal"
+                    ]
                   }
                 },
                 {
@@ -12612,7 +12695,9 @@
                   "code": "firmware-scan-incomplete",
                   "data": {
                     "dir": "/mnt/sd/retrodeck/bios",
-                    "unreadable": "/mnt/sd/retrodeck/bios"
+                    "unreadable": [
+                      "/mnt/sd/retrodeck/bios"
+                    ]
                   }
                 }
               ]
@@ -12707,7 +12792,11 @@
                     "dir": "/mnt/sd/retrodeck/bios",
                     "candidates": "2",
                     "need": "required",
-                    "regions": "ntsc-u, ntsc-j, pal"
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -12802,7 +12891,11 @@
                     "declared": "",
                     "need": "required",
                     "dir": "/mnt/sd/retrodeck/bios",
-                    "regions": "ntsc-u, ntsc-j, pal"
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -13333,7 +13426,10 @@
                     "dir": "/mnt/sd/retrodeck/bios",
                     "candidates": "1",
                     "need": "required",
-                    "regions": "ntsc-j, pal"
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -13442,7 +13538,10 @@
                     "declared": "",
                     "need": "required",
                     "dir": "/mnt/sd/retrodeck/bios",
-                    "regions": "ntsc-j, pal"
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -13672,7 +13771,11 @@
                     "declared": "",
                     "need": "required",
                     "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/bios",
-                    "regions": "ntsc-u, ntsc-j, pal"
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -14209,7 +14312,11 @@
                     "core": "DUCKSTATION",
                     "count": "2",
                     "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
-                    "key": "[BIOS] PathNTSCU, [BIOS] PathNTSCJ, [BIOS] PathPAL"
+                    "key": [
+                      "[BIOS] PathNTSCU",
+                      "[BIOS] PathNTSCJ",
+                      "[BIOS] PathPAL"
+                    ]
                   }
                 },
                 {
@@ -14221,7 +14328,11 @@
                     "declared": "",
                     "need": "required",
                     "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/bios",
-                    "regions": "ntsc-u, ntsc-j, pal"
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
                   }
                 }
               ]
@@ -14995,8 +15106,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }
@@ -15032,8 +15145,10 @@
                   "data": {
                     "core_so": "dolphin_libretro.so",
                     "systemname": "GameCube / Wii",
-                    "files": "codehandler.bin",
-                    "database": "",
+                    "files": [
+                      "codehandler.bin"
+                    ],
+                    "database": [],
                     "table_version": "3"
                   }
                 }

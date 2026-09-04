@@ -629,7 +629,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -1091,7 +1093,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -1157,7 +1161,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }

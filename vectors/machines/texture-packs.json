@@ -793,7 +793,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Dolphin.General] NANDRootPath",
+                "key": [
+                  "[Dolphin.General] NANDRootPath"
+                ],
                 "layer": "GlobalGame"
               }
             },
@@ -838,7 +840,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -1302,7 +1306,9 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[EmuCore/GS] LoadTextureReplacements"
+                "key": [
+                  "[EmuCore/GS] LoadTextureReplacements"
+                ]
               }
             },
             {
@@ -1369,7 +1375,9 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[EmuCore/GS] LoadTextureReplacements"
+                "key": [
+                  "[EmuCore/GS] LoadTextureReplacements"
+                ]
               }
             },
             {
@@ -1612,7 +1620,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -2024,7 +2034,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -2085,7 +2097,9 @@
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "PRIMEHACK",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }
@@ -2242,7 +2256,9 @@
               "data": {
                 "core": "PCSX2",
                 "dir": "/var/tmp/gamesettings",
-                "key": "[EmuCore/GS] LoadTextureReplacements"
+                "key": [
+                  "[EmuCore/GS] LoadTextureReplacements"
+                ]
               }
             },
             {
@@ -2307,7 +2323,9 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
-                "key": "[EmuCore/GS] LoadTextureReplacements"
+                "key": [
+                  "[EmuCore/GS] LoadTextureReplacements"
+                ]
               }
             },
             {
@@ -2524,7 +2542,9 @@
                 "core": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gs-layer",
-                "key": "[EmuCore/GS] LoadTextureReplacements"
+                "key": [
+                  "[EmuCore/GS] LoadTextureReplacements"
+                ]
               }
             },
             {
@@ -2645,14 +2665,18 @@
                 "core": "DOLPHIN",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
-                "key": "[Dolphin.General] LoadPath"
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ]
               }
             },
             {
               "code": "per-game-build-layer-unread",
               "data": {
                 "core": "DOLPHIN",
-                "key": "[Dolphin.General] LoadPath",
+                "key": [
+                  "[Dolphin.General] LoadPath"
+                ],
                 "layer": "GlobalGame"
               }
             }

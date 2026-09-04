@@ -15,9 +15,11 @@ import pathlib
 
 import pytest
 
+import atlas
 from atlas.firmware import FirmwareAlternatives, FirmwareRequirement
 from atlas.placement import SavefilePlacement
 from scripts import generate_contract_reference as reference
+from tests.corpus import caveat_blocks, expected_blocks
 
 
 CODE_SECTION = "## Caveat codes"
@@ -576,3 +578,152 @@ class TestTheWalkStopsWhereTheTypeStopsSpeaking:
         assert walk.stopped["[].answer"] == {
             reference.Shape("object", frozenset({"systems", "caveats"})): 1
         }
+
+
+class TestTheDataRegistryReading:
+    """The fifth reading: what `ENUMERATED_DATA` lets the page claim, and how it is named.
+
+    The vectors say what a value *was*; this one says what it *can be*, because
+    the constructors refuse anything else. The page cites the tuple by
+    name, so the naming is part of the claim and is tested with it.
+    """
+
+    def test_every_registered_pair_names_its_tuple(self) -> None:
+        named = reference.registered_enumerations()
+        assert set(named) == set(atlas.ENUMERATED_DATA)
+        assert named == {
+            ("core-mode-unestablished", "reason"): "CORE_MODE_UNESTABLISHED_REASONS",
+            ("filenames-content-conditional", "files_established_for"): (
+                "FILES_ESTABLISHED_FOR_TOKENS"
+            ),
+            ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
+            # Built by splat from REFUSAL_CODES, so no literal tuple in the
+            # source holds these members — the AST reading alone called this
+            # one "an unnamed tuple" until the exported names were read too.
+            ("emulator-config-unreadable", "reason"): "EMULATOR_CONFIG_UNREADABLE_REASONS",
+        }
+
+    def test_contents_alone_do_not_identify_a_name(self) -> None:
+        # The package really does give two names to one tuple, twice over, so
+        # a reading that matched members and took what it saw last would cite
+        # whichever came second. Neither pair is exported, so the preference
+        # leaves both unresolved — which is honest, and harmless, because the
+        # page names registry tuples and these are not among them.
+        names = reference.vocabulary_names()
+        assert names[("config", "data")] == ["_BASES", "_FILE_BASES"]
+        assert names[("required", "optional")] == ["FIRMWARE_NEEDS", "_FILE_NEEDS"]
+        registered = {tuple(v) for v in atlas.ENUMERATED_DATA.values()}
+        assert ("config", "data") not in registered
+        assert ("required", "optional") not in registered
+
+    def test_an_exported_name_wins_over_a_private_one_with_the_same_members(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The preference itself, driven on a tuple the package does export: a
+        # private literal with the same members is synthesised (the package has
+        # none today) and must stop being a candidate rather than being ordered
+        # after the exported name.
+        declared = dict(reference.declared_vocabularies())
+        declared["_A_PRIVATE_ALIAS"] = tuple(atlas.CFG_LAYER_KINDS)
+        monkeypatch.setattr(reference, "declared_vocabularies", lambda: declared)
+        names = reference.vocabulary_names()
+        assert names[tuple(atlas.CFG_LAYER_KINDS)] == ["CFG_LAYER_KINDS"]
+        assert "_A_PRIVATE_ALIAS" not in names[tuple(atlas.CFG_LAYER_KINDS)]
+
+    def test_no_registered_tuple_is_claimed_by_two_names(self) -> None:
+        assert reference.ambiguous_vocabulary_names(reference.registered_enumerations()) == []
+
+    def test_a_collision_over_a_registered_tuple_stops_the_generation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A second exported name for one registry tuple must fail, not pick one.
+
+        Synthetic because the package has no such collision today — which is
+        the point: the guard has to be there before the day it does.
+        """
+        layers = atlas.CFG_LAYER_KINDS
+        monkeypatch.setattr(atlas, "A_SECOND_NAME_FOR_THE_LAYER_KINDS", layers, raising=False)
+        monkeypatch.setattr(atlas, "__all__", [*atlas.__all__, "A_SECOND_NAME_FOR_THE_LAYER_KINDS"])
+        failures = reference.ambiguous_vocabulary_names(reference.registered_enumerations())
+        assert len(failures) == 1
+        assert "invalid-save-directory.layer" in failures[0]
+        assert "A_SECOND_NAME_FOR_THE_LAYER_KINDS" in failures[0]
+        assert "CFG_LAYER_KINDS" in failures[0]
+
+
+class TestTheTwoCorpusGates:
+    """One `(code, key)` carries one type, and only values the registry allows.
+
+    Both are the null cross-check's family: a page that printed "string, array"
+    or a closed set that is not closed would document a defect as a feature.
+    Each probe injects into a COPY of the real corpus and asserts it changed
+    exactly one value, so a probe that stops reaching its target fails loudly
+    rather than passing on an unmutated corpus.
+    """
+
+    @staticmethod
+    def _corpus_with(mutate) -> dict[str, reference.WitnessedCode]:
+        """The real corpus, read again with one caveat value changed."""
+        changed = 0
+        witnessed: dict[str, reference.WitnessedCode] = {}
+        for _, expected in expected_blocks():
+            for code, data in caveat_blocks(expected):
+                if not changed:
+                    changed = mutate(code, data)
+                witnessed.setdefault(code, reference.WitnessedCode())
+                for key, value in data.items():
+                    witnessed[code].keys.setdefault(key, []).append(value)
+        assert changed == 1, "the probe reached no value to change"
+        return witnessed
+
+    def test_two_types_for_one_pair_stops_the_generation(self) -> None:
+        def join_one(code: str, data: dict[str, object]) -> int:
+            value = data.get("users")
+            if code == "core-mode-unestablished" and isinstance(value, list) and value:
+                data["users"] = ", ".join(value)
+                return 1
+            return 0
+
+        failures = reference.shape_disagreements(self._corpus_with(join_one))
+        assert len(failures) == 1
+        assert "core-mode-unestablished.users" in failures[0]
+        assert "array and string" in failures[0]
+
+    def test_the_untouched_corpus_states_one_type_per_pair(self) -> None:
+        witnessed = {}
+        for _, expected in expected_blocks():
+            for code, data in caveat_blocks(expected):
+                witnessed.setdefault(code, reference.WitnessedCode())
+                for key, value in data.items():
+                    witnessed[code].keys.setdefault(key, []).append(value)
+        assert reference.shape_disagreements(witnessed) == []
+
+    def test_a_value_the_registry_would_refuse_stops_the_generation(self) -> None:
+        outsider = "a sentence the vocabulary never held"
+
+        def flip_one(code: str, data: dict[str, object]) -> int:
+            if code == "core-mode-unestablished" and "reason" in data:
+                data["reason"] = outsider
+                return 1
+            return 0
+
+        witnessed = self._corpus_with(flip_one)
+        failures = reference.registry_disagreements(witnessed, reference.registered_enumerations())
+        assert len(failures) == 1
+        assert "core-mode-unestablished.reason" in failures[0]
+        assert outsider in failures[0]
+        assert "CORE_MODE_UNESTABLISHED_REASONS" in failures[0]
+
+    def test_the_untouched_corpus_carries_no_value_the_registry_refuses(self) -> None:
+        witnessed = {}
+        for _, expected in expected_blocks():
+            for code, data in caveat_blocks(expected):
+                witnessed.setdefault(code, reference.WitnessedCode())
+                for key, value in data.items():
+                    witnessed[code].keys.setdefault(key, []).append(value)
+        assert reference.registry_disagreements(witnessed, reference.registered_enumerations()) == []
+
+    def test_the_type_column_names_one_type(self) -> None:
+        assert reference.value_shape(["a", "b"]) == "string"
+        assert reference.value_shape([["a"], []]) == "array"
+        assert reference.value_shape([{"a": "1"}]) == "object"

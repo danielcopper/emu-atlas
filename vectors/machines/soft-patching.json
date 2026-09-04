@@ -649,7 +649,12 @@
             {
               "code": "patch-formats-unestablished",
               "data": {
-                "formats": "ips,bps,ups,xdelta"
+                "formats": [
+                  "ips",
+                  "bps",
+                  "ups",
+                  "xdelta"
+                ]
               }
             }
           ]

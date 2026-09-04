@@ -5,7 +5,17 @@ from __future__ import annotations
 import pytest
 
 from atlas.placement import (
+    CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+    CAVEAT_INVALID_SAVE_DIRECTORY,
+    CAVEAT_SAVE_ROOT_REDIRECTED,
+    CORE_MODE_UNESTABLISHED_REASONS,
+    ENUMERATED_DATA,
+    REASON_ACTIVE_USER_UNRECORDED,
+    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+    UNRESOLVED_STANDALONE,
     Caveat,
+    Unresolved,
     ROOT_CONTENT_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
     ROOT_SAVESTATE_DIRECTORY,
@@ -397,3 +407,78 @@ class TestSavestateRootsFollowTheSamePathMath:
         )
         assert placement.dir == "/states/<content_dir>/<library_name>"
         assert placement.needs == ("content_dir", "library_name")
+
+
+class TestAnEnumeratedValueIsRefusedAtConstruction:
+    """A slug outside its vocabulary raises where it is built, not downstream.
+
+    Closed by convention is not closed. Several of these slugs have no fixture
+    machine, so a typo in one of those resolvers used to pass the type check,
+    the suite and the vectors alike and reach a client as a value nothing
+    documents. The registry is the same one the guide and the corpus tripwire
+    read, so the three cannot drift apart.
+    """
+
+    def test_a_reason_outside_the_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="core-mode-unestablished.reason"):
+            Caveat(CAVEAT_CORE_MODE_UNESTABLISHED, "a message", {"reason": "no-such-slug"})
+
+    def test_the_sentence_it_replaced_is_refused_too(self):
+        # The exact string this round retired, so a resolver that was missed
+        # cannot quietly keep emitting it.
+        with pytest.raises(ValueError, match="core-mode-unestablished.reason"):
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                "a message",
+                {"reason": "the active user account is not recorded on disk"},
+            )
+
+    def test_a_scope_token_outside_the_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="filenames-content-conditional"):
+            Caveat(
+                CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+                "a message",
+                {"files_established_for": "content loaded as a single disk image"},
+            )
+
+    def test_a_layer_kind_outside_the_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="invalid-save-directory.layer"):
+            Caveat(
+                CAVEAT_INVALID_SAVE_DIRECTORY,
+                "a message",
+                {"layer": "core override config/mGBA/mGBA.cfg"},
+            )
+
+    def test_a_refusal_reason_outside_the_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="emulator-config-unreadable.reason"):
+            Unresolved(
+                UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+                "a message",
+                {"reason": "/dev_hdd0/ is unread"},
+            )
+
+    def test_every_member_of_a_vocabulary_is_accepted(self):
+        for reason in CORE_MODE_UNESTABLISHED_REASONS:
+            assert Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED, "a message", {"reason": reason}
+            ).data["reason"] == reason
+
+    def test_the_same_key_under_another_code_is_untouched(self):
+        # ``reason`` is only an enumeration where the registry says so; a code
+        # that has no vocabulary for the key keeps taking any value.
+        assert Caveat(UNRESOLVED_STANDALONE, "a message", {"reason": "anything at all"}).data
+        # And a key with no entry under an enumerated code is free too.
+        assert Caveat(
+            CAVEAT_CORE_MODE_UNESTABLISHED,
+            "a message",
+            {"reason": REASON_ACTIVE_USER_UNRECORDED, "core": "RPCS3"},
+        ).data["core"] == "RPCS3"
+
+    def test_the_registry_names_only_real_codes_and_closed_tuples(self):
+        for (code, key), vocabulary in ENUMERATED_DATA.items():
+            assert code, f"{vocabulary}: a registry entry with no code"
+            assert key, f"{code}: a registry entry with no data key"
+            assert vocabulary, f"{code}.{key} names an empty vocabulary"
+            assert len(set(vocabulary)) == len(vocabulary), f"{code}.{key} repeats a value"
+        # A code with no enumeration must not be listed by accident.
+        assert (CAVEAT_SAVE_ROOT_REDIRECTED, "key") not in ENUMERATED_DATA

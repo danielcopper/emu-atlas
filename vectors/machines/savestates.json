@@ -432,7 +432,8 @@
             {
               "code": "invalid-save-directory",
               "data": {
-                "layer": "core override config/mGBA/mGBA.cfg",
+                "layer": "core-override",
+                "file": "config/mGBA/mGBA.cfg",
                 "configured": "",
                 "effective": "/mnt/sd/retrodeck/states"
               }
@@ -538,7 +539,8 @@
             {
               "code": "invalid-save-directory",
               "data": {
-                "layer": "retroarch.cfg",
+                "layer": "global",
+                "file": "retroarch.cfg",
                 "configured": "/mnt/sd/gone/states",
                 "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states"
               }

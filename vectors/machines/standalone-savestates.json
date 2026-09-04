@@ -671,7 +671,9 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "MELONDS",
-                "files": "<rom_stem>.ml<slot>",
+                "files": [
+                  "<rom_stem>.ml<slot>"
+                ],
                 "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
                 "citation": "EmuInstance.cpp:696-701 at 1.1"
               }
@@ -1053,7 +1055,9 @@
               "code": "filenames-content-conditional",
               "data": {
                 "core": "MELONDS",
-                "files": "<rom_stem>.ml<slot>",
+                "files": [
+                  "<rom_stem>.ml<slot>"
+                ],
                 "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
                 "citation": "EmuInstance.cpp:696-701 at 1.1"
               }
@@ -1925,8 +1929,12 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "key": "state_directory",
-                "files": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini"
+                "key": [
+                  "state_directory"
+                ],
+                "files": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini"
+                ]
               }
             },
             {
@@ -2829,8 +2837,12 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "key": "state_directory",
-                "files": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini",
+                "key": [
+                  "state_directory"
+                ],
+                "files": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini"
+                ],
                 "read": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/adam.ini"
               }
             },
@@ -2933,8 +2945,12 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "key": "state_directory",
-                "files": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ADAM.ini"
+                "key": [
+                  "state_directory"
+                ],
+                "files": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ADAM.ini"
+                ]
               }
             },
             {
@@ -3038,8 +3054,12 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "key": "state_directory",
-                "files": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/sfiii3.ini"
+                "key": [
+                  "state_directory"
+                ],
+                "files": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/sfiii3.ini"
+                ]
               }
             },
             {
@@ -3543,6 +3563,120 @@
               "path": "/run/user/1000/mame/sta"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "mame-a-leftover-layer-states-the-files-it-saw-and-the-tree-it-could-not-list",
+      "rationale": "Two facts about one search path: ini files this reading did not open, and a directory on the path whose listing failed. They were one string before, and the names won — the failed listing dropped out of the answer whenever both held. `files` is the list of leftover inis and `unlistable` the directories where the look stopped, so a client sees that this statement is itself partial.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>adam</name>\n    <path>%ROMPATH%/adam</path>\n    <extension>.dsk .DSK</extension>\n    <command label=\"MAME [Diskette] (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ui.ini": "# ui\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini": "state_directory           /mnt/sd/elsewhere\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/source"
+        ],
+        "entry_savestate_query": {
+          "system": "adam"
+        },
+        "unlistable": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/source"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/states/mame-sa/adam",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-layer-unread",
+              "data": {
+                "key": [
+                  "state_directory"
+                ],
+                "files": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/vertical.ini"
+                ],
+                "unlistable": [
+                  "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini"
+                ]
+              }
+            },
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "emulator": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
         }
       }
     }

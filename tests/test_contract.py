@@ -18,6 +18,7 @@ import atlas
 from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
 from tests.answers import placed, state_placed
+from tests.corpus import caveat_blocks, expected_blocks, vector_files
 
 _VECTOR_DIR = Path(__file__).resolve().parents[1] / "vectors" / "machines"
 
@@ -294,3 +295,89 @@ class TestAnswerShapeDiscipline:
                     f"{file_name}:{vector}:{question}: flat answer also carries {sorted(overlap)}, "
                     f"which makes the two shapes mistakable"
                 )
+
+
+class TestOneKeyHasOneShape:
+    """A ``(code, key)`` pair carries ONE JSON type across the whole corpus.
+
+    The vocabulary round made lists out of comma-joined strings, and a client
+    that switched on ``code`` and read ``data["files"]`` now gets an array. It
+    gets one everywhere or the promise is worthless: a key that is a list on
+    one emitter and a string on another is worse than the joined string was,
+    because the joined string was at least consistent.
+
+    Nothing else can see this. The validator checks each value against the
+    three allowed shapes one at a time, the vectors assert their own expected
+    block, and both pass while two emitters of one code disagree — which is
+    exactly what happened: five pairs shipped with two types because the sweep
+    that converted them looked for ``", ".join(`` and nothing else. This walks
+    the corpus instead of the source, so an emitter written in any style at all
+    is held to what its siblings already state.
+    """
+
+    @staticmethod
+    def _shapes(vectors_dir: Path) -> dict[tuple[str, str], dict[str, list[str]]]:
+        """``(code, key)`` → JSON type name → where the corpus shows it."""
+        shapes: dict[tuple[str, str], dict[str, list[str]]] = {}
+        for where, expected in expected_blocks(vectors_dir):
+            for code, data in caveat_blocks(expected):
+                for key, value in data.items():
+                    seen = shapes.setdefault((code, key), {})
+                    seen.setdefault(_json_type(value), []).append(where)
+        return shapes
+
+    def test_no_pair_carries_two_shapes(self):
+        mixed = {
+            f"{code}.{key}": {name: sorted(set(where))[:2] for name, where in seen.items()}
+            for (code, key), seen in self._shapes(_VECTOR_DIR).items()
+            if len(seen) > 1
+        }
+        assert mixed == {}
+
+    def test_it_catches_a_single_disagreeing_emitter(self, tmp_path):
+        """The probe: one value flipped inside a COPY of the real corpus.
+
+        Copied and mutated rather than synthesised, so the check is proven
+        against the shapes that actually ship — a hand-built two-vector fixture
+        would pass a check that only ever looked at its own invention.
+        """
+        copied = tmp_path / "machines"
+        copied.mkdir()
+        flipped = 0
+        for path in vector_files():
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            if not flipped:
+                flipped = _flip_one_list_to_a_string(doc)
+            (copied / path.name).write_text(json.dumps(doc), encoding="utf-8")
+        assert flipped == 1, "no list-valued caveat data left in the corpus to mutate"
+        mixed = {
+            f"{code}.{key}"
+            for (code, key), seen in self._shapes(copied).items()
+            if len(seen) > 1
+        }
+        assert mixed, "the injected string went unnoticed"
+
+
+def _json_type(value: Any) -> str:
+    """The JSON type name of a data value — the three the contract allows."""
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return type(value).__name__
+
+
+def _flip_one_list_to_a_string(node: Any) -> int:
+    """Join the first list-valued caveat datum found, in place. Returns 1 if one was.
+
+    The walker yields the ``data`` mapping itself, so assigning through it
+    breaks the copy the probe then reads.
+    """
+    for _, data in caveat_blocks(node):
+        for key, value in data.items():
+            if isinstance(value, list) and all(isinstance(item, str) for item in value):
+                data[key] = ", ".join(value)
+                return 1
+    return 0

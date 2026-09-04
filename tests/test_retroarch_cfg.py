@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from atlas.retroarch_cfg import (
+    CFG_LAYER_CONTENT_DIR_OVERRIDE,
+    CFG_LAYER_KINDS,
+    CFG_LAYER_CORE_OVERRIDE,
+    CFG_LAYER_GAME_OVERRIDE,
+    CFG_LAYER_GLOBAL,
     IGNORED_LINE_DROPPED,
     IGNORED_VALUE_REJECTED,
+    CfgSource,
     SAVEFILE_KEYS,
     SAVESTATE_KEYS,
     UPSTREAM_DEFAULTS,
@@ -22,6 +28,17 @@ from tests.shipped_layouts import EMUDECK_SHIPPED, RETRODECK_SHIPPED
 
 HOME = "/home/deck"
 
+# The chain's files as these tests spell them. A layer is a kind and a file
+# now, so a test that names one names both — which is exactly what the
+# ``invalid-save-directory`` caveat hands a client.
+_GLOBAL = CfgSource(CFG_LAYER_GLOBAL, "retroarch.cfg")
+_OVERRIDE_KINDS = (CFG_LAYER_CORE_OVERRIDE, CFG_LAYER_CONTENT_DIR_OVERRIDE, CFG_LAYER_GAME_OVERRIDE)
+
+
+def _override(index):
+    """The chain's *index*-th override, kinds in RetroArch's own load order."""
+    return CfgSource(_OVERRIDE_KINDS[index - 1], f"override {index}")
+
 
 def _cfg(text):
     return resolve_layout(
@@ -37,7 +54,7 @@ def _chain(global_text, *overrides, is_directory=None):
         home=HOME,
         cfg_label="retroarch.cfg",
         defaults=RETRODECK_SHIPPED,
-        overrides=[(f"override {i}", text) for i, text in enumerate(overrides, start=1)],
+        overrides=[(_override(i), text) for i, text in enumerate(overrides, start=1)],
         is_directory=is_directory,
     )
 
@@ -145,7 +162,12 @@ class TestOverrideChain:
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
-            overrides=[("core override PPSSPP/PPSSPP.cfg", 'sort_savefiles_by_content_enable = "false"')],
+            overrides=[
+                (
+                    CfgSource(CFG_LAYER_CORE_OVERRIDE, "config/PPSSPP/PPSSPP.cfg"),
+                    'sort_savefiles_by_content_enable = "false"',
+                )
+            ],
         )
         assert cfg.sort_by_content is False
         assert any("override wins" in s for s in cfg.sources)
@@ -158,8 +180,8 @@ class TestOverrideChain:
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
             overrides=[
-                ("core override", 'sort_savefiles_by_content_enable = "false"'),
-                ("game override", 'sort_savefiles_by_content_enable = "true"'),
+                (_override(1), 'sort_savefiles_by_content_enable = "false"'),
+                (_override(3), 'sort_savefiles_by_content_enable = "true"'),
             ],
         )
         assert cfg.sort_by_content is True
@@ -172,7 +194,7 @@ class TestOverrideChain:
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
-            overrides=[("core override", 'sort_savefiles_by_content_enable = "false"')],
+            overrides=[(_override(1), 'sort_savefiles_by_content_enable = "false"')],
         )
         assert cfg.directory == "/mnt/saves"
         assert cfg.sort_by_core is True
@@ -186,7 +208,7 @@ class TestOverrideChain:
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
-            overrides=[("game override", 'savefile_directory = "/mnt/elsewhere"')],
+            overrides=[(_override(3), 'savefile_directory = "/mnt/elsewhere"')],
         )
         assert cfg.directory == "/mnt/elsewhere"
 
@@ -241,8 +263,8 @@ class TestReadsPerKey:
     def test_chain_bool_reads_the_last_layer_that_sets_the_key(self):
         value, ignored = chain_bool(
             [
-                ("retroarch.cfg", 'game_specific_options = "true"'),
-                ("core override", 'game_specific_options = "false"'),
+                (_GLOBAL, 'game_specific_options = "true"'),
+                (_override(1), 'game_specific_options = "false"'),
             ],
             "game_specific_options",
             default=True,
@@ -253,32 +275,32 @@ class TestReadsPerKey:
     def test_chain_bool_keeps_the_global_value_when_the_override_is_refused(self):
         value, ignored = chain_bool(
             [
-                ("retroarch.cfg", 'global_core_options = "true"'),
-                ("core override", 'global_core_options = "on"'),
+                (_GLOBAL, 'global_core_options = "true"'),
+                (_override(1), 'global_core_options = "on"'),
             ],
             "global_core_options",
             default=False,
         )
         assert value is True
         assert [(i.kind, i.layer, i.key, i.text) for i in ignored] == [
-            (IGNORED_VALUE_REJECTED, "core override", "global_core_options", "on")
+            (IGNORED_VALUE_REJECTED, _override(1), "global_core_options", "on")
         ]
 
     def test_chain_value_reads_the_last_layer_and_reports_dropped_lines(self):
         value, ignored = chain_value(
             [
-                ("retroarch.cfg", 'rgui_config_directory="/a"'),
-                ("core override", 'rgui_config_directory = "/b"'),
+                (_GLOBAL, 'rgui_config_directory="/a"'),
+                (_override(1), 'rgui_config_directory = "/b"'),
             ],
             "rgui_config_directory",
         )
         assert value == "/b"
         assert [(i.kind, i.layer, i.key, i.text) for i in ignored] == [
-            (IGNORED_LINE_DROPPED, "retroarch.cfg", "rgui_config_directory", 'rgui_config_directory="/a"')
+            (IGNORED_LINE_DROPPED, _GLOBAL, "rgui_config_directory", 'rgui_config_directory="/a"')
         ]
 
     def test_chain_value_is_none_when_no_layer_sets_the_key(self):
-        assert chain_value([("retroarch.cfg", 'video_driver = "gl"')], "core_options_path") == (None, ())
+        assert chain_value([(_GLOBAL, 'video_driver = "gl"')], "core_options_path") == (None, ())
 
 
 class TestSavefileDirectoryValidation:
@@ -297,7 +319,7 @@ class TestSavefileDirectoryValidation:
         )
         assert cfg.directory == "/mnt/sd/saves"
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
-            ("override 1", "/run/media/gone/saves")
+            (_override(1), "/run/media/gone/saves")
         ]
 
     def test_an_unusable_global_falls_to_the_platform_default(self):
@@ -306,7 +328,7 @@ class TestSavefileDirectoryValidation:
         cfg = _chain('savefile_directory = "/run/media/gone/saves"\n', is_directory=_only())
         assert cfg.directory is None
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
-            ("retroarch.cfg", "/run/media/gone/saves")
+            (_GLOBAL, "/run/media/gone/saves")
         ]
 
     def test_a_refused_global_is_marked_superseded_when_an_override_rescues_it(self):
@@ -316,7 +338,7 @@ class TestSavefileDirectoryValidation:
             is_directory=_only("/mnt/sd/other"),
         )
         assert cfg.directory == "/mnt/sd/other"
-        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [("retroarch.cfg", True)]
+        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [(_GLOBAL, True)]
 
     def test_a_refusal_the_chain_never_got_past_is_not_superseded(self):
         cfg = _chain(
@@ -324,7 +346,34 @@ class TestSavefileDirectoryValidation:
             'savefile_directory = "/run/media/gone/saves"',
             is_directory=_only("/mnt/sd/saves"),
         )
-        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [("override 1", False)]
+        assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [(_override(1), False)]
+
+    def test_each_of_the_four_layer_kinds_can_be_the_one_refused(self):
+        """The kind is data a client acts on, so each one must be reachable.
+
+        The middle of the chain is the one nothing else exercises: a
+        content-directory override is loaded between the core's and the game's
+        (configuration.c:7095), and a root it states is refused exactly like
+        any other. Without this the vocabulary would document a value no test
+        ever produced.
+        """
+        refused = "/run/media/gone/saves"
+        kinds = []
+        for index in (1, 2, 3):
+            layers = ['savefile_directory = "/mnt/sd/saves"'] * (index - 1)
+            cfg = _chain(
+                'savefile_directory = "/mnt/sd/saves"\n',
+                *layers,
+                f'savefile_directory = "{refused}"',
+                is_directory=_only("/mnt/sd/saves"),
+            )
+            assert cfg.directory == "/mnt/sd/saves"
+            [rejected] = cfg.rejected_directories
+            assert rejected.value == refused
+            kinds.append(rejected.layer.kind)
+        global_only = _chain(f'savefile_directory = "{refused}"\n', is_directory=_only())
+        kinds.append(global_only.rejected_directories[0].layer.kind)
+        assert sorted(kinds) == sorted(CFG_LAYER_KINDS)
 
     def test_a_reset_after_a_refusal_also_supersedes_it(self):
         # "default" sets the platform default outright, so the root that stands
@@ -378,13 +427,13 @@ class TestSavefileDirectoryValidation:
             is_directory=_only("/mnt/sd/saves"),
         )
         assert cfg.directory == "/mnt/sd/saves"
-        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("override 1", "")]
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [(_override(1), "")]
 
     def test_blank_is_refused_even_without_a_directory_check(self):
         # No machine is needed for this one: "" is a directory nowhere.
         cfg = _chain('savefile_directory = ""\n')
         assert cfg.directory is None
-        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [("retroarch.cfg", "")]
+        assert [(r.layer, r.value) for r in cfg.rejected_directories] == [(_GLOBAL, "")]
 
     def test_the_check_sees_the_expanded_value(self):
         cfg = _chain('savefile_directory = "~/saves"\n', is_directory=_only(f"{HOME}/saves"))
@@ -570,7 +619,7 @@ class TestBooleanVocabulary:
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
-            overrides=[("core override", 'sort_savefiles_by_content_enable = "yes"')],
+            overrides=[(_override(1), 'sort_savefiles_by_content_enable = "yes"')],
         )
         assert cfg.sort_by_content is False
 
@@ -583,10 +632,10 @@ class TestIgnoredSettings:
             home=HOME,
             cfg_label="retroarch.cfg",
             defaults=RETRODECK_SHIPPED,
-            overrides=[("core override", 'sort_savefiles_enable = "yes"')],
+            overrides=[(_override(1), 'sort_savefiles_enable = "yes"')],
         )
         assert [(i.kind, i.layer, i.key, i.text) for i in cfg.ignored] == [
-            (IGNORED_VALUE_REJECTED, "core override", "sort_savefiles_enable", "yes")
+            (IGNORED_VALUE_REJECTED, _override(1), "sort_savefiles_enable", "yes")
         ]
 
     def test_dropped_line_aiming_at_a_governing_key_is_reported(self):
@@ -623,7 +672,7 @@ def _states(text, *overrides, is_directory=None):
         home=HOME,
         cfg_label="retroarch.cfg",
         defaults=RETRODECK_SHIPPED,
-        overrides=[(f"override {i}", t) for i, t in enumerate(overrides, start=1)],
+        overrides=[(_override(i), t) for i, t in enumerate(overrides, start=1)],
         is_directory=is_directory,
     )
 
@@ -675,7 +724,7 @@ class TestTheSavestateRootTakesTheSameSpellings:
         cfg = _states('savestate_directory = "/gone/states"\n', is_directory=_only())
         assert cfg.directory is None
         assert [(r.layer, r.value) for r in cfg.rejected_directories] == [
-            ("retroarch.cfg", "/gone/states")
+            (_GLOBAL, "/gone/states")
         ]
 
     def test_blank_in_an_override_keeps_the_standing_root(self):
