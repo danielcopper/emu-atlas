@@ -677,9 +677,15 @@ directory appears, so one loop over `groups` is enough and there is no second st
 
 **The granularity block is how you show "is the wanted option active, and where does it change".** `value` is the
 grouping in force and `mode` names the rule-card mode behind it (an option value like `"enabled"` where one option
-governs, the card's own mode name like `"per-game"` where a rule selects, `None` where no card speaks). `readings` is
-one entry per switch that went into the selection — for Flycast one, for Beetle Saturn its two sharing switches, and for
-hatari exactly the one write-protect option the loaded content's class made relevant:
+governs, the card's own mode name like `"per-game"` where a rule selects, `None` where no card speaks). **`mode` is for
+display, `value` is for branching**: `value` speaks a closed vocabulary this page lists, and three gates reject anything
+outside it — the rule-card loader, the `FileGroup` constructor and the vector validator. `mode` is held to no vocabulary
+anywhere: it is whatever decided the grouping calls itself, a rule card's own mode name (`"internal-shared"`, Beetle
+Saturn's) or a word a standalone resolver composes from the emulator's own configuration (`"folder+none"`, the two
+GameCube card slots Dolphin.ini describes). It is an open set that reads differently per emulator. Show it, log it, put
+it in a diagnostic; do not key behaviour on it. `readings` is one entry per switch that went into the selection — for
+Flycast one, for Beetle Saturn its two sharing switches, and for hatari exactly the one write-protect option the loaded
+content's class made relevant:
 
 ```python
 g = placement.granularity
@@ -2226,6 +2232,65 @@ json.dumps(health_contract(inst.health()))   # what installation_contract() puts
 Structured fields in these dicts are contractual; prose (`sources`, caveat messages) is deliberately absent. An
 aggregate answer has no serializer of its own — `installation_answers_contract` composes the label with whichever of
 these you asked for, so a labelled answer and a handle-route answer serialize identically.
+
+### Telling the shapes apart, including one you have never seen
+
+Everything below is about **one installation's answer** — what a `--installation` invocation prints whole, and what sits
+under `answer` in each entry of the labelled list the CLI prints without one (see
+[The command line](#the-command-line)). The aggregate itself is a JSON array, so unpack it first and apply this to each
+entry.
+
+One installation's answer takes one of several shapes, and two of them are not the answer's own fields. Normally a
+serialized answer carries **its fields flat** at the top level, and which fields those are is the question's own
+business — a savefile placement leads with `dir`, a mod placement with `trees`, a soft-patching answer with
+`candidates`. At the top level there are exactly two exceptions, and each announces itself as a **single-key object
+naming its shape**: a refusal is `{"unresolved": {"code": …, "data": {…}}}`, and a savestate question's stated no is
+`{"no_savestates": {"emulator": …, "citation": …, "caveats": […]}}`. (The same single-key discriminator style appears
+once more further in, around a firmware requirement that is a choice between region images — `{"alternatives": [ … ]}`
+inside `cores[].requirements[]`. It is documented with the firmware answer; watch for it if you walk that list.)
+
+**Those two are the shape the contract promises for anything added later**, so a client can recognize a shape it does
+not know instead of misreading it: what is not a question's own flat answer arrives as a single-key wrapper naming
+itself. Check the two you know by name, then check the field you are about to use actually **has a value**:
+
+```python
+answer = json.loads(document)              # one installation's answer (see above)
+if "unresolved" in answer:
+    refused(answer["unresolved"]["code"])
+elif "no_savestates" in answer:
+    no_such_feature(answer["no_savestates"])
+elif answer.get("dir") is not None:        # the field THIS question answers with
+    act_on(answer)
+else:
+    nothing_to_act_on(answer)              # no value in this question's field, or a shape newer
+                                           # than this client — the two are told apart below
+```
+
+**Test the value, not the key.** A flat answer may carry `null` in its own leading field, and that is an answer rather
+than a gap: `rom_location` never refuses, so where it resolved no directory it says `"dir": null` and the caveats say
+which way it went. Reading that as a directory is the failure this whole section exists to prevent — a `None` joined
+onto a file name puts the file somewhere nobody looks.
+
+**The last branch therefore catches two different things, and they want different handling.** Either atlas answered this
+question and resolved no value — the ordinary field names are all there, and `caveats` says which way it went, which is
+what you log and what you show a person — or the object is a shape this client does not know, in which case the key is
+the only thing to log and the release note is where its meaning lives. Tell them apart by whether the fields you expect
+are present at all.
+
+Presence and value do different jobs here, which is why the two tests above look contradictory and are not. **Presence
+classifies the shape**: your question's field names are there, so this is that question's answer. **Value decides the
+action**: the field holds something, so there is something to act on. Testing presence to decide the action is the
+mistake — that is the `rom_location` trap. Testing value to decide the shape is the other one, and it lands a resolved
+nothing in the same bucket as an object from the future.
+
+**In both cases take the branch a refusal takes, and never fall through into the answer branch.** There is nothing to
+raise either: atlas answered, in one case with a null and in the other in a spelling this client does not know yet.
+
+Read the instruction narrowly, though: an unknown wrapper is not automatically a refusal in **meaning**. `no_savestates`
+is an answer — the emulator has no such feature — and a client that reports it as "atlas could not answer" tells its
+user something false. What the rule settles is only what to **do**: without knowing the shape you cannot act on it, and
+not acting is exactly what the refusal branch already does correctly. When a new key starts showing up in your logs,
+read the release note and give it a branch of its own.
 
 ### Which answers have a summary field, and which never will
 

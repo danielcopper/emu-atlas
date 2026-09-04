@@ -50,8 +50,18 @@ guessed from a file extension.
 and every answer from a broken installation states them. On the firmware route, a standalone emulator answers
 `declaration="unsupported"` with the placement route's own `standalone-unsupported`, and an absent `system_directory`
 resolves to RetroArch's platform default instead of refusing, leaving `system-directory-cleared` to mean only a key set
-to nothing. Still open in the item: `identify_firmware`'s untyped refusal, the naming sweep, the summary-field
-convention.
+to nothing. Two of the item's three remainders have since shipped in #54: the naming sweep (single-origin fields aligned
+on the `sources` vocabulary, eight `CAVEAT_*` constants renamed to match the code strings they carry, the subject
+positional / modifiers keyword-only parameter rule) and the summary-field convention, which `DESIGN.md` now carries as a
+settled decision with the three non-summary categories beside it. What is still open is `identify_firmware`'s untyped
+refusal: content it cannot identify comes back as a `FirmwareIdentification` with `identity=None` and a caveat, where
+every placement route answers the same kind of "not for me" with the typed `Unresolved`. Beside the item, the guide now
+states how a client tells the answer shapes apart — a question's own fields flat, and at the top level two single-key
+wrappers naming themselves (`unresolved`, `no_savestates`), which is the shape anything added later takes — so a shape
+added after a client was written is recognizable to it rather than misread. A vector-corpus test holds the wrapper set
+closed: no single-key shape outside the documented pair reaches the corpus and no flat answer carries a wrapper key.
+Holding the whole rule needs the per-question key set a generated contract reference would carry, which is where the
+stronger check belongs.
 
 **The consumable surface** (#196, #68, #65, #202, #108): the `emu-atlas` CLI — one question per invocation, the contract
 JSON on stdout, the conformance vectors run through its dispatch; the platform crosswalk (`systems_for_platform` /
