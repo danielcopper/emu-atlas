@@ -9,6 +9,7 @@ than restating it.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,6 +18,8 @@ import atlas
 from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
 from tests.answers import placed, state_placed
+
+_VECTOR_DIR = Path(__file__).resolve().parents[1] / "vectors" / "machines"
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -232,3 +235,62 @@ class TestTheAlternativesEntryIsItsOwnShape:
             atlas.FirmwareAlternatives(options=(self._option("scph5501.bin", ("ntsc-u",)),))
         )
         assert json.loads(json.dumps(block)) == block
+
+
+class TestAnswerShapeDiscipline:
+    """The half of the usage guide's shape rule a corpus walk can actually hold.
+
+    The guide tells clients an answer is either the question's own fields flat
+    or a single-key object naming the shape, and that an unrecognized wrapper
+    takes the branch a refusal takes. What is asserted here is the wrapper set
+    being **closed**: no single-key shape outside the documented pair reaches
+    the corpus, both documented ones are really witnessed, and no flat answer
+    carries a wrapper key — so a client that checks those two names by hand
+    cannot be surprised by a third.
+
+    What it does not hold, stated so the sentence is not read as more than it
+    is: an envelope with two or more keys is indistinguishable from a flat
+    answer here, because "the question's own fields" is not knowable from the
+    corpus without a per-question key set. That set is what a generated
+    contract reference would build, and the stronger check belongs beside it.
+    """
+
+    WRAPPERS = frozenset({"unresolved", "no_savestates"})
+
+    @staticmethod
+    def _answers():
+        """Every serialized answer in the corpus, unwrapped from the aggregate."""
+        for path in sorted(_VECTOR_DIR.glob("*.json")):
+            for vector in json.loads(path.read_text(encoding="utf-8"))["vectors"]:
+                for question, block in vector.get("expected", {}).items():
+                    if question == "installations":
+                        continue
+                    if isinstance(block, list):  # the aggregate: one entry per installation
+                        for entry in block:
+                            yield path.name, vector["name"], question, entry["answer"]
+                    else:
+                        yield path.name, vector["name"], question, block
+
+    def test_every_answer_is_flat_or_a_named_single_key_wrapper(self):
+        seen: set[str] = set()
+        for file_name, vector, question, answer in self._answers():
+            where = f"{file_name}:{vector}:{question}"
+            assert isinstance(answer, dict), f"{where}: an answer is a JSON object"
+            if len(answer) == 1:
+                [key] = answer
+                assert key in self.WRAPPERS, (
+                    f"{where}: single-key answer {key!r} is a shape the usage guide's rule "
+                    f"cannot name — either give it fields of its own or add it to the "
+                    f"documented wrapper set"
+                )
+                seen.add(key)
+        assert seen == self.WRAPPERS, f"corpus witnesses {sorted(seen)}, expected both wrappers"
+
+    def test_no_flat_answer_carries_a_wrapper_key(self):
+        for file_name, vector, question, answer in self._answers():
+            if len(answer) > 1:
+                overlap = self.WRAPPERS & set(answer)
+                assert not overlap, (
+                    f"{file_name}:{vector}:{question}: flat answer also carries {sorted(overlap)}, "
+                    f"which makes the two shapes mistakable"
+                )
