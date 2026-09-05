@@ -4463,6 +4463,260 @@
           "enabled": "[D] Read from source at 228c14e, the revision the shipped binary names. Not live-observed."
         }
       }
+    },
+    "puae": {
+      "identifiers": {
+        "library_name": [
+          "PUAE"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "puae_floppy_write_protection",
+            "puae_floppy_write_redirect",
+            "puae_shared_nvram",
+            "puae_model",
+            "puae_use_boot_hd"
+          ]
+        },
+        "modes": {
+          "floppy-writeback": {
+            "root": "content_directory",
+            "inside_content": "with both floppy switches off — the registered defaults — a plain image takes the emulation's track writes into itself. Nothing creates a write file while the emulation runs: disk_setwriteprotect is the only thing that creates one (sources/src/disk.c:3258-3259 at 0043cf9) and its only callers are the two libretro redirect helpers (libretro/libretro-core.c:605, :642). So openwritefile finds none, leaves the drive's wrprot at 0 for a writable host file (disk.c:1251-1270), and drive_write_data writes the track back through drive_write_adf_amigados into the loaded image (:2937-2969, ADF_NORMAL) — the content file is the save medium and no file of the core's own appears anywhere. The extension selects this mode and the header is what the emulator actually checks: an .adf carrying a UAE--ADF, CAPS or FDI header needs a write file instead (diskfile_iswriteprotect, :1307-1327) and then keeps nothing, exactly as the read-only formats do"
+          },
+          "floppy-format-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with both floppy switches off — the registered defaults — an image the emulator cannot write in place keeps nothing anywhere. A gzipped .adz or a .dms is unpacked into memory, so openwritefile write-protects the drive once it finds no write file (sources/src/disk.c:1266-1268 at 0043cf9), and an .ipf or .fdi is write-protected at insert (:1494-1501, :1517-1520); drive_writeprotected then makes drive_write_data drop the track before any writer runs (:853-866, :2937-2946). No write file is created either — disk_setwriteprotect is the only thing that creates one and runs from the redirect helpers alone (libretro/libretro-core.c:605, :642) — and the one floppy_close_redirect makes at unload is empty and unlinked in the same call (disk.c:3258-3267). Switching 'puae_floppy_write_redirect' on is what makes these formats keep a save"
+          },
+          "floppy-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with 'puae_floppy_write_protection' on the emulated drive is write-protected whatever the image is: the option writes floppy_write_protect=true into the UAE config and sets p->floppy_read_only live (libretro/libretro-core.c:4097-4112 at 0043cf9), drive_writeprotected returns true for every drive on that flag alone (sources/src/disk.c:865) and drive_write_data drops the track (:2937-2946). No write file is created either — disk_setwriteprotect returns before creating one whenever the flag is set (:3248-3251) — so the setting outranks 'puae_floppy_write_redirect' and nothing anywhere keeps the progress"
+          },
+          "floppy-redirected": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>_save.adf",
+                  "<rom_stem>_save.adf.gz"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "complete": false,
+                "files_established_for": "single-disk-image",
+                "files_established_note": "The class here is content loaded as a single disk image: the write file is named after the opened image's own stem, so a playlist's members and an archive's extracted members each bring their own name rather than the question's. The two names are then one save under the two spellings it takes. With 'puae_floppy_write_redirect' on, diskfile_iswriteprotect demands a write file for every floppy whatever its format (sources/src/disk.c:1300-1306 at 0043cf9); floppy_open_redirect creates <save dir>/<stem>_save.adf through disk_setwriteprotect (libretro/libretro-core.c:564-610, disk.c:3256-3259) and reinserts the disk, the emulation's tracks land in that file (:2947-2950), and the original image is chmod'd read-only so it is never written (:3276-3282). At close — retro_unload_game, a disk-control eject, or the option being switched off — floppy_close_redirect gzips the write file to <stem>_save.adf.gz and removes the plain one (libretro-core.c:612-658, :4143, :4876, :8729), so the .gz is the form at rest and the plain .adf the form while the core holds the disk or after a crash. A write file nothing ever wrote to is unlinked instead of kept (disk.c:3261-3267).",
+                "files_citation": "sources/src/disk.c:1300-1306, :3229-3285 and libretro/libretro-core.c:564-658 at libretro/libretro-uae 0043cf9"
+              }
+            ]
+          },
+          "cd-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "complete": false
+              }
+            ]
+          },
+          "cd-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "puae_libretro.nvr",
+                  "puae_libretro_cdtv.nvr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery",
+                "complete": false
+              }
+            ]
+          },
+          "cd-no-nvram": {
+            "root": "savefile_directory",
+            "writes_discarded": "with 'puae_model' naming a model that has no extended Kickstart — every model but CDTV, CD32 and CD32FR (emu_config_string, libretro/libretro-core.c:5969-5978 at 0043cf9) — retro_config_kickstart appends no flash_file line at all (:5577-5578, :5640-5661). The emulated machine then has no non-volatile memory for a CD title to write into, so nothing keeps its progress; naming a CD model outright is what makes the file exist, whatever else is configured (the preset is written straight, :6263); leaving 'puae_model' on 'auto' does it too, but only while 'puae_use_boot_hd' is disabled — a boot hard drive otherwise takes the hard-disk model wherever no marker in the launch path names a CD one (:7000-7028)"
+          }
+        },
+        "anchors": {
+          "puae_floppy_write_protection": {
+            "literal": "puae_floppy_write_protection"
+          },
+          "puae_floppy_write_redirect": {
+            "literal": "puae_floppy_write_redirect"
+          },
+          "puae_shared_nvram": {
+            "literal": "puae_shared_nvram"
+          },
+          "puae_model": {
+            "literal": "puae_model"
+          },
+          "puae_use_boot_hd": {
+            "literal": "puae_use_boot_hd"
+          },
+          "<rom_stem>_save.adf": {
+            "literal": "_save.adf"
+          },
+          "<rom_stem>_save.adf.gz": {
+            "unprotected": "composed at run time: the '_save.adf' half is a whole literal in the shipped binary and pinned above, while the '.gz' is appended by floppy_close_redirect with snprintf(\"%s%s\", saveimagepath, \".gz\") (libretro/libretro-core.c:647-651), so no field of the binary carries the finished name"
+          },
+          "<rom_stem>.nvr": {
+            "literal": "%s.nvr"
+          },
+          "puae_libretro.nvr": {
+            "literal": "puae_libretro"
+          },
+          "puae_libretro_cdtv.nvr": {
+            "literal": "%s_cdtv.nvr"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/libretro-uae at 0043cf9, the revision the shipped binary names in its library_version ('5.3.0 0043cf9'). retro_get_memory_size answers RETRO_MEMORY_SYSTEM_RAM alone and returns 0 for every other id (libretro/libretro-core.c:8874-8886), so RetroArch writes no .srm and every save here is the core's own. Two stories share the core and which one applies is the content's class, dispatched off the extension by dc_get_image_type (libretro/libretro-dc.c:825-868): floppy (adf/adz/fdi/dms/raw/ipf), CD (cue/ccd/nrg/mds/iso/chd), hard disk (hdf/hdz or a directory), WHDLoad (lha/slave/info) and archive (zip/7z). The card states the floppy and CD classes; the rule answers a content-class-unrecorded refusal for the rest, and the reason is below.\n\nThe floppy story is UAE's own. fetch_path returns the frontend's save directory for every path name under __LIBRETRO__ (sources/src/misc.c:609-617, fetch_saveimagepath at :634-637), and saveimageoriginalpath is fixed at 0 with nothing assigning it (misc.c:155), so DISK_get_saveimagepath(-2) falls through its whole search to DISK_get_default_saveimagepath and composes <save dir>/<stem>_save.adf (disk.c:1166-1210, :1151-1160; the stem is the basename cut at its last dot, saveimagecutfilepart :1115-1140; the '_save.adf' spelling saveimageaddfilename :1142-1149). The '.save_adf' spelling the same function can build is only ever looked for, never created: the creating call reaches it through type -1, which takes the '_save.adf' branch (:1194-1198). The search does look beside the content as well as under the save root, so a write file a user put next to the image is used where it exists (:1170-1192) — a discovery path, not one the core writes to.\n\nWhether a write file exists at all is disk_setwriteprotect (:3229-3285), and its only two callers are the libretro redirect helpers (libretro-core.c:605, :642). With both floppy switches off none is created while the emulation runs, and the image's own format decides what a write does: a plain image is written in place, while a compressed one (adz, dms — unpacked into memory, zfile_iscompressed) or a raw-disk one (ipf, fdi, and the UAE--ADF header) write-protects the drive and the write is dropped. 'puae_floppy_write_protection' discards every write whatever the format and outranks the redirect switch, because p->floppy_read_only both write-protects every drive (disk.c:865) and makes disk_setwriteprotect return before creating anything (:3248-3251). 'puae_floppy_write_redirect' makes every floppy need a write file (:1300-1306), and its close helper leaves <stem>_save.adf.gz behind.\n\nThe CD story is the flash chip. retro_config_kickstart appends flash_file=<save dir>/<name>.nvr only where the model has an extended Kickstart (libretro-core.c:5577-5578, :5640-5661), which emu_config_string gives CDTV, CD32 and CD32FR alone (:5969-5978); UAE opens that path and creates it at hardware reset when it is missing — akiko.c:203-238 for the CD32's 1 KiB EEPROM (\"wb\" at :229, reached from akiko_reset :2101-2105, which akiko_init registers as the device reset at :2137-2140) and cdtv.c:1591-1611 for the CDTV's 32 KiB battery RAM (\"wb\" at :1600, called from cdtv_init at :1758) — so the file is there from launch, before anything is saved. The line is appended for the MODEL, not for the content's class: a floppy run on an explicitly selected CD32 or CDTV gets one too, which the recorded floppy modes do not state, so the rule refuses that combination rather than under-stating it. Which model runs a CD is 'puae_model' where it names one, and on 'auto' the CD default 'puae_model_cd' — whose registered values are CD models only — unless 'puae_use_boot_hd' is set, in which case the hard-disk model applies except where a marker in the content's own launch path names a CD one (:7000-7028); that path is not a value this answer reads, so the rule refuses that combination too. The per-game name is the content path's own basename with its extension cut (:5651-5659), so a playlist of CD images is named after the playlist file and an archive of them after the .m3u the loader generates from the archive's own stem (:6301-6304, :6376-6386). The shared name is the core's own prefix, and the two spellings are a closed candidate set of which one is written per run: the CDTV one is taken when the main Kickstart file on this machine is 256 KiB (:5646-5649, ROM_SIZE_256 in sources/src/include/memory.h:71), which is Kickstart 1.3, the ROM the CDTV preset names (:5964, libretro-core.h:186-190), while CD32 and CD32FR name a different ROM file (:5965-5966, libretro-core.h:235-239) whose size the code never states — it tests only that the main Kickstart is at most 512 KiB before looking for an external extended ROM (:5588), so the plain spelling is what any size other than 256 KiB takes — that size is a property of the file installed here and 'puae_kickstart' can override which file it is (:5504-5505), so the card states both names and claims neither. 'puae_model_cd' itself is deliberately not declared: every value it can take keeps an NVRAM file, so reading it would change no answer.\n\nWhat this record does not state, and why. An archive (zip, 7z, and the rp9 the same branch takes) is extracted into <save dir>/TEMP and re-dispatched by what is inside it — a generated .m3u for several images, a single WHDLoad image, or the extracted directory (libretro-core.c:6280-6389) — and the TEMP tree is removed at the next retro_init and at retro_deinit (:5094-5096, :5144-5146, the path built at :721), so a floppy extracted there keeps nothing unless the redirect switch is on, in which case its write file is keyed by the extracted member's stem and outlives the tree. An .m3u playlist is the same shape: each member takes its own class's behaviour under its own stem, and the playlist itself is never written. Both classes therefore turn on what the members are, which is inside a file this answer does not read — an archive of WHDLoad content keeps its saves in a directory that survives, an archive of floppies keeps nothing — so the rule names the extension and refuses rather than stating one of the two. Hard-disk and WHDLoad content are a follow-up's subject and outside this record: an .lha is mounted read-only (:5706-5708) while 'puae_use_whdload' on its registered default mounts <save dir>/WHDSaves/ as the WHDSaves: volume that WHDLoad.prefs points its SavePath at (:6767-6785, whdload/WHDLoad.prefs:37), 'hdfs' mounts <save dir>/WHDSaves.hdf instead (:6824-6852), and .hdf/.hdz images and mapped directories take their writes in place (:5709-5720) under a UAE config key, harddrive_write_protect, that no core option ever sets (sources/src/cfgfile.c:5967). Two more files of the core's own are outside the save story: <m3u stem>.save<n>.adf, blank disks the user creates from the core's own hotkey (dc_add_m3u_save_disk, libretro-dc.c:476-480, reached from dc_save_disk_toggle :549), and puae_libretro_global.uae, a configuration file (libretro-core.c:7330). One reading that bounds every path above: the core strips a trailing one-letter directory from the save path it was handed (:715-718), so an arrangement that sorts saves into single-letter folders would have the core write one level up — no arrangement atlas reads does that, and the modes state the root the frontend names. A .uae file is a fourth class outside this record: it is in the core's valid_extensions (:5227) and the loader applies it row by row as a UAE configuration (:7087-7152), which can name content of any of the classes above. A launch with no content at all takes the shared spelling whatever the sharing switch says (string_is_empty(full_path), :5644; the option's own sublabel states it at :1213), and it still reaches retro_config_kickstart — but the rule refuses a content-less question before any of that, because the class it splits on is the content's. Two writable stores sit beside every mode this card states, which is why no group claims a closed candidate universe. 'puae_use_boot_hd' on anything but its registered 'disabled' mounts a Boot HD read-write — <save dir>/puae_libretro.hdf under the hdf sizes (:5443) or <save dir>/BootHD/ under 'files' (:5474), retro_config_boot_hd at :5390-5493 — and it does so for floppy and CD content alike (:6495 and :7039); only a content-less launch skips it for the CD models (:7319-7322). Composing that store with the save story this card does state needs a mode form carrying two independent stories, so it is recorded here and claimed nowhere. The other store is configuration: two .uae files under the save root are appended after every line this rule reasons about — puae_libretro_global.uae (:7330-7343) and <save dir>/<content stem>.uae (:7345-7362) — so either can override a mode outright, later lines winning in a UAE config (flash_file is parsed by cfgfile_string, sources/src/cfgfile.c:6068, whose body at :3250-3257 copies into the destination on every match with no first-wins guard, so the last occurrence stands). Neither is read here. The model preset puae_libretro_<model>.uae (:6009-6032) cannot override a mode: it is read into uae_custom_config (:6022), concatenated into the preset (:6231) and emitted with it (:6488 for floppies, :7031 for CDs) before retro_config_kickstart writes the flash_file line (:6491, :7034), so the core's own line wins over anything it says. What it does reach is the Kickstart, parsed straight out of it (:6024).",
+        "status": {
+          "floppy-writeback": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed: no Amiga content and no Amiga save exists on the machine the audit ran on.",
+          "floppy-format-discarded": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed.",
+          "floppy-discarded": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed.",
+          "floppy-redirected": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed.",
+          "cd-per-game": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed.",
+          "cd-shared": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed.",
+          "cd-no-nvram": "[D] Read from source at 0043cf9, the revision the shipped binary names. Not live-observed."
+        }
+      }
+    },
+    "puae2021": {
+      "identifiers": {
+        "library_name": [
+          "PUAE 2021"
+        ]
+      },
+      "saves": {
+        "governing_rule": {
+          "options": [
+            "puae_floppy_write_protection",
+            "puae_floppy_write_redirect",
+            "puae_shared_nvram",
+            "puae_model",
+            "puae_use_boot_hd"
+          ]
+        },
+        "modes": {
+          "floppy-writeback": {
+            "root": "content_directory",
+            "inside_content": "with both floppy switches off — the registered defaults — a plain image takes the emulation's track writes into itself. Nothing creates a write file while the emulation runs: disk_setwriteprotect is the only thing that creates one (sources/src/disk.c:2626-2627 at 58527ce) and its only callers are the two libretro redirect helpers (libretro/libretro-core.c:606, :643). So openwritefile finds none, leaves the drive's wrprot at 0 for a writable host file (disk.c:1012-1031), and drive_write_data writes the track back through drive_write_adf_amigados into the loaded image (:2312-2328, ADF_NORMAL) — the content file is the save medium and no file of the core's own appears anywhere. The extension selects this mode and the header is what the emulator actually checks: an .adf carrying a UAE--ADF, CAPS or FDI header needs a write file instead (diskfile_iswriteprotect, :1060-1080) and then keeps nothing, exactly as the read-only formats do"
+          },
+          "floppy-format-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with both floppy switches off — the registered defaults — an image the emulator cannot write in place keeps nothing anywhere. A gzipped .adz or a .dms is unpacked into memory, so openwritefile write-protects the drive once it finds no write file (sources/src/disk.c:1027-1029 at 58527ce), and an .ipf or .fdi is write-protected at insert (:1170-1179, :1182-1187); drive_writeprotected then makes drive_write_data drop the track before any writer runs (:1459-1466, :2312-2321). No write file is created either — disk_setwriteprotect is the only thing that creates one and runs from the redirect helpers alone (libretro/libretro-core.c:606, :643) — and the one floppy_close_redirect makes at unload is empty and unlinked in the same call (disk.c:2626-2635). Switching 'puae_floppy_write_redirect' on is what makes these formats keep a save"
+          },
+          "floppy-discarded": {
+            "root": "content_directory",
+            "writes_discarded": "with 'puae_floppy_write_protection' on the emulated drive is write-protected whatever the image is: the option writes floppy_write_protect=true into the UAE config and sets p->floppy_read_only live (libretro/libretro-core.c:4048-4077 at 58527ce), drive_writeprotected returns true for every drive on that flag alone (sources/src/disk.c:1465) and drive_write_data drops the track (:2312-2321). No write file is created either — disk_setwriteprotect returns before creating one whenever the flag is set (:2616-2619) — so the setting outranks 'puae_floppy_write_redirect' and nothing anywhere keeps the progress"
+          },
+          "floppy-redirected": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>_save.adf",
+                  "<rom_stem>_save.adf.gz"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "complete": false,
+                "files_established_for": "single-disk-image",
+                "files_established_note": "The class here is content loaded as a single disk image: the write file is named after the opened image's own stem, so a playlist's members and an archive's extracted members each bring their own name rather than the question's. The two names are then one save under the two spellings it takes. With 'puae_floppy_write_redirect' on, diskfile_iswriteprotect demands a write file for every floppy whatever its format (sources/src/disk.c:1053-1059 at 58527ce); floppy_open_redirect creates <save dir>/<stem>_save.adf through disk_setwriteprotect (libretro/libretro-core.c:565-611, disk.c:2624-2627) and reinserts the disk, the emulation's tracks land in that file (:2322-2325), and the original image is chmod'd read-only so it is never written (:2644-2650). At close — retro_unload_game, a disk-control eject, or the option being switched off — floppy_close_redirect gzips the write file to <stem>_save.adf.gz and removes the plain one (libretro-core.c:613-659, :4094, :4815, :8647), so the .gz is the form at rest and the plain .adf the form while the core holds the disk or after a crash. A write file nothing ever wrote to is unlinked instead of kept (disk.c:2629-2635).",
+                "files_citation": "sources/src/disk.c:1053-1059, :2599-2653 and libretro/libretro-core.c:565-659 at libretro/libretro-uae 58527ce"
+              }
+            ]
+          },
+          "cd-per-game": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "complete": false
+              }
+            ]
+          },
+          "cd-shared": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "puae_libretro.nvr",
+                  "puae_libretro_cdtv.nvr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery",
+                "complete": false
+              }
+            ]
+          },
+          "cd-no-nvram": {
+            "root": "savefile_directory",
+            "writes_discarded": "with 'puae_model' naming a model that has no extended Kickstart — every model but CDTV, CD32 and CD32FR (emu_config_string, libretro/libretro-core.c:5893-5902 at 58527ce) — retro_config_kickstart appends no flash_file line at all (:5501-5502, :5564-5585). The emulated machine then has no non-volatile memory for a CD title to write into, so nothing keeps its progress; naming a CD model outright is what makes the file exist, whatever else is configured (the preset is written straight, :6187); leaving 'puae_model' on 'auto' does it too, but only while 'puae_use_boot_hd' is disabled — a boot hard drive otherwise takes the hard-disk model wherever no marker in the launch path names a CD one (:6924-6952)"
+          }
+        },
+        "anchors": {
+          "puae_floppy_write_protection": {
+            "literal": "puae_floppy_write_protection"
+          },
+          "puae_floppy_write_redirect": {
+            "literal": "puae_floppy_write_redirect"
+          },
+          "puae_shared_nvram": {
+            "literal": "puae_shared_nvram"
+          },
+          "puae_model": {
+            "literal": "puae_model"
+          },
+          "puae_use_boot_hd": {
+            "literal": "puae_use_boot_hd"
+          },
+          "<rom_stem>_save.adf": {
+            "literal": "_save.adf"
+          },
+          "<rom_stem>_save.adf.gz": {
+            "unprotected": "composed at run time: the '_save.adf' half is a whole literal in the shipped binary and pinned above, while the '.gz' is appended by floppy_close_redirect with snprintf(\"%s%s\", saveimagepath, \".gz\") (libretro/libretro-core.c:648-652), so no field of the binary carries the finished name"
+          },
+          "<rom_stem>.nvr": {
+            "literal": "%s.nvr"
+          },
+          "puae_libretro.nvr": {
+            "literal": "puae_libretro"
+          },
+          "puae_libretro_cdtv.nvr": {
+            "literal": "%s_cdtv.nvr"
+          }
+        }
+      },
+      "provenance": {
+        "source": "libretro/libretro-uae at 58527ce, the revision the shipped binary names in its library_version ('2.6.1 58527ce') — the 2021 generation of the same core, kept beside the current one, and this card is that generation's reading. retro_get_memory_size answers RETRO_MEMORY_SYSTEM_RAM alone and returns 0 for every other id (libretro/libretro-core.c:8792-8804), so RetroArch writes no .srm. Which story applies is the content's class, dispatched off the extension by dc_get_image_type exactly as in the current generation (libretro/libretro-dc.c:825-868): floppy (adf/adz/fdi/dms/raw/ipf), CD (cue/ccd/nrg/mds/iso/chd), hard disk (hdf/hdz or a directory), WHDLoad (lha/slave/info) and archive (zip/7z). The card states the floppy and CD classes; the rule answers a content-class-unrecorded refusal for the rest.\n\nThe floppy story is UAE's own. fetch_path returns the frontend's save directory for every path name under __LIBRETRO__ (sources/src/misc.c:450-473, fetch_saveimagepath at :475-478), and saveimageoriginalpath is fixed at 0 with nothing assigning it (misc.c:109), so DISK_get_saveimagepath(-2) falls through its whole search to DISK_get_default_saveimagepath and composes <save dir>/<stem>_save.adf (disk.c:942-966, :927-936; the stem is the basename cut at its last dot, saveimagecutfilepart :891-916; the '_save.adf' spelling saveimageaddfilename :918-925). This generation's search is shorter than the current one's — getexistingwritefile asks for two spellings rather than four (:968-983) — and lands on the same name.\n\nWhether a write file exists at all is disk_setwriteprotect (:2599-2653), and its only two callers are the libretro redirect helpers (libretro-core.c:606, :643). With both floppy switches off none is created while the emulation runs, and the image's own format decides what a write does: a plain image is written in place, while a compressed one (adz, dms — unpacked into memory, zfile_iscompressed) or a raw-disk one (ipf, fdi, and the UAE--ADF header) write-protects the drive and the write is dropped. 'puae_floppy_write_protection' discards every write whatever the format and outranks the redirect switch, because p->floppy_read_only both write-protects every drive (disk.c:1465) and makes disk_setwriteprotect return before creating anything (:2616-2619). 'puae_floppy_write_redirect' makes every floppy need a write file (:1053-1059), and its close helper leaves <stem>_save.adf.gz behind.\n\nThe CD story is the flash chip. retro_config_kickstart appends flash_file=<save dir>/<name>.nvr only where the model has an extended Kickstart (libretro-core.c:5501-5502, :5564-5585), which emu_config_string gives CDTV, CD32 and CD32FR alone (:5893-5902). One difference from the current generation, and it is about when the file appears rather than where: this UAE creates the CD32 EEPROM on the first write rather than at reset (nvram_write opens \"wb\" when the file is missing, sources/src/akiko.c:128-143, while nvram_read at :145-156 only reads — reached from akiko_reset :2010-2013, which akiko_init calls through akiko_free at :2050-2054), whereas the CDTV's battery RAM is still created at reset (cdtv.c:1636-1655, called from cdtv_init at :1791). So a CD32 title that never saved leaves no file, and a CDTV has one from launch. The line is appended for the MODEL, not for the content's class: a floppy run on an explicitly selected CD32 or CDTV gets one too, which the recorded floppy modes do not state, so the rule refuses that combination rather than under-stating it. Which model runs a CD is 'puae_model' where it names one, and on 'auto' the CD default 'puae_model_cd' — whose registered values are CD models only — unless 'puae_use_boot_hd' is set, in which case the hard-disk model applies except where a marker in the content's own launch path names a CD one (:6924-6952); that path is not a value this answer reads, so the rule refuses that combination too. The per-game name is the content path's own basename with its extension cut (:5575-5582), so a playlist of CD images is named after the playlist file and an archive of them after the .m3u the loader generates from the archive's own stem (:6225-6228, :6300-6310). The shared name is the core's own prefix, and the two spellings are a closed candidate set of which one is written per run: the CDTV one is taken when the main Kickstart file on this machine is 256 KiB (:5570-5573, ROM_SIZE_256 in sources/src/include/memory_uae.h:80), which is Kickstart 1.3, the ROM the CDTV preset names (:5888, libretro-core.h:186-190), while CD32 and CD32FR name a different ROM file (:5889-5890, libretro-core.h:235-239) whose size the code never states — it tests only that the main Kickstart is at most 512 KiB before looking for an external extended ROM (:5512), so the plain spelling is what any size other than 256 KiB takes — that size is a property of the file installed here and 'puae_kickstart' can override which file it is (:5428-5429), so the card states both names and claims neither.\n\nWhat this record does not state, and why. An archive (zip, 7z, and the rp9 the same branch takes) is extracted into <save dir>/TEMP and re-dispatched by what is inside it — a generated .m3u for several images, a single WHDLoad image, or the extracted directory (libretro-core.c:6204-6312) — and the TEMP tree is removed at the next retro_init and at retro_deinit (:5033-5035, :5083-5085, the path built at :722), so a floppy extracted there keeps nothing unless the redirect switch is on, in which case its write file is keyed by the extracted member's stem and outlives the tree. An .m3u playlist is the same shape: each member takes its own class's behaviour under its own stem, and the playlist itself is never written. Both classes therefore turn on what the members are, which is inside a file this answer does not read, so the rule names the extension and refuses rather than stating one of two outcomes. Hard-disk and WHDLoad content are a follow-up's subject and outside this record: an .lha is mounted read-only (:5630-5632) while 'puae_use_whdload' on its registered default mounts <save dir>/WHDSaves/ as the WHDSaves: volume that WHDLoad.prefs points its SavePath at (:6691-6709, whdload/WHDLoad.prefs:37), 'hdfs' mounts <save dir>/WHDSaves.hdf instead (:6748-6776), and .hdf/.hdz images and mapped directories take their writes in place (:5633-5651) — this generation's UAE has no harddrive_write_protect key at all, so nothing switches that off. Two more files of the core's own are outside the save story: <m3u stem>.save<n>.adf, blank disks the user creates from the core's own hotkey (dc_add_m3u_save_disk, libretro-dc.c:476-480, reached from dc_save_disk_toggle :549), and puae_libretro_global.uae, a configuration file (libretro-core.c:7254). One reading that bounds every path above: the core strips a trailing one-letter directory from the save path it was handed (:716-719), so an arrangement that sorts saves into single-letter folders would have the core write one level up — no arrangement atlas reads does that, and the modes state the root the frontend names. A .uae file is a fourth class outside this record: it is in the core's valid_extensions (:5151) and the loader applies it row by row as a UAE configuration (:7010-7076), which can name content of any of the classes above. A launch with no content at all takes the shared spelling whatever the sharing switch says (string_is_empty(full_path), :5568; the option's own sublabel states it at :1212), and it still reaches retro_config_kickstart — but the rule refuses a content-less question before any of that, because the class it splits on is the content's. Two writable stores sit beside every mode this card states, which is why no group claims a closed candidate universe. 'puae_use_boot_hd' on anything but its registered 'disabled' mounts a Boot HD read-write — <save dir>/puae_libretro.hdf under the hdf sizes (:5367) or <save dir>/BootHD/ under 'files' (:5398), retro_config_boot_hd at :5314-5417 — and it does so for floppy and CD content alike (:6419 and :6963); only a content-less launch skips it for the CD models (:7244-7246). Composing that store with the save story this card does state needs a mode form carrying two independent stories, so it is recorded here and claimed nowhere. The other store is configuration: two .uae files under the save root are appended after every line this rule reasons about — puae_libretro_global.uae (:7252-7267) and <save dir>/<content stem>.uae (:7269-7286) — so either can override a mode outright, later lines winning in a UAE config (flash_file is parsed through cfgfile_path_mp, sources/src/cfgfile.c:3413, which delegates to cfgfile_string at :1559-1562; that body at :1550-1557 copies into the destination on every match with no first-wins guard, so the last occurrence stands). Neither is read here. The model preset puae_libretro_<model>.uae (:5933-5956) cannot override a mode: it is read into uae_custom_config (:5946), concatenated into the preset (:6155) and emitted with it (:6412 for floppies, :6955 for CDs) before retro_config_kickstart writes the flash_file line (:6415, :6958), so the core's own line wins over anything it says. What it does reach is the Kickstart, parsed straight out of it (:5948).",
+        "status": {
+          "floppy-writeback": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed: no Amiga content and no Amiga save exists on the machine the audit ran on.",
+          "floppy-format-discarded": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed.",
+          "floppy-discarded": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed.",
+          "floppy-redirected": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed.",
+          "cd-per-game": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed.",
+          "cd-shared": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed.",
+          "cd-no-nvram": "[D] Read from source at 58527ce, the revision the shipped binary names. Not live-observed."
+        }
+      }
     }
   }
 }

@@ -6093,6 +6093,3208 @@
           "granularity": null
         }
       }
+    },
+    {
+      "name": "an-amiga-floppy-saves-into-its-own-image",
+      "rationale": "PUAE at its registered defaults writes a plain .adf's tracks back into the image itself: nothing creates a write file while the emulation runs, so the content file is the save medium and the answer is the declared emptiness the save-inside-content caveat carries. The readings show every switch the rule consulted — the model decides whether a non-volatile memory file rides along, so it is read for a floppy too.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "floppy-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "floppy-redirected",
+                "options": {
+                  "puae_floppy_write_redirect": "enabled"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-floppy-format-that-cannot-take-a-write-keeps-nothing",
+      "rationale": "The same defaults over an .ipf keep nothing anywhere: the format write-protects the drive at insert and the only thing that creates a write file is the redirect helper, which is not running. Told apart from the write-protection mode by the option values in the readings, and from the write-back mode by the extension alone — which is why the card carries two unswitched floppy modes rather than one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican II (Europe).ipf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican II (Europe).ipf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-format-discarded"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "floppy-format-discarded",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "floppy-redirected",
+                "options": {
+                  "puae_floppy_write_redirect": "enabled"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-write-protection-discards-every-floppy-write",
+      "rationale": "With 'puae_floppy_write_protection' on the emulated drive is write-protected whatever the image is and no write file is created either, so nothing anywhere keeps the progress. The setting outranks the redirect switch, which is why flipping the redirect one is not offered as an alternative here: it would change nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_protection = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-discarded"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "floppy-discarded",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-writeback",
+                "options": {
+                  "puae_floppy_write_protection": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-redirected-amiga-floppy-writes-a-gzipped-diff-under-the-save-root",
+      "rationale": "With 'puae_floppy_write_redirect' on every floppy needs a write file, the original image is left read-only, and the diff is gzipped at close — so the save is one file per game under the frontend's save root, stated under both the spelling it takes at rest and the one it takes while the core holds the disk.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_redirect = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Ruff and Tumble (Europe)_save.adf",
+              "Ruff and Tumble (Europe)_save.adf.gz"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Ruff and Tumble (Europe)_save.adf",
+                  "Ruff and Tumble (Europe)_save.adf.gz"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-redirected",
+                "files": [
+                  "Ruff and Tumble (Europe)_save.adf",
+                  "Ruff and Tumble (Europe)_save.adf.gz"
+                ],
+                "files_established_for": "single-disk-image",
+                "citation": "sources/src/disk.c:1300-1306, :3229-3285 and libretro/libretro-core.c:564-658 at libretro/libretro-uae 0043cf9"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "floppy-redirected",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "floppy-writeback",
+                "options": {
+                  "puae_floppy_write_redirect": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-cd-keeps-its-non-volatile-memory-per-game",
+      "rationale": "A CD image on the registered defaults selects a CD32, whose extended Kickstart makes the core append a flash_file line: the console's non-volatile memory lands in the save root under the content's own stem. The sharing switch is the one edit that moves it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Banshee (Europe).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Banshee (Europe).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_boot_hd",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-shared-amiga-cd-nvram-states-both-spellings-it-can-take",
+      "rationale": "With 'puae_shared_nvram' on the file is named after the core rather than after the content, and which of the two names it takes depends on the size of the Kickstart ROM installed here: the CDTV spelling is taken at exactly 256 KiB and the plain one at any other size. Both are stated as the candidate set rather than one of them claimed, and the set is not closed either, because a configured Boot HD is a writable store beside it that no mode here states.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_shared_nvram = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "puae_libretro.nvr",
+              "puae_libretro_cdtv.nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "puae_libretro.nvr",
+                  "puae_libretro_cdtv.nvr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "cd-shared",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_boot_hd",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-per-game",
+                "options": {
+                  "puae_shared_nvram": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-model-without-non-volatile-memory-keeps-no-cd-save",
+      "rationale": "Only the CDTV, CD32 and CD32FR models have an extended Kickstart, and only those make the core append a flash_file line. Asked about a CD with 'puae_model' naming an ordinary Amiga, the emulated machine has nowhere to keep the progress at all — the discarded emptiness. Its alternative names CD32 rather than auto, because an explicit CD model reaches the NVRAM mode whatever the boot hard drive says while auto reaches it only with that switch off.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"A500\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "cd-no-nvram"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "cd-no-nvram",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "A500",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-per-game",
+                "options": {
+                  "puae_model": "CD32"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-cd-model-under-a-floppy-adds-a-save-the-floppy-modes-do-not-state",
+      "rationale": "The flash_file line is appended for the emulated model, not for the content's class, so a floppy run on an explicitly selected CD32 has the disk's own save story and a non-volatile memory file beside it. The card's floppy modes state only the first half, so the rule steps aside with emulated-model-unrecorded rather than under-stating the answer, and the model it read is a key of its own.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CD32\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "emulated-model-unrecorded",
+                "model": "CD32"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-is-a-class-the-record-refuses-to-name",
+      "rationale": "An archive is extracted into the save root's TEMP tree and re-dispatched by what is inside it — floppies whose writes die with the tree unless the redirect switch is on, or WHDLoad content whose saves outlive it in a directory of their own. Which applies is a fact inside a file atlas does not read, so the extension is named and no mode is claimed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "content-class-unrecorded",
+                "extension": "zip"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-playlist-is-a-class-the-record-refuses-to-name",
+      "rationale": "A playlist's members each take their own class's behaviour under their own stem, and which classes those are is inside the .m3u — a floppy playlist keeps nothing under the defaults while a CD playlist keeps a non-volatile memory file named after the playlist itself. The record names the extension instead of picking one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Pinball Dreams (Europe).m3u": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Pinball Dreams (Europe).m3u"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "content-class-unrecorded",
+                "extension": "m3u"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-content-is-outside-this-record",
+      "rationale": "WHDLoad content mounts a saves volume of the core's own under the frontend's save root, which this round did not card: the extension is outside every recorded class and rides the answer as a key, so a client sees which content class went unanswered rather than a guess about it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (Europe).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (Europe).lha"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "content-class-unrecorded",
+                "extension": "lha"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-question-without-content-cannot-name-a-class",
+      "rationale": "PUAE's save story splits on the content's class before any switch is read, so asked without a content path the rule has no class to select with. The card steps aside and the standard answer below stays honest: the core fills no memory id and its record retired with the card, so no file set is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "content-class-unnamed"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-cd-on-auto-with-a-boot-hard-drive-cannot-name-its-model",
+      "rationale": "The second way the model goes unestablished: with 'puae_model' on 'auto' and a boot hard drive configured, the loader takes the hard-disk model wherever no marker in the content's own launch path names a CD one — and that path is not a value this answer reads. Same reason slug as the CD-model-under-a-floppy case, with 'auto' as the model it saw, so a client branching on the slug gets both.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_boot_hd = \"files\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "emulated-model-unrecorded",
+                "model": "auto"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-cdtv-cd-answers-the-same-shape-as-a-cd32-one",
+      "rationale": "The CD default 'puae_model_cd' names the model for a CD on 'auto', and every value it can take is a CD model, so the answer does not move: CDTV keeps its non-volatile memory under the content's own stem exactly as CD32 does, which is why the rule never needs to read the CD default. The shared mode states both spellings for a different reason — which one is written keys on the size of the Kickstart installed here, not on the model option.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CDTV\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Banshee (Europe).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Banshee (Europe).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "CDTV",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-explicit-amiga-cd-model-does-not-consult-the-boot-hard-drive",
+      "rationale": "With 'puae_model' naming CD32 outright the loader writes that preset straight and the marker logic never runs, so the boot-hard-drive switch cannot change the machine. The readings are the proof: 'puae_use_boot_hd' is absent from them because the rule never consulted it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CD32\"\npuae_use_boot_hd = \"files\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Banshee (Europe).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Banshee (Europe).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "CD32",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-write-protection-outranks-the-redirect-switch",
+      "rationale": "Both floppy switches on: write protection wins, because it write-protects every drive and makes the write-file creator return before creating anything. The alternatives are what this proves — flipping the redirect switch would leave the mode where it is, so it is not offered, and only the protection flip is.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_protection = \"enabled\"\npuae_floppy_write_redirect = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-discarded"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "floppy-discarded",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-redirected",
+                "options": {
+                  "puae_floppy_write_protection": "disabled"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "redirection-gives-a-read-only-amiga-floppy-format-a-save-at-last",
+      "rationale": "The pair the format split exists for: an .ipf keeps nothing with both switches off, and turning the redirect switch on gives it the same write file a plain image gets. The unswitched neighbour in the alternatives is 'floppy-format-discarded' rather than 'floppy-writeback', because the extension decides which of the two the class falls back to.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican II (Europe).ipf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_redirect = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican II (Europe).ipf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Turrican II (Europe)_save.adf",
+              "Turrican II (Europe)_save.adf.gz"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Turrican II (Europe)_save.adf",
+                  "Turrican II (Europe)_save.adf.gz"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-redirected",
+                "files": [
+                  "Turrican II (Europe)_save.adf",
+                  "Turrican II (Europe)_save.adf.gz"
+                ],
+                "files_established_for": "single-disk-image",
+                "citation": "sources/src/disk.c:1300-1306, :3229-3285 and libretro/libretro-core.c:564-658 at libretro/libretro-uae 0043cf9"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "floppy-redirected",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "floppy-format-discarded",
+                "options": {
+                  "puae_floppy_write_redirect": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-model-without-nvram-still-names-the-shared-mode-it-would-reach",
+      "rationale": "The discarded CD emptiness with the sharing switch on: the alternative has to name the mode that switch would select once a CD model is chosen, which is the shared one rather than the per-game one. Its option edit names CD32, the model that reaches it whatever the boot hard drive says.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"A500\"\npuae_shared_nvram = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "cd-no-nvram"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "cd-no-nvram",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "A500",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_model": "CD32"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-unrecognised-boot-hard-drive-value-falls-back-to-the-registered-default",
+      "rationale": "The resolver normalises a persisted value before a rule sees it, but only where all four conditions hold: a value was read at all, the probe captured the option, the value is outside the set the core registers, and the core registers a default to fall back to. All four hold here, so the stray value is stated as unknown-option-value and the registered default governs — what RetroArch's own option manager does with an invalid persisted value — and the answer is the ordinary per-game one with the discarded setting named beside it. Where a condition fails the raw value reaches the rule instead and its own refusal answers, which is how a rule card covers two of the states the normalisation leaves open: an option a core registers without a default (PUAE registers three such, none of them read by this rule), and a value a newer core generation registers that the record has not been re-audited for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_boot_hd = \"hdf1024\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Banshee (Europe).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Banshee (Europe).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "unknown-option-value",
+              "data": {
+                "core": "puae",
+                "option_key": "puae_use_boot_hd",
+                "value": "hdf1024"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_boot_hd",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the-2021-generation-writes-a-floppy-back-into-its-own-image-too",
+      "rationale": "The floppy half of the older build, which its own card states at its own revision: the same two switches off give the same write-back into the loaded image, so the answer is the declared emptiness with puae2021 named throughout. Together with the CD vector this holds both halves of the second card against the one rule function.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
+            "library_name": "PUAE 2021",
+            "library_version": "2.6.1 58527ce",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae2021_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae2021",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae2021",
+                "mode": "floppy-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "floppy-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "floppy-redirected",
+                "options": {
+                  "puae_floppy_write_redirect": "enabled"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "the-2021-generation-of-puae-carries-the-same-cd-answer",
+      "rationale": "The 2021 build reads the same switches and writes the same names, so one rule function serves both — which is what this vector holds: the answer names puae2021 throughout. It carries a card of its own rather than sharing one because its citations are a different revision and one behaviour differs: that UAE creates the CD32 EEPROM on the first write rather than at reset.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
+            "library_name": "PUAE 2021",
+            "library_version": "2.6.1 58527ce",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae2021_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Banshee (Europe).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Banshee (Europe).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae2021",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_boot_hd",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

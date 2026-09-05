@@ -925,6 +925,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `virtual-sd-disabled`                 | the emulated SD card is switched off                                               | —                          |
 | `content-class-unnamed`               | the answer splits on the content's class and no content was named                  | —                          |
 | `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
+| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
 | `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
 | `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |
 | `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover              | `options` (an object)      |

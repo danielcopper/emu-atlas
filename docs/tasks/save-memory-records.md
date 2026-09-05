@@ -38,9 +38,10 @@ covers the answer.
   rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
   builds, `cannonball`, `cap32`, `desmume`, `dosbox_pure`, `easyrpg`, `geolith`, `kronos`, `mednafen_ngp`, `melonds`,
-  `noods`, `nxengine`, `openlara`, `pokemini`, `prboom`, `quasi88`, `race`, `pcsx2`, `tyrquake`, `virtualjaguar`, the
-  four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes builds). The card wins,
-  and a record beside it would be a second declaration of one file set — a test enforces that no core carries both.
+  `noods`, `nxengine`, `openlara`, `pokemini`, `prboom`, the two `puae` builds, `quasi88`, `race`, `pcsx2`, `tyrquake`,
+  `virtualjaguar`, the four vitaquake2 builds, `vitaquake3`, the two boom3 builds, `desmume2015`, and the three bsnes
+  builds). The card wins, and a record beside it would be a second declaration of one file set — a test enforces that no
+  core carries both.
 
 Once a core is read, its record covers **every system the catalogue offers it for**, not only the ones it leads: leading
 is a menu position, and a user who picks the second entry is asking about the same core.
@@ -204,7 +205,12 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`prboom`** — outcome 2, and a card: `<save_dir>/<rom_stem>/` with eight `prbmsav<slot>.dsg` and a written-back
       `prboom.cfg`, all nameable — the `<rom_stem>` subdir template's first core
 - [x] **`prosystem`** — frontend writes nothing on atari7800
-- [x] **`puae`** — frontend writes nothing on amiga, amiga1200, amiga600, amigacd32, cdtv
+- [x] **`puae`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the core's
+      own save story is the content's class. A floppy's writes go into the loaded image itself, or nowhere at all where
+      the format cannot take them (adz/dms/ipf/fdi are write-protected and no write file is created), or into
+      `<save_dir>/<image stem>_save.adf.gz` under `puae_floppy_write_redirect`; a CD32 or CDTV keeps its non-volatile
+      memory as `<save_dir>/<rom_stem>.nvr`, or shared as `puae_libretro.nvr` / `puae_libretro_cdtv.nvr`. Its record
+      became a card, and `puae2021` got the same card at its own revision
 - [x] **`px68k`** — frontend writes nothing on x68000
 - [x] **`quasi88`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
       core's floppy writes are option-routed — the default keeps a differencing file per opened disk image as
