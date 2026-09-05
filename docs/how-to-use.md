@@ -1686,12 +1686,39 @@ entry = answer.entries[0]          # the effective default (per-game altemulator
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
+entry.declared_index               # 0 — where the layer that declared the system put it, promotion aside
 entry.selection                    # why it is first, when a user promoted it — None for declared order
 entry.caveats                      # this entry's own degradations, e.g. games selecting another emulator
 entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
+
+**`declared_index` is the shipped order; the list is in the effective one.** It is the entry's 0-based place in the
+launch list ES-DE builds from the `<command>` elements of the layer that declared the system — the bundled
+`es_systems.xml`, or the `custom_systems` overlay where that redefines the system — and a promotion never changes it. So
+the entry with `declared_index` 0 is the frontend's _own_ default, and that is what to read when your client wants what
+ES-DE would do with the user's choice set aside; `entries[0]` is the effective default and may be a promoted entry. The
+pair is also the only way to tell the two selection cases apart, because `entries[0].selection` is set in both: an entry
+promoted out of the middle carries a non-zero `declared_index`, while a user selecting the entry that was already first
+carries `0`.
+
+The positions are ES-DE's, not a count of the elements, because ES-DE does not keep every element
+(`SystemData.cpp:1028-1071` @ v3.4.1, and the list it fills at `:1139`). Three rules, all decided by the label:
+
+- A **duplicate label** is dropped and takes no position, so the next command is the frontend's next position.
+- A `<command>` with **no `label` attribute**, once anything is kept, **ends the walk** — that element and every later
+  one are gone. A first command with no label therefore caps the system at one entry whatever follows it.
+- Everything else is kept **whatever its text is**. An **empty or whitespace-only** command is a launch command of `""`
+  to ES-DE, which gives it a position and its own row in the alternative-emulator list; atlas states no entry for it,
+  because it names nothing to launch. That is the one thing that gaps the numbering, and the only one.
+
+Two consequences worth planning for. `declared_index` values in an answer are distinct and ascending in declared order,
+but a gap is legal, so do not treat them as list indices. And **the lookup for `declared_index == 0` can come up empty**
+— it does exactly when the layer's first kept command has no text — so a client whose default is the frontend's default
+needs a branch for "the frontend's default launches nothing", not an assumed hit. A commented-out `<command>` is not an
+element and takes no position, which is why RetroDECK's many commented-out standalone entries do not push the numbers
+around. The field is `null` on a derived entry (below): no layer declared it, so there is no declared position to state.
 
 An empty `entries` is six different facts, and the five `emulator-catalogue-*` codes are how you tell them apart —
 **none of them present** means the catalogue was read and declares no emulator for that system, an answer about the

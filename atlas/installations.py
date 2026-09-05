@@ -13845,6 +13845,10 @@ def _entries_from(
     if specs and chosen_label is not None:
         for index, spec in enumerate(specs):
             if spec.label == chosen_label:
+                # Only ``selection`` is replaced: ``declared_index`` is the
+                # shipped position, and a promotion is precisely the thing that
+                # must not overwrite it — the pair is what says "promoted from
+                # position 3" rather than "first, and also selected".
                 promoted = _dc_replace(spec, selection=chosen_source)
                 specs = (promoted, *specs[:index], *specs[index + 1 :])
                 break
@@ -14031,6 +14035,22 @@ class EmulatorEntry:
     def provenance(self) -> str:
         """Which catalogue layer declared this entry — prose, for debugging."""
         return self._spec.provenance
+
+    @property
+    def declared_index(self) -> int | None:
+        """This entry's place, from 0, in the launch list the declaring layer yields.
+
+        The shipped position, which promotion never touches — read it beside
+        :attr:`selection` to tell an entry promoted out of the middle from the
+        declared first that a user also selected. It is ES-DE's own numbering
+        rather than a count of ``<command>`` elements
+        (:func:`atlas.esde._stored_commands`), so the values across one answer
+        are distinct and ascending *in declared order* — the answer itself is
+        in effective order, where a promoted entry may put a higher position
+        first — and they may skip one. ``None`` on a derived entry: no layer
+        declared it, so it has no declared position (#133).
+        """
+        return self._spec.declared_index
 
     @property
     def selection(self) -> str | None:
@@ -14502,7 +14522,10 @@ def _derived_catalogue_entries(
     string would be an invention. The order is the enumeration's own
     (alphabetical by ``.so``) and claims nothing — with no catalogue and no
     user selection there is no "entry that would run", and the
-    ``emulator-list-derived`` caveat says all of that in one stable code.
+    ``emulator-list-derived`` caveat says all of that in one stable code. That
+    is also why every entry's ``declared_index`` is ``None`` rather than its
+    place in this list: a number here would read as a shipped position, and no
+    layer shipped one.
     """
     selected, hidden = derived_core_selection(context.cores, system)
     entries = tuple(
@@ -14515,6 +14538,7 @@ def _derived_catalogue_entries(
                 core_so=core.core_so,
                 command="",
                 provenance=_DERIVED_ENTRY_PROVENANCE,
+                declared_index=None,
             ),
         )
         for core in selected

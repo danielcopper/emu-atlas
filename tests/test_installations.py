@@ -477,6 +477,9 @@ class TestADerivedEmulatorList:
         ]
         # No catalogue declares a command — empty is the honest statement.
         assert answer.entries[0].command == ""
+        # And no layer declared a position, so there is none to state: a number
+        # here would read as the shipped order of a catalogue that does not exist.
+        assert answer.entries[0].declared_index is None
         codes = [c.code for c in answer.caveats]
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE in codes

@@ -239,7 +239,11 @@ ALTERNATIVE_FIELDS = {"mode", "options", "values"}
 # save data lives. Valid for granularity.value and an alternative's value only.
 GRANULARITY_VALUE_NONE = "none"
 CAVEAT_FIELDS = {"code", "data"}
-EMULATOR_FIELDS = {"system", "label", "kind", "core_so", "selection", "caveats"}
+# Named once because two rules read it: an entry's own check types the value,
+# wherever the entry appears, and the catalogue answer's check reads the whole
+# list of them at once.
+DECLARED_INDEX = "declared_index"
+EMULATOR_FIELDS = {"system", "label", "kind", "core_so", DECLARED_INDEX, "selection", "caveats"}
 # The three ways a catalogue answer carries no entries, each a different claim:
 # the arrangement has none, its one could not be read, or atlas has not
 # established where it keeps one. None of them can accompany actual entries.
@@ -1983,6 +1987,9 @@ def _validate_emulator(name: str, entry: Any) -> None:
     selection = entry["selection"]
     if selection is not None and not isinstance(selection, str):
         fail(f"{name}: emulator selection must be null or a string")
+    declared_index = entry[DECLARED_INDEX]
+    if declared_index is not None and (not isinstance(declared_index, int) or declared_index < 0):
+        fail(f"{name}: emulator declared_index must be null or an integer >= 0")
     if not isinstance(entry["system"], str) or not entry["system"]:
         fail(f"{name}: emulator system must be a non-empty string")
     _validate_caveats(name, entry["caveats"])
@@ -2033,6 +2040,39 @@ def _validate_rom_location(name: str, placement: Any) -> None:
         fail(f"{name}: expected.rom_location resolved no dir and states no caveat saying why")
 
 
+def _validate_declared_indexes(name: str, entries: list[Any], *, derived: bool) -> None:
+    """The declared positions of one answer: all absent, or a permutation of ``0..n-1``.
+
+    An answer is wholly derived or wholly declared, never a mix, so the two
+    cases are exhaustive. Derived entries carry no position at all: no layer
+    declared them, and a number beside ``emulator-list-derived`` would claim a
+    shipped place that does not exist.
+
+    A declared answer's values must cover ``0..n-1`` exactly. Promotion moves an
+    entry to the front without touching its position, so the effective order is
+    always a permutation of the declared one, and a gap or a repeat is a block
+    somebody typed instead of generating. Exactly one shape gaps the run
+    honestly: a layer declaring an **empty or whitespace-only** ``<command>``,
+    which ES-DE keeps as a position (``SystemData.cpp:1068-1069`` @ v3.4.1)
+    while atlas states no entry for it. Nothing else can — the reader mirrors
+    the rest of ES-DE's walk, so a duplicate label and an ended walk take no
+    position either. No fixture has that shape: across the corpus the layers
+    spell 718 ``<command>`` occurrences, 713 of them elements and the other
+    five inside XML comments, and not one of them is empty.
+    The day a fixture wants one, this rule is what says so out loud instead of
+    letting a silent gap through.
+    """
+    indexes = [entry[DECLARED_INDEX] for entry in entries]
+    if derived:
+        if any(index is not None for index in indexes):
+            fail(f"{name}: expected.catalogue is derived and still states a declared_index")
+        return
+    if any(index is None for index in indexes):
+        fail(f"{name}: expected.catalogue was declared by a layer and an entry states no declared_index")
+    if sorted(indexes) != list(range(len(indexes))):
+        fail(f"{name}: expected.catalogue declared_index values {sorted(indexes)} are not 0..{len(indexes) - 1}")
+
+
 def _validate_catalogue(name: str, catalogue: Any) -> None:
     """A catalogue answer: the entries, and why there are none when there are none."""
     if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
@@ -2049,6 +2089,7 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
     derived = any(c["code"] == "emulator-list-derived" for c in catalogue["caveats"])
     if catalogue["entries"] and unread and not derived:
         fail(f"{name}: expected.catalogue states entries and {unread} without emulator-list-derived")
+    _validate_declared_indexes(name, catalogue["entries"], derived=derived)
 
 
 def _validate_platform_systems(name: str, answer: Any) -> None:

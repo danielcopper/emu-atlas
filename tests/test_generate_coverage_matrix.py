@@ -16,10 +16,10 @@ def test_matrix_renders_per_game_capability_and_notes(tmp_path, monkeypatch):
         """<systemList>
   <system>
     <name>test</name>
-    <command>/cores/yes_libretro.so %ROM%</command>
-    <command>/cores/no_libretro.so %ROM%</command>
-    <command>/cores/unknown_libretro.so %ROM%</command>
-    <command>/cores/unaudited_libretro.so %ROM%</command>
+    <command label="Yes">/cores/yes_libretro.so %ROM%</command>
+    <command label="No">/cores/no_libretro.so %ROM%</command>
+    <command label="Unknown">/cores/unknown_libretro.so %ROM%</command>
+    <command label="Unaudited">/cores/unaudited_libretro.so %ROM%</command>
   </system>
 </systemList>
 """,
@@ -79,6 +79,26 @@ def test_matrix_rejects_unsupported_audit_schema(tmp_path):
 
     with pytest.raises(ValueError, match="unsupported schema 99"):
         matrix.load_audit_data(audit_path)
+
+
+# The two reads ES-DE refuses the whole load on. The resolver answers either
+# with an empty catalogue and a caveat; a generator has no caveat to carry, so
+# an empty matrix would publish "nothing is covered" as if it had been
+# surveyed. These hold the guard that fails instead.
+@pytest.mark.parametrize(
+    ("catalogue", "reason"),
+    [
+        ("<systemList><system>", "parse-error"),
+        ('<?xml version="1.0"?><notASystemList />', "missing-systemlist"),
+    ],
+    ids=["unparseable", "no-document-level-systemlist"],
+)
+def test_matrix_refuses_a_catalogue_es_de_would_refuse(tmp_path, catalogue, reason):
+    es_systems = tmp_path / "es_systems.xml"
+    es_systems.write_text(catalogue, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=reason):
+        matrix.collect_rows(es_systems)
 
 
 def _standalone_table(text: str) -> dict[str, list[str]]:

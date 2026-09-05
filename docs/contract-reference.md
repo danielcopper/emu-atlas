@@ -9,7 +9,7 @@ named attribute), and the **data registry** `atlas.ENUMERATED_DATA` (which `(cod
 construction, whether or not a vector exercises them). An attribute an answer type declares and no serialized answer
 carries is listed under [attributes no answer carries](#attributes-no-answer-carries) rather than described.
 
-**Corpus:** 689 vectors in 10 files carry 19 question kinds plus `installations`, which is the only block every vector
+**Corpus:** 692 vectors in 10 files carry 19 question kinds plus `installations`, which is the only block every vector
 states. **Codes:** 125 distinct caveat and unresolved codes are exported under 128 names in `atlas.__all__`, and 123 of
 them appear in the corpus.
 
@@ -17,7 +17,7 @@ them appear in the corpus.
 | ---------------------------- | ------- |
 | `firmware.json`              | 155     |
 | `mods.json`                  | 27      |
-| `named-cases.json`           | 188     |
+| `named-cases.json`           | 191     |
 | `save-file-sets.json`        | 83      |
 | `savestates.json`            | 24      |
 | `screenshots.json`           | 3       |
@@ -79,11 +79,11 @@ dispatcher of every family that can refuse.
 
 ### catalogue
 
-29 vectors state it.
+32 vectors state it.
 
 | shape                                     | vectors | container | dispatchers producing it |
 | ----------------------------------------- | ------- | --------- | ------------------------ |
-| [catalogue_contract](#catalogue_contract) | 29      | object    |                          |
+| [catalogue_contract](#catalogue_contract) | 32      | object    |                          |
 
 | code                               | occurrences | data keys witnessed here       |
 | ---------------------------------- | ----------- | ------------------------------ |
@@ -522,11 +522,11 @@ dispatcher of every family that can refuse.
 
 ### installations
 
-689 vectors state it.
+692 vectors state it.
 
 | shape                                                         | vectors | container | dispatchers producing it |
 | ------------------------------------------------------------- | ------- | --------- | ------------------------ |
-| [installation_contract (array)](#installation_contract-array) | 687     | array     |                          |
+| [installation_contract (array)](#installation_contract-array) | 690     | array     |                          |
 | empty array                                                   | 2       | array     |                          |
 
 | code                       | occurrences | data keys witnessed here           |
@@ -550,25 +550,26 @@ and has no section here.
 
 ### catalogue_contract
 
-Serialized from `CatalogueAnswer` (`atlas.installations`). 29 answers in the corpus take this shape.
+Serialized from `CatalogueAnswer` (`atlas.installations`). 32 answers in the corpus take this shape.
 
-| field                      | JSON type      | declared as                                               | can be null | null observed | answers | closed vocabulary |
-| -------------------------- | -------------- | --------------------------------------------------------- | ----------- | ------------- | ------- | ----------------- |
-| `caveats`                  | array          | `tuple[Caveat, ...]`                                      | no          | no            | 29/29   |                   |
-| `caveats[]`                | object         | `Caveat`                                                  | no          | no            | 15/29   |                   |
-| `caveats[].code`           | string         | `str`                                                     | no          | no            | 15/29   |                   |
-| `caveats[].data`           | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 15/29   |                   |
-| `entries`                  | array          | `tuple[EmulatorEntry, ...]`                               | no          | no            | 29/29   |                   |
-| `entries[]`                | object         | `EmulatorEntry`                                           | no          | no            | 21/29   |                   |
-| `entries[].caveats`        | array          | `tuple[Caveat, ...]` (property)                           | no          | no            | 21/29   |                   |
-| `entries[].caveats[]`      | object         | `Caveat` (property)                                       | no          | no            | 1/29    |                   |
-| `entries[].caveats[].code` | string         | `str`                                                     | no          | no            | 1/29    |                   |
-| `entries[].caveats[].data` | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 1/29    |                   |
-| `entries[].core_so`        | null or string | `str \| None` (property)                                  | yes         | yes           | 21/29   |                   |
-| `entries[].kind`           | string         | `str` (property)                                          | no          | no            | 21/29   |                   |
-| `entries[].label`          | string         | `str` (property)                                          | no          | no            | 21/29   |                   |
-| `entries[].selection`      | null or string | `str \| None` (property)                                  | yes         | yes           | 21/29   |                   |
-| `entries[].system`         | string         | `str` (property)                                          | no          | no            | 21/29   |                   |
+| field                      | JSON type       | declared as                                               | can be null | null observed | answers | closed vocabulary |
+| -------------------------- | --------------- | --------------------------------------------------------- | ----------- | ------------- | ------- | ----------------- |
+| `caveats`                  | array           | `tuple[Caveat, ...]`                                      | no          | no            | 32/32   |                   |
+| `caveats[]`                | object          | `Caveat`                                                  | no          | no            | 15/32   |                   |
+| `caveats[].code`           | string          | `str`                                                     | no          | no            | 15/32   |                   |
+| `caveats[].data`           | object          | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 15/32   |                   |
+| `entries`                  | array           | `tuple[EmulatorEntry, ...]`                               | no          | no            | 32/32   |                   |
+| `entries[]`                | object          | `EmulatorEntry`                                           | no          | no            | 24/32   |                   |
+| `entries[].caveats`        | array           | `tuple[Caveat, ...]` (property)                           | no          | no            | 24/32   |                   |
+| `entries[].caveats[]`      | object          | `Caveat` (property)                                       | no          | no            | 1/32    |                   |
+| `entries[].caveats[].code` | string          | `str`                                                     | no          | no            | 1/32    |                   |
+| `entries[].caveats[].data` | object          | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 1/32    |                   |
+| `entries[].core_so`        | null or string  | `str \| None` (property)                                  | yes         | yes           | 24/32   |                   |
+| `entries[].declared_index` | integer or null | `int \| None` (property)                                  | yes         | yes           | 24/32   |                   |
+| `entries[].kind`           | string          | `str` (property)                                          | no          | no            | 24/32   |                   |
+| `entries[].label`          | string          | `str` (property)                                          | no          | no            | 24/32   |                   |
+| `entries[].selection`      | null or string  | `str \| None` (property)                                  | yes         | yes           | 24/32   |                   |
+| `entries[].system`         | string          | `str` (property)                                          | no          | no            | 24/32   |                   |
 
 ### firmware_contract
 
@@ -719,44 +720,45 @@ themselves otherwise — `unattributed` there means no serializer in `atlas/cont
 
 ### installation_contract (array)
 
-Serialized from `Installation` (`atlas.installations`). 687 answers in the corpus take this shape.
+Serialized from `Installation` (`atlas.installations`). 690 answers in the corpus take this shape.
 
 | field              | JSON type | declared as                  | can be null | null observed | answers | closed vocabulary |
 | ------------------ | --------- | ---------------------------- | ----------- | ------------- | ------- | ----------------- |
-| `[]`               | object    | —                            | not stated  | no            | 687/687 |                   |
-| `[].health`        | array     | derived (method)             | not stated  | no            | 687/687 |                   |
-| `[].health[]`      | object    | derived (method)             | not stated  | no            | 16/687  |                   |
-| `[].health[].code` | string    | —                            | not stated  | no            | 16/687  |                   |
-| `[].health[].data` | object    | —                            | not stated  | no            | 16/687  |                   |
-| `[].kind`          | string    | `str` (property)             | no          | no            | 687/687 |                   |
-| `[].kinds`         | array     | `tuple[str, ...]` (property) | no          | no            | 687/687 |                   |
-| `[].kinds[]`       | string    | `str` (property)             | no          | no            | 687/687 |                   |
-| `[].label`         | string    | —                            | not stated  | no            | 687/687 |                   |
-| `[].root`          | string    | derived (method)             | not stated  | no            | 687/687 |                   |
+| `[]`               | object    | —                            | not stated  | no            | 690/690 |                   |
+| `[].health`        | array     | derived (method)             | not stated  | no            | 690/690 |                   |
+| `[].health[]`      | object    | derived (method)             | not stated  | no            | 16/690  |                   |
+| `[].health[].code` | string    | —                            | not stated  | no            | 16/690  |                   |
+| `[].health[].data` | object    | —                            | not stated  | no            | 16/690  |                   |
+| `[].kind`          | string    | `str` (property)             | no          | no            | 690/690 |                   |
+| `[].kinds`         | array     | `tuple[str, ...]` (property) | no          | no            | 690/690 |                   |
+| `[].kinds[]`       | string    | `str` (property)             | no          | no            | 690/690 |                   |
+| `[].label`         | string    | —                            | not stated  | no            | 690/690 |                   |
+| `[].root`          | string    | derived (method)             | not stated  | no            | 690/690 |                   |
 
 ### launchable_contract
 
 Serialized from `LaunchabilityAnswer` (`atlas.installations`). 8 answers in the corpus take this shape.
 
-| field             | JSON type      | declared as                                               | can be null | null observed | answers | closed vocabulary |
-| ----------------- | -------------- | --------------------------------------------------------- | ----------- | ------------- | ------- | ----------------- |
-| `accepted`        | array          | `tuple[str, ...]`                                         | no          | no            | 8/8     |                   |
-| `accepted[]`      | string         | `str`                                                     | no          | no            | 7/8     |                   |
-| `alternatives`    | array          | `tuple[str, ...]`                                         | no          | no            | 8/8     |                   |
-| `alternatives[]`  | string         | `str`                                                     | no          | no            | 1/8     |                   |
-| `caveats`         | array          | `tuple[Caveat, ...]`                                      | no          | no            | 8/8     |                   |
-| `caveats[]`       | object         | `Caveat`                                                  | no          | no            | 4/8     |                   |
-| `caveats[].code`  | string         | `str`                                                     | no          | no            | 4/8     |                   |
-| `caveats[].data`  | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 4/8     |                   |
-| `entry`           | null or object | `EmulatorEntry \| None`                                   | yes         | yes           | 8/8     |                   |
-| `entry.caveats`   | array          | `tuple[Caveat, ...]` (property)                           | no          | no            | 5/8     |                   |
-| `entry.core_so`   | null or string | `str \| None` (property)                                  | yes         | yes           | 5/8     |                   |
-| `entry.kind`      | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
-| `entry.label`     | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
-| `entry.selection` | null           | `str \| None` (property)                                  | yes         | yes           | 5/8     |                   |
-| `entry.system`    | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
-| `extension`       | string         | `str`                                                     | no          | no            | 8/8     |                   |
-| `verdict`         | string         | `str`                                                     | no          | no            | 8/8     |                   |
+| field                  | JSON type      | declared as                                               | can be null | null observed | answers | closed vocabulary |
+| ---------------------- | -------------- | --------------------------------------------------------- | ----------- | ------------- | ------- | ----------------- |
+| `accepted`             | array          | `tuple[str, ...]`                                         | no          | no            | 8/8     |                   |
+| `accepted[]`           | string         | `str`                                                     | no          | no            | 7/8     |                   |
+| `alternatives`         | array          | `tuple[str, ...]`                                         | no          | no            | 8/8     |                   |
+| `alternatives[]`       | string         | `str`                                                     | no          | no            | 1/8     |                   |
+| `caveats`              | array          | `tuple[Caveat, ...]`                                      | no          | no            | 8/8     |                   |
+| `caveats[]`            | object         | `Caveat`                                                  | no          | no            | 4/8     |                   |
+| `caveats[].code`       | string         | `str`                                                     | no          | no            | 4/8     |                   |
+| `caveats[].data`       | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]` | no          | no            | 4/8     |                   |
+| `entry`                | null or object | `EmulatorEntry \| None`                                   | yes         | yes           | 8/8     |                   |
+| `entry.caveats`        | array          | `tuple[Caveat, ...]` (property)                           | no          | no            | 5/8     |                   |
+| `entry.core_so`        | null or string | `str \| None` (property)                                  | yes         | yes           | 5/8     |                   |
+| `entry.declared_index` | integer        | `int \| None` (property)                                  | yes         | no            | 5/8     |                   |
+| `entry.kind`           | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
+| `entry.label`          | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
+| `entry.selection`      | null           | `str \| None` (property)                                  | yes         | yes           | 5/8     |                   |
+| `entry.system`         | string         | `str` (property)                                          | no          | no            | 5/8     |                   |
+| `extension`            | string         | `str`                                                     | no          | no            | 8/8     |                   |
+| `verdict`              | string         | `str`                                                     | no          | no            | 8/8     |                   |
 
 ### mod_placement_contract
 

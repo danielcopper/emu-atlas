@@ -689,6 +689,7 @@ class TestTheGrammarRefusesContradictions:
                             "label": "ParaLLEl N64",
                             "kind": "libretro",
                             "core_so": "parallel_n64_libretro.so",
+                            "declared_index": 0,
                             "selection": None,
                             "caveats": [],
                         }

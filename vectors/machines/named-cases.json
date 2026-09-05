@@ -2092,6 +2092,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             },
@@ -2100,6 +2101,106 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "catalogue-a-duplicate-label-is-dropped-and-takes-no-position",
+      "rationale": "ES-DE stores a command only under `if (!duplicateLabel)` (SystemData.cpp:1067-1069 @ v3.4.1, the comparison at :1056-1066), so the second command bearing a label already kept never reaches mLaunchCommands. atlas states no entry for it either, and the command after it is declared_index 1 rather than 2 — numbering the elements would put every later entry a slot too high and name a different emulator than the frontend shows at that position.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
+              "selection": null,
+              "caveats": []
+            },
+            {
+              "system": "n64",
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "catalogue-a-command-without-a-label-ends-the-walk",
+      "rationale": "Once one command is kept, a <command> with no label attribute stops ES-DE's read of the system (SystemData.cpp:1031-1038 @ v3.4.1, 'only the first command tag will be processed'), and every later element goes with it. So a system declaring three commands answers with one entry at declared_index 0. The mirror image at :1048-1055 caps a system whose FIRST command carries no label at that single entry too, but that shape cannot be a vector: such an entry is kept under the empty label ES-DE reads from the absent attribute, and the corpus grammar refuses an empty emulator label (scripts/validate_vectors.py, 'emulator label must be a non-empty string'). It is covered by a direct-parser test instead (tests/test_esde.py::TestParse::test_a_labelless_first_command_makes_a_one_entry_system).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command>%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -2144,6 +2245,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -2189,6 +2291,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
               "caveats": []
             },
@@ -2197,6 +2300,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -2242,6 +2346,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
               "caveats": []
             },
@@ -2250,6 +2355,62 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
+              "selection": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "catalogue-gamelist-selection-of-the-declared-first-changes-no-order",
+      "rationale": "The user's saved choice names the entry the layer already declared first, so promotion moves nothing: the order is the declared one and selection still says a user chose it. Read beside catalogue-gamelist-selection-promotes-default, where the promoted entry carries declared_index 1, this is what declared_index is for: entries[0] carries a selection in both answers, so selection alone cannot say whether the choice moved anything, and only the declared position tells the two apart.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>Mupen64Plus-Next</label>\n</alternativeEmulator>\n<gameList />\n",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "n64"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "n64",
+              "label": "Mupen64Plus-Next",
+              "kind": "libretro",
+              "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
+              "selection": "gamelist.xml: alternativeEmulator = \"Mupen64Plus-Next\"",
+              "caveats": []
+            },
+            {
+              "system": "n64",
+              "label": "ParaLLEl N64",
+              "kind": "libretro",
+              "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": []
             }
@@ -5817,6 +5978,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             },
@@ -5825,6 +5987,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": []
             }
@@ -5907,6 +6070,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
               "caveats": []
             },
@@ -5915,6 +6079,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -6005,6 +6170,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
               "caveats": []
             },
@@ -6013,6 +6179,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -6876,6 +7043,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -7636,6 +7804,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -8086,6 +8255,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": [
                 {
@@ -8104,6 +8274,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": [
                 {
@@ -8557,6 +8728,7 @@
               "label": "PPSSPP (Standalone)",
               "kind": "standalone",
               "core_so": null,
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             },
@@ -8565,6 +8737,7 @@
               "label": "PPSSPP",
               "kind": "libretro",
               "core_so": "ppsspp_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": []
             }
@@ -9400,6 +9573,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -9943,6 +10117,7 @@
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
               "caveats": []
             },
@@ -9951,6 +10126,7 @@
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -10109,6 +10285,7 @@
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
               "caveats": []
             },
@@ -10117,6 +10294,7 @@
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -10506,6 +10684,7 @@
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -10738,6 +10917,7 @@
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -10928,6 +11108,7 @@
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -10979,6 +11160,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             },
@@ -10987,6 +11169,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": []
             }
@@ -11054,6 +11237,7 @@
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
+              "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
               "caveats": []
             },
@@ -11062,6 +11246,7 @@
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             }
@@ -11284,6 +11469,7 @@
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
+              "declared_index": 0,
               "selection": null,
               "caveats": []
             },
@@ -11292,6 +11478,7 @@
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
+              "declared_index": 1,
               "selection": null,
               "caveats": []
             }
@@ -12801,6 +12988,7 @@
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
+            "declared_index": 0,
             "selection": null,
             "caveats": []
           },
@@ -13003,6 +13191,7 @@
             "label": "Azahar",
             "kind": "standalone",
             "core_so": null,
+            "declared_index": 0,
             "selection": null,
             "caveats": []
           },
@@ -13064,6 +13253,7 @@
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
+            "declared_index": 0,
             "selection": null,
             "caveats": []
           },
@@ -13131,6 +13321,7 @@
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
+            "declared_index": 0,
             "selection": null,
             "caveats": []
           },
@@ -13192,6 +13383,7 @@
             "label": "RPCS3",
             "kind": "standalone",
             "core_so": null,
+            "declared_index": 0,
             "selection": null,
             "caveats": []
           },
@@ -13249,6 +13441,7 @@
               "label": "mGBA",
               "kind": "libretro",
               "core_so": "mgba_libretro.so",
+              "declared_index": null,
               "selection": null,
               "caveats": []
             }

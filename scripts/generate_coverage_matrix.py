@@ -20,13 +20,15 @@ half now shows one column per question, filled from the card file that answers
 it, so a gap is generated rather than surveyed by hand.
 
 Usage: ``python scripts/generate_coverage_matrix.py [path-to-es_systems.xml]``
-(default: the RetroDECK Flatpak deployment's bundled file). Stdlib only —
-including ``xml.etree``: the input is a local, trusted config file, modern
-expat rejects entity-expansion attacks, and zero dependencies is a design
-contract (``atlas/esde.py`` documents the same reasoning). The package itself
-reaches expat through ``atlas/_xml.py`` instead, because a vendored copy has to
-run on runtimes that ship the parser without the wrapper package; a maintainer
-script runs here, on a full Python.
+(default: the RetroDECK Flatpak deployment's bundled file). Stdlib only, and
+the catalogue is read through ``atlas.esde.parse_es_systems`` rather than a
+parse of this module's own: ES-DE can keep fewer ``<command>`` elements than a
+system declares (a duplicate label is dropped, a label-less one ends the walk),
+so a second reader here would survey emulator coverage the frontend does not
+actually have. Reading through the package makes the survey and the answers it
+surveys one reading. The package reaches expat through ``atlas/_xml.py``, and
+parsing this local, trusted config with the stdlib rather than ``defusedxml``
+is the deliberate, documented choice ``atlas/esde.py`` sets out.
 """
 
 from __future__ import annotations
@@ -36,9 +38,10 @@ import json
 import re
 import string
 import sys
-import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
+
+from atlas.esde import parse_es_systems
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "atlas" / "data"
@@ -95,19 +98,32 @@ def core_short_name(command: str) -> str | None:
 
 
 def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
-    """Return ``(libretro, standalone)`` as ``{emulator_key: {systems}}``."""
+    """Return ``(libretro, standalone)`` as ``{emulator_key: {systems}}``.
+
+    The entries come from :func:`atlas.esde.parse_es_systems`, the resolver's
+    own reader, rather than a second ``findall("command")`` here. ES-DE does
+    not keep every element — a duplicate label is dropped and a label-less one
+    ends the walk — so a raw walk would credit an emulator with a system the
+    frontend would never launch it for, and the matrix would disagree with the
+    answers it is a survey of. Reading through the package also retires this
+    module's own XML parse; ``atlas`` is stdlib-only, so the note above holds.
+    """
     libretro: dict[str, set[str]] = defaultdict(set)
     standalone: dict[str, set[str]] = defaultdict(set)
-    root = ET.parse(es_systems_path).getroot()
-    for system_el in root.findall("system"):
-        name = (system_el.findtext("name") or "").strip()
-        for command_el in system_el.findall("command"):
-            command = (command_el.text or "").strip()
-            core = core_short_name(command)
+    layer = parse_es_systems(es_systems_path.read_text(encoding="utf-8"), provenance=str(es_systems_path))
+    # The resolver answers an unreadable layer with an empty catalogue and a
+    # caveat; a generator has no caveat to carry, and an empty matrix would
+    # publish "nothing is covered" as if it were surveyed. Fail instead — the
+    # stdlib parse this replaced raised here too.
+    if layer.invalid is not None:
+        raise ValueError(f"{es_systems_path}: {layer.invalid}")
+    for name, declaration in layer.systems.items():
+        for spec in declaration.entries:
+            core = core_short_name(spec.command)
             if core:
                 libretro[core].add(name)
                 continue
-            runner = _RUNNER_RE.search(command)
+            runner = _RUNNER_RE.search(spec.command)
             if runner and runner.group(1) != "RETROARCH":
                 standalone[runner.group(1).lower()].add(name)
     return dict(libretro), dict(standalone)

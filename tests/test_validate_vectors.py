@@ -174,6 +174,7 @@ def _emulator(**overrides) -> Vector:
         "label": "mGBA",
         "kind": "libretro",
         "core_so": CORE_SO,
+        "declared_index": 0,
         "selection": None,
         "caveats": [],
         **overrides,
@@ -791,6 +792,17 @@ ENTRY_CASES = [
          "unresolved data values must each be", id="entry-unresolved-tally-under-the-wrong-code"),
 ]
 
+# The pair this fixture uses: a bare RetroArch has no catalogue at all, so the
+# entries beside that code came from the installed cores instead (issue #133).
+# It is not the only pairing — the EmuDeck route derives for a system its
+# readable layers do not declare and pairs the same code with
+# `emulator-catalogue-sealed` (installations.py:17272-17282; corpus vector
+# emudeck-esde-sealed-is-not-declares-none).
+DERIVED_CAVEATS = [
+    {"code": "emulator-catalogue-unavailable", "data": {}},
+    {"code": "emulator-list-derived", "data": {"system": SYSTEM}},
+]
+
 CATALOGUE_CASES = [
     case(_vector({"catalogue": []}, installed=True, catalogue_query={"system": SYSTEM}),
          "expected.catalogue must be", id="catalogue-not-object"),
@@ -808,6 +820,21 @@ CATALOGUE_CASES = [
          "emulator system must be a non-empty string", id="emulator-empty-system"),
     case(_base_catalogue(caveats=[{"code": "emulator-catalogue-unreadable", "data": {}}]),
          "states entries and", id="catalogue-entries-and-unread"),
+    case(_base_catalogue(entries=[_emulator(declared_index="0")]),
+         "declared_index must be null or an integer", id="emulator-declared-index-type"),
+    case(_base_catalogue(entries=[_emulator(declared_index=-1)]),
+         "declared_index must be null or an integer", id="emulator-declared-index-negative"),
+    # The declared order the answer was permuted from has to be recoverable
+    # from the answer: a gap, a repeat or a missing position is a block
+    # somebody typed instead of running the resolver.
+    case(_base_catalogue(entries=[_emulator(declared_index=0), _emulator(declared_index=2)]),
+         "are not 0..1", id="catalogue-declared-index-gap"),
+    case(_base_catalogue(entries=[_emulator(declared_index=0), _emulator(declared_index=0)]),
+         "are not 0..1", id="catalogue-declared-index-repeat"),
+    case(_base_catalogue(entries=[_emulator(declared_index=None)]),
+         "states no declared_index", id="catalogue-declared-entry-without-a-position"),
+    case(_base_catalogue(entries=[_emulator()], caveats=DERIVED_CAVEATS),
+         "is derived and still states a declared_index", id="catalogue-derived-entry-with-a-position"),
 ]
 
 SYSTEMS_CASES = [
@@ -1348,6 +1375,13 @@ ACCEPTED_CASES = [
                  id="a-standalone-catalogue-entry"),
     pytest.param(_base_catalogue(entries=[], caveats=[{"code": "emulator-catalogue-unreadable", "data": {}}]),
                  id="an-empty-catalogue-that-says-why"),
+    pytest.param(_base_catalogue(entries=[_emulator(declared_index=1,
+                                                    selection='gamelist.xml: alternativeEmulator = "mGBA"'),
+                                          _emulator(declared_index=0, label="Gambatte",
+                                                    core_so="gambatte_libretro.so")]),
+                 id="a-promoted-entry-keeps-the-position-it-was-declared-at"),
+    pytest.param(_base_catalogue(entries=[_emulator(declared_index=None)], caveats=DERIVED_CAVEATS),
+                 id="a-derived-entry-no-layer-declared-a-position-for"),
     pytest.param(_vector({"installations": [{**INSTALLATION, "health": [FINDING]}]}),
                  id="an-installation-with-a-health-finding"),
 ]
