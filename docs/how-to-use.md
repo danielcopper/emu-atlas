@@ -2233,6 +2233,9 @@ Structured fields in these dicts are contractual; prose (`sources`, caveat messa
 aggregate answer has no serializer of its own — `installation_answers_contract` composes the label with whichever of
 these you asked for, so a labelled answer and a handle-route answer serialize identically.
 
+Per question, [the contract reference](contract-reference.md) is the generated field-by-field lookup for what comes
+back.
+
 ### Telling the shapes apart, including one you have never seen
 
 Everything below is about **one installation's answer** — what a `--installation` invocation prints whole, and what sits

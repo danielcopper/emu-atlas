@@ -42,6 +42,21 @@ and a test fails when the committed file no longer matches them:
 python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md
 ```
 
+## The generated contract reference
+
+`docs/contract-reference.md` is the per-question lookup table for what a serialized answer carries: its fields, their
+nullability, and which caveat code rides which question with which data keys. It is derived four ways — the annotations
+on the answer types, the vectors, an AST scan of the `Caveat(...)` and `Unresolved(...)` construction sites, and an AST
+scan of the serializers in `atlas/contract.py` — and it fails loudly rather than publishing a false claim: a field the
+annotations say cannot be `null` for which a vector produced `null` stops the generator. Regenerate after touching
+anything those four readings read, which is more than the obvious ones: an annotation, a `__post_init__` check, a
+module-level tuple, `atlas.__all__`, a class docstring and a serializer all move the page. A test fails when the
+committed page is not what the generator produces.
+
+```bash
+python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md
+```
+
 ## Commands
 
 ```bash
