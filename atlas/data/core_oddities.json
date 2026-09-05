@@ -2217,6 +2217,41 @@
         }
       }
     },
+    "mednafen_ngp": {
+      "identifiers": {
+        "library_name": [
+          "Beetle NeoPop"
+        ]
+      },
+      "saves": {
+        "modes": {
+          "always": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": null,
+                "files": [
+                  "<rom_stem>.flash"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          }
+        },
+        "anchors": {
+          "<rom_stem>.flash": {
+            "literal": "flash"
+          }
+        }
+      },
+      "provenance": {
+        "source": "beetle-ngp-libretro at 139fe34, the revision the shipped binary names in its library_version ('v1.29.0.0 139fe34'). retro_get_memory_data and retro_get_memory_size answer system RAM alone — CPUExRAM, 16384 bytes of it (libretro.c:780-781, :787-788) — while save RAM falls past both conditions to NULL and 0 (:782, :789), so RetroArch writes no .srm. The core writes the Neo Geo Pocket's flash memory itself, through one name-building function: MDFN_MakeFName joins the frontend's save directory, a slash, the content stem and a dot to the suffix its caller passes (libretro.c:796-816), and both of its callers pass the literal 'flash' — the read at mednafen/ngp/system.c:22 and the write at :40. The directory is RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, taken once in retro_init (libretro.c:417-418); the system directory stands in only where the frontend names none (:419-425) — never the case under RetroArch. The stem is libretro's canonical content name where the frontend offers RETRO_ENVIRONMENT_GET_GAME_INFO_EXT — info_ext->name, copied at load under the comment 'Use canonical content name for save files' (libretro.c:215-223) — and otherwise the content path's basename cut at its last dot (extract_basename, :146-164, called at :230-231). For content inside an archive that name is the frontend's choice between the archive's own basename and the inner file's, and RetroArch chooses the archive's (libretro-common/include/libretro.h:3534-3556), so a zipped ROM's save is named after the .zip rather than after the ROM in it.\n\nThe file is written once, at unload: retro_unload_game calls rom_unload (libretro.c:510-514), which calls flash_commit (mednafen/ngp/rom.c:81-87). flash_commit writes only what make_flash_commit returns, and that is NULL while no flash block was ever registered (mednafen/ngp/flash.c:261-271, :210-218) — an untouched game leaves no file. That is the whole route into the writer: system_io_flash_write's only caller is flash_commit (flash.c:269), whose only caller is rom_unload (rom.c:87), whose only caller is retro_unload_game (libretro.c:514). make_flash_commit's second caller, FLASH_StateAction (system.c:54-106), serializes the same blocks into a savestate and opens no file — its only I/O is MDFNSS_StateAction, at :72 and :92. An existing file is read back at load — rom_loaded calls flash_read (rom.c:56-78), which is silent where no file exists yet (flash.c:165-166) and refuses one whose header id is wrong (:169-170). The core registers one option, 'ngp_language' (libretro_core_options.h:31-43, the whole array), which chooses the language games display text in and moves no file — one mode.",
+        "status": {
+          "always": "[V-live] A content-keyed .flash was observed in the standard save directory on a RetroDECK arrangement (2026-07-23, the audit's observation). The derivation is read from source at 139fe34, the revision the binary names, and bound to that binary by the whole literal 'flash'."
+        }
+      }
+    },
     "prboom": {
       "identifiers": {
         "library_name": [

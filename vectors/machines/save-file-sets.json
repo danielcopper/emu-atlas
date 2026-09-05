@@ -2899,6 +2899,148 @@
       }
     },
     {
+      "name": "a-pocket-handheld-whose-core-writes-its-flash-into-the-standard-save-directory",
+      "rationale": "Beetle NeoPop answers no save id beyond system RAM, so RetroArch writes no .srm, and the core writes the Neo Geo Pocket's flash memory itself as <rom_stem>.flash in the frontend's save directory. Where the record answered a declared set of no files plus core-own-writes-unestablished, the card names the file — and because the fixture runs the arrangement and core versions the audit verified against, the answer carries no caveat at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ngp</name><path>%ROMPATH%/ngp</path>\n    <command label=\"Beetle NeoPop\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_ngp_libretro.so %ROM%</command>\n  </system>\n  <system><name>ngpc</name><path>%ROMPATH%/ngpc</path>\n    <command label=\"Beetle NeoPop\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_ngp_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ngp/Pocket Falcon Rally (World).ngp": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_ngp_libretro.so": {
+            "library_name": "Beetle NeoPop",
+            "library_version": "v1.29.0.0 139fe34"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "ngp",
+          "label": "Beetle NeoPop",
+          "content_path": "/mnt/sd/retrodeck/roms/ngp/Pocket Falcon Rally (World).ngp"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pocket Falcon Rally (World).flash"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pocket Falcon Rally (World).flash"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "the-colour-model-the-same-core-serves-answers-by-the-same-flash-rule",
+      "rationale": "One core serves both Neo Geo Pocket systems, and a rule card is keyed by core rather than by system: asking through the colour model's catalogue entry answers by the same rule, with one file named after that content's own stem. The pair is what keeps the card from being read as a claim about ngp alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ngp</name><path>%ROMPATH%/ngp</path>\n    <command label=\"Beetle NeoPop\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_ngp_libretro.so %ROM%</command>\n  </system>\n  <system><name>ngpc</name><path>%ROMPATH%/ngpc</path>\n    <command label=\"Beetle NeoPop\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_ngp_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ngpc/Neon Kite Legends (World).ngc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_ngp_libretro.so": {
+            "library_name": "Beetle NeoPop",
+            "library_version": "v1.29.0.0 139fe34"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "ngpc",
+          "label": "Beetle NeoPop",
+          "content_path": "/mnt/sd/retrodeck/roms/ngpc/Neon Kite Legends (World).ngc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Neon Kite Legends (World).flash"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Neon Kite Legends (World).flash"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "four-files-for-one-game-and-one-of-them-shares-the-frontends-name",
       "rationale": "Geolith writes four files of its own per game — the board's NVRAM, the cartridge RAM, a memory card and the CD backup RAM — into the frontend's own save directory. Three roles across four names, so a client can tell the memory card from the rest. The second name is why this is a card and not a record: for CD content the core also fills the save-RAM id, so RetroArch writes <rom_stem>.srm onto the same path the core writes at unload. Every other two-writer case read so far kept the two apart by name. The answer states the set either way, because the names are the core's and it writes them for cartridge content too.",
       "input": {
