@@ -307,11 +307,24 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
     covered or named below, never silently neither.
     """
 
-    # The one exception, and why it is one: detection triggers on the marker,
-    # so a machine without one has no installation for a vector to ask. It is
-    # covered by a direct-handle test instead
+    # Two exceptions, each with the test that reaches the state behind it.
+    # Detection triggers on the marker, so a machine without one has no
+    # installation for a vector to ask at all; it is covered by a direct-handle
+    # test instead
     # (tests/test_installations.py::TestAMarkerThatIsGoneIsStatedNotDetected).
-    UNREACHABLE_BY_FIXTURE = {"marker-missing"}
+    # 'filenames-unverified' rides on mode.files being None — the mode's
+    # PRIMARY NAMED group carrying no 'files' — which is a different shape
+    # from a group that states none at all: the nineteen shipped groups
+    # without a list carry 'unnamed', which is never a mode's primary named
+    # group, and their caveat is 'file-names-unestablished'. Since issue #387
+    # gave the opera card one mode per (storage, version) pair, no shipped
+    # card leaves a named group's list unverified, so no fixture machine can
+    # reach the construction site; the loader still accepts the shape and the
+    # resolver still says so. The test that holds it is
+    # tests/test_oddities.py::TestAModeWhosePrimaryGroupDeclaresNoFiles. The
+    # sibling test below asserts the moment a vector covers either one, and a
+    # human then removes its entry.
+    UNREACHABLE_BY_FIXTURE = {"marker-missing", "filenames-unverified"}
 
     def _exported_codes(self) -> set[str]:
         families = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")

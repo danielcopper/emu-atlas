@@ -159,7 +159,10 @@ def _retrodeck(files, **kwargs):
 FLYCAST_REGISTERED = {
     "reicast_per_content_vmus": {"default": "disabled", "values": ["disabled", "VMU A1", "All VMUs"]}
 }
-OPERA_REGISTERED = {"opera_nvram_storage": {"default": "per game", "values": ["per game", "shared"]}}
+OPERA_REGISTERED = {
+    "opera_nvram_storage": {"default": "per game", "values": ["per game", "shared"]},
+    "opera_nvram_version": {"default": "0", "values": [str(v) for v in range(10)]},
+}
 FLYCAST_CORE = {"library_name": "Flycast", "options": FLYCAST_REGISTERED}
 OPERA_CORE = {"library_name": "Opera", "options": OPERA_REGISTERED}
 
@@ -1504,7 +1507,12 @@ class TestOperaCard:
         assert p.root_kind == atlas.ROOT_SAVEFILE_DIRECTORY
         assert p.granularity is not None
         assert p.granularity.value == GRANULARITY_PER_GAME_FILE
-        assert ("shared", (GRANULARITY_SHARED_CARD,)) in [(a.mode, a.values) for a in p.granularity.alternatives]
+        alternatives = [(a.mode, a.values) for a in p.granularity.alternatives]
+        # The one-edit neighbours: the other storage at this version, and
+        # each other version at this one.
+        assert ("shared-0", (GRANULARITY_SHARED_CARD,)) in alternatives
+        assert ("per-game-7", (GRANULARITY_PER_GAME_FILE,)) in alternatives
+        assert len(alternatives) == 10
 
     def test_shared_mode_switches_subdir(self):
         p = self._query({OPTIONS_CFG: 'opera_nvram_storage = "shared"\n'})
@@ -1521,10 +1529,92 @@ class TestOperaCard:
         p = self._query({"/mnt/sd/retrodeck/saves/3do/.keep": ""}, cfg=cfg)
         assert p.dir == "/mnt/sd/retrodeck/saves/3do/opera/per_game"
 
-    def test_version_parameterized_files_are_observed_not_declared(self):
+    def test_the_version_in_the_name_is_the_modes_own(self):
+        # One mode per (storage, version) pair, so the number in the name is
+        # the mode's rather than a hole no declared list can carry — the set
+        # is a statement either way, and observation only confirms it here.
         p = self._query({"/mnt/sd/retrodeck/saves/opera/per_game/Game.0.srm": "nv"})
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Game.0.srm",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "per-game-0"
+        assert not [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED]
+
+    def test_a_non_default_version_names_its_own_file(self):
+        p = self._query({OPTIONS_CFG: 'opera_nvram_version = "4"\n'})
+        assert p.dir == "/mnt/sd/retrodeck/saves/opera/per_game"
+        assert p.file_set.state == "declared"
+        assert p.file_set.files == ("Game.4.srm",)
+        assert p.granularity is not None
+        assert p.granularity.mode == "per-game-4"
+
+
+class TestAModeWhosePrimaryGroupDeclaresNoFiles:
+    """The card shape ``filenames-unverified`` exists for, and no shipped card still has.
+
+    The caveat rides on ``mode.files is None``, which is the *primary named*
+    group carrying no ``files`` — not on a group that states none at all. The
+    nineteen shipped groups without a list carry ``unnamed``, which is never a
+    mode's primary named group, and their caveat is
+    ``file-names-unestablished``. Since issue #387 gave the opera card one mode
+    per (storage, version) pair, nothing in ``core_oddities.json`` has the
+    shape below, so no fixture machine can reach the construction site and this
+    is the test that holds it
+    (tests/test_machine_vectors.py::TestEveryCodeTheCorpusCanShowIsInTheCorpus).
+    """
+
+    def _card(self, files):
+        return load_oddities(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "cores": {
+                        "x": {
+                            "identifiers": {"library_name": ["X"]},
+                            "saves": {
+                                "modes": {
+                                    MODE_ALWAYS: {
+                                        "root": "savefile_directory",
+                                        "groups": [
+                                            {
+                                                "subdir": "x",
+                                                "files": files,
+                                                "granularity": GRANULARITY_PER_GAME_FILE,
+                                                "role": "battery",
+                                            }
+                                        ],
+                                    }
+                                },
+                                "anchors": {
+                                    name: {"literal": name}
+                                    for name in ("x", *(files or ()))
+                                },
+                            },
+                        }
+                    },
+                }
+            )
+        )[0]
+
+    def test_the_caveat_names_the_core_and_the_mode(self):
+        from atlas.installations import _file_set_caveats  # pyright: ignore[reportPrivateUsage]
+
+        card = self._card(None)
+        mode = card.modes[MODE_ALWAYS]
+        assert mode.files is None
+        caveats = _file_set_caveats(card, mode, mode_value=MODE_ALWAYS, rom_stem="Game")
+        assert [c.code for c in caveats] == [atlas.CAVEAT_FILENAMES_UNVERIFIED]
+        assert caveats[0].data == {"core": "x", "mode": MODE_ALWAYS}
+
+    def test_a_declared_list_says_nothing_at_all(self):
+        # The trigger is the missing list, not the shape around it: the same
+        # card with names on the same group produces no caveat here.
+        from atlas.installations import _file_set_caveats  # pyright: ignore[reportPrivateUsage]
+
+        card = self._card(["x.sav"])
+        mode = card.modes[MODE_ALWAYS]
+        assert mode.files == ("x.sav",)
+        assert _file_set_caveats(card, mode, mode_value=MODE_ALWAYS, rom_stem="Game") == ()
 
 
 class TestAuditVerdictCaveats:

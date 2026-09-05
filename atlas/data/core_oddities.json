@@ -2053,27 +2053,268 @@
         ]
       },
       "saves": {
-        "governing_option": {
-          "key": "opera_nvram_storage"
+        "governing_rule": {
+          "options": [
+            "opera_nvram_storage",
+            "opera_nvram_version"
+          ]
         },
         "modes": {
-          "per game": {
+          "per-game-0": {
             "root": "savefile_directory",
             "groups": [
               {
                 "subdir": "opera/per_game",
-                "files": null,
+                "files": [
+                  "<rom_stem>.0.srm"
+                ],
                 "granularity": "per-game-file",
                 "role": "battery"
               }
             ]
           },
-          "shared": {
+          "per-game-1": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.1.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-2": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.2.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-3": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.3.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-4": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.4.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-5": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.5.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-6": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.6.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-7": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.7.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-8": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.8.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "per-game-9": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/per_game",
+                "files": [
+                  "<rom_stem>.9.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-0": {
             "root": "savefile_directory",
             "groups": [
               {
                 "subdir": "opera/shared",
-                "files": null,
+                "files": [
+                  "nvram.0.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-1": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.1.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-2": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.2.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-3": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.3.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-4": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.4.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-5": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.5.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-6": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.6.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-7": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.7.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-8": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.8.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "shared-9": {
+            "root": "savefile_directory",
+            "groups": [
+              {
+                "subdir": "opera/shared",
+                "files": [
+                  "nvram.9.srm"
+                ],
                 "granularity": "shared-card",
                 "role": "battery"
               }
@@ -2084,6 +2325,9 @@
           "opera_nvram_storage": {
             "literal": "opera_nvram_storage"
           },
+          "opera_nvram_version": {
+            "literal": "opera_nvram_version"
+          },
           "opera": {
             "literal": "opera"
           },
@@ -2092,14 +2336,92 @@
           },
           "shared": {
             "literal": "shared"
+          },
+          "<rom_stem>.0.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.1.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.2.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.3.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.4.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.5.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.6.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.7.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.8.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "<rom_stem>.9.srm": {
+            "literal": "%s.%u.srm"
+          },
+          "nvram.0.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.1.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.2.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.3.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.4.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.5.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.6.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.7.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.8.srm": {
+            "literal": "nvram.%u.srm"
+          },
+          "nvram.9.srm": {
+            "literal": "nvram.%u.srm"
           }
         }
       },
       "provenance": {
-        "source": "opera-libretro @ 67a29e6, the revision the shipped binary names in its library_version: NVRAM is written to '<save_dir>/opera/per_game/<rom_stem>.<version>.srm' (opera_lr_nvram.c:130-152) or '<save_dir>/opera/shared/nvram.<version>.srm' (:154-175); <version> comes from opera_nvram_version (libretro_core_options.c:188-206), which is why per-mode file lists are omitted rather than declared — the option's values are read from the core, not recorded here. The 'opera' directory is joined onto the save directory the frontend gives (:115-128), which falls back to the system directory only when the frontend provides none (:102-113) — never the case under RetroArch. RETRO_MEMORY_SAVE_RAM returns NULL (libretro.c:430-444), so these files are the ONLY persistence; no RetroArch-side .srm exists. Legacy locations are tried at load only, in order: the per_game/shared file, then '<save_dir>/<rom_stem>.srm' and '<system_dir>/<rom_stem>.srm' for a per-game load (opera_lr_nvram.c:177-217, :243-265), or '<save_dir>/3DO.nvram' and '<system_dir>/3DO.nvram' for a shared one (:267-303, :328-349, name at :17).",
+        "source": "opera-libretro @ 67a29e6, the revision the shipped binary names in its library_version ('1.0.0 67a29e6'). RETRO_MEMORY_SAVE_RAM answers NULL and size 0 (libretro.c:430-444, :446-460), so RetroArch writes no .srm and these NVRAM files are the whole save.\n\nThe core writes one file, and its name carries two option values, which is why the modes are the product of two switches rather than the values of one. get_opera_path joins the frontend's save directory with 'opera' (opera_lr_nvram.c:115-128) — the save directory from GET_SAVE_DIRECTORY (get_save_path, :70-84), the system directory standing in only where the frontend names none (get_save_or_system_path, :102-113) — never the case under RetroArch: its environment callback answers that case by handing over runloop_st->savefile_dir and breaking (runloop.c:2001-2005 at a79435a), so it returns true (:3792) and the pointer is an array member of the runloop state (runloop.h:298) and never NULL, which fails both halves of the core's guard (opera_lr_nvram.c:78). opera_lr_nvram_save then branches on the storage switch: shared, or a NULL game path, writes '<opera>/shared/nvram.<version>.srm' (opera_lr_nvram_save_shared, :154-175, the name built at :168-170); per game writes '<opera>/per_game/<stem>.<version>.srm' (opera_lr_nvram_save_pergame, :130-152, the name at :145-147), the stem being the content path's basename with its extension removed (:369-374). <version> is opera_nvram_version, read as an integer and formatted into the name (opera_lr_opts.c:346-351, getval_as_int at :73-85, the 'opera_' prefix added to every key at :53-71); the storage is opera_nvram_storage compared against 'shared' (:330-337). The core's own fallback where the frontend answers nothing is 'shared' rather than the registered default (the third argument of getval_is_str, :101-114). For an option this core registers RetroArch does not reach it: GET_VARIABLE is answered out of the option manager built from the core's own registration (runloop.c:1442-1445 at a79435a). It does answer NULL for a key the manager does not hold, and before any options exist at all (:1447-1452, :1429-1433), so that fallback belongs to a build that stopped registering the switch rather than to this one.\n\nBoth switches are registered — opera_nvram_storage with 'per game' and 'shared', default 'per game'; opera_nvram_version with '0' through '9', default '0' (libretro_core_options.c:177-187, :188-206) — so the file each configuration writes is the closed product of two known value sets: twenty modes, one per (storage, version) pair, each naming its one file literally. The alternative would have been a mode per storage with the version left as a hole in the name, and the file-name vocabulary has no such hole: its two tokens are filled from the content, not from a core option. Enumerating the product is what lets all twenty names be stated facts instead of templates atlas cannot fill.\n\nThe file is written at unload (retro_unload_game, libretro.c:379-392) and at reset (:497-515), and read at load (:364-366) and again after a reset (:512-514). The name's stem comes from g_GAME_INFO_PATH, the path the frontend passed, saved at load (game_info_path_save, :323-335, called at :350). The core sets need_fullpath (:187), so for content inside an archive RetroArch extracts the matching member to a temporary directory and hands the core that path (tasks/task_content.c:1487-1495, content_file_extract_from_archive at :1226-1272), and the extracted file carries the member's own basename (libretro-common/file/archive_file.c:111-116, at RetroArch a79435a) — so a zipped game's per-game NVRAM is named after the file inside the archive, not after the .zip the question names.\n\nLegacy locations are read and never written, which is why no mode claims a closed candidate universe: a per-game load tries the opera directory first, then '<save_dir>/<stem>.srm' and '<system_dir>/<stem>.srm' (opera_lr_nvram_load_pergame, :243-265, the two spellings at :177-196 and :198-217); a shared load tries the opera directory first, then '<save_dir>/3DO.nvram' and '<system_dir>/3DO.nvram' (:328-349, the two at :267-284 and :286-303, the name at :17). A machine carried over from an older Opera can still be holding one of those beside the declared file.",
         "status": {
-          "per game": "paths verified from source; file names are opera_nvram_version-parameterized and therefore not declared; not yet live-observed",
-          "shared": "paths verified from source; not yet live-observed"
+          "per-game-0": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '0'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-1": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '1'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-2": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '2'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-3": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '3'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-4": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '4'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-5": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '5'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-6": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '6'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-7": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '7'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-8": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '8'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "per-game-9": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'per_game' and '%s.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '9'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-0": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '0'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-1": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '1'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-2": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '2'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-3": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '3'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-4": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '4'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-5": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '5'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-6": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '6'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-7": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '7'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-8": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '8'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed.",
+          "shared-9": "[D] Derived from source at 67a29e6 and bound to the shipped binary by the whole strings 'opera', 'shared' and 'nvram.%u.srm'; the version in the name is this mode's own opera_nvram_version value, '9'. No 3DO content and no opera save tree exist on the reference machine, so no mode of this card has been live-observed."
         }
       }
     },

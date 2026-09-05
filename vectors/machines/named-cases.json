@@ -2953,7 +2953,7 @@
     },
     {
       "name": "opera-nvram-subdir-unanswered-when-no-mode-is-established",
-      "rationale": "3DO NVRAM (rule card 'opera') on a core the probe could not read: it loaded and answered, but registered no options this probe captured, so it declared no default for opera_nvram_storage. The opera card records none either — a default is written down only for a core that registers none, and this one normally does. With no options file on the machine, nothing states which mode is in force, so the card cannot pick between opera/per_game and opera/shared and steps aside rather than nesting a subdirectory on the strength of nothing. core-option-value-unestablished says which half is missing; the version comparison still runs and still reports that this card was never verified on any arrangement. The per_game answer this machine used to give lives on in opera-nvram-subdir-from-the-cores-own-default, where the core states its default.",
+      "rationale": "3DO NVRAM (rule card 'opera') on a core the probe could not read: it loaded and answered, but registered no options this probe captured, so it declared a default for neither switch the card's rule reads. The card records neither either — a default is written down only for a core that registers none, and this one normally does. With no options file on the machine nothing states the storage or the version, so the rule cannot name one of the twenty modes and steps aside rather than nesting a subdirectory on the strength of nothing. One core-option-value-unestablished per unread switch says which; the version comparison still runs and still reports that this card was never verified on any arrangement. Read the core's registration on this same machine and it answers mode per-game-0 in saves/opera/per_game, observing the 'Road Rash (USA).0.srm' it already carries — an observed set with no groups, which is a different answer from the declared one a machine without that file gives.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3011,6 +3011,13 @@
                 "core": "opera",
                 "option_key": "opera_nvram_storage"
               }
+            },
+            {
+              "code": "core-option-value-unestablished",
+              "data": {
+                "core": "opera",
+                "option_key": "opera_nvram_version"
+              }
             }
           ],
           "granularity": null
@@ -3018,8 +3025,8 @@
       }
     },
     {
-      "name": "opera-nvram-subdir-from-the-cores-own-default",
-      "rationale": "The same 3DO machine with the core read as the shipped binary really answers: opera registers opera_nvram_storage and declares 'per game' as its default. No options file states a value, so that live default governs — a machine fact, not a recorded one — and the core nests opera/per_game under the effective save directory it receives from GET_SAVE_DIRECTORY (runloop.c:2001/8977). The file name carries the opera_nvram_version option, so the set is observed, never declared. The card was never live-verified on any arrangement, and the answer says so. This is the guarantee opera-nvram-subdir-unanswered-when-no-mode-is-established held while the card still carried a copy of the default.",
+      "name": "opera-card-retires-when-the-core-registers-one-of-its-two-switches",
+      "rationale": "The same 3DO machine with a core that registers opera_nvram_storage and not opera_nvram_version. A rule card declares every option its rule reads, and feature detection is the plural of the single-option check: one missing switch means the rule would be reading something this core does not have, so the card retires as a generation mismatch naming the switch it could not find. The stale per_game file on disk is left where it is — the card is not applied, so nothing observes under its names. This machine used to answer with the subdirectory, back when the card read the storage switch alone.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3060,64 +3067,35 @@
           }
         ],
         "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+          "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
           "needs": [],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "observed",
-            "files": [
-              "Road Rash (USA).0.srm"
-            ],
+            "state": "unknown",
+            "files": [],
             "complete": false,
             "groups": []
           },
           "caveats": [
             {
-              "code": "unverified-version",
+              "code": "core-generation-mismatch",
               "data": {
                 "core": "opera",
-                "arrangement": "retrodeck",
-                "verification": "never-verified"
-              }
-            },
-            {
-              "code": "filenames-unverified",
-              "data": {
-                "core": "opera",
-                "mode": "per game"
+                "options": [
+                  "opera_nvram_version"
+                ]
               }
             }
           ],
-          "granularity": {
-            "value": "per-game-file",
-            "mode": "per game",
-            "readings": [
-              {
-                "key": "opera_nvram_storage",
-                "value": "per game",
-                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
-              }
-            ],
-            "alternatives": [
-              {
-                "mode": "shared",
-                "options": {
-                  "opera_nvram_storage": "shared"
-                },
-                "values": [
-                  "shared-card"
-                ]
-              }
-            ]
-          }
+          "granularity": null
         }
       }
     },
     {
-      "name": "opera-shared-nvram-subdir",
-      "rationale": "The same core with opera_nvram_storage = shared switches to opera/shared with one card for every game — granularity and directory flip on one live-read option.",
+      "name": "opera-shared-nvram-unanswered-when-only-the-storage-switch-is-read",
+      "rationale": "The options file states opera_nvram_storage = shared and the probe captured no core options, so the version switch is stated nowhere. Half a reading is not a mode: the file name carries the version, so the rule refuses rather than naming opera/shared on the strength of the switch it did read. Exactly one core-option-value-unestablished rides, and it names the version — the switch that was read is not reported as missing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3152,7 +3130,7 @@
           }
         ],
         "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+          "dir": "/mnt/sd/retrodeck/saves",
           "root_kind": "savefile_directory",
           "needs": [],
           "fallback_dir": null,
@@ -3173,28 +3151,210 @@
               }
             },
             {
-              "code": "filenames-unverified",
+              "code": "core-option-value-unestablished",
               "data": {
                 "core": "opera",
-                "mode": "shared"
+                "option_key": "opera_nvram_version"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "opera-per-game-nvram-named-from-the-cores-own-defaults",
+      "rationale": "The shipped Opera binary as the probe really reads it: both save switches registered, opera_nvram_storage defaulting to 'per game' and opera_nvram_version to '0'. No options file states either, so those live defaults govern — machine facts, not recorded ones — and the rule names mode per-game-0. The name the core writes is then a stated fact rather than a template: <stem>.0.srm under opera/per_game, declared because nothing of that name is on the machine yet. The alternatives are the one-edit neighbours, the other storage at this version and each other version at this storage.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera",
+            "options": {
+              "opera_nvram_storage": {
+                "default": "per game",
+                "values": [
+                  "per game",
+                  "shared"
+                ]
+              },
+              "opera_nvram_version": {
+                "default": "0",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Road Rash (USA).0.srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+                "files": [
+                  "Road Rash (USA).0.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
               }
             }
           ],
           "granularity": {
-            "value": "shared-card",
-            "mode": "shared",
+            "value": "per-game-file",
+            "mode": "per-game-0",
             "readings": [
               {
                 "key": "opera_nvram_storage",
-                "value": "shared",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "opera_nvram_version",
+                "value": "0",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": [
               {
-                "mode": "per game",
+                "mode": "shared-0",
                 "options": {
-                  "opera_nvram_storage": "per game"
+                  "opera_nvram_storage": "shared"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "per-game-1",
+                "options": {
+                  "opera_nvram_version": "1"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-2",
+                "options": {
+                  "opera_nvram_version": "2"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-3",
+                "options": {
+                  "opera_nvram_version": "3"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-4",
+                "options": {
+                  "opera_nvram_version": "4"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-5",
+                "options": {
+                  "opera_nvram_version": "5"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-6",
+                "options": {
+                  "opera_nvram_version": "6"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-7",
+                "options": {
+                  "opera_nvram_version": "7"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-8",
+                "options": {
+                  "opera_nvram_version": "8"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-9",
+                "options": {
+                  "opera_nvram_version": "9"
                 },
                 "values": [
                   "per-game-file"
@@ -3202,6 +3362,484 @@
               }
             ]
           }
+        }
+      }
+    },
+    {
+      "name": "opera-shared-nvram-named-at-the-default-version",
+      "rationale": "The same read core with opera_nvram_storage = shared in the options file: the directory becomes opera/shared, the granularity one card for every game, and the version still comes from the core's own default — so the mode is shared-0 and the declared file is nvram.0.srm, a name with no content in it at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"shared\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera",
+            "options": {
+              "opera_nvram_storage": {
+                "default": "per game",
+                "values": [
+                  "per game",
+                  "shared"
+                ]
+              },
+              "opera_nvram_version": {
+                "default": "0",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "nvram.0.srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+                "files": [
+                  "nvram.0.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "shared-0",
+            "readings": [
+              {
+                "key": "opera_nvram_storage",
+                "value": "shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "opera_nvram_version",
+                "value": "0",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "per-game-0",
+                "options": {
+                  "opera_nvram_storage": "per game"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "shared-1",
+                "options": {
+                  "opera_nvram_version": "1"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-2",
+                "options": {
+                  "opera_nvram_version": "2"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-3",
+                "options": {
+                  "opera_nvram_version": "3"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-4",
+                "options": {
+                  "opera_nvram_version": "4"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-5",
+                "options": {
+                  "opera_nvram_version": "5"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-6",
+                "options": {
+                  "opera_nvram_version": "6"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-7",
+                "options": {
+                  "opera_nvram_version": "7"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-8",
+                "options": {
+                  "opera_nvram_version": "8"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-9",
+                "options": {
+                  "opera_nvram_version": "9"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "opera-per-game-nvram-at-a-version-the-options-file-states",
+      "rationale": "opera_nvram_version = 7 in the options file, storage left at the core's own default: the directory does not move and the file name does. Mode per-game-7 declares <stem>.7.srm, which is what the twenty modes exist to make sayable — the old card had no vocabulary for the number and had to leave the whole set unknown.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_version = \"7\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera",
+            "options": {
+              "opera_nvram_storage": {
+                "default": "per game",
+                "values": [
+                  "per game",
+                  "shared"
+                ]
+              },
+              "opera_nvram_version": {
+                "default": "0",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Road Rash (USA).7.srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/opera/per_game",
+                "files": [
+                  "Road Rash (USA).7.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "per-game-7",
+            "readings": [
+              {
+                "key": "opera_nvram_storage",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "opera_nvram_version",
+                "value": "7",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "shared-7",
+                "options": {
+                  "opera_nvram_storage": "shared"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "per-game-0",
+                "options": {
+                  "opera_nvram_version": "0"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-1",
+                "options": {
+                  "opera_nvram_version": "1"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-2",
+                "options": {
+                  "opera_nvram_version": "2"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-3",
+                "options": {
+                  "opera_nvram_version": "3"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-4",
+                "options": {
+                  "opera_nvram_version": "4"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-5",
+                "options": {
+                  "opera_nvram_version": "5"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-6",
+                "options": {
+                  "opera_nvram_version": "6"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-8",
+                "options": {
+                  "opera_nvram_version": "8"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "per-game-9",
+                "options": {
+                  "opera_nvram_version": "9"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "opera-nvram-version-outside-the-registered-set-retires-the-card",
+      "rationale": "An options file naming opera_nvram_version = 12 on a core whose registration this probe did not capture. With no registered set to normalize against, the value reaches the rule as it stands, and 12 is outside the ten versions the record covers: the card cannot say which file that configuration writes, so it retires as a generation mismatch naming the switch and the value rather than rounding to a mode it did not establish. The storage switch, read and recognized, is not reported as a problem.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"per game\"\nopera_nvram_version = \"12\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/opera_libretro.so": {
+            "library_name": "Opera"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd",
+          "core_so": "opera_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "opera",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-generation-mismatch",
+              "data": {
+                "core": "opera",
+                "option_key": "opera_nvram_version",
+                "value": "12"
+              }
+            }
+          ],
+          "granularity": null
         }
       }
     },
@@ -3727,13 +4365,13 @@
     },
     {
       "name": "retrodeck-sandbox-options-path-governs-card",
-      "rationale": "core_options_path in the sandbox's spelling of the app config directory. The rule card's governing option is read from the file RetroArch would read, so the resolved granularity is shared-card; without the translation the file is invisible and the core default would stand in.",
+      "rationale": "core_options_path in the sandbox's spelling of the app config directory. Both switches the rule card reads are taken from the file RetroArch would read, so the mode is shared-3 and the declared file is nvram.3.srm; without the translation the file is invisible, the core registered nothing this probe captured, and the card would step aside with nothing to read.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\ncore_options_path = \"/var/config/retroarch/opts.cfg\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": "opera_nvram_storage = \"shared\"",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": "opera_nvram_storage = \"shared\"\nopera_nvram_version = \"3\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
           "/mnt/sd/retrodeck/saves/.keep": ""
         },
@@ -3766,10 +4404,21 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
-            "files": [],
+            "state": "declared",
+            "files": [
+              "nvram.3.srm"
+            ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/opera/shared",
+                "files": [
+                  "nvram.3.srm"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
@@ -3779,33 +4428,112 @@
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
               }
-            },
-            {
-              "code": "filenames-unverified",
-              "data": {
-                "core": "opera",
-                "mode": "shared"
-              }
             }
           ],
           "granularity": {
             "value": "shared-card",
-            "mode": "shared",
+            "mode": "shared-3",
             "readings": [
               {
                 "key": "opera_nvram_storage",
                 "value": "shared",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg"
+              },
+              {
+                "key": "opera_nvram_version",
+                "value": "3",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg"
               }
             ],
             "alternatives": [
               {
-                "mode": "per game",
+                "mode": "per-game-3",
                 "options": {
                   "opera_nvram_storage": "per game"
                 },
                 "values": [
                   "per-game-file"
+                ]
+              },
+              {
+                "mode": "shared-0",
+                "options": {
+                  "opera_nvram_version": "0"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-1",
+                "options": {
+                  "opera_nvram_version": "1"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-2",
+                "options": {
+                  "opera_nvram_version": "2"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-4",
+                "options": {
+                  "opera_nvram_version": "4"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-5",
+                "options": {
+                  "opera_nvram_version": "5"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-6",
+                "options": {
+                  "opera_nvram_version": "6"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-7",
+                "options": {
+                  "opera_nvram_version": "7"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-8",
+                "options": {
+                  "opera_nvram_version": "8"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "shared-9",
+                "options": {
+                  "opera_nvram_version": "9"
+                },
+                "values": [
+                  "shared-card"
                 ]
               }
             ]
