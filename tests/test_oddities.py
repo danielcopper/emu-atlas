@@ -4067,6 +4067,13 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("prboom", "prbmsav5.dsg", "unprotected"),
             ("prboom", "prbmsav6.dsg", "unprotected"),
             ("prboom", "prbmsav7.dsg", "unprotected"),
+            # Both PUAE generations gzip their floppy write file at close, and
+            # the '.gz' is appended at run time to a path the '_save.adf'
+            # literal already ends: no field of either binary carries the
+            # finished name, and the half that can be pinned is pinned on the
+            # plain spelling beside it.
+            ("puae", "<rom_stem>_save.adf.gz", "unprotected"),
+            ("puae2021", "<rom_stem>_save.adf.gz", "unprotected"),
             # quasi88's diff is named after the opened disk image's stem at run
             # time, composed from the whole format '%s%c%s.srm'. The in-place
             # mode no longer records a name: the save is the content file

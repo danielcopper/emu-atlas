@@ -557,6 +557,15 @@ REASON_VIRTUAL_SD_DISABLED = "virtual-sd-disabled"
 # (``extension`` carries the one seen).
 REASON_CONTENT_CLASS_UNNAMED = "content-class-unnamed"
 REASON_CONTENT_CLASS_UNRECORDED = "content-class-unrecorded"
+# Which machine the core emulates decides part of the save story, and here it is
+# either outside the card's modes or not decided at all: PUAE keeps a
+# non-volatile memory file for the CDTV, CD32 and CD32FR models alone, so a
+# floppy run on one of them has a save the floppy modes do not state; and a CD
+# run with the model on 'auto' beside a boot hard drive takes its model from a
+# marker in the content's own launch path where one matches and from the
+# hard-disk model otherwise, neither of which this answer reads. ``model``
+# carries the configured value the reading saw.
+REASON_EMULATED_MODEL_UNRECORDED = "emulated-model-unrecorded"
 # ScummVM's own save directory: its ini could not be read, or the path it sets
 # has no host spelling (``path`` carries the configured value).
 REASON_SAVEPATH_CONFIG_UNREADABLE = "savepath-config-unreadable"
@@ -595,6 +604,7 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_VIRTUAL_SD_DISABLED,
     REASON_CONTENT_CLASS_UNNAMED,
     REASON_CONTENT_CLASS_UNRECORDED,
+    REASON_EMULATED_MODEL_UNRECORDED,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,
     REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES,
