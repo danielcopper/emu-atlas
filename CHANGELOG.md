@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.12.0](https://github.com/danielcopper/emu-atlas/compare/v0.11.0...v0.12.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **catalogue:** every catalogue entry gains one key, `declared_index`, a JSON integer or null, and on some layers the entry list itself gets shorter — mirroring ES-DE's walk means a duplicate-labelled command and everything after a label-less one are no longer stated as entries at all. No shipped catalogue is such a layer, so no answer on a stock machine moves, but a hand-written `custom_systems` overlay can be one. Across the corpus no existing key changes value: 26 machine vectors move, all of them by addition alone — 20 catalogue answers whose entries a layer declared, one derived answer whose entry states null, and the five `launchable.entry` blocks, which serialize a single entry through the same shape. 44 entries now carry the field, 43 of them an integer. Three vectors are added, none of which is a contract break: `catalogue-gamelist-selection-of-the-declared-first-changes-no-order` beside the existing promoted case so the two are readable side by side, and `catalogue-a-duplicate-label-is-dropped-and-takes-no-position` and `catalogue-a-command-without-a-label-ends-the-walk` for the two rules that change which entries an answer states. In `catalogue-gamelist-selection-promotes-default`, whose gamelist promotes the second of two declared entries, the answer was
+* **saves:** opera names its nvram file per storage and version ([#396](https://github.com/danielcopper/emu-atlas/issues/396))
+
+### Features
+
+* **catalogue:** every entry carries its declared position ([#397](https://github.com/danielcopper/emu-atlas/issues/397)) ([a54fc0f](https://github.com/danielcopper/emu-atlas/commit/a54fc0f24904b0687195dde5158221df6a6bbb4d))
+* **saves:** a card names the flash file mednafen_ngp writes itself ([#388](https://github.com/danielcopper/emu-atlas/issues/388)) ([e8beccf](https://github.com/danielcopper/emu-atlas/commit/e8beccff4de95e903008689a67b45c8cc4800404)), closes [#385](https://github.com/danielcopper/emu-atlas/issues/385)
+* **saves:** card puae — floppy write-back, redirect and CD32/CDTV nvram ([#390](https://github.com/danielcopper/emu-atlas/issues/390)) ([414e836](https://github.com/danielcopper/emu-atlas/commit/414e836bf352eaf3bb42025a09e23bc66da9f5f9)), closes [#386](https://github.com/danielcopper/emu-atlas/issues/386)
+* **saves:** opera names its nvram file per storage and version ([#396](https://github.com/danielcopper/emu-atlas/issues/396)) ([c560632](https://github.com/danielcopper/emu-atlas/commit/c560632d4ac0769cc9e1a7c2d5b2cb6e4d1b9082)), closes [#387](https://github.com/danielcopper/emu-atlas/issues/387)
+
 ## [0.11.0](https://github.com/danielcopper/emu-atlas/compare/v0.10.0...v0.11.0) (2026-09-05)
 
 
