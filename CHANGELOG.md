@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.0](https://github.com/danielcopper/emu-atlas/compare/v0.10.0...v0.11.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **contract:** every `(code, key)` listed above that carried a comma-joined string now carries a JSON array, one-element sets included, and `core-mode-unestablished.reason`, `emulator-config-unreadable.reason`, `filenames-content-conditional.files_established_for` and `invalid-save-directory.layer` carry slugs instead of sentences — the mapping is above. `invalid-save-directory` gains a `file` key beside the split `layer`, and `per-game-layer-unread` gains `unlistable` beside `files`, which no longer carries the sentence `"the directory could not be listed"` in place of names. `core-without-systemname.database` and `system-assignment-derived.database` are arrays rather than pipe-joined strings. One `core-mode-unestablished.reason` value is withdrawn without replacement: `"the configuration preselects a user, and whether a launch opens it depends on how the launch was made"` was documented and no machine could produce it.
+
+### Features
+
+* **contract:** caveat data becomes machine-readable everywhere ([#384](https://github.com/danielcopper/emu-atlas/issues/384)) ([6993fc3](https://github.com/danielcopper/emu-atlas/commit/6993fc30ceb2b6268f510e4934d43e7ed6cf18e0))
+
+
+### Documentation
+
+* a generated per-question reference for what a serialized answer carries ([#379](https://github.com/danielcopper/emu-atlas/issues/379)) ([3b6e765](https://github.com/danielcopper/emu-atlas/commit/3b6e7654aa804ea5a5990f3cb48fc89e2e753456))
+* **contract:** state how a client tells the answer shapes apart ([#374](https://github.com/danielcopper/emu-atlas/issues/374)) ([d326f33](https://github.com/danielcopper/emu-atlas/commit/d326f3355887bc83f760f0be595f51fa2eb3e45e))
+
 ## [0.10.0](https://github.com/danielcopper/emu-atlas/compare/v0.9.1...v0.10.0) (2026-09-03)
 
 
