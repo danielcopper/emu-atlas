@@ -542,6 +542,20 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
     a client's own list, into a serialized answer read later — otherwise names
     the emulator without naming what it launches.
 
+    ``declared_index`` is the entry's 0-based place in the launch list ES-DE
+    builds from the declaring layer's ``<command>`` elements, and ``selection``
+    says why the list order moved. The list travels in *effective* order, so
+    without the pair a reader cannot tell an entry promoted out of the middle
+    from the declared first one a user also selected — and a client whose own
+    default is the frontend's default looks for ``declared_index == 0``, never
+    ``entries[0]``. That lookup can legitimately find nothing: the values are
+    distinct and ascending *in declared order* — never guaranteed in
+    serialized order, which a promotion can reshuffle — and they may skip
+    one, because a command
+    ES-DE keeps with empty text holds a position that carries no entry here. It
+    is ``null`` on a derived entry (``emulator-list-derived``), which no layer
+    declared and which therefore has no declared position.
+
     ``caveats`` serialize ``{code, data}`` like every other caveat in this
     module. Bare codes were this serializer's own dialect and lost what the
     data says (which game's override was not checked), which is exactly the
@@ -552,6 +566,7 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
         "label": entry.label,
         "kind": entry.kind,
         "core_so": entry.core_so,
+        "declared_index": entry.declared_index,
         "selection": entry.selection,
         "caveats": _caveats_contract(entry.caveats),
     }

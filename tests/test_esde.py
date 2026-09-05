@@ -56,6 +56,91 @@ class TestParse:
         assert set(parsed) == {"dreamcast", "flash", "n64"}
         assert [e.label for e in parsed["n64"].entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
 
+    def test_declared_index_is_the_place_in_the_launch_list(self):
+        parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
+        assert [e.declared_index for e in parsed["n64"].entries] == [0, 1]
+        assert parsed["dreamcast"].entries[0].declared_index == 0
+
+    @staticmethod
+    def _n64_with(*commands: str):
+        """One ``<system>`` carrying exactly *commands*, parsed."""
+        text = (
+            '<?xml version="1.0"?><systemList><system><name>n64</name>'
+            "<path>%ROMPATH%/n64</path><extension>.z64</extension>"
+            f"{''.join(commands)}</system></systemList>"
+        )
+        return parse_es_systems(text, provenance="test").systems["n64"].entries
+
+    PARALLEL = (
+        '<command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L '
+        "%CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>"
+    )
+    MUPEN = (
+        '<command label="Mupen64Plus-Next">%EMULATOR_RETROARCH% -L '
+        "%CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>"
+    )
+
+    def test_an_empty_command_still_consumes_its_declared_position(self):
+        # ES-DE stores entry.text().get() with no emptiness test at all
+        # (SystemData.cpp:1068-1069 @ v3.4.1), so an element with no text
+        # becomes a launch command of "" that still holds its slot in
+        # mLaunchCommands (:1139) and still draws its own row in the
+        # alternative-emulator list (GuiAlternativeEmulators.cpp:153-205).
+        # atlas states no entry for it, and closing the gap it leaves would
+        # make every later declared_index name a different emulator than the
+        # frontend shows at that position.
+        entries = self._n64_with('<command label="Cleared"></command>', self.PARALLEL)
+        assert [(e.label, e.declared_index) for e in entries] == [("ParaLLEl N64", 1)]
+
+    def test_a_whitespace_only_command_consumes_one_too(self):
+        # The same slot, reached the other way: ES-DE keeps the string as it
+        # finds it, so "   " is a launch command to the frontend, while atlas
+        # strips first and states no entry. The position is consumed either way.
+        entries = self._n64_with('<command label="Blank">   </command>', self.PARALLEL)
+        assert [(e.label, e.declared_index) for e in entries] == [("ParaLLEl N64", 1)]
+
+    def test_a_duplicate_label_takes_no_entry_and_no_position(self):
+        # ES-DE stores only under `if (!duplicateLabel)` (SystemData.cpp:
+        # 1067-1069, the comparison at :1056-1066), so the second command
+        # bearing a label already kept never reaches mLaunchCommands — and the
+        # command after it is the frontend's position 1, not 2. Numbering the
+        # elements would put every later entry a slot too high.
+        entries = self._n64_with(self.PARALLEL, self.PARALLEL, self.MUPEN)
+        assert [(e.label, e.declared_index) for e in entries] == [
+            ("ParaLLEl N64", 0),
+            ("Mupen64Plus-Next", 1),
+        ]
+
+    def test_a_command_without_a_label_ends_the_walk(self):
+        # :1030-1046 — "only the first command tag will be processed". Once
+        # anything is kept, an element with no label attribute stops the read,
+        # and every later element is gone with it, position and all.
+        entries = self._n64_with(
+            self.PARALLEL,
+            "<command>%EMULATOR_RETROARCH% %ROM%</command>",
+            self.MUPEN,
+        )
+        assert [(e.label, e.declared_index) for e in entries] == [("ParaLLEl N64", 0)]
+
+    def test_a_labelless_first_command_makes_a_one_entry_system(self):
+        # The mirror image at :1048-1055: a labelled element whose predecessor
+        # was kept under an empty label ends the walk as well. So a first
+        # command with no label caps the system at one entry whatever follows
+        # — one branch or the other fires on the second element.
+        entries = self._n64_with("<command>%EMULATOR_RETROARCH% %ROM%</command>", self.PARALLEL)
+        assert [(e.label, e.declared_index) for e in entries] == [("", 0)]
+
+    def test_a_commented_out_command_consumes_no_position(self):
+        # The one every RetroDECK machine hits: its bundled catalogue comments
+        # out the standalone entries of many systems, and both walks step
+        # through children by name, which never yields a comment node — so the
+        # numbers must not count them either.
+        entries = self._n64_with(
+            '<!-- <command label="Retired">%EMULATOR_RETROARCH% %ROM%</command> -->',
+            self.PARALLEL,
+        )
+        assert [(e.label, e.declared_index) for e in entries] == [("ParaLLEl N64", 0)]
+
     def test_libretro_classification_extracts_core_so(self):
         parsed = parse_es_systems(BUNDLED_XML, provenance="test").systems
         entry = parsed["dreamcast"].entries[0]
@@ -545,6 +630,33 @@ class TestGamelistAlternative:
         assert [e.label for e in entries] == ["ParaLLEl N64", "Mupen64Plus-Next"]
         assert entries[0].selection == 'gamelist.xml: alternativeEmulator = "ParaLLEl N64"'
         assert entries[1].selection is None
+
+    def test_promotion_leaves_the_declared_position_alone(self):
+        # The order the answer travels in is the effective one, so the shipped
+        # order survives only in declared_index. A client whose own default is
+        # the frontend's default reads that, not entries[0].
+        rd = _catalogue_fixture(
+            {"/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": self.REAL_SAMPLE}
+        )
+        entries = _entries(rd.emulators_for("n64"))
+        assert [e.declared_index for e in entries] == [1, 0]
+
+    def test_selecting_the_declared_first_moves_nothing_and_still_says_so(self):
+        # The case declared_index exists to tell apart from the one above.
+        # entries[0] carries a selection in both answers, so selection alone
+        # cannot say whether the user's choice actually moved anything; only
+        # the position can — 1 there, 0 here.
+        rd = _catalogue_fixture(
+            {
+                "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": (
+                    "<alternativeEmulator><label>Mupen64Plus-Next</label></alternativeEmulator><gameList />"
+                )
+            }
+        )
+        entries = _entries(rd.emulators_for("n64"))
+        assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
+        assert [e.declared_index for e in entries] == [0, 1]
+        assert entries[0].selection == 'gamelist.xml: alternativeEmulator = "Mupen64Plus-Next"'
 
     def test_nested_selection_promotes_entry_to_default(self):
         # The live shape: what emulators_for answers must not depend on where
