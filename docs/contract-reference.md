@@ -9,7 +9,7 @@ named attribute), and the **data registry** `atlas.ENUMERATED_DATA` (which `(cod
 construction, whether or not a vector exercises them). An attribute an answer type declares and no serialized answer
 carries is listed under [attributes no answer carries](#attributes-no-answer-carries) rather than described.
 
-**Corpus:** 662 vectors in 10 files carry 19 question kinds plus `installations`, which is the only block every vector
+**Corpus:** 664 vectors in 10 files carry 19 question kinds plus `installations`, which is the only block every vector
 states. **Codes:** 125 distinct caveat and unresolved codes are exported under 128 names in `atlas.__all__`, and 124 of
 them appear in the corpus.
 
@@ -18,7 +18,7 @@ them appear in the corpus.
 | `firmware.json`              | 155     |
 | `mods.json`                  | 27      |
 | `named-cases.json`           | 184     |
-| `save-file-sets.json`        | 60      |
+| `save-file-sets.json`        | 62      |
 | `savestates.json`            | 24      |
 | `screenshots.json`           | 3       |
 | `soft-patching.json`         | 8       |
@@ -122,11 +122,11 @@ dispatcher of every family that can refuse.
 
 ### entry_savefile_location
 
-155 vectors state it.
+157 vectors state it.
 
 | shape                                                       | vectors | container | dispatchers producing it                                                                                                                                              |
 | ----------------------------------------------------------- | ------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [savefile_placement_contract](#savefile_placement_contract) | 143     | object    | `savefile_answer_contract`                                                                                                                                            |
+| [savefile_placement_contract](#savefile_placement_contract) | 145     | object    | `savefile_answer_contract`                                                                                                                                            |
 | [unresolved_contract](#unresolved_contract)                 | 12      | object    | `mod_answer_contract`, `savefile_answer_contract`, `savestate_answer_contract`, `screenshot_answer_contract`, `soft_patch_answer_contract`, `texture_answer_contract` |
 
 | code                                  | occurrences | data keys witnessed here                                                                                     |
@@ -523,11 +523,11 @@ dispatcher of every family that can refuse.
 
 ### installations
 
-662 vectors state it.
+664 vectors state it.
 
 | shape                                                         | vectors | container | dispatchers producing it |
 | ------------------------------------------------------------- | ------- | --------- | ------------------------ |
-| [installation_contract (array)](#installation_contract-array) | 660     | array     |                          |
+| [installation_contract (array)](#installation_contract-array) | 662     | array     |                          |
 | empty array                                                   | 2       | array     |                          |
 
 | code                       | occurrences | data keys witnessed here           |
@@ -720,20 +720,20 @@ themselves otherwise — `unattributed` there means no serializer in `atlas/cont
 
 ### installation_contract (array)
 
-Serialized from `Installation` (`atlas.installations`). 660 answers in the corpus take this shape.
+Serialized from `Installation` (`atlas.installations`). 662 answers in the corpus take this shape.
 
 | field              | JSON type | declared as                  | can be null | null observed | answers | closed vocabulary |
 | ------------------ | --------- | ---------------------------- | ----------- | ------------- | ------- | ----------------- |
-| `[]`               | object    | —                            | not stated  | no            | 660/660 |                   |
-| `[].health`        | array     | derived (method)             | not stated  | no            | 660/660 |                   |
-| `[].health[]`      | object    | derived (method)             | not stated  | no            | 16/660  |                   |
-| `[].health[].code` | string    | —                            | not stated  | no            | 16/660  |                   |
-| `[].health[].data` | object    | —                            | not stated  | no            | 16/660  |                   |
-| `[].kind`          | string    | `str` (property)             | no          | no            | 660/660 |                   |
-| `[].kinds`         | array     | `tuple[str, ...]` (property) | no          | no            | 660/660 |                   |
-| `[].kinds[]`       | string    | `str` (property)             | no          | no            | 660/660 |                   |
-| `[].label`         | string    | —                            | not stated  | no            | 660/660 |                   |
-| `[].root`          | string    | derived (method)             | not stated  | no            | 660/660 |                   |
+| `[]`               | object    | —                            | not stated  | no            | 662/662 |                   |
+| `[].health`        | array     | derived (method)             | not stated  | no            | 662/662 |                   |
+| `[].health[]`      | object    | derived (method)             | not stated  | no            | 16/662  |                   |
+| `[].health[].code` | string    | —                            | not stated  | no            | 16/662  |                   |
+| `[].health[].data` | object    | —                            | not stated  | no            | 16/662  |                   |
+| `[].kind`          | string    | `str` (property)             | no          | no            | 662/662 |                   |
+| `[].kinds`         | array     | `tuple[str, ...]` (property) | no          | no            | 662/662 |                   |
+| `[].kinds[]`       | string    | `str` (property)             | no          | no            | 662/662 |                   |
+| `[].label`         | string    | —                            | not stated  | no            | 662/662 |                   |
+| `[].root`          | string    | derived (method)             | not stated  | no            | 662/662 |                   |
 
 ### launchable_contract
 
@@ -818,46 +818,46 @@ Serialized from `RomPlacement` (`atlas.installations`). 23 answers in the corpus
 
 ### savefile_placement_contract
 
-Serialized from `SavefilePlacement` (`atlas.placement`). 250 answers in the corpus take this shape.
+Serialized from `SavefilePlacement` (`atlas.placement`). 252 answers in the corpus take this shape.
 
 | field                                 | JSON type      | declared as                                                                                                         | can be null | null observed | answers | closed vocabulary                                    |
 | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- | ------- | ---------------------------------------------------- |
-| `caveats`                             | array          | `tuple[Caveat, ...]`                                                                                                | no          | no            | 250/250 |                                                      |
-| `caveats[]`                           | object         | `Caveat`                                                                                                            | no          | no            | 216/250 |                                                      |
-| `caveats[].code`                      | string         | `str`                                                                                                               | no          | no            | 216/250 |                                                      |
-| `caveats[].data`                      | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]`                                                           | no          | no            | 216/250 |                                                      |
-| `dir`                                 | string         | `str`                                                                                                               | no          | no            | 250/250 |                                                      |
-| `fallback_dir`                        | null or string | `str \| None`                                                                                                       | yes         | yes           | 250/250 |                                                      |
-| `file_set`                            | object         | `FileSet`                                                                                                           | no          | no            | 250/250 |                                                      |
-| `file_set.complete`                   | boolean        | `bool`                                                                                                              | no          | no            | 250/250 |                                                      |
-| `file_set.files`                      | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 250/250 |                                                      |
-| `file_set.files[]`                    | string         | `str`                                                                                                               | no          | no            | 135/250 |                                                      |
-| `file_set.groups`                     | array          | `tuple[FileGroup, ...]`                                                                                             | no          | no            | 250/250 |                                                      |
-| `file_set.groups[]`                   | object         | `FileGroup`                                                                                                         | no          | no            | 124/250 |                                                      |
-| `file_set.groups[].dir`               | string         | `str`                                                                                                               | no          | no            | 124/250 |                                                      |
-| `file_set.groups[].files`             | array or null  | `tuple[str, ...] \| None`                                                                                           | yes         | yes           | 124/250 |                                                      |
-| `file_set.groups[].files[]`           | string         | `str`                                                                                                               | no          | no            | 71/250  |                                                      |
-| `file_set.groups[].granularity`       | string         | `str`                                                                                                               | no          | no            | 124/250 | `GRANULARITIES`                                      |
-| `file_set.groups[].role`              | string         | `str`                                                                                                               | no          | no            | 124/250 | `ROLES`                                              |
-| `file_set.state`                      | string         | `Literal['observed', 'declared', 'unknown']`                                                                        | no          | no            | 250/250 | `Literal[FileSet.state]`, `_FILE_SET_STATES`         |
-| `granularity`                         | null or object | `Granularity \| None`                                                                                               | yes         | yes           | 250/250 |                                                      |
-| `granularity.alternatives`            | array          | `tuple[ModeAlternative, ...]`                                                                                       | no          | no            | 177/250 |                                                      |
-| `granularity.alternatives[]`          | object         | `ModeAlternative`                                                                                                   | no          | no            | 42/250  |                                                      |
-| `granularity.alternatives[].mode`     | string         | `str`                                                                                                               | no          | no            | 42/250  |                                                      |
-| `granularity.alternatives[].options`  | object         | `tuple[tuple[str, str], ...]`                                                                                       | no          | no            | 42/250  |                                                      |
-| `granularity.alternatives[].values`   | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 42/250  |                                                      |
-| `granularity.alternatives[].values[]` | string         | `str`                                                                                                               | no          | no            | 42/250  |                                                      |
-| `granularity.mode`                    | null or string | `str \| None`                                                                                                       | yes         | yes           | 177/250 |                                                      |
-| `granularity.readings`                | array          | `tuple[OptionReading, ...]`                                                                                         | no          | no            | 177/250 |                                                      |
-| `granularity.readings[]`              | object         | `OptionReading`                                                                                                     | no          | no            | 124/250 |                                                      |
-| `granularity.readings[].key`          | string         | `str`                                                                                                               | no          | no            | 124/250 |                                                      |
-| `granularity.readings[].options_file` | null or string | `str \| None`                                                                                                       | yes         | yes           | 124/250 |                                                      |
-| `granularity.readings[].value`        | null or string | `str \| None`                                                                                                       | yes         | yes           | 124/250 |                                                      |
-| `granularity.value`                   | string         | `str`                                                                                                               | no          | no            | 177/250 |                                                      |
-| `needs`                               | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 250/250 |                                                      |
-| `needs[]`                             | string         | `str`                                                                                                               | no          | no            | 44/250  |                                                      |
-| `physical_dir`                        | null or string | `str \| None`                                                                                                       | yes         | yes           | 250/250 |                                                      |
-| `root_kind`                           | string         | `Literal['savefile_directory', 'content_directory', 'system_directory', 'working_directory', 'emulator_directory']` | no          | no            | 250/250 | `Literal[SavefilePlacement.root_kind]`, `ROOT_KINDS` |
+| `caveats`                             | array          | `tuple[Caveat, ...]`                                                                                                | no          | no            | 252/252 |                                                      |
+| `caveats[]`                           | object         | `Caveat`                                                                                                            | no          | no            | 216/252 |                                                      |
+| `caveats[].code`                      | string         | `str`                                                                                                               | no          | no            | 216/252 |                                                      |
+| `caveats[].data`                      | object         | `Mapping[str, str \| Sequence[str] \| Mapping[str, str]]`                                                           | no          | no            | 216/252 |                                                      |
+| `dir`                                 | string         | `str`                                                                                                               | no          | no            | 252/252 |                                                      |
+| `fallback_dir`                        | null or string | `str \| None`                                                                                                       | yes         | yes           | 252/252 |                                                      |
+| `file_set`                            | object         | `FileSet`                                                                                                           | no          | no            | 252/252 |                                                      |
+| `file_set.complete`                   | boolean        | `bool`                                                                                                              | no          | no            | 252/252 |                                                      |
+| `file_set.files`                      | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 252/252 |                                                      |
+| `file_set.files[]`                    | string         | `str`                                                                                                               | no          | no            | 137/252 |                                                      |
+| `file_set.groups`                     | array          | `tuple[FileGroup, ...]`                                                                                             | no          | no            | 252/252 |                                                      |
+| `file_set.groups[]`                   | object         | `FileGroup`                                                                                                         | no          | no            | 126/252 |                                                      |
+| `file_set.groups[].dir`               | string         | `str`                                                                                                               | no          | no            | 126/252 |                                                      |
+| `file_set.groups[].files`             | array or null  | `tuple[str, ...] \| None`                                                                                           | yes         | yes           | 126/252 |                                                      |
+| `file_set.groups[].files[]`           | string         | `str`                                                                                                               | no          | no            | 73/252  |                                                      |
+| `file_set.groups[].granularity`       | string         | `str`                                                                                                               | no          | no            | 126/252 | `GRANULARITIES`                                      |
+| `file_set.groups[].role`              | string         | `str`                                                                                                               | no          | no            | 126/252 | `ROLES`                                              |
+| `file_set.state`                      | string         | `Literal['observed', 'declared', 'unknown']`                                                                        | no          | no            | 252/252 | `Literal[FileSet.state]`, `_FILE_SET_STATES`         |
+| `granularity`                         | null or object | `Granularity \| None`                                                                                               | yes         | yes           | 252/252 |                                                      |
+| `granularity.alternatives`            | array          | `tuple[ModeAlternative, ...]`                                                                                       | no          | no            | 179/252 |                                                      |
+| `granularity.alternatives[]`          | object         | `ModeAlternative`                                                                                                   | no          | no            | 42/252  |                                                      |
+| `granularity.alternatives[].mode`     | string         | `str`                                                                                                               | no          | no            | 42/252  |                                                      |
+| `granularity.alternatives[].options`  | object         | `tuple[tuple[str, str], ...]`                                                                                       | no          | no            | 42/252  |                                                      |
+| `granularity.alternatives[].values`   | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 42/252  |                                                      |
+| `granularity.alternatives[].values[]` | string         | `str`                                                                                                               | no          | no            | 42/252  |                                                      |
+| `granularity.mode`                    | null or string | `str \| None`                                                                                                       | yes         | yes           | 179/252 |                                                      |
+| `granularity.readings`                | array          | `tuple[OptionReading, ...]`                                                                                         | no          | no            | 179/252 |                                                      |
+| `granularity.readings[]`              | object         | `OptionReading`                                                                                                     | no          | no            | 124/252 |                                                      |
+| `granularity.readings[].key`          | string         | `str`                                                                                                               | no          | no            | 124/252 |                                                      |
+| `granularity.readings[].options_file` | null or string | `str \| None`                                                                                                       | yes         | yes           | 124/252 |                                                      |
+| `granularity.readings[].value`        | null or string | `str \| None`                                                                                                       | yes         | yes           | 124/252 |                                                      |
+| `granularity.value`                   | string         | `str`                                                                                                               | no          | no            | 179/252 |                                                      |
+| `needs`                               | array          | `tuple[str, ...]`                                                                                                   | no          | no            | 252/252 |                                                      |
+| `needs[]`                             | string         | `str`                                                                                                               | no          | no            | 44/252  |                                                      |
+| `physical_dir`                        | null or string | `str \| None`                                                                                                       | yes         | yes           | 252/252 |                                                      |
+| `root_kind`                           | string         | `Literal['savefile_directory', 'content_directory', 'system_directory', 'working_directory', 'emulator_directory']` | no          | no            | 252/252 | `Literal[SavefilePlacement.root_kind]`, `ROOT_KINDS` |
 
 The paths below carry a whole answer of another shape rather than attributes of this one, so the walk stops there and
 the shape it carried is named instead. Every shape the corpus put there is listed; one that is an answer in its own

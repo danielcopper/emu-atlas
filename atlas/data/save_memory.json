@@ -628,28 +628,6 @@
         "source": "read at the revision the installed binary names in its library_version"
       }
     },
-    "mednafen_ngp": {
-      "identifiers": {
-        "library_name": [
-          "Beetle NeoPop"
-        ]
-      },
-      "systems": {
-        "ngp": {
-          "memory_types": [],
-          "verified_core": "v1.29.0.0 139fe34",
-          "citation": "[V] libretro.c:785-790 at beetle-ngp-libretro 139fe34 — only RETRO_MEMORY_SYSTEM_RAM answers (16384); save RAM returns 0. The core keeps Neo Geo Pocket saves in a file of its own, which this record does not describe."
-        },
-        "ngpc": {
-          "memory_types": [],
-          "verified_core": "v1.29.0.0 139fe34",
-          "citation": "[V] libretro.c:785-790 at beetle-ngp-libretro 139fe34 — only RETRO_MEMORY_SYSTEM_RAM answers (16384); save RAM returns 0. The core keeps Neo Geo Pocket saves in a file of its own, which this record does not describe."
-        }
-      },
-      "provenance": {
-        "source": "read at the revision the installed binary names in its library_version"
-      }
-    },
     "mednafen_pce": {
       "identifiers": {
         "library_name": [

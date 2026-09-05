@@ -326,13 +326,13 @@
       "kind": "libretro"
     },
     "mednafen_ngp": {
-      "verdict": "standard-dir",
+      "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-live] RetroDECK 0.10.9b contains content-keyed SNK Gals' Fighters (USA, Europe).flash in the standard save directory.",
+      "note": "[V-source/binary, placement V-live] Answers no memory id beyond system RAM, so RetroArch writes no .srm. Writes <save dir>/<rom_stem>.flash itself — the Neo Geo Pocket's flash memory, named through one name-building function both the read and the write pass 'flash' to: read back at load, written at unload only when a flash block was registered. A content-keyed .flash was live-observed in the standard save directory (2026-07-23). Supersedes the standard-dir triage — the file set is now stated by the card.",
       "verified": {
         "retrodeck": {
           "version": "0.10.9b",
-          "core_library_version": null,
+          "core_library_version": "v1.29.0.0 139fe34",
           "date": "2026-07-23"
         },
         "emudeck": null,
