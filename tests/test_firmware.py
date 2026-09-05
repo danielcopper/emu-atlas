@@ -519,7 +519,7 @@ class TestTheCountIsTheEnumeration:
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
         assert core.caveats[0].data == {
             "core_so": f"{self.STEM}.so",
-            "declared": "firmware1_path",
+            "declared": ("firmware1_path",),
             "firmware_count": "1",
         }
 
@@ -544,7 +544,7 @@ class TestTheCountIsTheEnumeration:
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
         assert core.caveats[0].data == {
             "core_so": f"{self.STEM}.so",
-            "declared": "firmwareA_path",
+            "declared": ("firmwareA_path",),
             "firmware_count": "1",
         }
 
@@ -553,7 +553,7 @@ class TestTheCountIsTheEnumeration:
         assert core.requirements == ()
         assert core.requirements_met is True
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
-        assert core.caveats[0].data["declared"] == "firmware_path"
+        assert core.caveats[0].data["declared"] == ("firmware_path",)
 
     def test_an_empty_path_inside_the_count_is_not_silently_dropped(self):
         # The one shape RetroArch does look up: it finds the entry, sees an
@@ -562,7 +562,7 @@ class TestTheCountIsTheEnumeration:
         core = self._answered('firmware_count = 2\nfirmware0_path = "a.bin"\nfirmware1_path = ""\n')
         assert [r.declared for r in _plain_requirements(core)] == ["a.bin"]
         assert [c.code for c in core.caveats] == [CAVEAT_FIRMWARE_DECLARATION_UNREAD]
-        assert core.caveats[0].data["declared"] == "firmware1_path"
+        assert core.caveats[0].data["declared"] == ("firmware1_path",)
 
     def test_a_checksum_key_is_not_a_declaration_nobody_reads(self):
         # holani_libretro.info ships firmware0_md5 — a key RetroArch reads
@@ -579,7 +579,7 @@ class TestTheCountIsTheEnumeration:
             'firmware_count = 1\nfirmware_path = "un.bin"\nfirmware1_path = "past.bin"\nfirmware0_path = ""\n'
         )
         (caveat,) = core.caveats
-        assert caveat.data["declared"] == "firmware0_path, firmware1_path, firmware_path"
+        assert caveat.data["declared"] == ("firmware0_path", "firmware1_path", "firmware_path")
         assert "firmware_path (no key it composes is spelled that way)" in caveat.message
         assert "firmware1_path (its firmware_count is 1, so it reads firmware0_ up to firmware0_" in caveat.message
         assert "firmware0_path (an empty value, which the read that finds it discards)" in caveat.message
@@ -1448,7 +1448,7 @@ class TestADeclarationStatesItsOwnShape:
         assert answer.caveats[0].data == {
             "dir": LRPS2_FOLDER,
             "candidates": "1",
-            "paths": f"{LRPS2_FOLDER}/scph39001.bin",
+            "paths": (f"{LRPS2_FOLDER}/scph39001.bin",),
             "core_so": LRPS2_SO,
             "table_version": FIRMWARE_DECLARED_DIRECTORY_VERSION,
         }
@@ -1473,6 +1473,35 @@ class TestADeclarationStatesItsOwnShape:
             "core_so": LRPS2_SO,
         }
         assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+
+    def test_the_description_reproduces_the_cores_own_format_string_byte_for_byte(self):
+        """``description`` is prose the CORE composes, and its columns are load-bearing.
+
+        Not a slug and never to become one: it reproduces LRPS2's own
+        ``"%-7s v%s.%s(%c%c/%c%c/%c%c%c%c)  %s %s"``
+        (``BiosTools.cpp:147-155`` at 14d19f8, built in
+        :meth:`atlas.ps2_bios.Ps2BiosHeader.from_strings`), and a consumer
+        renders it to a person the way the emulator's own BIOS list does. The
+        zone is left-justified in seven columns and two spaces stand before the
+        console word — so ``Europe`` carries one trailing space here, and a
+        test that trimmed it would let the padding rot unnoticed. The fields
+        beside it (``zone``, ``version``, ``date``, ``serial``) are the
+        machine-readable halves; this one is the rendering.
+        """
+        identified, _ = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph70004.bin": PS2_IMAGE_EUR},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph70004.bin": PS2_HEADER_EUR},
+        )
+        unlisted, _ = self._lrps2(
+            {f"{LRPS2_FOLDER}/scph39001.bin": PS2_UNLISTED},
+            ps2_bios_headers={f"{LRPS2_FOLDER}/scph39001.bin": PS2_HEADER_EUR},
+        )
+        for answer, code in (
+            (identified, CAVEAT_FIRMWARE_IMAGE_IDENTIFIED),
+            (unlisted, CAVEAT_FIRMWARE_IMAGE_UNLISTED),
+        ):
+            stated = next(c for c in answer.caveats if c.code == code)
+            assert stated.data["description"] == "Europe  v02.00(14/06/2004)  Console fixture-eu"
 
     def test_an_image_whose_digest_could_not_be_taken_is_an_image_and_a_stated_read_failure(self):
         """The header is the verdict and stands; the digest that was never taken is a read failure, not a miss."""
@@ -1512,7 +1541,7 @@ class TestADeclarationStatesItsOwnShape:
         ]
         assert answer.caveats[0].data == {"path": f"{LRPS2_FOLDER}/scph39001.bin"}
         assert "does not read as a PS2 BIOS, and its bytes could not be hashed" in answer.caveats[0].message
-        assert answer.caveats[1].data["paths"] == f"{LRPS2_FOLDER}/scph39001.bin"
+        assert answer.caveats[1].data["paths"] == (f"{LRPS2_FOLDER}/scph39001.bin",)
         # Stated here, so the unclaimed scan — which hashes what it lists and
         # would state the same failure — must not state it again.
         assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
@@ -1639,7 +1668,7 @@ class TestADeclarationStatesItsOwnShape:
         assert folder.found == "directory"
         assert folder.satisfied is None
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_SCAN_INCOMPLETE]
-        assert answer.caveats[0].data == {"dir": LRPS2_FOLDER, "unreadable": LRPS2_FOLDER}
+        assert answer.caveats[0].data == {"dir": LRPS2_FOLDER, "unreadable": (LRPS2_FOLDER,)}
 
     def test_a_right_sized_file_whose_bytes_cannot_be_read_is_carried_as_unread(self):
         """A read failure is not 'bytes the table does not know'."""
@@ -1830,7 +1859,7 @@ class TestADeclarationStatesItsOwnShape:
         )
         assert "fails every one — so the listing" in answer.caveats[0].message
         assert answer.caveats[0].data["candidates"] == "3"
-        assert answer.caveats[0].data["paths"] == ", ".join(sorted(three))
+        assert answer.caveats[0].data["paths"] == tuple(sorted(three))
 
     def test_a_contents_verdict_is_refused_off_a_listed_folder(self):
         """The internal field can only state a folder that was listed — anywhere else it would lie."""
@@ -2019,8 +2048,10 @@ class TestSystemAssignmentIsVisible:
         core = firmware_for_core(machine, _context(machine), core_so="mgba_libretro.so").cores[0]
         caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_ASSIGNMENT_DERIVED)
         # gb_bios.bin has a per-file rule; gba_bios.bin does not.
-        assert caveat.data["files"] == "gba_bios.bin"
-        assert caveat.data["database"] == "Nintendo - Game Boy|Nintendo - Game Boy Advance"
+        assert caveat.data["files"] == ("gba_bios.bin",)
+        # The systems atlas parsed out of the .info, not the .info's own
+        # pipe-joined spelling re-made — a client wants what was read.
+        assert caveat.data["database"] == ("Nintendo - Game Boy", "Nintendo - Game Boy Advance")
 
     def test_full_override_coverage_states_nothing(self):
         machine = _machine({f"{INFO_DIR}/covered_libretro.info": FULLY_OVERRIDDEN_INFO,
@@ -2142,7 +2173,7 @@ class TestSystemAssignmentIsVisible:
         answer = firmware_for_system(machine, _context(machine), system="atari5200")
         assert answer.cores == ()
         hiding = next(c for c in answer.caveats if c.code == CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES)
-        assert hiding.data["cores"] == "atari800_libretro.so"
+        assert hiding.data["cores"] == ("atari800_libretro.so",)
 
     def test_it_names_only_cores_whose_own_database_covers_the_question(self):
         # mGBA is derived too, but nothing on the machine says it covers the
@@ -3174,7 +3205,7 @@ class TestASystemTheCatalogueDoesNotNameIsMarked:
         assert caveat.data == {
             "core_so": "numero_libretro.so",
             "system": "ti83",
-            "files": "ti83.rom",
+            "files": ("ti83.rom",),
             "map_version": SYSTEMNAME_MAP_VERSION,
         }
 
@@ -3639,3 +3670,34 @@ class TestAnAnswerStatesAnObservationOnce:
             {"count": "1", "emulators": {"DuckStation": "1"}},
         )
         assert stated_once((tally, reordered, other)) == (tally, other)
+
+    def test_a_sequence_valued_entry_is_keyed_by_its_own_order(self):
+        # A list-valued key is keyed without being hashed, like the mapping
+        # above — but ORDER decides here, because the order is the emitter's
+        # stated one and part of the contract. Two answers naming the same
+        # files in different orders are two statements, not a restatement.
+        one = Caveat(
+            CAVEAT_FIRMWARE_DECLARATION_UNREAD,
+            "the declarations RetroArch does not take",
+            {"core_so": LRPS2_SO, "declared": ("firmware0_path", "firmware1_path")},
+        )
+        same = Caveat(
+            CAVEAT_FIRMWARE_DECLARATION_UNREAD,
+            "the same fact, worded again",
+            {"core_so": LRPS2_SO, "declared": ("firmware0_path", "firmware1_path")},
+        )
+        reordered = Caveat(
+            CAVEAT_FIRMWARE_DECLARATION_UNREAD,
+            "the same names, the other way round",
+            {"core_so": LRPS2_SO, "declared": ("firmware1_path", "firmware0_path")},
+        )
+        assert stated_once((one, same)) == (one,)
+        assert stated_once((one, reordered)) == (one, reordered)
+
+    def test_a_sequence_is_keyed_apart_from_the_string_it_used_to_be(self):
+        # The contract change itself: ("a",) and "a" are different statements,
+        # so a port that still joins its lists is not silently deduplicated
+        # against one that does not.
+        listed = Caveat(CAVEAT_FIRMWARE_DECLARATION_UNREAD, "as a list", {"declared": ("a",)})
+        joined = Caveat(CAVEAT_FIRMWARE_DECLARATION_UNREAD, "as a string", {"declared": "a"})
+        assert stated_once((listed, joined)) == (listed, joined)

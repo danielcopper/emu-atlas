@@ -206,7 +206,7 @@ class TestThePerGameLayerStatedBesideAnAnswer:
         caveats = self._caveats(
             {f"{self.DIR}/SLUS-00594.ini": "[MemoryCards]\n"}, dirs=[self.DIR]
         )
-        assert caveats[0].data["key"] == "[MemoryCards] Card1Type, [MemoryCards] Card2Type"
+        assert caveats[0].data["key"] == ("[MemoryCards] Card1Type", "[MemoryCards] Card2Type")
 
     def test_an_empty_directory_says_nothing_at_all(self):
         # Silence is available here — unlike Dolphin, DuckStation ships no

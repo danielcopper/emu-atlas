@@ -7,8 +7,10 @@ have, and the constructs the reader must refuse rather than guess at.
 
 import pytest
 
+from atlas import yaml_scalars
 from atlas.yaml_scalars import (
     REFUSAL_ANCHOR,
+    REFUSAL_CODES,
     REFUSAL_NOT_A_FLAT_MAPPING,
     REFUSAL_SECOND_DOCUMENT,
     REFUSAL_SUBSTITUTION_CYCLE,
@@ -227,3 +229,24 @@ class TestScalarsAsWritten:
         read = read_scalars("note: |\n  first\n  second\nnext: 1\n")
         assert read.skipped == ("note",)
         assert read.get("next") == "1"
+
+
+class TestTheRefusalVocabularyIsEnumerated:
+    """A refusal a caller may state to its own client is one this tuple names.
+
+    ``atlas.placement`` builds a caveat vocabulary on top of these
+    (``EMULATOR_CONFIG_UNREADABLE_REASONS``) and the guide lists them, so a
+    seventh refusal added to the module and not to the tuple would reach a
+    client as a value nothing documents.
+    """
+
+    def test_every_refusal_constant_is_in_the_tuple(self):
+        declared = {
+            value
+            for name, value in vars(yaml_scalars).items()
+            if name.startswith("REFUSAL_") and isinstance(value, str)
+        }
+        assert declared == set(REFUSAL_CODES)
+
+    def test_the_tuple_names_each_refusal_once(self):
+        assert len(set(REFUSAL_CODES)) == len(REFUSAL_CODES)

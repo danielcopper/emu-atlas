@@ -33,7 +33,16 @@ from .placement import (
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
+    REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES,
+    REASON_CONTENT_CLASS_UNNAMED,
+    REASON_CONTENT_CLASS_UNRECORDED,
+    REASON_INI_OUTRANKED_BY_CASCADE,
+    REASON_INI_PRESENCE_UNESTABLISHED,
+    REASON_INI_SEARCH_PATH_UNLISTABLE,
+    REASON_SAVEPATH_CONFIG_UNREADABLE,
+    REASON_SAVEPATH_UNTRANSLATABLE,
     Caveat,
+    DataValue,
     OptionReading,
 )
 
@@ -144,14 +153,21 @@ def _unknown_value(core: str, option_key: str, value: str) -> Caveat:
     )
 
 
-def _mode_unestablished(core: str, reason: str) -> Caveat:
-    """The rule as a whole could not decide — the reason travels with the code."""
+def _mode_unestablished(core: str, reason: str, because: str, **facts: DataValue) -> Caveat:
+    """The rule as a whole could not decide — the slug and its subject travel with the code.
+
+    *reason* is the slug from :data:`CORE_MODE_UNESTABLISHED_REASONS` a client
+    branches on, *because* the sentence that says the same thing to a person,
+    and *facts* the subject the sentence names — the extension it saw, the path
+    it could not translate, the ini files it is about. Three arguments rather
+    than one, because the sentence used to be all three at once.
+    """
     return Caveat(
         CAVEAT_CORE_MODE_UNESTABLISHED,
         f"core {core!r} is recorded as selecting between save behaviours by a rule, and the rule "
-        f"could not decide here: {reason} — the recorded behaviour is not applied; the standard "
+        f"could not decide here: {because} — the recorded behaviour is not applied; the standard "
         "answer below may miss the real save stack",
-        {"core": core, "reason": reason},
+        {"core": core, "reason": reason, **facts},
     )
 
 
@@ -239,6 +255,7 @@ def _hatari(reading: RuleReading) -> ModeChoice:
             caveats=(
                 _mode_unestablished(
                     "hatari",
+                    REASON_CONTENT_CLASS_UNNAMED,
                     "which write-protect option governs depends on the content's class (a floppy "
                     "image is written back into itself, a hard-disk image takes writes in place), "
                     "and no content was named",
@@ -255,9 +272,11 @@ def _hatari(reading: RuleReading) -> ModeChoice:
             caveats=(
                 _mode_unestablished(
                     "hatari",
+                    REASON_CONTENT_CLASS_UNRECORDED,
                     f"the content's extension {extension!r} is outside both recorded classes "
                     "(floppy: st/msa/stx/dim/ipf/zip/m3u; hard disk: ide/vhd/gem), so which "
                     "write-protect option governs was never established",
+                    extension=extension,
                 ),
             ),
         )
@@ -317,6 +336,7 @@ def _scummvm(reading: RuleReading) -> ModeChoice:
             caveats=(
                 _mode_unestablished(
                     "scummvm",
+                    REASON_SAVEPATH_CONFIG_UNREADABLE,
                     "the save directory is ScummVM's own 'savepath' setting in scummvm.ini, and "
                     "the ini could not be read — whether the saves were routed elsewhere is "
                     "unknowable here",
@@ -343,8 +363,10 @@ def _scummvm(reading: RuleReading) -> ModeChoice:
             caveats=(
                 _mode_unestablished(
                     "scummvm",
+                    REASON_SAVEPATH_UNTRANSLATABLE,
                     f"scummvm.ini sets savepath to {savepath!r}, which no view of this machine "
                     "translates to a host path — whether it governs cannot be established",
+                    path=savepath,
                 ),
             ),
             readings=(
@@ -566,9 +588,15 @@ def _beetle_psx_rule(prefix: str, core: str) -> Callable[[RuleReading], ModeChoi
                 caveats=(
                     _mode_unestablished(
                         core,
+                        REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES,
                         f"the card-image index options select other card files than the recorded "
                         f"names cover ({names} — the digit in <stem>.<idx>.mcr is the option's "
                         "value, libretro.cpp:2159-2164 at d6383bf)",
+                        # An option nothing on this machine states carries the
+                        # empty value this package spells an absent value with,
+                        # rather than dropping the key and hiding which options
+                        # the statement is about.
+                        options={key: value or "" for key, value in offset},
                     ),
                 ),
             )
@@ -618,6 +646,7 @@ def _gpgx_content_class(extension: str | None) -> ModeChoice | None:
             caveats=(
                 _mode_unestablished(
                     "genesis_plus_gx",
+                    REASON_CONTENT_CLASS_UNNAMED,
                     "the save story splits on the content's class (a cartridge fills the "
                     "frontend's SRAM interface, a CD writes the core's own BRAM files), and no "
                     "content was named",
@@ -637,9 +666,11 @@ def _gpgx_content_class(extension: str | None) -> ModeChoice | None:
             caveats=(
                 _mode_unestablished(
                     "genesis_plus_gx",
+                    REASON_CONTENT_CLASS_UNRECORDED,
                     f"the content's extension {extension!r} is outside both recorded classes "
                     "(cartridge: md/smd/gen/sms/gg/sg/68k/sgd/mdx/bms and raw .bin; CD: "
                     "cue/iso/chd/m3u), so which save story applies was never established",
+                    extension=extension,
                 ),
             ),
         )
@@ -835,27 +866,52 @@ def _mame_redirected(key: str, path: str, options_file: str | None) -> Caveat:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _MameRefusal:
+    """Why the ini branch cannot decide: the slug, the sentence, and the inis it is about.
+
+    One shape for all four refusals rather than a tuple whose length says which
+    one it is — ``members`` is the cascade file or files the statement names,
+    empty where the refusal is about the search path itself and no ini was
+    reached.
+    """
+
+    reason: str
+    because: str
+    members: tuple[str, ...] = ()
+
+    @property
+    def facts(self) -> dict[str, DataValue]:
+        """``members`` where the refusal names inis, nothing where it names none."""
+        return {"members": self.members} if self.members else {}
+
+
 def _mame_cascade_refusal(
     main: FileLookup, driver: FileLookup, stem: str | None, strays: tuple[str, ...] | None
-) -> str | None:
+) -> _MameRefusal | None:
     """Why the ini branch cannot decide — ``None`` when it can."""
     if main.status == FILE_UNREADABLE:
-        return (
+        return _MameRefusal(
+            REASON_INI_PRESENCE_UNESTABLISHED,
             "MAME's own paths and ini reading are both on, and whether a mame.ini exists "
             "along the emulator's search path could not be established — whether the save "
-            "trees were routed elsewhere is unknowable here"
+            "trees were routed elsewhere is unknowable here",
+            (_MAME_MAIN_INI,),
         )
     if driver.status == FILE_UNREADABLE:
-        return (
+        return _MameRefusal(
+            REASON_INI_PRESENCE_UNESTABLISHED,
             f"MAME's own paths and ini reading are both on, and whether a {stem}.ini exists "
             "along the emulator's search path could not be established — the driver's ini "
-            "outranks mame.ini, so which values govern is unknowable here"
+            "outranks mame.ini, so which values govern is unknowable here",
+            (f"{stem}.ini",),
         )
     if strays is None:
-        return (
+        return _MameRefusal(
+            REASON_INI_SEARCH_PATH_UNLISTABLE,
             "MAME reads an ini cascade, and one of its search directories could not be "
             "listed — whether a higher-priority ini overrides the values read is unknowable "
-            "here"
+            "here",
         )
     if strays:
         outranks = (
@@ -863,10 +919,12 @@ def _mame_cascade_refusal(
             if len(strays) == 1
             else f"{', '.join(strays)} on its search path outrank mame.ini"
         )
-        return (
+        return _MameRefusal(
+            REASON_INI_OUTRANKED_BY_CASCADE,
             "MAME reads an ini cascade whose members apply by driver metadata inside the "
             f"binary, which atlas cannot attribute — {outranks}, so which values govern was "
-            "never established"
+            "never established",
+            strays,
         )
     return None
 
@@ -925,7 +983,12 @@ def _mame_own_ini(reading: RuleReading) -> ModeChoice:
     )
     refusal = _mame_cascade_refusal(main, driver, stem, _mame_stray_inis(reading, stem))
     if refusal is not None:
-        return ModeChoice(None, caveats=(_mode_unestablished("mame", refusal),))
+        return ModeChoice(
+            None,
+            caveats=(
+                _mode_unestablished("mame", refusal.reason, refusal.because, **refusal.facts),
+            ),
+        )
     values, sources = _mame_ini_readings(main, driver)
     return ModeChoice(None, caveats=_mame_tree_caveats(values, sources))
 

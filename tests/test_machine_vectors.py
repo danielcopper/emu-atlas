@@ -19,7 +19,9 @@ from pathlib import Path
 import pytest
 
 import atlas
+from atlas import placement, retroarch_cfg
 from atlas.machine import FixtureMachine
+from tests.corpus import caveat_blocks, expected_blocks
 from scripts import validate_vectors
 from atlas.contract import (
     catalogue_contract,
@@ -320,22 +322,7 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
         }
 
     def _codes_in_corpus(self) -> set[str]:
-        found: set[str] = set()
-
-        def walk(node):
-            if isinstance(node, dict):
-                if isinstance(code := node.get("code"), str):
-                    found.add(code)
-                for value in node.values():
-                    walk(value)
-            elif isinstance(node, list):
-                for value in node:
-                    walk(value)
-
-        for path in sorted(_VECTOR_DIR.glob("*.json")):
-            for vector in json.loads(path.read_text())["vectors"]:
-                walk(vector["expected"])
-        return found
+        return {code for _, expected in expected_blocks() for code, _ in caveat_blocks(expected)}
 
     def test_every_code_appears_in_some_vector(self):
         uncovered = sorted(self._exported_codes() - self._codes_in_corpus() - self.UNREACHABLE_BY_FIXTURE)
@@ -348,6 +335,150 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
 
     def test_the_corpus_shows_no_code_atlas_cannot_emit(self):
         assert sorted(self._codes_in_corpus() - self._exported_codes()) == []
+
+
+class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
+    """A ``data`` value a client branches on is a slug from a named tuple.
+
+    The codes have had this guarantee since the corpus existed; the values
+    inside ``data`` did not, and three of them were English sentences. The
+    check runs both ways for each: nothing the corpus shows may sit outside
+    its vocabulary, and the vocabulary is what the guide documents — a slug
+    the guide does not list is a branch a client cannot know it may take.
+
+    Coverage is the separate question, and it is pinned rather than asserted:
+    the corpus does not reach every slug yet, so what it does not reach is
+    listed below and the list itself is checked both ways. A gap cannot open
+    silently, and a gap that closes must lose its entry. Every entry names the
+    test that does hold it, so "not in a fixture" never quietly becomes "not
+    tested" — a claim this list carried once without earning it.
+    """
+
+    # Slugs no fixture machine produces yet, each with the test that reaches
+    # the state behind it. All were equally unwitnessed while their value was a
+    # sentence: this round changed the shape, not the reach.
+    NOT_YET_IN_A_FIXTURE = {
+        # tests/test_installations.py::TestMoreStandaloneSaves — xemu with no
+        # hard-disk image, Cemu launched with --mlc, Azahar with the SD off.
+        "hdd-path-unset",
+        "mlc-launch-flag-outranks-config",
+        "virtual-sd-disabled",
+        # tests/test_oddities.py::TestScummvmSavepath and ::TestMameOwnPaths.
+        "savepath-config-unreadable",
+        "ini-search-path-unlistable",
+        # tests/test_installations.py::TestTheUserAPerUserTreeWouldOpen —
+        # one test per construct the scalar reader refuses a whole file on,
+        # asserted as this code's reason rather than as the reader's own word.
+        "second-document",
+        "anchor-or-alias",
+        "tag",
+        "substitution-cycle",
+        "substitution-unknown",
+        "not-a-flat-mapping",
+        # tests/test_oddities.py::TestTheUnpackedGameDirectoryScope and
+        # ::TestGpgxContentClasses — the two card tokens whose cores have no
+        # fixture machine.
+        "unpacked-game-directory",
+        "raw-cartridge-image",
+        # tests/test_retroarch_cfg.py::TestSavefileDirectoryValidation drives
+        # each of the four chain layers as the one refused, so it produces the
+        # CfgSource kind this slug is; what no fixture machine builds is the
+        # caveat carrying it.
+        "content-dir-override",
+    }
+
+    _GUIDE = (_REPO_ROOT / "docs" / "how-to-use.md").read_text(encoding="utf-8")
+
+    # (code, data key) → the vocabulary its value must come from.
+    VOCABULARIES = {
+        ("core-mode-unestablished", "reason"): atlas.CORE_MODE_UNESTABLISHED_REASONS,
+        ("emulator-config-unreadable", "reason"): atlas.EMULATOR_CONFIG_UNREADABLE_REASONS,
+        ("filenames-content-conditional", "files_established_for"): (
+            atlas.FILES_ESTABLISHED_FOR_TOKENS
+        ),
+        ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
+    }
+
+    def _values_in_corpus(self) -> dict[tuple[str, str], set[str]]:
+        found: dict[tuple[str, str], set[str]] = {pair: set() for pair in self.VOCABULARIES}
+        for _, expected in expected_blocks():
+            for code, data in caveat_blocks(expected):
+                for pair in self.VOCABULARIES:
+                    if pair[0] == code and pair[1] in data:
+                        found[pair].add(data[pair[1]])
+        return found
+
+    def test_the_corpus_shows_no_value_outside_its_vocabulary(self):
+        found = self._values_in_corpus()
+        stray = {
+            f"{code}.{key}": sorted(found[(code, key)] - set(vocabulary))
+            for (code, key), vocabulary in self.VOCABULARIES.items()
+            if found[(code, key)] - set(vocabulary)
+        }
+        assert stray == {}
+
+    @pytest.mark.parametrize(
+        ("where", "vocabulary"),
+        [(f"{code}.{key}", vocabulary) for (code, key), vocabulary in VOCABULARIES.items()],
+    )
+    def test_the_guide_lists_every_slug(self, where, vocabulary):
+        undocumented = sorted(slug for slug in vocabulary if f"`{slug}`" not in self._GUIDE)
+        assert undocumented == [], where
+
+    def test_the_corpus_reaches_every_slug_the_exemption_list_does_not_name(self):
+        found: set[str] = set()
+        for values in self._values_in_corpus().values():
+            found |= values
+        every = {slug for vocabulary in self.VOCABULARIES.values() for slug in vocabulary}
+        assert sorted(every - found - self.NOT_YET_IN_A_FIXTURE) == []
+
+    def test_the_exemption_list_names_nothing_the_corpus_now_reaches(self):
+        found: set[str] = set()
+        for values in self._values_in_corpus().values():
+            found |= values
+        assert sorted(self.NOT_YET_IN_A_FIXTURE & found) == []
+
+    def test_every_slug_constant_is_in_its_tuple(self):
+        # The tuple is what the guide, the validator and the corpus check
+        # against, so a constant beside it and not in it is a value atlas can
+        # emit that nothing documents. Read off the defining MODULE, not the
+        # package's re-export list: a constant somebody forgot to export is
+        # exactly the one that would slip past.
+        for module, prefix, vocabulary in (
+            (
+                placement,
+                "REASON_",
+                (
+                    *atlas.CORE_MODE_UNESTABLISHED_REASONS,
+                    *atlas.EMULATOR_CONFIG_UNREADABLE_REASONS,
+                ),
+            ),
+            (placement, "ESTABLISHED_FOR_", atlas.FILES_ESTABLISHED_FOR_TOKENS),
+            (retroarch_cfg, "CFG_LAYER_", atlas.CFG_LAYER_KINDS),
+        ):
+            declared = {
+                value
+                for name, value in vars(module).items()
+                if name.startswith(prefix) and isinstance(value, str)
+            }
+            assert sorted(declared - set(vocabulary)) == [], prefix
+
+    def test_every_slug_constant_is_also_exported(self):
+        # And the package exports each, since the guide tells clients to
+        # compare against the names rather than against string literals.
+        for module, prefix in ((placement, "REASON_"), (placement, "ESTABLISHED_FOR_")):
+            for name, value in vars(module).items():
+                if name.startswith(prefix) and isinstance(value, str):
+                    assert name in atlas.__all__, name
+
+    def test_no_slug_is_spelled_twice_or_reads_as_a_sentence(self):
+        # Kebab-case, no spaces: the shape that separates a value from prose.
+        for (code, key), vocabulary in self.VOCABULARIES.items():
+            assert len(set(vocabulary)) == len(vocabulary), f"{code}.{key}"
+            for slug in vocabulary:
+                assert slug == slug.lower(), slug
+                assert " " not in slug, slug
+                assert "_" not in slug, slug
 
 
 class TestTheRunnerAsksEverythingItIsGiven:

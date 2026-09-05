@@ -1158,8 +1158,10 @@
               "data": {
                 "core": "mame",
                 "mode": "frontend-paths",
-                "files": "dkong",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files": [
+                  "dkong"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
               }
             },
@@ -1972,8 +1974,10 @@
               "data": {
                 "core": "mame2000",
                 "mode": "always",
-                "files": "dkong.nv",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. The file is named after the driver, not after the ROM file: MAME 2000 matches the content's basename against its driver table case-insensitively (libretro.c:862-871, and a miss refuses the load), and then writes the table's own spelling. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files": [
+                  "dkong.nv"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "libretro/fileio.c:763 at libretro/mame2000-libretro 2ec60f6"
               }
             }
@@ -2124,8 +2128,10 @@
               "data": {
                 "core": "mame2010",
                 "mode": "always",
-                "files": "dkong.nv",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.c:183, m_basename(driver.name)) and every name below is built on it, while the glue finds the driver from the content's basename (retromain.c). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files": [
+                  "dkong.nv"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "src/emu/machine/generic.c:325-331 at libretro/mame2010-libretro c5b413b"
               }
             },
@@ -2273,8 +2279,10 @@
               "data": {
                 "core": "mame2003",
                 "mode": "enabled",
-                "files": "dkong.nv",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files": [
+                  "dkong.nv"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
               }
             },
@@ -2432,8 +2440,10 @@
               "data": {
                 "core": "mame2003_plus",
                 "mode": "disabled",
-                "files": "dkong.nv",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files": [
+                  "dkong.nv"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
               }
             },
@@ -2581,8 +2591,11 @@
               "data": {
                 "core": "fbalpha2012_cps2",
                 "mode": "enabled",
-                "files": "ssf2t.fs, ssf2t.hi",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files": [
+                  "ssf2t.fs",
+                  "ssf2t.hi"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
               }
             }
@@ -2700,8 +2713,10 @@
               "data": {
                 "core": "fbalpha2012_neogeo",
                 "mode": "always",
-                "files": "mslug.fs",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files": [
+                  "mslug.fs"
+                ],
+                "files_established_for": "driver-named-content",
                 "citation": "src/burner/libretro/libretro.cpp:1429 (write) and :2899 (read) at libretro/fbalpha2012_neogeo fa3bf50"
               }
             }
@@ -3265,8 +3280,18 @@
               "data": {
                 "core": "prboom",
                 "mode": "always",
-                "files": "prbmsav0.dsg, prbmsav1.dsg, prbmsav2.dsg, prbmsav3.dsg, prbmsav4.dsg, prbmsav5.dsg, prbmsav6.dsg, prbmsav7.dsg, prboom.cfg",
-                "files_established_for": "content whose DeHackEd patch does not rename the savegame base",
+                "files": [
+                  "prbmsav0.dsg",
+                  "prbmsav1.dsg",
+                  "prbmsav2.dsg",
+                  "prbmsav3.dsg",
+                  "prbmsav4.dsg",
+                  "prbmsav5.dsg",
+                  "prbmsav6.dsg",
+                  "prbmsav7.dsg",
+                  "prboom.cfg"
+                ],
+                "files_established_for": "default-save-name",
                 "citation": "d_deh.c:492 sets the base to 'prbmsav'; :840 lists SAVEGAMENAME among the strings a .deh may replace, and the loader passes a matching .deh found beside the content (libretro.c:2399, :2611)"
               }
             }
@@ -3873,8 +3898,22 @@
               "data": {
                 "core": "tyrquake",
                 "mode": "always",
-                "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
-                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "files": [
+                  "s0.sav",
+                  "s1.sav",
+                  "s2.sav",
+                  "s3.sav",
+                  "s4.sav",
+                  "s5.sav",
+                  "s6.sav",
+                  "s7.sav",
+                  "s8.sav",
+                  "s9.sav",
+                  "s10.sav",
+                  "s11.sav",
+                  "config.cfg"
+                ],
+                "files_established_for": "menu-slot-saves",
                 "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
               }
             }
@@ -3952,8 +3991,22 @@
               "data": {
                 "core": "tyrquake",
                 "mode": "always",
-                "files": "s0.sav, s1.sav, s2.sav, s3.sav, s4.sav, s5.sav, s6.sav, s7.sav, s8.sav, s9.sav, s10.sav, s11.sav, config.cfg",
-                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "files": [
+                  "s0.sav",
+                  "s1.sav",
+                  "s2.sav",
+                  "s3.sav",
+                  "s4.sav",
+                  "s5.sav",
+                  "s6.sav",
+                  "s7.sav",
+                  "s8.sav",
+                  "s9.sav",
+                  "s10.sav",
+                  "s11.sav",
+                  "config.cfg"
+                ],
+                "files_established_for": "menu-slot-saves",
                 "citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
               }
             }
@@ -4050,8 +4103,10 @@
               "data": {
                 "core": "quasi88",
                 "mode": "disabled",
-                "files": "Game (Japan).srm",
-                "files_established_for": "content loaded as a single disk image. Every disk the core opens gets a differencing file named after that image's own stem — an .m3u playlist's member images each bring theirs, and the core's built-in menu can open further images with theirs",
+                "files": [
+                  "Game (Japan).srm"
+                ],
+                "files_established_for": "single-disk-image",
                 "citation": "src/LIBRETRO/file-op.c:252-254 at libretro/quasi88-libretro 42be798 — the diff is named after the opened image's basename; libretro.c:684-685 inserts the content path, load_m3u (:616-670) appends each playlist member, menu.c:2469 opens what the menu picks"
               }
             }
@@ -4371,7 +4426,7 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "hatari",
-                "reason": "which write-protect option governs depends on the content's class (a floppy image is written back into itself, a hard-disk image takes writes in place), and no content was named"
+                "reason": "content-class-unnamed"
               }
             }
           ],
@@ -4759,8 +4814,13 @@
               "data": {
                 "core": "swanstation",
                 "mode": "card1-per-code+card2-shared",
-                "files": "<save_id>_1.mcd, duckstation_shared_card_2.mcd",
-                "files_without_save_id": "duckstation_shared_card_1.mcd"
+                "files": [
+                  "<save_id>_1.mcd",
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "files_without_save_id": [
+                  "duckstation_shared_card_1.mcd"
+                ]
               }
             }
           ],
@@ -5300,7 +5360,10 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "mame",
-                "reason": "MAME reads an ini cascade whose members apply by driver metadata inside the binary, which atlas cannot attribute — vertical.ini on its search path outranks mame.ini, so which values govern was never established"
+                "reason": "ini-outranked-by-cascade",
+                "members": [
+                  "vertical.ini"
+                ]
               }
             }
           ],
@@ -5506,7 +5569,382 @@
               "code": "core-mode-unestablished",
               "data": {
                 "core": "mame",
-                "reason": "MAME reads an ini cascade whose members apply by driver metadata inside the binary, which atlas cannot attribute — source/dkong.ini on its search path outranks mame.ini, so which values govern was never established"
+                "reason": "ini-outranked-by-cascade",
+                "members": [
+                  "source/dkong.ini"
+                ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "mame-an-ini-whose-presence-is-unestablished-names-the-member-it-is-about",
+      "rationale": "MAME's own paths and ini reading are both on, and whether a mame.ini exists along the search path could not be established — so which values govern is unknowable and the rule steps aside. Which cascade member the statement is about is data (`members`), not a file name spelled into a sentence.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\nmame_read_config = \"enabled\"\n",
+          "/mnt/sd/retrodeck/bios/mame/ini/mame.ini": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/mame-nvram",
+          "/mnt/sd/mame-cfg-dkong"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "mame",
+                "reason": "ini-presence-unestablished",
+                "members": [
+                  "mame.ini"
+                ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "hatari-a-content-class-outside-the-record-names-the-extension-it-saw",
+      "rationale": "The write-protect story splits on whether the content is a floppy or a hard-disk image, and this extension is in neither recorded class — so which option governs was never established and the card steps aside. The extension is the fact, and it is a key of its own rather than a word quoted into the reason.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).qqq": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
+            "library_name": "hatari",
+            "library_version": "1.8 7008194",
+            "options": {
+              "hatari_writeprotect_floppy": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              },
+              "hatari_writeprotect_hd": {
+                "default": "off",
+                "values": [
+                  "on",
+                  "off",
+                  "auto"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/atarist/Turrican (Europe).qqq",
+          "core_so": "hatari_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "hatari",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "hatari",
+                "reason": "content-class-unrecorded",
+                "extension": "qqq"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "scummvm-a-savepath-with-no-host-spelling-names-the-value-it-read",
+      "rationale": "scummvm.ini sets savepath to a path no view of this machine translates, so whether it governs cannot be established. The configured value is what a caller has to look at, so it rides as `path` beside the reason slug — the value was inside the sentence before, in quotes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm": "rom",
+          "/mnt/sd/retrodeck/bios/scummvm.ini": "[scummvm]\nsavepath=/run/user/1000/scumm-saves\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
+            "library_name": "ScummVM",
+            "library_version": "2.10.0git",
+            "options": {}
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/scummvm/monkey1.scummvm",
+          "core_so": "scummvm_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "scummvm",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "scummvm",
+                "reason": "savepath-untranslatable",
+                "path": "/run/user/1000/scumm-saves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "beetle-psx-a-diverging-card-index-names-the-options-and-their-values",
+      "rationale": "The card-image index options select other card files than the recorded names cover, so the card refuses to name a file rather than misname one. Which options and what they are set to is an object under `options`, the shape a tally already has — the sentence used to spell the pairs out and a client had to parse them back.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "beetle_psx_memcard_right_index = \"7\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX",
+            "library_version": "0.9.44.1 d6383bf",
+            "options": {
+              "beetle_psx_use_mednafen_memcard0_method": {
+                "default": "libretro",
+                "values": [
+                  "libretro",
+                  "mednafen"
+                ]
+              },
+              "beetle_psx_enable_memcard1": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_psx_shared_memory_cards": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_psx_memcard_left_index": {
+                "default": "0",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7"
+                ]
+              },
+              "beetle_psx_memcard_right_index": {
+                "default": "1",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game (Europe).cue",
+          "core_so": "mednafen_psx_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "mednafen_psx",
+                "reason": "card-index-outside-recorded-names",
+                "options": {
+                  "beetle_psx_memcard_right_index": "7"
+                }
               }
             }
           ],

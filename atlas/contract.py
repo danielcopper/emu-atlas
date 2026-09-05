@@ -69,22 +69,29 @@ from .placement import (
 AnswerT = TypeVar("AnswerT")
 
 
-def _caveats_contract(caveats: Sequence[Caveat]) -> list[dict[str, Any]]:
-    """One ``{code, data}`` per caveat, in order — the one serialization of a caveat.
+def data_contract(data: Mapping[str, "str | Sequence[str] | Mapping[str, str]"]) -> dict[str, Any]:
+    """The one rule for serializing a ``data`` block, caveat or refusal alike.
 
-    Mapping-valued data (the alternative-emulator tally) serializes as a plain
-    object, the way an aggregate refusal's tuples serialize as lists.
+    Three shapes, one each: a string stays a string, a sequence of strings
+    becomes a JSON array in the emitter's own order, and a mapping — a tally,
+    at the two keys the guide documents — becomes a plain object. Written once
+    because both callers below and the generated contract reference must agree
+    literally — a second copy is a second answer waiting to happen.
     """
-    return [
-        {
-            "code": c.code,
-            "data": {
-                key: dict(value) if isinstance(value, Mapping) else value
-                for key, value in c.data.items()
-            },
-        }
-        for c in caveats
-    ]
+    out: dict[str, Any] = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            out[key] = value
+        elif isinstance(value, Mapping):
+            out[key] = dict(value)
+        else:
+            out[key] = list(value)
+    return out
+
+
+def _caveats_contract(caveats: Sequence[Caveat]) -> list[dict[str, Any]]:
+    """One ``{code, data}`` per caveat, in order — the one serialization of a caveat."""
+    return [{"code": c.code, "data": data_contract(c.data)} for c in caveats]
 
 
 def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[str, Any]:
@@ -290,18 +297,11 @@ def soft_patch_contract(answer: SoftPatchAnswer) -> dict[str, Any]:
 def unresolved_contract(unresolved: Unresolved) -> dict[str, Any]:
     """The stable form of an :class:`~atlas.placement.Unresolved` outcome.
 
-    Tuple-valued data (an aggregate refusal's ``paths``) serializes as the
-    JSON list it is in the written contract.
+    Its ``data`` serializes by the same rule a caveat's does
+    (:func:`data_contract`), because it is the same vocabulary: an aggregate
+    refusal's ``paths`` is the JSON list it is in the written contract.
     """
-    return {
-        "unresolved": {
-            "code": unresolved.code,
-            "data": {
-                key: list(value) if isinstance(value, tuple) else value
-                for key, value in unresolved.data.items()
-            },
-        }
-    }
+    return {"unresolved": {"code": unresolved.code, "data": data_contract(unresolved.data)}}
 
 
 def _findings_contract(health: Health) -> list[dict[str, Any]]:

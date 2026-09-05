@@ -622,7 +622,12 @@ INSTALLATION_CASES = [
     case(_vector({"installations": [{**INSTALLATION, "health": [{"code": "root-missing"}]}]}),
          "each caveat must be exactly the fields", id="caveat-missing-data"),
     case(_vector({"installations": [{**INSTALLATION, "health": [{"code": "root-missing", "data": {"n": 1}}]}]}),
-         "caveat data must be an object of strings", id="caveat-data-not-strings"),
+         "caveat data values must each be", id="caveat-data-not-strings"),
+    case(_vector({"installations": [{**INSTALLATION, "health": [{"code": "root-missing", "data": {"n": ["a", 1]}}]}]}),
+         "caveat data values must each be", id="caveat-data-list-of-non-strings"),
+    case(_vector({"installations": [{**INSTALLATION,
+                                     "health": [{"code": "root-missing", "data": {"emulators": {"a": "1"}}}]}]}),
+         "caveat data values must each be", id="caveat-data-tally-under-the-wrong-code"),
 ]
 
 PLACEMENT_CASES = [
@@ -776,6 +781,14 @@ ENTRY_CASES = [
          "unresolved code must be one of", id="entry-unknown-unresolved-code"),
     case(_base_entry({"unresolved": {"code": "standalone-unsupported"}}),
          "entry_savefile_location.unresolved must be exactly the fields", id="entry-unresolved-missing-data"),
+    # A refusal's data speaks the caveat value vocabulary; it used to pass
+    # unchecked while only its code was validated.
+    case(_base_entry({"unresolved": {"code": "standalone-unsupported", "data": {"emulator": 1}}}),
+         "unresolved data values must each be", id="entry-unresolved-data-not-a-value"),
+    case(_base_entry({"unresolved": {"code": "standalone-unsupported", "data": {"paths": ["a", 2]}}}),
+         "unresolved data values must each be", id="entry-unresolved-data-list-of-non-strings"),
+    case(_base_entry({"unresolved": {"code": "standalone-unsupported", "data": {"emulators": {"a": "1"}}}}),
+         "unresolved data values must each be", id="entry-unresolved-tally-under-the-wrong-code"),
 ]
 
 CATALOGUE_CASES = [

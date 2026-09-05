@@ -154,11 +154,17 @@ had.
   otherwise, so the set is conditional on a fact atlas does not read. The resolver states the id-keyed set and hands
   this one to the caller in `filenames-content-conditional`, filled as far as it can fill it. Only meaningful next to a
   `<save_id>` set, and it may not name an id itself; the loader enforces both.
-- `files_established_for` + `files_citation` — the class of content the list was established for, and the source that
-  says so. Not every difference between content classes is a spelling: Flycast connects four VMUs on a Dreamcast and two
-  on a Naomi board, so for arcade content two of the four declared names can never exist. Both travel into the same
-  caveat as data, so a client can tell "this list is scoped" from "this list is universal" without reading prose. The
-  scope needs a declared `files` to scope, and the citation needs a scope to cite; the loader enforces both.
+- `files_established_for` + `files_established_note` + `files_citation` — the class of content the list was established
+  for, that class spelled out for a person, and the source that says so. Not every difference between content classes is
+  a spelling: Flycast connects four VMUs on a Dreamcast and two on a Naomi board, so for arcade content two of the four
+  declared names can never exist. The **token** is one of `atlas.placement.FILES_ESTABLISHED_FOR_TOKENS` — today
+  `console`, `driver-named-content`, `single-disk-image`, `unpacked-game-directory`, `raw-cartridge-image`,
+  `menu-slot-saves`, `default-save-name` — and the loader refuses anything else, because it reaches a client as the
+  value it branches on. Whatever the class needs said in words goes in `files_established_note`, which reaches the
+  caller through the caveat's `message`; the token alone travels as data, so "this list is scoped" is a branch and not a
+  paragraph to read. A card that needs a class the tokens do not name adds one to that tuple and to the sentence that
+  lists them in `docs/how-to-use.md`, rather than writing a sentence into the token. The scope needs a declared `files`
+  to scope, and both the note and the citation need a scope to belong to; the loader enforces all three.
 
 ### A group at another root — the spanning save
 

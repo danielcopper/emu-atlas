@@ -260,7 +260,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "files_established_for": "content loaded as a single .dsk floppy image. Every disk attached to drive A gets a differencing file named after that image's own full name, extension kept — a playlist's or an archive's member disks bring their inner names. Tapes, snapshots and cartridges write nothing here, and drive B has no differencing file",
+                "files_established_for": "single-disk-image",
+                "files_established_note": "The class here is a single .dsk floppy image: every disk attached to drive A gets a differencing file named after that image's own full name, extension kept — a playlist's or an archive's member disks bring their inner names. Tapes, snapshots and cartridges write nothing here, and drive B has no differencing file.",
                 "files_citation": "libretro/retro_disk_control.c:90 at libretro-cap32 a5d96c5 — '%s%s%s.' EXT_DIFF_DSK joined from the save directory and path_basename of the attached file, with EXT_DIFF_DSK 'sav' (libretro-core.h:230)"
               }
             ]
@@ -376,7 +377,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content without a save-name redirect or a legacy save. A <name>.SAVENAME file on the emulated C: drive renames the save to <name>.pure.zip so several contents share one; an existing legacy <rom_stem>.sav keeps being used unless the strict-mode option forbids it; a 'Boot OS' setup keeps its virtual disks beside the save, '<rom_stem>-CDRIVE.sav' and hash-keyed '.sav' spellings whose names follow the installation",
+                "files_established_for": "default-save-name",
+                "files_established_note": "The class here is content with neither a save-name redirect nor a legacy save: a <name>.SAVENAME file on the emulated C: drive renames the save to <name>.pure.zip so several contents share one; an existing legacy <rom_stem>.sav keeps being used unless the strict-mode option forbids it; a 'Boot OS' setup keeps its virtual disks beside the save, '<rom_stem>-CDRIVE.sav' and hash-keyed '.sav' spellings whose names follow the installation.",
                 "files_citation": "dosbox_pure_libretro.cpp:826-844 at libretro/dosbox-pure ed5e809 ('Set version to 1.0-preview4', the version the shipped binary names) — DBP_GetSaveFile joins the save directory, the content's stem and '.pure.zip'; :808-824 finds the .SAVENAME redirect, :835-839 the legacy fallback, :845-875 the Boot OS disk spellings"
               }
             ]
@@ -432,7 +434,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "files_established_for": "content loaded as an unpacked game directory (or a file inside one), where the slots land beside the game files themselves. An archive (.zip, .easyrpg) cannot be written, so the player creates a sibling directory named after the archive's own full name with '.save' appended and the slots land in there — a directory whose name atlas cannot state as a template",
+                "files_established_for": "unpacked-game-directory",
+                "files_established_note": "The class here is content loaded as an unpacked game directory (or a file inside one), where the slots land beside the game files themselves. An archive (.zip, .easyrpg) cannot be written, so the player creates a sibling directory named after the archive's own full name with '.save' appended and the slots land in there — a directory whose name atlas cannot state as a template.",
                 "files_citation": "src/scene_save.cpp:69 at EasyRPG/Player 6a244c1 writes 'Save{:02d}.lsd' into FileFinder::Save(); src/filefinder.cpp:402 bounds the slots at 15; :88-127 derives the .save redirect for unwritable game filesystems"
               }
             ]
@@ -511,7 +514,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:800 (write) and :1006 (read) at libretro/fbalpha2012 77167ce"
               },
               {
@@ -534,7 +538,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:800 (write) and :1006 (read) at libretro/fbalpha2012 77167ce"
               }
             ]
@@ -585,7 +590,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "src/burn/devices/eeprom.cpp:110 (write, fopen 'wb' at :116) and :88 (read) at libretro/fbalpha2012_cps1 v0.2.97.28"
               },
               {
@@ -650,7 +656,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
               },
               {
@@ -673,7 +680,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "src/burner/libretro/libretro.cpp:1036 (write) and :858 (read) at libretro/fbalpha2012_cps2 v0.2.97.28"
               }
             ]
@@ -720,7 +728,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:626 (write) and :1024 (read) at libretro/fbalpha2012_cps3 v0.2.97.29"
               },
               {
@@ -743,7 +752,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "svn-current/trunk/src/burner/libretro/libretro.cpp:626 (write) and :1024 (read) at libretro/fbalpha2012_cps3 v0.2.97.29"
               }
             ]
@@ -790,7 +800,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is the driver's own name. FB Alpha names the file after the loaded driver, and its lookup is exact: BurnDrvGetIndexByName compares with strcmp, so a content basename that differs from the driver name in any way — case included — refuses to load at all. Where the game runs, the two strings are equal.",
                 "files_citation": "src/burner/libretro/libretro.cpp:1429 (write) and :2899 (read) at libretro/fbalpha2012_neogeo fa3bf50"
               }
             ]
@@ -1201,7 +1212,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal.",
                 "files_citation": "ctrl/src/stv.c:3075 (write) and :3052 (read) at FCare/Kronos 6709c1d — '%s/%s.nv' joined from the eeprom directory and the romset name"
               }
             ]
@@ -1236,7 +1248,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is ST-V content whose file stem is the set's own name. The eeprom file is named after the romset the zip's contents identified as (STVGetSingle), not after the zip — for sets named as the driver list names them, the two are equal.",
                 "files_citation": "ctrl/src/stv.c:3075 (write) and :3052 (read) at FCare/Kronos 6709c1d — '%s/%s.nv' joined from the eeprom directory and the romset name"
               }
             ]
@@ -1313,7 +1326,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.cpp:74, m_basename(_config.gamedrv().name)) and every name below is built on it, while the glue finds the driver from the content's basename (retro_init.cpp:285-305). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
               },
               {
@@ -1397,7 +1411,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. The file is named after the driver, not after the ROM file: MAME 2000 matches the content's basename against its driver table case-insensitively (libretro.c:862-871, and a miss refuses the load), and then writes the table's own spelling. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. The file is named after the driver, not after the ROM file: MAME 2000 matches the content's basename against its driver table case-insensitively (libretro.c:862-871, and a miss refuses the load), and then writes the table's own spelling. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "libretro/fileio.c:763 at libretro/mame2000-libretro 2ec60f6"
               },
               {
@@ -1472,7 +1487,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
               },
               {
@@ -1515,7 +1531,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "mame.c:497 and :530 at libretro/mame2003-libretro 3570605"
               },
               {
@@ -1612,7 +1629,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
               },
               {
@@ -1655,7 +1673,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. Every name here is Machine->gamedrv->name, the driver's own (mame.c:497 and :530 for the NVRAM, hiscore.c:166 and :203 for the score table), while the glue finds the driver by matching the content's basename against the driver table. For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "mame.c:497 and :530 at libretro/mame2003-plus-libretro 62c7089"
               },
               {
@@ -1748,7 +1767,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "files_established_for": "content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.c:183, m_basename(driver.name)) and every name below is built on it, while the glue finds the driver from the content's basename (retromain.c). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
+                "files_established_for": "driver-named-content",
+                "files_established_note": "The class here is content whose file stem is spelled exactly as MAME spells the driver. running_machine takes its basename straight from the driver (machine.c:183, m_basename(driver.name)) and every name below is built on it, while the glue finds the driver from the content's basename (retromain.c). For a MAME-conformant romset the two are the same string; for a collection that spells its files otherwise, the stem here is right up to case.",
                 "files_citation": "src/emu/machine/generic.c:325-331 at libretro/mame2010-libretro c5b413b"
               },
               {
@@ -2222,7 +2242,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "files_established_for": "content whose DeHackEd patch does not rename the savegame base",
+                "files_established_for": "default-save-name",
+                "files_established_note": "The class here is content whose DeHackEd patch does not rename the savegame base.",
                 "files_citation": "d_deh.c:492 sets the base to 'prbmsav'; :840 lists SAVEGAMENAME among the strings a .deh may replace, and the loader passes a matching .deh found beside the content (libretro.c:2399, :2611)"
               },
               {
@@ -2296,7 +2317,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "files_established_for": "content loaded as a single disk image. Every disk the core opens gets a differencing file named after that image's own stem — an .m3u playlist's member images each bring theirs, and the core's built-in menu can open further images with theirs",
+                "files_established_for": "single-disk-image",
+                "files_established_note": "The class here is content loaded as a single disk image: every disk the core opens gets a differencing file named after that image's own stem — an .m3u playlist's member images each bring theirs, and the core's built-in menu can open further images with theirs.",
                 "files_citation": "src/LIBRETRO/file-op.c:252-254 at libretro/quasi88-libretro 42be798 — the diff is named after the opened image's basename; libretro.c:684-685 inserts the content path, load_m3u (:616-670) appends each playlist member, menu.c:2469 opens what the menu picks"
               }
             ]
@@ -2387,7 +2409,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "files_established_for": "saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them",
+                "files_established_for": "menu-slot-saves",
+                "files_established_note": "The class here is the saves made through the menu's twelve slots — the console's save command takes a free name, defaults its extension to .sav and lands the file beside them.",
                 "files_citation": "common/menu.c:643 at libretro/tyrquake dfdae65 stuffs 'save s%i' for the twelve slots (MAX_SAVEGAMES, menu.c:487); host_cmd.c:512-513 joins the save directory with the given name and defaults the extension"
               },
               {
@@ -3725,7 +3748,8 @@
                 "files": [
                   "<rom_stem>.srm"
                 ],
-                "files_established_for": "a raw .bin loaded as the cartridge dump it is in every ordinary library — one that carries the Sega CD disc header boots as a disc instead and takes the CD modes, a class the extension alone cannot settle",
+                "files_established_for": "raw-cartridge-image",
+                "files_established_note": "The class here is a raw .bin loaded as the cartridge dump it is in every ordinary library — one that carries the Sega CD disc header boots as a disc instead and takes the CD modes, a class the extension alone cannot settle.",
                 "files_citation": "core/loadrom.c load-time system detection at 46a5521",
                 "granularity": "per-game-file",
                 "role": "battery"

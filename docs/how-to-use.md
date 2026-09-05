@@ -589,7 +589,7 @@ comes with `file-set-across-systems`, whose `data["systems"]` lists exactly the 
 
 ```python
 c = next(c for c in placement.caveats if c.code == "file-set-across-systems")
-c.data["systems"]      # 'gb, gbc' — the answer holds for these, and states nothing about any other
+c.data["systems"]      # ['gb', 'gbc'] — the answer holds for these, and states nothing about any other
 ```
 
 The one core where the systems disagree is mGBA, which is also the reason the records are keyed by system at all — it
@@ -752,8 +752,8 @@ as far as atlas can fill it:
 
 ```python
 c = next(c for c in placement.caveats if c.code == "filenames-content-conditional")
-c.data["files"]                   # '<save_id>.A1.bin, <save_id>.B1.bin, …'  — the stated set
-c.data["files_without_save_id"]   # 'Game.A1.bin, Game.B1.bin, …'            — if the content has no id
+c.data["files"]                   # ['<save_id>.A1.bin', '<save_id>.B1.bin', …]  — the stated set
+c.data["files_without_save_id"]   # ['Game.A1.bin', 'Game.B1.bin', …]           — if the content has no id
 c.data["files_established_for"]   # 'console'  — which content class the set itself was established for
 c.data["citation"]                # the source behind both, for when you need to check
 ```
@@ -804,7 +804,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `cfg-value-rejected`              | the file sets a value the emulator cannot read, so the value it had keeps governing                       |
 | `core-unaudited` / `core-suspect` | no rule card for this core yet / options scan shows save-related keys nobody has verified                 |
 | `core-multi-option`               | granularity deliberately unstated — depends on options atlas does not interpret (named in it)             |
-| `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope                    |
+| `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope token, below       |
 | `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared             |
 | `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
 | `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
@@ -812,7 +812,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
 | `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
 | `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |
-| `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` says why) — not applied                      |
+| `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied              |
 | `option-entry-retired`            | the options file carries a key this core generation retired — the value there stopped applying            |
 | `save-inside-content`             | no separate save file exists: the loaded content file itself takes the writes — your call                 |
 | `save-inside-image`               | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file          |
@@ -851,6 +851,122 @@ it, so you can tell whether this answer is even about the emulator that will run
 statement about the **emulator**: some games carry a settings file that layers over this very answer, with `core`, `dir`
 and `key` beside the `count`. Both can ride the same answer at once, because they come from different places — switch on
 the code.
+
+#### The values inside `data`
+
+Three shapes, and the shape is fixed per **`(code, key)` pair** — not per key name. The same name means different things
+under different codes: `options` is a list on `core-multi-option` and `core-generation-mismatch` and an object on
+`core-mode-unestablished`; `key` is one config key as a string on `sandbox-path-untranslated`, `cfg-value-rejected` and
+their siblings, and a list of them on the three codes that name a whole set of keys a per-game file could answer
+differently (`per-game-layer-unread`, `per-game-overrides-present`, `per-game-build-layer-unread`); `declared` is one
+declared path on the firmware requirement codes and a list on `firmware-declaration-unread`. Switch on the code first,
+then read the key. A test holds this: every `(code, key)` in the conformance corpus carries one JSON type and never two.
+
+- **a string** — one value, e.g. `dir`, `core`, `count`;
+- **a list** — several values, in the order this answer states them;
+- **an object** — a tally of strings, at two pairs and only there: `per-game-alternative-emulator`'s `emulators` (each
+  selected emulator label to how many games select it) and `core-mode-unestablished`'s `options` (each option key to the
+  value read for it).
+
+A list is a JSON array, never a string you split on `", "`, and a one-element list is still an array — MAME's
+`per-game-layer-unread.key` names a single ini setting and spells it `["state_directory"]`, because its siblings under
+that code name several and a client must not have to test the type first. The save side spells these pairs as lists:
+`filenames-content-conditional`'s `files` and `files_without_save_id`, `file-set-spans-roots.files`,
+`file-set-across-systems.systems`, `core-mode-unestablished`'s `users` / `skipped` / `unestablished`,
+`per-game-layer-unread`'s `key` / `files` / `unlistable`, `per-game-overrides-present.key`,
+`per-game-build-layer-unread.key`, `core-multi-option.options`, `core-generation-mismatch.options`,
+`core-mode-unestablished.members`, `unverified-version.missing` and `patch-formats-unestablished.formats`. The firmware
+side spells `regions` (on `firmware-path-names-no-file`, `firmware-search-unverified` and `core-mode-unestablished`),
+`firmware-declaration-unread.declared`, `firmware-directory-holds-no-image.paths`,
+`firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`, `system-not-in-catalogue` and
+`system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on both `core-without-systemname`
+and `system-assignment-derived`. Order is contractual: it is the order the answer states, and two caveats naming the
+same names in different orders are two statements.
+
+An empty list and an absent key are different answers, and which a pair gives is fixed. `[]` says this answer states no
+names under that key; whether none exist, none were read, or a listing failed is the code's business and the message's,
+not the empty array's. Read off the emitters, and measured wherever the corpus reaches it: the pairs always stated and
+carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-assignment-derived.database` and
+`core-without-systemname.database`; the ones present only when they have something to say, and simply absent otherwise,
+are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`, `unverified-version.missing` and the per-user
+`skipped` and `unestablished`. `per-game-layer-unread.files` is neither, because that code has four emulators' emitters
+and they do not agree: MAME's states it, `[]` there when only a failed listing is left to state, and states no `core`,
+while the DuckStation, PCSX2 and Dolphin emitters state `core`, `dir` and `key` and no `files`. Test for the key before
+reading it.
+
+A key a client **branches** on is a value from a closed set, never a sentence. Four of them are the ones this round
+introduced, and all four are kebab-case slugs (older enumerations spell themselves their own way —
+`arrangement-unverified`'s `kind` is snake_case, and `verification`, `verdict`, `need` and `status` are closed sets
+too):
+
+`core-mode-unestablished.reason` — why the card's selection rule could not decide. The sentence that used to sit here is
+in `message`, and what it embedded is a key of its own (named in the third column):
+
+| reason                                | what could not be decided                                                          | what the sentence embedded |
+| ------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- |
+| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it               | —                          |
+| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                 | —                          |
+| `no-user-directory`                   | no user directory was found at all                                                 | —                          |
+| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them           | —                          |
+| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                     | —                          |
+| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                  | —                          |
+| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                     | —                          |
+| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                             | —                          |
+| `configured-user-has-no-tree`         | nothing here answers to the configured id                                          | —                          |
+| `no-user-preselected`                 | the configuration preselects no user                                               | —                          |
+| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                | —                          |
+| `region-decided-by-disc`              | which console region boots is the running disc's                                   | — [^rd]                    |
+| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                          | —                          |
+| `slot-holds-agp-device`               | the slot holds a GBA cartridge adapter this answer does not model                  | `slot`                     |
+| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                            | `slot`, `value`            |
+| `session-override-set`                | a per-session override (a movie or netplay session) is set                         | `key`                      |
+| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                 | —                          |
+| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                  | —                          |
+| `virtual-sd-disabled`                 | the emulated SD card is switched off                                               | —                          |
+| `content-class-unnamed`               | the answer splits on the content's class and no content was named                  | —                          |
+| `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
+| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
+| `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |
+| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover              | `options` (an object)      |
+| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                  | `members`                  |
+| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read   | —                          |
+| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal | `members`                  |
+
+[^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
+    lifted out of the sentence.
+
+Four keys ride the eleven per-user reasons independently of which one it is, so read them by presence rather than by
+reason: `users` is always there and names the trees this answer points at — where none was found it holds the single
+tree the emulator starts with, which is a compiled default and not a directory seen on this machine; `configured_user`
+is there whenever the configuration records a user id, including on reasons whose name does not mention one; `skipped`
+names directories the emulator's own listing passes over, and `unestablished` those whose deciding file could not be
+read.
+
+`emulator-config-unreadable.reason` — set where the read got somewhere and still could not answer. Six values are the
+scalar reader's own refusals — `second-document`, `anchor-or-alias`, `tag`, `substitution-cycle`,
+`substitution-unknown`, `not-a-flat-mapping` — each naming the construct that stopped the whole file. The seventh is
+`key-unread`: the file parsed, and the one key the answer hangs on is stated as a construct the reader does not read,
+with `data["key"]` naming it. Only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's
+`config.yml` — ever state a `reason` at all. A refusal that could not open its file states none, and so does one whose
+file is not parseable in its own format (xemu's TOML, Cemu's XML): there is no vocabulary for "the parser said no" and
+inventing one would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case.
+
+`filenames-content-conditional.files_established_for` — which class of content the declared names were established for:
+`console`, `driver-named-content` (the emulator names the file after the driver or romset it identified, not after the
+file you passed), `single-disk-image`, `unpacked-game-directory`, `raw-cartridge-image`, `menu-slot-saves`,
+`default-save-name` (content that does not rename the save). Where the card states a paragraph about that class — most
+do, `console` does not — it is in `message`, not in the data.
+
+`invalid-save-directory.layer` — which layer of RetroArch's override chain stated the refused directory: `global`,
+`core-override`, `content-dir-override` or `game-override`, with `data["file"]` naming the file itself. The two were one
+string before, and splitting them is what lets a client act on the kind without parsing the path back out.
+
+Five keys stay prose on purpose, because nothing branches on them: `citation` on the codes that carry one; the hole-fill
+descriptions `save_id` and `rom_stem` on `filenames-content-conditional` and `file-names-unestablished`, each saying in
+words what a caller must know to fill that hole, which no closed set could say; `names` on `savestate-inside-image`,
+which describes how the entries inside a disk image are named rather than listing them; and `description` on
+`firmware-image-identified` and `firmware-image-unlisted`, which reproduces the core's own format string for rendering
+to a person (see the firmware section).
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
@@ -1056,7 +1172,7 @@ emulator's own config directory. Below the drive, saves are one directory per ti
 Which user the emulator runs as is a runtime selection nothing on disk records, so **every user home RPCS3 itself would
 list is a group of its own** and a caveat lists them: a machine with two accounts gets two trees rather than a guess at
 which is in force. Where the tree holds no user home at all, the caveat says exactly that — the directory named is the
-one the emulator would create on the first save, not one found here — and a tree that could not be listed carries
+one the emulator creates at startup, not one found here — and a tree that could not be listed carries
 `save-dir-unlistable` of its own, so "which users exist is unknown" is something a client can branch on. Two more things
 ride along: the per-title directories keep their names refused (they are the games' own), and a _second_ place saves
 live rides as its own group — `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, outside the per-user
@@ -2217,7 +2333,19 @@ Two more say a directory could not be read, and both mean the answer is narrower
 
 `core-enumeration-incomplete` carries `data["path"]`, the directory that could not be read. `firmware-scan-incomplete`
 carries `path` from the unclaimed scan, and `dir` plus `unreadable` from a folder declaration's listing or a DuckStation
-search — the directory asked for, and where the walk stopped short.
+search — the directory asked for, and the places the walk stopped short at, as a list.
+
+The firmware caveats spell their multi-valued keys as JSON arrays, the same rule the save side follows (see
+[The values inside `data`](#the-values-inside-data)): `regions` on `firmware-path-names-no-file`,
+`firmware-search-unverified` and the region-conditional `core-mode-unestablished`; `declared` on
+`firmware-declaration-unread`; `paths` on `firmware-directory-holds-no-image`; `unreadable` on
+`firmware-scan-incomplete`; `files` on `core-without-systemname`, `system-not-in-catalogue` and
+`system-assignment-derived`; `cores` on `system-assignment-may-hide-cores`; and `database` on `core-without-systemname`
+and `system-assignment-derived`, which carries the systems atlas parsed out of the `.info` rather than that field's own
+pipe-joined spelling. One key here is deliberately not machine-readable and never will be: `description` on
+`firmware-image-identified` and `firmware-image-unlisted` reproduces the core's own format string
+(`BiosTools.cpp:147-155` at 14d19f8) with its column padding intact, for rendering to a person. The fields beside it —
+`zone`, `version`, `date`, `serial` — are the machine-readable halves.
 
 ## Answers as plain JSON
 

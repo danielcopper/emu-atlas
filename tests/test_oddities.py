@@ -33,9 +33,16 @@ from tests.answers import placed, state_placed
 
 
 def _text(caveat: atlas.Caveat, key: str) -> str:
-    """The string at *key* — narrows past the one mapping-valued data key (#311)."""
+    """The string at *key* — narrows past the sequence- and mapping-valued keys."""
     value = caveat.data[key]
     assert isinstance(value, str)
+    return value
+
+
+def _names(caveat: atlas.Caveat, key: str) -> tuple[str, ...]:
+    """The sequence at *key* — the shape every file, key, option and region list has."""
+    value = caveat.data[key]
+    assert isinstance(value, tuple)
     return value
 
 
@@ -287,9 +294,47 @@ def _prboom_query(files, content_path=PRBOOM_ROM):
     return placed(rd.savefile_location(content_path=content_path, core_so="prboom_libretro.so"))
 
 
+EASYRPG_ROM = "/mnt/sd/retrodeck/roms/easyrpg/My Game/RPG_RT.ldb"
+
+
+def _easyrpg_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/easyrpg_libretro.so": {"library_name": "EasyRPG Player"}})
+    return placed(rd.savefile_location(content_path=EASYRPG_ROM, core_so="easyrpg_libretro.so"))
+
+
 def _vitaquake2_query(files):
     rd = _retrodeck(files, cores={f"{DEPLOY}/vitaquake2_libretro.so": {"library_name": "vitaQuakeII"}})
     return placed(rd.savefile_location(content_path=VQ2_ROM, core_so="vitaquake2_libretro.so"))
+
+
+class TestTheUnpackedGameDirectoryScope:
+    """EasyRPG's fifteen slots hold for an unpacked game, and the token says so.
+
+    The one content class this vocabulary names that nothing else exercises:
+    an archive cannot be written into, so the player writes a sibling
+    directory whose name atlas cannot state as a template — which is exactly
+    why the declared names are scoped rather than stated flat.
+    """
+
+    FILES = {
+        RETRODECK_JSON: RD_JSON,
+        RETRODECK_CFG: CFG,
+        SAVES_KEEP: "",
+        EASYRPG_ROM: "",
+    }
+
+    def test_the_slots_are_scoped_to_the_unpacked_directory_class(self):
+        p = _easyrpg_query(self.FILES)
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL)
+        assert caveat.data["files_established_for"] == atlas.ESTABLISHED_FOR_UNPACKED_GAME_DIRECTORY
+        assert _names(caveat, "files")[0] == "Save01.lsd"
+        # The paragraph the token replaced is prose now, and it rides here.
+        assert ".save" in caveat.message
+
+    def test_the_answer_lands_beside_the_game_files(self):
+        p = _easyrpg_query(self.FILES)
+        assert p.dir == "/mnt/sd/retrodeck/roms/easyrpg/My Game"
+        assert p.file_set.files[0] == "Save01.lsd"
 
 
 class TestASubdirNamedAfterTheContent:
@@ -327,7 +372,8 @@ class TestASubdirNamedAfterTheContent:
         # the base — a fact about the content, so it rides machine-readably.
         p = _prboom_query(self.FILES)
         caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL)
-        assert "DeHackEd" in caveat.data["files_established_for"]
+        assert caveat.data["files_established_for"] == atlas.ESTABLISHED_FOR_DEFAULT_SAVE_NAME
+        assert "DeHackEd" in caveat.message
 
     def test_the_directory_name_template_fills_from_the_contents_directory(self):
         p = _vitaquake2_query(self.FILES)
@@ -558,7 +604,8 @@ class TestAnOptionThatMovesTheRootItself:
     def test_the_open_diff_set_is_scoped_by_a_caveat(self):
         p = self._query(self.FILES)
         caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL)
-        assert "m3u" in caveat.data["files_established_for"]
+        assert caveat.data["files_established_for"] == atlas.ESTABLISHED_FOR_SINGLE_DISK_IMAGE
+        assert "m3u" in caveat.message
 
 
 class TestFlycastResolution:
@@ -690,13 +737,13 @@ class TestFlycastResolution:
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/bios/dc",
-                "files": "vmu_save_B1.bin, vmu_save_C1.bin, vmu_save_D1.bin",
+                "files": ("vmu_save_B1.bin", "vmu_save_C1.bin", "vmu_save_D1.bin"),
             },
             {
                 "core": "flycast",
                 "mode": "VMU A1",
                 "dir": "/mnt/sd/retrodeck/bios/dc",
-                "files": "dc_nvmem.bin",
+                "files": ("dc_nvmem.bin",),
             },
         ]
 
@@ -744,13 +791,13 @@ class TestFlycastResolution:
         data = dict(conditional[0].data)
         assert data["core"] == "flycast"
         assert data["mode"] == "All VMUs"
-        assert _text(conditional[0], "files").split(", ") == list(p.file_set.files)
-        assert _text(conditional[0], "files_without_save_id").split(", ") == [
+        assert _names(conditional[0], "files") == p.file_set.files
+        assert _names(conditional[0], "files_without_save_id") == (
             f"{ROM_STEM}.A1.bin",
             f"{ROM_STEM}.B1.bin",
             f"{ROM_STEM}.C1.bin",
             f"{ROM_STEM}.D1.bin",
-        ]
+        )
 
     def test_all_vmus_marks_the_port_set_as_the_console_one(self):
         # Not every content difference is a spelling: a Naomi board connects
@@ -784,7 +831,7 @@ class TestFlycastResolution:
         p = placed(rd.savefile_location(core_so="flycast_libretro.so"))
         conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert conditional
-        assert _text(conditional[0], "files_without_save_id").startswith("<rom_stem>.A1.bin")
+        assert _names(conditional[0], "files_without_save_id")[0] == "<rom_stem>.A1.bin"
 
     def test_the_card_provenance_rides_along_on_the_standard_route(self):
         # A mode switch MOVES the save — the shared cards stay behind stale —
@@ -1525,7 +1572,7 @@ class TestAuditVerdictCaveats:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MULTI_OPTION]
         assert stated
         assert stated[0].data["core"] == "neocd"
-        assert stated[0].data["options"] == "neocd_per_content_saves"
+        assert stated[0].data["options"] == ("neocd_per_content_saves",)
 
     # What these two cases are about: an audit verdict that adds nothing of its
     # own. `core-unaudited`, `core-suspect` and `core-multi-option` are the
@@ -1709,7 +1756,7 @@ class TestARuleSelectedCard:
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_GENERATION_MISMATCH]
         assert stated
-        assert stated[0].data["options"] == "beetle_saturn_shared_ext"
+        assert stated[0].data["options"] == ("beetle_saturn_shared_ext",)
 
 
 HATARI_REGISTERED = {
@@ -1783,7 +1830,8 @@ class TestHatariContentClasses:
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
         assert stated[0].data["core"] == "hatari"
-        assert "no content was named" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_CONTENT_CLASS_UNNAMED
+        assert "no content was named" in stated[0].message
 
 
 SCUMMVM_CORE = {"library_name": "ScummVM", "options": {}}
@@ -1871,7 +1919,8 @@ class TestScummvmSavepath:
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "could not be read" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_SAVEPATH_CONFIG_UNREADABLE
+        assert "could not be read" in stated[0].message
 
 
 MAME_INI_DIR = "/mnt/sd/retrodeck/bios/mame/ini"
@@ -1964,7 +2013,8 @@ class TestMameOwnPaths:
         assert not any(c.code == atlas.CAVEAT_SAVE_ROOT_REDIRECTED for c in p.caveats)
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "vertical.ini" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_INI_OUTRANKED_BY_CASCADE
+        assert stated[0].data["members"] == ("vertical.ini",)
 
     def test_a_source_tree_member_refuses_the_mode_too(self):
         # Issue #304: parse_standard_inis composes source/<sourcefile>.ini with
@@ -1982,7 +2032,8 @@ class TestMameOwnPaths:
             }
         )
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
-        assert "source/dkong.ini" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_INI_OUTRANKED_BY_CASCADE
+        assert stated[0].data["members"] == ("source/dkong.ini",)
 
     def test_a_source_tree_member_stops_the_redirect_being_stated(self):
         p = _mame_query(
@@ -2008,7 +2059,8 @@ class TestMameOwnPaths:
         )
         p = placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame_libretro.so"))
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
-        assert "could not be listed" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_INI_SEARCH_PATH_UNLISTABLE
+        assert "could not be listed" in stated[0].message
 
     def test_an_absent_source_tree_is_a_truthful_negative(self):
         # No source/ directory is not a failed listing: the redirect stands.
@@ -2031,7 +2083,9 @@ class TestMameOwnPaths:
         )
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "could not be established" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_INI_PRESENCE_UNESTABLISHED
+        assert stated[0].data["members"] == ("mame.ini",)
+        assert "could not be established" in stated[0].message
 
     def test_an_unlistable_search_directory_refuses_the_shadow_check(self):
         # The values read may be overridden by a file the listing would have
@@ -2047,7 +2101,8 @@ class TestMameOwnPaths:
         p = placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame_libretro.so"))
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "could not be listed" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_INI_SEARCH_PATH_UNLISTABLE
+        assert "could not be listed" in stated[0].message
 
     def test_the_second_switch_alone_changes_nothing(self):
         # read_config on while the frontend's paths hold: the command line
@@ -2134,7 +2189,7 @@ class TestSwanStationSlotPair:
         # the id-less spelling travels in the caveat's data.
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert stated
-        assert stated[0].data["files_without_save_id"] == "duckstation_shared_card_1.mcd"
+        assert stated[0].data["files_without_save_id"] == ("duckstation_shared_card_1.mcd",)
 
     def test_no_cards_at_all_is_the_discarded_emptiness_under_the_save_root(self):
         p = _swan_query(
@@ -2244,7 +2299,8 @@ class TestBeetlePsxSecondCard:
         assert p.granularity is None
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
         assert stated
-        assert "memcard_right_index" in stated[0].data["reason"]
+        assert stated[0].data["reason"] == atlas.REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES
+        assert stated[0].data["options"] == {"beetle_psx_memcard_right_index": "7"}
 
 
 GPGX_REGISTERED = {
@@ -2319,7 +2375,8 @@ class TestGpgxContentClasses:
         assert p.granularity.mode == "cartridge-raw-image"
         stated = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
         assert stated
-        assert "Sega CD disc header" in stated[0].data["files_established_for"]
+        assert stated[0].data["files_established_for"] == atlas.ESTABLISHED_FOR_RAW_CARTRIDGE_IMAGE
+        assert "Sega CD disc header" in stated[0].message
 
 
 class TestARetiredEntryIsStated:
@@ -3516,7 +3573,7 @@ class TestVerificationMatrix:
         stale = [c for c in p.caveats if c.code == atlas.CAVEAT_UNVERIFIED_VERSION]
         assert stale
         assert stale[0].data["verification"] == "runtime-version-unknown"
-        assert stale[0].data["missing"] == "arrangement_version"
+        assert stale[0].data["missing"] == ("arrangement_version",)
 
     def test_confirmed_verification_lands_in_provenance(self):
         rd = _retrodeck(
