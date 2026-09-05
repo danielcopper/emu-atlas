@@ -1363,6 +1363,84 @@ def _puae_rule(core: str) -> Callable[[RuleReading], ModeChoice]:
     return rule
 
 
+# ---------------------------------------------------------------------------
+# opera — the NVRAM file's name carries two option values, so the modes are
+# their product. 'opera_nvram_storage' picks the directory and the naming
+# scheme and 'opera_nvram_version' the number in the name: per game writes
+# <save dir>/opera/per_game/<stem>.<version>.srm and shared writes
+# <save dir>/opera/shared/nvram.<version>.srm (opera_lr_nvram.c:130-152,
+# :154-175 at 67a29e6; the 'opera' segment joined onto the frontend's save
+# directory at :115-128, the stem taken from the content path at :369-374).
+# Ten registered versions times two storages is twenty modes naming one file
+# each — the file-name vocabulary has no option-valued hole, so the product is
+# enumerated in the card rather than parametrized (issue #387).
+#
+# Both switches are registered options, 'per game'/'shared' defaulting to
+# 'per game' and '0' through '9' defaulting to '0' (libretro_core_options.c
+# :177-187, :188-206), read through a helper that prefixes 'opera_' to the key
+# (opera_lr_opts.c:53-71): the storage is a string comparison against 'shared'
+# (:330-337), the version an atoi (:346-351, getval_as_int at :73-85). Either
+# would still act on a value outside its registered set, and the rule refuses
+# such a value instead of naming the file it would make — the record covers
+# the twenty modes the core registers, and a value outside them says the
+# record lags rather than that the mode is one of the twenty.
+#
+# Twenty is a space too large to list whole, so the alternatives are the
+# one-edit neighbours — every switch, changed once: the other storage at this
+# version, and each other version at this storage.
+# ---------------------------------------------------------------------------
+
+_OPERA_STORAGE = "opera_nvram_storage"
+_OPERA_VERSION = "opera_nvram_version"
+_OPERA_PER_GAME = "per game"
+_OPERA_SHARED = "shared"
+# What each storage value opens a mode name with, and the versions that close
+# it — the two registered sets whose product the card states.
+_OPERA_STORAGE_MODES = {_OPERA_PER_GAME: "per-game", _OPERA_SHARED: "shared"}
+_OPERA_STORAGES = tuple(_OPERA_STORAGE_MODES)
+_OPERA_VERSIONS = tuple(str(version) for version in range(10))
+
+
+def _opera_mode(storage: str, version: str) -> str:
+    """The mode one (storage, version) pair names."""
+    return f"{_OPERA_STORAGE_MODES[storage]}-{version}"
+
+
+def _opera_alternatives(
+    storage: str, version: str
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """The one-edit neighbours: the other storage here, each other version here."""
+    return tuple(
+        (_opera_mode(other, version), ((_OPERA_STORAGE, other),))
+        for other in _OPERA_STORAGES
+        if other != storage
+    ) + tuple(
+        (_opera_mode(storage, other), ((_OPERA_VERSION, other),))
+        for other in _OPERA_VERSIONS
+        if other != version
+    )
+
+
+def _opera(reading: RuleReading) -> ModeChoice:
+    storage = reading.option_values[_OPERA_STORAGE]
+    version = reading.option_values[_OPERA_VERSION]
+    missing = _require_values("opera", ((_OPERA_STORAGE, storage), (_OPERA_VERSION, version)))
+    if missing:
+        return ModeChoice(None, caveats=missing)
+    alien = _refuse_alien(
+        "opera",
+        ((_OPERA_STORAGE, storage, _OPERA_STORAGES), (_OPERA_VERSION, version, _OPERA_VERSIONS)),
+    )
+    if alien:
+        return ModeChoice(None, caveats=alien)
+    # Both are stated past _require_values; the fallbacks are the checker's.
+    chosen_storage, chosen_version = storage or "", version or ""
+    return ModeChoice(
+        _opera_mode(chosen_storage, chosen_version),
+        alternatives=_opera_alternatives(chosen_storage, chosen_version),
+    )
+
+
 # The registry the card loader validates against: a card stating a
 # ``governing_rule`` must have its function here, and the test suite holds
 # the mirror claim — a rule with no card would be code describing nothing.
@@ -1377,4 +1455,5 @@ RULES: Mapping[str, Callable[[RuleReading], ModeChoice]] = {
     "mame": _mame,
     "puae": _puae_rule("puae"),
     "puae2021": _puae_rule("puae2021"),
+    "opera": _opera,
 }

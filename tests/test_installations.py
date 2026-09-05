@@ -5800,7 +5800,7 @@ class TestFlatpakSandboxPaths:
                     f'core_options_path = "{self.SANDBOX_CFG_DIR}/opts.cfg"\n'
                 ),
                 f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": (
-                    'opera_nvram_storage = "shared"'
+                    'opera_nvram_storage = "shared"\nopera_nvram_version = "3"\n'
                 ),
                 "/mnt/sd/retrodeck/saves/.keep": "",
                 "/mnt/sd/retrodeck/roms/3do/Game.chd": "",
@@ -5813,7 +5813,8 @@ class TestFlatpakSandboxPaths:
             )
         )
         assert p.granularity is not None
-        assert p.granularity.mode == "shared"
+        # Both switches the rule reads come out of the translated file.
+        assert p.granularity.mode == "shared-3"
 
     def test_unreachable_root_is_not_observed_at_all(self):
         # The sorted directory, its fallback and the link view all come from

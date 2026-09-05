@@ -487,7 +487,7 @@
     "opera": {
       "verdict": "card",
       "per_game_capable": true,
-      "note": "[V-source/binary] opera-libretro@67a29e6 — the revision the shipped binary reports — writes its NVRAM per game or shared under <save_dir>/opera (opera_lr_nvram.c:130-152, :154-175) and exposes no RETRO_MEMORY_SAVE_RAM (libretro.c:430-444), so the nvram files are the whole save. Not live-observed.",
+      "note": "[V-source/binary] opera-libretro@67a29e6 — the revision the shipped binary reports — writes one NVRAM file whose name carries both of its save switches: <save_dir>/opera/per_game/<stem>.<version>.srm or <save_dir>/opera/shared/nvram.<version>.srm (opera_lr_nvram.c:130-152, :154-175), the directory and naming scheme from opera_nvram_storage and the number from opera_nvram_version (libretro_core_options.c:177-187, :188-206). Both are registered value sets, so the twenty (storage, version) pairs are a closed product and the card states all twenty names rather than leaving the file set unverified. RETRO_MEMORY_SAVE_RAM answers NULL (libretro.c:430-444), so the nvram files are the whole save. Not live-observed: the reference machine carries no 3DO content and no opera save tree.",
       "verified": {
         "retrodeck": null,
         "emudeck": null,
