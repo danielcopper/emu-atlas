@@ -154,22 +154,25 @@ ARCHIVE_MISSING: ArchiveStatus = "missing"
 ARCHIVE_UNREADABLE: ArchiveStatus = "unreadable"
 ARCHIVE_NOT_ARCHIVE: ArchiveStatus = "not-archive"
 
-# Reading the WHDLoad slave out of an archive adds two more, and they are a
-# different claim each: "no-slave" is an archive the core's own boot script
-# selects nothing out of (there is none, or the script's search cannot tell
-# two candidates apart), and "slave-unreadable" is a slave the script *does*
-# select whose bytes do not come back — a compression method this runtime does
-# not implement, a failed CRC, or bytes that are no slave. The first says the
-# archive has no name to give; the second says it has one and atlas could not
-# read it, and a caller states those differently.
+# Reading the WHDLoad slave out of an archive adds three more, and they are a
+# different claim each. "no-slave" is an archive nothing names a slave out of:
+# the boot script's search found none and the archive does not offer WHDLoad
+# exactly one either. "ambiguous" is a listing the script's own search *met*
+# candidates in and could not tell apart, where the archive holds no single
+# slave to fall back on — a fact about the search, not about the archive
+# being empty. "slave-unreadable" is a slave that was named and whose bytes
+# do not come back: a compression method this runtime does not implement, a
+# failed CRC, or bytes that are no slave. A caller states all three
+# differently, and only the last says the archive had a name to give.
 WhdloadSlaveStatus = Literal[
-    "ok", "missing", "unreadable", "not-archive", "no-slave", "slave-unreadable"
+    "ok", "missing", "unreadable", "not-archive", "no-slave", "ambiguous", "slave-unreadable"
 ]
 WHDLOAD_OK: WhdloadSlaveStatus = "ok"
 WHDLOAD_MISSING: WhdloadSlaveStatus = "missing"
 WHDLOAD_UNREADABLE: WhdloadSlaveStatus = "unreadable"
 WHDLOAD_NOT_ARCHIVE: WhdloadSlaveStatus = "not-archive"
 WHDLOAD_NO_SLAVE: WhdloadSlaveStatus = "no-slave"
+WHDLOAD_AMBIGUOUS: WhdloadSlaveStatus = "ambiguous"
 WHDLOAD_SLAVE_UNREADABLE: WhdloadSlaveStatus = "slave-unreadable"
 
 # The archive suffixes this seam reads, and which reader each takes. UAE
@@ -274,9 +277,16 @@ class ArchiveListResult:
 class WhdloadSlaveResult:
     """What the slave inside an archive states — the member it came from, and its two fields.
 
-    ``slave`` is the member the core's boot script selects and ``version`` its
-    ``ws_Version``; both are set exactly when ``status`` is ok, because every
-    other status is a read that produced no slave to state anything about.
+    ``slave`` is the member the read was made of, ``version`` its
+    ``ws_Version`` and ``selected_by`` how it was arrived at
+    (:data:`atlas.whdload.SELECTION_ROUTES`); all three are set exactly when
+    ``status`` is ok, because every other status is a read that produced no
+    slave to state anything about. ``selected_by`` is what keeps the two
+    routes apart: ``script`` is the core's own boot-script search, while
+    ``only-slave`` is atlas's inference from an archive that offers WHDLoad
+    exactly one — a derived claim, and one a caller may want to weigh
+    differently.
+
     ``name`` is ``ws_name``, and it is the one field that can be absent from a
     successful read: a slave older than
     :data:`atlas.whdload.NAMED_FROM_VERSION` carries no such field at all, and
@@ -288,13 +298,14 @@ class WhdloadSlaveResult:
     slave: str | None = None
     version: int | None = None
     name: str | None = None
+    selected_by: str | None = None
 
     def __post_init__(self) -> None:
-        stated = self.slave is not None and self.version is not None
+        stated = self.slave is not None and self.version is not None and self.selected_by is not None
         if stated != (self.status == WHDLOAD_OK):
             raise ValueError(
-                "WhdloadSlaveResult: the member and its version are stated exactly when status is "
-                f"'ok' (got {self.status!r})"
+                "WhdloadSlaveResult: the member, its version and the route that named it are "
+                f"stated exactly when status is 'ok' (got {self.status!r})"
             )
         if self.name is not None and self.status != WHDLOAD_OK:
             raise ValueError(
@@ -604,7 +615,7 @@ def _whdload_root(path: str, members: tuple[str, ...]) -> str | None:
     return whdload.mounted_root(accepted[0], members)
 
 
-def _read_slave_member(path: str, member: str) -> WhdloadSlaveResult:
+def _read_slave_member(path: str, member: str, route: str) -> WhdloadSlaveResult:
     """Decompress exactly the selected member and read the structure at its start."""
     try:
         slave = whdload.read_slave(_archive_member_bytes(path, member))
@@ -612,7 +623,7 @@ def _read_slave_member(path: str, member: str) -> WhdloadSlaveResult:
         return WhdloadSlaveResult(outcome.status)
     except _SLAVE_UNREADABLE_ERRORS:
         return WhdloadSlaveResult(WHDLOAD_SLAVE_UNREADABLE)
-    return WhdloadSlaveResult(WHDLOAD_OK, member, slave.version, slave.name)
+    return WhdloadSlaveResult(WHDLOAD_OK, member, slave.version, slave.name, route)
 
 
 def _archive_member_bytes(path: str, member: str) -> bytes:
@@ -793,10 +804,10 @@ class RealMachine:
         if root is None:
             return WhdloadSlaveResult(WHDLOAD_NO_SLAVE)
         inside = [name[len(root) :] for name in listed.members if name.startswith(root)]
-        selected = whdload.select_slave(inside)
-        if selected is None:
-            return WhdloadSlaveResult(WHDLOAD_NO_SLAVE)
-        return _read_slave_member(path, root + selected)
+        selection = whdload.select_slave(inside)
+        if selection.slave is None:
+            return WhdloadSlaveResult(WHDLOAD_AMBIGUOUS if selection.ambiguous else WHDLOAD_NO_SLAVE)
+        return _read_slave_member(path, root + selection.slave, selection.route or "")
 
     def glob(self, pattern: str) -> GlobResult:
         return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)
@@ -1257,8 +1268,8 @@ _FIXTURE_ARCHIVE_STATES = ("unreadable", "not-archive")
 # And the states a fixture slave read may declare short of the structure. The
 # container's own failures are not among them: they come from the archive
 # declaration, so the two reads cannot contradict each other.
-_FIXTURE_WHDLOAD_STATES = ("no-slave", "slave-unreadable")
-_FIXTURE_WHDLOAD_FIELDS = ("slave", "version", "name")
+_FIXTURE_WHDLOAD_STATES = ("no-slave", "ambiguous", "slave-unreadable")
+_FIXTURE_WHDLOAD_FIELDS = ("slave", "version", "name", "selected_by")
 
 
 def _validate_fixture_archives(
@@ -1322,7 +1333,7 @@ def _fixture_members(path: str, spec: object) -> tuple[str, ...]:
 def _validate_fixture_whdload_slaves(
     slaves: Mapping[str, object],
     archives: Mapping[str, tuple[str, ...] | str],
-) -> dict[str, tuple[str, int, str | None] | str]:
+) -> dict[str, tuple[str, int, str | None, str] | str]:
     """The declared slave reads — the two fields the structure yields, or a state.
 
     A slave sits inside an archive, so its path must be one whose member list
@@ -1330,7 +1341,7 @@ def _validate_fixture_whdload_slaves(
     member out of that listing, and a fixture naming one that is not there
     would model a read no machine makes.
     """
-    validated: dict[str, tuple[str, int, str | None] | str] = {}
+    validated: dict[str, tuple[str, int, str | None, str] | str] = {}
     for path, spec in slaves.items():
         members = archives.get(path)
         if not isinstance(members, tuple):
@@ -1350,7 +1361,9 @@ def _validate_fixture_whdload_slaves(
     return validated
 
 
-def _fixture_slave(path: str, spec: object, members: tuple[str, ...]) -> tuple[str, int, str | None]:
+def _fixture_slave(
+    path: str, spec: object, members: tuple[str, ...]
+) -> tuple[str, int, str | None, str]:
     """One declared structure, checked against what a real slave can state."""
     if not isinstance(spec, Mapping) or set(spec) != set(_FIXTURE_WHDLOAD_FIELDS):
         raise ValueError(
@@ -1360,8 +1373,13 @@ def _fixture_slave(path: str, spec: object, members: tuple[str, ...]) -> tuple[s
     member = spec["slave"]
     if member not in members:
         raise ValueError(f"whdload slave {path!r}: member {member!r} is not in this archive's listing")
+    route = spec["selected_by"]
+    if route not in whdload.SELECTION_ROUTES:
+        raise ValueError(
+            f"whdload slave {path!r}: selected_by must be one of {whdload.SELECTION_ROUTES}, got {route!r}"
+        )
     version, name = _fixture_slave_fields(path, spec["version"], spec["name"])
-    return str(member), version, name
+    return str(member), version, name, str(route)
 
 
 def _fixture_slave_fields(path: str, version: object, name: object) -> tuple[int, str | None]:
@@ -1401,7 +1419,8 @@ class FixtureMachine:
     pair: ``archives`` maps an archive's path to its member list (or to
     ``"unreadable"`` / ``"not-archive"``), and ``whdload_slaves`` maps the
     same path to what the slave inside it states — ``{"slave": ..., "version":
-    ..., "name": ...}`` with a nullable name, or ``"no-slave"`` /
+    ..., "name": ..., "selected_by": ...}`` with a nullable name and the route
+    that named the member, or ``"no-slave"`` / ``"ambiguous"`` /
     ``"slave-unreadable"``. A slave declaration must name a member the archive
     lists, so the two can never describe different machines.
 
@@ -1652,8 +1671,8 @@ class FixtureMachine:
         if isinstance(spec, str):
             status: WhdloadSlaveStatus = spec  # type: ignore[assignment]  # validated at construction
             return WhdloadSlaveResult(status)
-        member, version, name = spec
-        return WhdloadSlaveResult(WHDLOAD_OK, member, version, name)
+        member, version, name, route = spec
+        return WhdloadSlaveResult(WHDLOAD_OK, member, version, name, route)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):

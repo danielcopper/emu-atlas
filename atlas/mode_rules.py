@@ -37,6 +37,7 @@ from .placement import (
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
     REASON_ARCHIVE_CONTENT_AMBIGUOUS,
+    REASON_ARCHIVE_CONTENT_UNRECOGNISED,
     REASON_ARCHIVE_MEMBER_PINNED,
     REASON_ARCHIVE_FORMAT_UNREAD,
     REASON_ARCHIVE_UNREAD,
@@ -1593,8 +1594,9 @@ def _puae_archive(core: str, reading: RuleReading, model: str) -> ModeChoice:
     that listing is what this reads. A member of one class is that class; more
     than one launchable thing is not a fact about the archive, because which
     one wins is the order the core's own directory listing returns them in;
-    and nothing recognised at all leaves the extracted tree itself mounted as
-    a hard disk.
+    and nothing recognised at all leaves one directory inside the extracted
+    tree mounted as a hard disk — which one, where the walk saw more than one
+    entry, is that listing's own order and therefore not stated.
     """
     listing = reading.archive_members()
     if listing.status != ARCHIVE_OK:
@@ -1611,6 +1613,8 @@ def _puae_archive(core: str, reading: RuleReading, model: str) -> ModeChoice:
         return _puae_cd(core, reading, model)
     if _PUAE_CLASS_FLOPPY in classes:
         return _puae_archived_floppy(core, reading, model, entries)
+    if len(entries) > 1:
+        return ModeChoice(None, caveats=(_puae_archive_unrecognised(core, entries),))
     return _puae_archived_hd(core, reading, model)
 
 
@@ -1664,6 +1668,20 @@ def _puae_archive_unread(core: str, status: str) -> Caveat:
         "(libretro-core.c:6280-6362 at 0043cf9), and this archive's member list did not come "
         f"back ({status}) — so which save story applies was never established",
         status=status,
+    )
+
+
+def _puae_archive_unrecognised(core: str, entries: tuple[str, ...]) -> Caveat:
+    """Nothing matched, and which of several entries gets mounted is a listing's order."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_CONTENT_UNRECOGNISED,
+        "no member of the archive is a class the core recognises, and what it then mounts is the "
+        "last entry its own directory listing returned — that entry where it is a directory and "
+        "the whole extracted tree otherwise (libretro-core.c:6355-6362, :6296 at 0043cf9). With "
+        f"more than one entry ({', '.join(sorted(entries))}) which of them that is depends on the "
+        "order the listing returns them in, which is not a value this answer reads",
+        entries=sorted(entries),
     )
 
 

@@ -117,50 +117,88 @@ def test_a_name_pointing_outside_the_hunk_is_refused() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_a_slave_at_the_root_is_the_one_selected() -> None:
-    assert whdload.select_slave(["Game.slave", "Game.info", "data/level1"]) == "Game.slave"
+def selected(names: list[str]) -> tuple[str | None, str | None, bool]:
+    """One selection flattened, so a case reads as (slave, route, ambiguous)."""
+    choice = whdload.select_slave(names)
+    return choice.slave, choice.route, choice.ambiguous
+
+
+def test_a_slave_at_the_root_is_the_one_the_script_selects() -> None:
+    assert selected(["Game.slave", "Game.info", "data/level1"]) == ("Game.slave", "script", False)
 
 
 def test_the_pattern_matches_without_regard_to_case_or_a_trailing_extension() -> None:
     # `#?.slav#?` is ".slav" with anything on either side.
-    assert whdload.select_slave(["GAME.SLAVE"]) == "GAME.SLAVE"
-    assert whdload.select_slave(["game.slav"]) == "game.slav"
-
-
-def test_two_slaves_at_the_root_name_none_of_them() -> None:
-    assert whdload.select_slave(["One.slave", "Two.slave"]) is None
+    assert selected(["GAME.SLAVE"])[0] == "GAME.SLAVE"
+    assert selected(["game.slav"])[0] == "game.slav"
 
 
 def test_with_no_info_at_the_root_the_search_descends_into_the_directory() -> None:
-    listing = ["Game/AlienBreed.slave", "Game/data/level1"]
+    assert selected(["Game/AlienBreed.slave", "Game/data/level1"]) == (
+        "Game/AlienBreed.slave",
+        "script",
+        False,
+    )
 
-    assert whdload.select_slave(listing) == "Game/AlienBreed.slave"
 
-
-def test_with_an_info_at_the_root_only_a_slave_named_after_its_drawer_is_found() -> None:
-    named = ["Game.info", "Game/Game.slave", "Game/ReadMe"]
-    other = ["Game.info", "Game/AlienBreed.slave", "Game/ReadMe"]
-
-    assert whdload.select_slave(named) == "Game/Game.slave"
-    assert whdload.select_slave(other) is None
+def test_with_an_info_at_the_root_the_script_takes_a_slave_named_after_its_drawer() -> None:
+    assert selected(["Game.info", "Game/Game.slave", "Game/ReadMe", "Game/Other.slave"]) == (
+        "Game/Game.slave",
+        "script",
+        False,
+    )
 
 
 def test_the_deepest_branch_takes_a_slave_named_after_its_own_subdirectory() -> None:
-    listing = ["Game/Inner/Inner.slave", "Game/Inner/data"]
+    assert selected(["Game/Inner/Inner.slave", "Game/Inner/data", "Game/Inner/Other.slave"]) == (
+        "Game/Inner/Inner.slave",
+        "script",
+        False,
+    )
 
-    assert whdload.select_slave(listing) == "Game/Inner/Inner.slave"
+
+def test_a_drawer_slave_the_script_misses_is_still_the_only_one_whdload_could_run() -> None:
+    # The shape a public install archive has. The script resolves nothing and
+    # hands the launch to the .info selector, where whichever icon is picked
+    # WHDLoad has this one slave to run — so the name follows from the set.
+    assert selected(["AlienBreedHD.info", "AlienBreedHD/AlienBreed.slave", "AlienBreedHD/ReadMe"]) == (
+        "AlienBreedHD/AlienBreed.slave",
+        "only-slave",
+        False,
+    )
 
 
-def test_a_load_file_at_the_root_replaces_the_launch_and_names_no_slave() -> None:
-    assert whdload.select_slave(["load", "Game.slave"]) is None
+def test_two_slaves_the_script_cannot_tell_apart_name_neither() -> None:
+    assert selected(["One.slave", "Two.slave"]) == (None, None, True)
 
 
 def test_two_candidate_directories_name_no_slave() -> None:
-    assert whdload.select_slave(["One/One.slave", "Two/Two.slave"]) is None
+    assert selected(["One/One.slave", "Two/Two.slave"]) == (None, None, True)
+
+
+def test_an_icon_beside_a_slave_does_not_count_as_a_second_one() -> None:
+    # The inference asks what WHDLoad could be handed, and an .info is not
+    # that — the script's own '.slav' pattern would match both.
+    assert selected(["Game.info", "Game/AlienBreed.slave", "Game/AlienBreed.slave.info"]) == (
+        "Game/AlienBreed.slave",
+        "only-slave",
+        False,
+    )
+
+
+def test_a_load_file_at_the_root_replaces_the_launch_and_names_no_slave() -> None:
+    # The archive's own command runs instead, and it need not run WHDLoad at
+    # all — so the only-slave inference is kept out of this one.
+    assert selected(["load", "Game.slave"]) == (None, None, False)
 
 
 def test_a_listing_with_nothing_to_find_names_no_slave() -> None:
-    assert whdload.select_slave(["ReadMe", "Game/level1"]) is None
+    assert selected(["ReadMe", "Game/level1"]) == (None, None, False)
+
+
+def test_a_named_slave_carries_the_route_that_named_it() -> None:
+    with pytest.raises(ValueError, match="carries the route"):
+        whdload.Selection("Game.slave", None)
 
 
 # ---------------------------------------------------------------------------
@@ -197,8 +235,8 @@ def test_the_sample_archive_resolves_end_to_end() -> None:
     data = SAMPLE.read_bytes()
     members = lha.members(data)
 
-    selected = whdload.select_slave([member.name for member in members])
-    member = next(m for m in members if m.name == selected)
+    choice = whdload.select_slave([member.name for member in members])
+    member = next(m for m in members if m.name == choice.slave)
 
-    assert selected == "TestGame/TestGame.slave"
+    assert (choice.slave, choice.route) == ("TestGame/TestGame.slave", "script")
     assert whdload.read_slave(lha.extract(data, member)) == whdload.Slave(17, "Test Game")

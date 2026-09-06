@@ -87,10 +87,12 @@ file's bytes; a declared file with no entry here answers **not an archive**, so 
 a file off as one that lists.
 
 **`whdload_slaves`** — the same archive path → what the WHDLoad slave inside it states:
-`{"slave": "Game/Game.slave", "version": 17, "name": "Alien Breed"}`, where `name` is `null` for a slave older than
-version 10 (which has no such field), or `"no-slave"` / `"slave-unreadable"`. The archive's own failures are not spelled
-here — they come from `archives`, so the two reads can never describe different machines — and a stated `slave` must be
-a member that archive lists. A listed archive with no entry here answers **no slave**.
+`{"slave": "Game/Game.slave", "version": 17, "name": "Alien Breed", "selected_by": "script"}`, where `name` is `null`
+for a slave older than version 10 (which has no such field) and `selected_by` is `"script"` (the core's own boot-script
+search named the member) or `"only-slave"` (the script named none and the archive offers WHDLoad exactly one), or one of
+the states `"no-slave"` / `"ambiguous"` / `"slave-unreadable"`. The archive's own failures are not spelled here — they
+come from `archives`, so the two reads can never describe different machines — and a stated `slave` must be a member
+that archive lists. A listed archive with no entry here answers **no slave**.
 
 **`unlistable` vs `inaccessible`** — two ways to be unreadable, told apart by one question: does the `stat` succeed?
 

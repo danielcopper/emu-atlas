@@ -586,6 +586,12 @@ REASON_ARCHIVE_CONTENT_AMBIGUOUS = "archive-content-ambiguous"
 # copy in a temporary tree and is named after itself rather than after the
 # archive. ``member`` carries the pinned name.
 REASON_ARCHIVE_MEMBER_PINNED = "archive-member-pinned"
+# Nothing inside the archive is a class the core recognises, and there is more
+# than one entry it could mount instead: the branch that picks one takes the
+# *last* entry its own directory listing returned, so which directory the
+# writes land in is that listing's order and not a fact about the archive.
+# ``entries`` names what the walk saw.
+REASON_ARCHIVE_CONTENT_UNRECOGNISED = "archive-content-unrecognised"
 # ScummVM's own save directory: its ini could not be read, or the path it sets
 # has no host spelling (``path`` carries the configured value).
 REASON_SAVEPATH_CONFIG_UNREADABLE = "savepath-config-unreadable"
@@ -628,6 +634,7 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_ARCHIVE_UNREAD,
     REASON_ARCHIVE_CONTENT_AMBIGUOUS,
     REASON_ARCHIVE_MEMBER_PINNED,
+    REASON_ARCHIVE_CONTENT_UNRECOGNISED,
     REASON_EMULATED_MODEL_UNRECORDED,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,

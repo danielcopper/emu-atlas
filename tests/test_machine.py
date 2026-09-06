@@ -33,6 +33,7 @@ from atlas.machine import (
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
     SYMLINK_HOPS,
+    WHDLOAD_AMBIGUOUS,
     WHDLOAD_MISSING,
     WHDLOAD_NO_SLAVE,
     WHDLOAD_NOT_ARCHIVE,
@@ -1186,6 +1187,13 @@ def _stored_lha(members: dict[str, bytes]) -> bytes:
     return out + b"\x00"
 
 
+def _slave_bytes() -> bytes:
+    """The slave member the committed fixture archive carries, decompressed."""
+    data = Path(SAMPLE_ARCHIVE).read_bytes()
+    member = next(m for m in atlas.lha.members(data) if m.name == SAMPLE_SLAVE)
+    return atlas.lha.extract(data, member)
+
+
 def _zip_of(path: Path, members: dict[str, bytes]) -> str:
     with zipfile.ZipFile(path, "w") as archive:
         for name, content in members.items():
@@ -1240,7 +1248,7 @@ class TestArchiveReads:
 
     def test_the_slave_inside_an_lha_states_its_version_and_name(self):
         assert RealMachine().read_whdload_slave(SAMPLE_ARCHIVE) == WhdloadSlaveResult(
-            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game", "script"
         )
 
     def test_the_slave_inside_a_zip_is_found_under_the_drawer_the_core_mounts(self, tmp_path):
@@ -1249,7 +1257,7 @@ class TestArchiveReads:
         path = _zip_of(tmp_path / "Game.zip", members)
 
         assert RealMachine().read_whdload_slave(path) == WhdloadSlaveResult(
-            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game", "script"
         )
 
     def test_a_whdload_archive_inside_a_zip_is_a_container_this_seam_does_not_open(self, tmp_path):
@@ -1306,17 +1314,25 @@ class TestFixtureArchiveReads:
     def test_a_declared_slave_answers_its_two_fields(self):
         machine = self._machine(
             archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)},
-            whdload_slaves={"/roms/Game.lha": {"slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game"}},
+            whdload_slaves={
+                "/roms/Game.lha": {
+                    "slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game", "selected_by": "script"
+                }
+            },
         )
 
         assert machine.read_whdload_slave("/roms/Game.lha") == WhdloadSlaveResult(
-            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game", "script"
         )
 
     def test_a_slave_older_than_ten_states_no_name(self):
         machine = self._machine(
             archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)},
-            whdload_slaves={"/roms/Game.lha": {"slave": SAMPLE_SLAVE, "version": 8, "name": None}},
+            whdload_slaves={
+                "/roms/Game.lha": {
+                    "slave": SAMPLE_SLAVE, "version": 8, "name": None, "selected_by": "only-slave"
+                }
+            },
         )
 
         assert machine.read_whdload_slave("/roms/Game.lha").name is None
@@ -1362,7 +1378,11 @@ class TestFixtureArchiveReads:
             pytest.param(
                 {
                     "archives": {"/roms/Game.lha": ["a.slave"]},
-                    "whdload_slaves": {"/roms/Game.lha": {"slave": "b.slave", "version": 17, "name": "X"}},
+                    "whdload_slaves": {
+                        "/roms/Game.lha": {
+                            "slave": "b.slave", "version": 17, "name": "X", "selected_by": "script"
+                        }
+                    },
                 },
                 "not in this archive's listing",
                 id="slave-outside-the-listing",
@@ -1370,7 +1390,11 @@ class TestFixtureArchiveReads:
             pytest.param(
                 {
                     "archives": {"/roms/Game.lha": ["a.slave"]},
-                    "whdload_slaves": {"/roms/Game.lha": {"slave": "a.slave", "version": 8, "name": "X"}},
+                    "whdload_slaves": {
+                        "/roms/Game.lha": {
+                            "slave": "a.slave", "version": 8, "name": "X", "selected_by": "script"
+                        }
+                    },
                 },
                 "ws_name field at all",
                 id="a-name-an-old-slave-cannot-have",
@@ -1393,8 +1417,68 @@ class TestFixtureArchiveReads:
             {SAMPLE_ARCHIVE: {"status": "invalid-text"}},
             archives={SAMPLE_ARCHIVE: list(SAMPLE_MEMBERS)},
             whdload_slaves={
-                SAMPLE_ARCHIVE: {"slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game"}
+                SAMPLE_ARCHIVE: {
+                    "slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game", "selected_by": "script"
+                }
             },
         ).read_whdload_slave(SAMPLE_ARCHIVE)
 
         assert fixture == real
+
+
+class TestTheRouteThatNamedTheSlave:
+    """The two ways a member gets named, and the states that name none."""
+
+    def test_the_only_slave_route_names_what_the_script_missed(self, tmp_path):
+        # A public install archive's own shape, mounted whole because it is an
+        # .lha: a drawer icon at the root and the slave inside under another
+        # name, which the boot script's search resolves to nothing.
+        path = tmp_path / "AlienBreed.lha"
+        path.write_bytes(
+            _stored_lha(
+                {
+                    "AlienBreedHD.info": b"icon",
+                    "AlienBreedHD/AlienBreed.slave": _slave_bytes(),
+                    "AlienBreedHD/ReadMe": b"notes",
+                }
+            )
+        )
+
+        answer = RealMachine().read_whdload_slave(str(path))
+
+        assert (answer.status, answer.selected_by) == (WHDLOAD_OK, "only-slave")
+        assert answer.slave == "AlienBreedHD/AlienBreed.slave"
+
+    def test_a_listing_the_script_cannot_tell_apart_is_its_own_state(self, tmp_path):
+        path = tmp_path / "Game.lha"
+        path.write_bytes(_stored_lha({"One.slave": _slave_bytes(), "Two.slave": _slave_bytes()}))
+
+        assert RealMachine().read_whdload_slave(str(path)).status == WHDLOAD_AMBIGUOUS
+
+    def test_a_fixture_states_the_route_a_vector_asserts(self):
+        machine = FixtureMachine(
+            {"/roms/Game.lha": {"status": "invalid-text"}},
+            archives={"/roms/Game.lha": ["Game.info", "Game/Other.slave"]},
+            whdload_slaves={
+                "/roms/Game.lha": {
+                    "slave": "Game/Other.slave",
+                    "version": 17,
+                    "name": "Alien Breed",
+                    "selected_by": "only-slave",
+                }
+            },
+        )
+
+        assert machine.read_whdload_slave("/roms/Game.lha").selected_by == "only-slave"
+
+    def test_a_fixture_route_outside_the_two_is_refused(self):
+        with pytest.raises(ValueError, match="selected_by must be one of"):
+            FixtureMachine(
+                {"/roms/Game.lha": {"status": "invalid-text"}},
+                archives={"/roms/Game.lha": ["Game.slave"]},
+                whdload_slaves={
+                    "/roms/Game.lha": {
+                        "slave": "Game.slave", "version": 17, "name": "X", "selected_by": "guessed"
+                    }
+                },
+            )

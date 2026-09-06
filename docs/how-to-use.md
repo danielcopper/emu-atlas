@@ -960,6 +960,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `archive-unread`                      | the loaded archive's member list did not come back                                 | `status`                   |
 | `archive-content-ambiguous`           | the archive holds several launchable members and its listing order picks one       | `classes`                  |
 | `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states          | `member`                   |
+| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted | `entries`                  |
 | `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
 | `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
 | `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |

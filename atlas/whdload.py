@@ -80,6 +80,11 @@ _INFO_SUFFIX = ".info"
 _SLAVE_SUFFIX = ".slave"
 # A file of this name at the root replaces the launch entirely (:61-62).
 _LOAD = "load"
+# How a named slave was arrived at: the boot script's own search, or atlas's
+# inference from an archive that offers WHDLoad exactly one.
+BY_SCRIPT = "script"
+BY_ONLY_SLAVE = "only-slave"
+SELECTION_ROUTES = (BY_SCRIPT, BY_ONLY_SLAVE)
 # What the core's archive walk passes over beside a leading dot: a playlist
 # it may have generated itself.
 _PLAYLIST_SUFFIX = "m3u"
@@ -246,44 +251,110 @@ def mounted_root(member: str, names: Sequence[str]) -> str:
     return prefix if any(name.startswith(prefix) for name in names) else ""
 
 
-def select_slave(names: Iterable[str]) -> str | None:
-    """The slave the boot script selects from a mounted ``DH0:`` (:61-82).
+@dataclass(frozen=True, slots=True)
+class Selection:
+    """Which slave a mounted ``DH0:`` yields, and by which route.
 
-    *names* are the paths under the mounted root, ``/``-separated. ``None``
-    is every outcome that names no slave: the ``load`` override, a search
-    that finds none, and a listing whose candidates the script's own
-    mechanism cannot tell apart.
+    ``route`` is set exactly when ``slave`` is: :data:`BY_SCRIPT` where the
+    boot script's own search named it, :data:`BY_ONLY_SLAVE` where atlas
+    inferred it instead. ``ambiguous`` says the script's search *met*
+    candidates and its own mechanism could not tell them apart, which is a
+    different state from finding none — the caller states them differently.
     """
-    root = _top_level(names)
-    if _has(root.files, _LOAD):
-        return None
+
+    slave: str | None = None
+    route: str | None = None
+    ambiguous: bool = False
+
+    def __post_init__(self) -> None:
+        if (self.slave is None) != (self.route is None):
+            raise ValueError("Selection: a named slave carries the route that named it")
+
+
+def select_slave(names: Iterable[str]) -> Selection:
+    """Which slave a mounted ``DH0:`` yields — the script's choice, else the only one there.
+
+    *names* are the paths under the mounted root, ``/``-separated. The script's
+    own search runs first (:64-81). Where it names nothing, one inference
+    stands in for it, and it is atlas's rather than the core's: **[D]** where
+    the archive holds exactly one ``.slave`` member anywhere, that member is
+    named even though the script did not select it, because the launch then
+    goes to the ``.info`` selector — "Selector will be launched always when
+    there is no exact match for ``.slave``" (README.md:396, ``S:WBSelect``) —
+    and whichever icon a person picks there, WHDLoad has no other slave to
+    run. The save directory's name follows from the set, not from the launch.
+
+    The one outcome that inference is kept out of is a ``load`` file at the
+    root: it replaces the launch with a command of the archive's own (:61-62),
+    which atlas does not read and which need not run WHDLoad at all, so the
+    premise does not hold there.
+    """
+    listing = list(names)
+    if _has(_top_level(listing).files, _LOAD):
+        return Selection()
+    scripted = _script_selection(listing)
+    if scripted.slave is not None:
+        return scripted
+    only = _only_slave(listing)
+    return Selection(only, BY_ONLY_SLAVE) if only is not None else scripted
+
+
+def _script_selection(listing: list[str]) -> Selection:
+    """What the boot script's own search names (:64-81), or why it names nothing.
+
+    ``List … TO ENV:`` writes *every* match into one variable (:64, :67), so
+    two candidate slaves or two candidate directories leave a value the
+    following ``CD`` and ``WHDLoad`` cannot use. Which one would win is not
+    established, so the search reports that it could not tell them apart
+    rather than picking.
+    """
+    root = _top_level(listing)
     here = _slaves(root.files)
     if here:
-        return here[0] if len(here) == 1 else None
+        return Selection(here[0], BY_SCRIPT) if len(here) == 1 else Selection(ambiguous=True)
     if len(root.directories) != 1:
-        return None
+        return Selection(ambiguous=len(root.directories) > 1)
     directory = root.directories[0]
     if any(name.lower().endswith(_INFO_SUFFIX) for name in root.files):
-        return _named_after(directory, directory, names)
-    return _inside_first_directory(directory, names)
+        return _named_after(directory, directory, listing)
+    return _inside_first_directory(directory, listing)
 
 
-def _inside_first_directory(directory: str, names: Iterable[str]) -> str | None:
+def _inside_first_directory(directory: str, listing: list[str]) -> Selection:
     """With no ``.info`` at the root the script descends first, then searches (:68-73)."""
-    inner = _top_level(_under(directory, names))
+    inner = _top_level(_under(directory, listing))
     found = _slaves(inner.files)
     if found:
-        return f"{directory}/{found[0]}" if len(found) == 1 else None
+        if len(found) != 1:
+            return Selection(ambiguous=True)
+        return Selection(f"{directory}/{found[0]}", BY_SCRIPT)
     if len(inner.directories) != 1:
-        return None
+        return Selection(ambiguous=len(inner.directories) > 1)
     deeper = inner.directories[0]
-    return _named_after(f"{directory}/{deeper}", deeper, names)
+    return _named_after(f"{directory}/{deeper}", deeper, listing)
 
 
-def _named_after(directory: str, stem: str, names: Iterable[str]) -> str | None:
-    """The last branch: a slave named exactly after the directory holding it (:77-78)."""
-    candidate = f"{directory}/{stem}{_SLAVE_SUFFIX}"
-    return candidate if _has(names, candidate) else None
+def _named_after(directory: str, stem: str, listing: list[str]) -> Selection:
+    """The last branch: a slave named exactly after the directory holding it (:77-78).
+
+    The listing's own spelling is what comes back, because AmigaDOS compares
+    without regard to case while the member has to be found by its name.
+    """
+    wanted = f"{directory}/{stem}{_SLAVE_SUFFIX}".lower()
+    actual = next((name for name in listing if name.lower() == wanted), None)
+    return Selection(actual, BY_SCRIPT) if actual is not None else Selection()
+
+
+def _only_slave(listing: list[str]) -> str | None:
+    """The one member WHDLoad could be run with, wherever in the archive it sits.
+
+    A ``.slave`` suffix rather than the script's ``.slav`` fragment: the
+    question here is what WHDLoad could be handed, and an icon beside a slave
+    (``Game.slave.info``) is not that. Two of them name none — the set no
+    longer decides.
+    """
+    slaves = sorted(name for name in listing if name.lower().endswith(_SLAVE_SUFFIX))
+    return slaves[0] if len(slaves) == 1 else None
 
 
 @dataclass(frozen=True, slots=True)

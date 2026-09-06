@@ -987,8 +987,11 @@ ARCHIVE_STATES = {"unreadable", "not-archive"}
 # And the slave read's own two, which are all it adds: everything the
 # container can answer comes from the archive declaration, so the two reads
 # cannot contradict each other.
-WHDLOAD_SLAVE_STATES = {"no-slave", "slave-unreadable"}
-WHDLOAD_SLAVE_FIELDS = {"slave", "version", "name"}
+WHDLOAD_SLAVE_STATES = {"no-slave", "ambiguous", "slave-unreadable"}
+WHDLOAD_SLAVE_FIELDS = {"slave", "version", "name", "selected_by"}
+# How a named member was arrived at: the core's own boot-script search, or
+# atlas's inference from an archive that offers WHDLoad exactly one slave.
+WHDLOAD_SELECTION_ROUTES = {"script", "only-slave"}
 # The version from which a slave has a ws_name field at all (WHDLoad autodoc,
 # WHDLoad.Slave: the fields from ws_name on are evaluated only for
 # ws_Version >= 10).
@@ -1052,6 +1055,11 @@ def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list[
         )
     if spec["slave"] not in members:
         fail(f"{name}: whdload slave {path!r} names {spec['slave']!r}, which its archive does not list")
+    if spec["selected_by"] not in WHDLOAD_SELECTION_ROUTES:
+        fail(
+            f"{name}: whdload slave {path!r} selected_by must be one of "
+            f"{sorted(WHDLOAD_SELECTION_ROUTES)}, got {spec['selected_by']!r}"
+        )
     _validate_whdload_slave_fields(name, path, spec)
 
 
