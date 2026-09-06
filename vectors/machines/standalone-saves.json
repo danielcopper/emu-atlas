@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md — installations, the machine seam, standalone save cards (issue #181)",
   "description": "Whole fixture machines in; the canonical SavefilePlacement serialization (atlas/contract.py) out, asserted with exact equality — for catalogue entries whose launch command names a standalone emulator a packaged save card covers. The card is the thin cited half (atlas/data/standalone_saves.json); the resolver reads the emulator's own configuration the way the emulator does, at the revision the arrangement ships (Dolphin 2603a). Root kind is emulator_directory: no frontend hands these emulators a save root.",
   "vectors": [

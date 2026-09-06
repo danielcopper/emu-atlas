@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md 'Placements'; atlas/save_memory.py; docs/research/retrodeck-save-placement.md §7",
   "description": "The standard rule's file set: which files RetroArch writes for a core on a system, declared from the frontend's naming rule and the core's own source rather than read off the save directory. Three things these vectors pin. That the answer is a DECLARATION: a file lying under the content's stem which this core cannot write is not reported, because it is evidence about the past and the question is where this configuration writes now. That a record is keyed by core AND system: one mGBA answers a Game Boy cartridge's clock and a Game Boy Advance cartridge's not at all, so the same core states different sets for its two systems and states nothing at all where the system is unknown. And that the claim is pinned to the build it was read at, because a rebuild is exactly what can add or drop a memory id. A core with no record keeps the old answer — the directory resolves and the file set stays what it always was.",
   "vectors": [

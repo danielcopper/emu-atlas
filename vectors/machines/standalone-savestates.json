@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md — installations, the machine seam, standalone savestate cards (issue #225)",
   "description": "Whole fixture machines in; the canonical SavestatePlacement serialization (atlas/contract.py) out, asserted with exact equality — for catalogue entries whose launch command names a standalone emulator a packaged savestate card covers (atlas/data/standalone_savestates.json). The card states where the states tree hangs and how the emulator names a state; the resolver reads the emulator's own configuration the way the emulator does, at the revision the arrangement ships. Root kind is emulator_directory (or the ROM's own directory / the launch's cwd for melonDS's empty and relative values): no frontend hands these emulators a state root. Un-carded emulators keep the standalone-unsupported refusal byte-identically.",
   "vectors": [
