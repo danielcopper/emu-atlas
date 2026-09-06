@@ -72,11 +72,6 @@ _KNOWN_FILE_TEMPLATES = (TEMPLATE_ROM_STEM, TEMPLATE_SAVE_ID, *RULE_FILLED_TEMPL
 # segment requirement: ``_base_of`` undoes a subdir by counting segments, and
 # that arithmetic stays exact only while one template fills to exactly one.
 _KNOWN_SUBDIR_TEMPLATES = frozenset(SUBDIR_TEMPLATE_HOLES) | frozenset(RULE_FILLED_TEMPLATES)
-# The subset of those the resolver fills from the content path, and the only
-# ones a mode may key a directory on without a rule behind it: the rest are
-# :data:`~atlas.placement.RULE_FILLED_TEMPLATES`, which a card's own rule
-# fills from a machine read and which therefore belong only to a rule card.
-_CONTENT_SUBDIR_TEMPLATES = frozenset(SUBDIR_TEMPLATE_HOLES)
 # How a libretro core's ``.so`` is spelled. Derived from the card key rather
 # than restated in the card: the key IS that basename, so a second spelling
 # could only ever be a way for the two to disagree.
@@ -921,7 +916,8 @@ def _expect_rule_filled_templates(
         for token in RULE_FILLED_TEMPLATES
         for mode in modes.values()
         for group in mode.groups
-        if token in (group.subdir or "") or any(token in name for name in group.files or ())
+        if token in (group.subdir or "")
+        or any(token in name for name in (*(group.files or ()), *(group.observe or ())))
     )
     if carried:
         raise ValueError(

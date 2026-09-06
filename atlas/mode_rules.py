@@ -29,7 +29,14 @@ from types import MappingProxyType
 from typing import Callable, Mapping
 
 from . import whdload
-from .machine import ARCHIVE_OK, ArchiveListResult, WhdloadSlaveResult
+from .machine import (
+    ARCHIVE_NOT_ARCHIVE,
+    ARCHIVE_OK,
+    WHDLOAD_NO_SLAVE,
+    WHDLOAD_OK,
+    ArchiveListResult,
+    WhdloadSlaveResult,
+)
 from .placement import (
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_MODE_UNESTABLISHED,
@@ -37,6 +44,7 @@ from .placement import (
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
     REASON_ARCHIVE_CONTENT_AMBIGUOUS,
+    REASON_ARCHIVE_CONTENT_MIXED,
     REASON_ARCHIVE_CONTENT_UNRECOGNISED,
     REASON_ARCHIVE_MEMBER_PINNED,
     REASON_ARCHIVE_FORMAT_UNREAD,
@@ -44,12 +52,16 @@ from .placement import (
     REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES,
     REASON_CONTENT_CLASS_UNNAMED,
     REASON_CONTENT_CLASS_UNRECORDED,
+    REASON_HD_BOOT_ABSENT,
+    REASON_HD_IMAGE_UNREAD,
     REASON_EMULATED_MODEL_UNRECORDED,
     REASON_INI_OUTRANKED_BY_CASCADE,
     REASON_INI_PRESENCE_UNESTABLISHED,
     REASON_INI_SEARCH_PATH_UNLISTABLE,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,
+    REASON_WHDLOAD_PREFS_UNREAD,
+    REASON_WHDLOAD_SAVEPATH_UNRECORDED,
     TEMPLATE_ARCHIVE_MEMBER_STEM,
     TEMPLATE_WHDLOAD_NAME,
     Caveat,
@@ -1193,6 +1205,10 @@ _PUAE_CD_SHARED = "cd-shared"
 _PUAE_CD_NO_NVRAM = "cd-no-nvram"
 _PUAE_WHDLOAD_OPTION = "puae_use_whdload"
 _PUAE_WS_NAME = "ws_name"
+_PUAE_SAVE_PATH_KEY = "SavePath"
+# What the baked prefs point SavePath at, in the spelling that file uses
+# (whdload/WHDLoad.prefs:37).
+_PUAE_BAKED_SAVE_PATH = "WHDSaves:"
 # 'puae_use_whdload' registers three values (libretro-core.c:1224-1237 at
 # 0043cf9, read at :4433-4438, the flag defaulting to 1 at :102) and the
 # handler has no else, so a value outside them leaves the flag as it was —
@@ -1525,64 +1541,207 @@ def _puae_cd(core: str, reading: RuleReading, model: str) -> ModeChoice:
 
 
 def _puae_hd(core: str, reading: RuleReading, model: str) -> ModeChoice:
-    """A hard-disk image or a mapped directory: mounted read-write, written in place."""
-    refusal = _puae_nvram_model(core, model, "the hard disk's own writes")
-    del reading
-    return refusal if refusal is not None else ModeChoice(_PUAE_HD_WRITEBACK)
+    """A hard-disk image or a mapped directory: mounted read-write, and then listed.
+
+    A directory is a volume this package can look inside, so what boots off it
+    is a read rather than a guess. An image is not: no AmigaDOS filesystem
+    reader ships here, so with the WHDLoad helper mounted beside it the answer
+    turns on bytes nothing opens.
+    """
+    listing = reading.archive_members()
+    if listing.status == ARCHIVE_OK:
+        return _puae_hard_disk(core, reading, model, _PUAE_HD_WRITEBACK, list(listing.members))
+    if listing.status == ARCHIVE_NOT_ARCHIVE:
+        # An image: not a container this package opens, which is the state the
+        # hard-disk half is written for.
+        return _puae_hard_disk(core, reading, model, _PUAE_HD_WRITEBACK, None)
+    # A directory that would not list is a different miss — the volume is one
+    # this package does read, and this machine did not yield it.
+    return ModeChoice(None, caveats=(_puae_archive_unread(core, listing.status),))
 
 
-def _puae_whdload(core: str, reading: RuleReading, model: str) -> ModeChoice:
-    """The WHDLoad half: one switch, and whether the slave gives its saves a name."""
-    refusal = _puae_nvram_model(core, model, "the WHDLoad saves volume")
-    if refusal is not None:
-        return refusal
+def _puae_whdload_switch(core: str, reading: RuleReading) -> str | ModeChoice:
+    """The WHDLoad switch's live value, or the refusal its absence makes."""
     value = reading.option_values[_PUAE_WHDLOAD_OPTION]
     missing = _require_values(core, ((_PUAE_WHDLOAD_OPTION, value),))
     if missing:
         return ModeChoice(None, caveats=missing)
     alien = _refuse_alien(core, ((_PUAE_WHDLOAD_OPTION, value, _PUAE_WHDLOAD_VALUES),))
-    if alien:
-        return ModeChoice(None, caveats=alien)
-    return _puae_whdload_choice(reading, value or "")
+    return ModeChoice(None, caveats=alien) if alien else (value or "")
 
 
-def _puae_whdload_choice(reading: RuleReading, value: str) -> ModeChoice:
+def _puae_hd_image_unread(core: str, reading: RuleReading) -> Caveat:
+    """An image's filesystem is not read here, and with the helper mounted it decides."""
+    return _mode_unestablished(
+        core,
+        REASON_HD_IMAGE_UNREAD,
+        "the WHDLoad helper volume is mounted before this image and takes the first word, and its "
+        "script hands the boot back only to an image carrying its own S/Startup-Sequence "
+        "(whdload/WHDLoad_files/S/Startup-Sequence:15-39 at 0043cf9, README.md:374) — so whether "
+        "the writes land inside the image or in the WHDSaves volume is decided by an AmigaDOS "
+        "filesystem no reader here opens; switching 'puae_use_whdload' off leaves the image the "
+        "only volume there is and settles it",
+        extension=reading.content_extension or "",
+    )
+
+
+def _puae_hd_boot_absent(core: str) -> Caveat:
+    """The volume was read and holds neither a script of its own nor a slave."""
+    return _mode_unestablished(
+        core,
+        REASON_HD_BOOT_ABSENT,
+        "the volume was listed and carries neither an S/Startup-Sequence of its own, which would "
+        "boot it and take its writes, nor a slave the helper's search can run, which would put "
+        "them in the WHDSaves volume (whdload/WHDLoad_files/S/Startup-Sequence:15-39, :61-82 at "
+        "0043cf9) — nothing boots it, so no save story begins",
+    )
+
+
+def _puae_whdload(
+    core: str, reading: RuleReading, model: str, switched_off: str = _PUAE_WHDLOAD_OFF
+) -> ModeChoice:
+    """The WHDLoad half: one switch, the prefs in force, and what the slave names.
+
+    *switched_off* is the mode the switch's ``disabled`` value reaches. It is
+    a parameter because hard-disk content arrives here too, and switching the
+    helper off does not stop such content booting — it makes it the only
+    volume there is, which is a mode of its own rather than this one's.
+    """
+    refusal = _puae_nvram_model(core, model, "the WHDLoad saves volume")
+    if refusal is not None:
+        return refusal
+    switch = _puae_whdload_switch(core, reading)
+    if isinstance(switch, ModeChoice):
+        return switch
+    slave = reading.whdload_slave()
+    prefs = _puae_save_path(core, reading, slave)
+    if isinstance(prefs, ModeChoice):
+        return prefs
+    return _puae_whdload_choice(switch, slave, (prefs, _puae_slave_reading(slave)), switched_off)
+
+
+def _puae_save_path(
+    core: str, reading: RuleReading, slave: WhdloadSlaveResult
+) -> OptionReading | ModeChoice:
+    """Where WHDLoad is pointed — the reading it makes, or the refusal it forces.
+
+    Two files decide it and both are read. ``<system dir>/WHDLoad.prefs`` is
+    the prefs in force: the core writes its baked copy there only when the
+    file is absent (libretro-core.c:6568-6588 at 0043cf9) and copies whatever
+    stands there into the helper on every run (:5881-5904), so a file a person
+    edited is the one that governs. A ``custom`` file at the mounted root is
+    appended to WHDLoad's own arguments and "always overrides WHDLoad.prefs"
+    (README.md:364; Startup-Sequence:115-116, :183-185). Either pointing
+    anywhere but the volume these modes are built on ends the answer.
+    """
+    prefs = reading.system_file(whdload.PREFS)
+    if prefs.status == FILE_UNREADABLE:
+        return ModeChoice(None, caveats=(_puae_prefs_unread(core, prefs.path),))
+    stated = whdload.save_redirect(prefs.text or "") if prefs.status == FILE_READ else (None, None)
+    redirect = _puae_save_redirect(core, stated, f"the prefs at {prefs.path}")
+    if redirect is None and slave.custom is not None:
+        redirect = _puae_save_redirect(
+            core, whdload.save_redirect(slave.custom), "a 'custom' file at the mounted root"
+        )
+    if redirect is not None:
+        return ModeChoice(None, caveats=(redirect,))
+    return OptionReading(
+        _PUAE_SAVE_PATH_KEY,
+        stated[0] or _PUAE_BAKED_SAVE_PATH,
+        f"WHDLoad.prefs {'sets' if stated[0] else 'is not there, so the copy the core bakes in sets'}"
+        f" SavePath, and the volume it names is the one the core mounts under the save root",
+        prefs.path,
+    )
+
+
+def _puae_save_redirect(core: str, stated: tuple[str | None, str | None], where: str) -> Caveat | None:
+    """A SavePath or a SaveDir the recorded modes cannot follow — ``None`` where it is theirs."""
+    save_path, save_dir = stated
+    if save_dir is None and (save_path is None or save_path.lower() == whdload.SAVES_VOLUME):
+        return None
+    return _mode_unestablished(
+        core,
+        REASON_WHDLOAD_SAVEPATH_UNRECORDED,
+        f"{where} moves the installed program's saves: WHDLoad writes them under SavePath and, "
+        "under SaveDir, into a sub directory it is told rather than one it derives from the slave "
+        "(WHDLoad manual, opt.html) — and every mode here is built on the WHDSaves: volume the "
+        "core mounts under the save root, so none of them states where these writes go",
+        **{key: value for key, value in (("savepath", save_path), ("savedir", save_dir)) if value},
+    )
+
+
+def _puae_prefs_unread(core: str, path: str | None) -> Caveat:
+    """The prefs are there and this machine did not yield them."""
+    return _mode_unestablished(
+        core,
+        REASON_WHDLOAD_PREFS_UNREAD,
+        "WHDLoad.prefs in the system directory is what points SavePath, and the core copies "
+        "whatever stands there into its helper on every run (libretro-core.c:5881-5904 at "
+        "0043cf9) — this machine did not yield it (" + (path or "the system directory is out of "
+        "reach") + "), so where the saves go was never established",
+    )
+
+
+def _puae_whdload_choice(
+    value: str,
+    slave: WhdloadSlaveResult,
+    readings: tuple[OptionReading, ...],
+    switched_off: str,
+) -> ModeChoice:
     """Which of the four WHDLoad modes holds, and the three the switch reaches.
 
     The slave is read whatever the switch says, because the ``files``
-    alternative must name the mode it would actually select — but the name it
-    yields rides the answer only where it is what the directory is called.
+    alternative must name the mode it would actually select — and because the
+    read went into this answer either way, it rides it as a reading on every
+    branch. What the name fills is only the mode that states a directory.
     """
-    slave = reading.whdload_slave()
     files = _PUAE_WHDLOAD_NAMED if slave.name is not None else _PUAE_WHDLOAD_UNNAMED
     by_value = {
         _PUAE_WHDLOAD_FILES: files,
         _PUAE_WHDLOAD_HDFS: _PUAE_WHDLOAD_IMAGE,
-        _PUAE_DISABLED: _PUAE_WHDLOAD_OFF,
+        _PUAE_DISABLED: switched_off,
     }
     alternatives = tuple(
         (by_value[other], ((_PUAE_WHDLOAD_OPTION, other),))
         for other in _PUAE_WHDLOAD_VALUES
         if other != value
     )
-    if value != _PUAE_WHDLOAD_FILES or slave.name is None:
-        return ModeChoice(by_value[value], alternatives=alternatives)
+    named = value == _PUAE_WHDLOAD_FILES and slave.name is not None
     return ModeChoice(
-        files,
+        by_value[value],
         alternatives=alternatives,
-        fills={TEMPLATE_WHDLOAD_NAME: (slave.name,)},
-        readings=(_puae_slave_reading(slave),),
+        fills={TEMPLATE_WHDLOAD_NAME: (slave.name or "",)} if named else _NO_FILLS,
+        readings=readings,
     )
 
 
 def _puae_slave_reading(slave: WhdloadSlaveResult) -> OptionReading:
-    """Where the save directory's name came from — a field of the content, not a setting."""
-    return OptionReading(
-        _PUAE_WS_NAME,
-        slave.name,
-        f"the WHDLoad slave {slave.slave!r} inside the loaded content states ws_name = "
-        f"{slave.name!r}, which WHDLoad derives the per-game save directory from",
-        None,
+    """The slave read this answer consulted — its outcome, whether or not it named anything.
+
+    It is not a switch and no file holds it, so it carries no options file:
+    what it records is that the answer rests on a read of the content, and
+    what that read came back with.
+    """
+    return OptionReading(_PUAE_WS_NAME, slave.name, _puae_slave_provenance(slave), None)
+
+
+def _puae_slave_provenance(slave: WhdloadSlaveResult) -> str:
+    if slave.status != WHDLOAD_OK:
+        return f"no slave was read out of the loaded content ({slave.status})"
+    route = (
+        "the boot script's own search named it"
+        if slave.selected_by == whdload.BY_SCRIPT
+        else "the script named none and this is the only slave the content offers, which is this "
+        "package's inference rather than the core's choice"
+    )
+    if slave.name is None:
+        return (
+            f"the slave {slave.slave!r} states no ws_name — it is older than version "
+            f"{whdload.NAMED_FROM_VERSION}, from which that field exists at all; {route}"
+        )
+    return (
+        f"the slave {slave.slave!r} states ws_name = {slave.name!r}, which WHDLoad derives the "
+        f"per-game save directory from; {route}"
     )
 
 
@@ -1601,21 +1760,29 @@ def _puae_archive(core: str, reading: RuleReading, model: str) -> ModeChoice:
     listing = reading.archive_members()
     if listing.status != ARCHIVE_OK:
         return ModeChoice(None, caveats=(_puae_archive_unread(core, listing.status),))
-    entries = whdload.walked_entries(listing.members)
-    accepted = whdload.accepted_members(listing.members)
-    classes = _puae_archive_classes(entries)
-    ambiguous = sorted({*classes, *((_PUAE_CLASS_WHDLOAD,) if accepted else ())})
-    if len(ambiguous) > 1 or len(accepted) > 1:
-        return ModeChoice(None, caveats=(_puae_archive_ambiguous(core, ambiguous),))
-    if accepted:
+    members = listing.members
+    roots = {whdload.mounted_root(name, members) for name in whdload.accepted_members(members)}
+    if len(roots) > 1:
+        return ModeChoice(None, caveats=(_puae_archive_ambiguous(core, sorted(roots)),))
+    if roots:
+        # An accepted WHDLoad member wins over every other class whatever the
+        # walk met first: the guard that ends the walk tests zip_mode > 1, so a
+        # floppy already seen does not stop the member being taken, and the
+        # playlist that floppy would have made is never written.
         return _puae_whdload(core, reading, model)
+    entries = whdload.walked_entries(members)
+    classes = _puae_archive_classes(entries)
+    if len(classes) > 1:
+        return ModeChoice(None, caveats=(_puae_archive_mixed(core, sorted(classes)),))
     if _PUAE_CLASS_CD in classes:
         return _puae_cd(core, reading, model)
     if _PUAE_CLASS_FLOPPY in classes:
         return _puae_archived_floppy(core, reading, model, entries)
+    if _PUAE_CLASS_HD in classes:
+        return _puae_archived_image(core, reading, model)
     if len(entries) > 1:
         return ModeChoice(None, caveats=(_puae_archive_unrecognised(core, entries),))
-    return _puae_archived_hd(core, reading, model)
+    return _puae_archived_tree(core, reading, model, members)
 
 
 def _puae_archived_floppy(
@@ -1634,11 +1801,69 @@ def _puae_archived_floppy(
     )
 
 
-def _puae_archived_hd(core: str, reading: RuleReading, model: str) -> ModeChoice:
-    """A hard-disk member, or an archive nothing recognised: the writes land in TEMP."""
-    refusal = _puae_nvram_model(core, model, "the extracted tree's own writes")
-    del reading
-    return refusal if refusal is not None else ModeChoice(_PUAE_ARCHIVED_HD_LOST)
+def _puae_archived_image(core: str, reading: RuleReading, model: str) -> ModeChoice:
+    """A hard-disk image inside an archive: a copy in a tree, and its bytes unread."""
+    return _puae_hard_disk(core, reading, model, _PUAE_ARCHIVED_HD_LOST, None)
+
+
+def _puae_archived_tree(
+    core: str, reading: RuleReading, model: str, members: tuple[str, ...]
+) -> ModeChoice:
+    """An archive nothing recognised: one directory of it is mounted, and it is listed."""
+    root = whdload.extracted_root(members) or ""
+    inside = [name[len(root) :] for name in members if name.startswith(root)]
+    return _puae_hard_disk(core, reading, model, _PUAE_ARCHIVED_HD_LOST, inside)
+
+
+def _puae_hard_disk(
+    core: str,
+    reading: RuleReading,
+    model: str,
+    in_place: str,
+    inside: list[str] | None,
+) -> ModeChoice:
+    """Hard-disk content, whose story the WHDLoad switch and the volume's own contents decide.
+
+    With the switch off the content is the only volume there is and whatever
+    boots writes into it. With it on the helper is mounted first and takes the
+    first word (libretro-core.c:6712 / :6819 before :6873, both at boot
+    priority 0 — [D], the order the configuration states them in): its script
+    hands the boot straight back to a volume that carries its own
+    ``S/Startup-Sequence`` (whdload/WHDLoad_files/S/Startup-Sequence:15-39,
+    README.md:374), and only otherwise searches for a slave to run. *inside*
+    is that volume's listing, or ``None`` for an image whose filesystem
+    nothing here reads.
+    """
+    refusal = _puae_nvram_model(core, model, "the hard disk's own writes")
+    if refusal is not None:
+        return refusal
+    switch = _puae_whdload_switch(core, reading)
+    if isinstance(switch, ModeChoice):
+        return switch
+    alternatives = _puae_hd_alternatives(switch, in_place)
+    if switch == _PUAE_DISABLED:
+        return ModeChoice(in_place, alternatives=alternatives)
+    if inside is None:
+        return ModeChoice(None, caveats=(_puae_hd_image_unread(core, reading),))
+    if any(name.lower() == whdload.STARTUP_SEQUENCE for name in inside):
+        return ModeChoice(in_place, alternatives=alternatives)
+    if reading.whdload_slave().status == WHDLOAD_NO_SLAVE:
+        return ModeChoice(None, caveats=(_puae_hd_boot_absent(core),))
+    return _puae_whdload(core, reading, model, in_place)
+
+
+def _puae_hd_alternatives(
+    switch: str, in_place: str
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """The one-edit neighbour that changes what boots: the switch off, or on.
+
+    Only the ``disabled`` end names a mode this rule can state without reading
+    the volume again, so the neighbour offered from the other two values is
+    that one, and from ``disabled`` it is ``files`` — the registered default.
+    """
+    if switch != _PUAE_DISABLED:
+        return ((in_place, ((_PUAE_WHDLOAD_OPTION, _PUAE_DISABLED),)),)
+    return ()
 
 
 def _puae_class_of(name: str) -> str | None:
@@ -1685,15 +1910,29 @@ def _puae_archive_unrecognised(core: str, entries: tuple[str, ...]) -> Caveat:
     )
 
 
-def _puae_archive_ambiguous(core: str, classes: list[str]) -> Caveat:
-    """Several launchable members, and the core's own listing order picks one."""
+def _puae_archive_ambiguous(core: str, roots: list[str]) -> Caveat:
+    """Two WHDLoad members mounting different drawers — the walk's order picks one."""
     return _mode_unestablished(
         core,
         REASON_ARCHIVE_CONTENT_AMBIGUOUS,
-        "the archive holds more than one thing the core could launch "
-        f"({', '.join(classes)}), and which of them it takes is decided by the order its own "
-        "directory listing returns them in (libretro-core.c:6310-6362 at 0043cf9) — not a fact "
-        "about the archive, so no one save story is stated",
+        "the archive holds WHDLoad members that mount different volumes "
+        f"({', '.join(root or 'the extracted tree' for root in roots)}), and the core takes the "
+        "first its own directory listing hands it and stops looking (libretro-core.c:6314, "
+        ":6332-6351 at 0043cf9) — which one that is depends on the order of a listing this "
+        "answer does not read, so neither volume's save story is stated",
+        classes=roots,
+    )
+
+
+def _puae_archive_mixed(core: str, classes: list[str]) -> Caveat:
+    """Members of several classes: the core plays them all off one playlist."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_CONTENT_MIXED,
+        f"the archive holds members of several classes ({', '.join(classes)}), and the core does "
+        "not choose between them: it sorts all of them into one generated playlist and runs that "
+        "(libretro-core.c:6324-6331, :6376-6386 at 0043cf9). No mode here states what two save "
+        "stories under one playlist amount to, so none is claimed",
         classes=classes,
     )
 

@@ -32,6 +32,12 @@ zero size *and* a zero checksum, or simply at the end of the file — both are
 in the wild, and the two-byte test is what keeps a level-2 header whose size
 is a multiple of 256 from being read as the end.
 
+The reader never runs longer than its input: the decode loop stops as soon as
+the bit reader is spent, so a header whose stated size does not match the
+bytes behind it ends in :class:`CorruptMember` rather than in an endless run
+of invented literals. Work is bounded by the compressed bytes, not by the
+size the header claims.
+
 **The compression.** Only two methods are read here. ``-lh0-`` is the member
 stored verbatim. ``-lh5-`` is LZSS over an 8 KiB window with static Huffman
 codes, in the shape LHa for UNIX implements it: a stream of blocks, each
@@ -47,7 +53,7 @@ The reader is checked two ways beyond its unit tests, because an
 implementation of a format this old is worth more evidence than a
 description: every member of a real Amiga WHDLoad install archive decodes to
 bytes identical to ``7z``'s extraction of the same member and to the CRC-16
-its own header states, and the fixtures under ``tests/data`` list and test
+its own header states, and the fixture under ``tests/data`` lists and tests
 clean under Lhasa (an independent LhA implementation). The CRC is the
 in-band check that ships: :func:`extract` verifies it and refuses a member
 whose decoded bytes do not match, so a decoder defect cannot reach a caller
@@ -125,6 +131,13 @@ _BLOCK_COUNT_BITS = 16
 _RUN_SHORT_BITS = 4
 _RUN_SHORT_BASE = 3
 _RUN_LONG_BASE = 20
+
+# How far past the compressed bytes the reader may legitimately run: a block's
+# last symbol can need bits the encoder never wrote, because the symbol count
+# and not the byte count is what ends a block. Two 16-bit peeks' worth is more
+# than any one symbol can ask for, and past it the reader is decoding zeros —
+# which is what turns a forged original size into an endless run of literals.
+_END_MARGIN_BITS = 32
 
 _CRC16_POLYNOMIAL = 0xA001
 
@@ -359,7 +372,14 @@ def _read_extended(data: bytes, start: int, first_size: int) -> tuple[bytes, byt
 def _member_name(directory: bytes, name: bytes) -> str:
     """One member's path, both separators an LhA header can carry turned into ``/``."""
     text = (directory + name).decode("latin-1")
-    return text.replace(_AMIGA_SEPARATOR, _SEPARATOR).replace(_DOS_SEPARATOR, _SEPARATOR)
+    joined = text.replace(_AMIGA_SEPARATOR, _SEPARATOR).replace(_DOS_SEPARATOR, _SEPARATOR)
+    if not joined:
+        # Every member has a name. Bytes that walk this far without one are
+        # some other format read as a header — a zip under an .lha suffix
+        # does exactly that — and a nameless member is a thing no listing can
+        # state, so the walk refuses rather than answering one.
+        raise NotAnLha("a member header states no name, which no LhA archive writes")
+    return joined
 
 
 def _optional_u16(data: bytes, offset: int, limit: int) -> int | None:
@@ -409,6 +429,11 @@ class _Bits:
     def skip(self, count: int) -> None:
         self._position += count
 
+    @property
+    def past_end(self) -> int:
+        """How many bits the reader has run beyond the compressed bytes."""
+        return self._position - len(self._data) * 8
+
     def take(self, count: int) -> int:
         value = self.peek(count)
         self._position += count
@@ -416,7 +441,7 @@ class _Bits:
 
 
 @dataclass(slots=True)
-class _Codes:
+class _CodeTable:
     """One decoded Huffman table: a flat lookup, plus a tree for longer codes.
 
     ``table`` maps the next ``bits`` bits straight to a symbol wherever the
@@ -434,7 +459,7 @@ class _Codes:
     right: list[int]
 
 
-def _decode_symbol(bits: _Bits, codes: _Codes) -> int:
+def _decode_symbol(bits: _Bits, codes: _CodeTable) -> int:
     """One symbol: the flat table, then the tree where the code outruns it."""
     symbol = codes.table[bits.peek(codes.bits)]
     if symbol >= codes.count:
@@ -447,7 +472,7 @@ def _decode_symbol(bits: _Bits, codes: _Codes) -> int:
     return symbol
 
 
-def _flat_codes(count: int, table_bits: int, symbol: int) -> _Codes:
+def _flat_codes(count: int, table_bits: int, symbol: int) -> _CodeTable:
     """The table a block states when one symbol carries the whole alphabet.
 
     It costs no bits at all: every lookup answers that symbol, and its length
@@ -458,7 +483,7 @@ def _flat_codes(count: int, table_bits: int, symbol: int) -> _Codes:
     """
     if symbol >= count:
         raise CorruptMember(f"a block states the single symbol {symbol} for an alphabet of {count}")
-    return _Codes(
+    return _CodeTable(
         count=count,
         bits=table_bits,
         lengths=[0] * count,
@@ -486,9 +511,9 @@ def _code_starts(lengths: list[int]) -> list[int]:
     return starts
 
 
-def _build_codes(count: int, table_bits: int, lengths: list[int]) -> _Codes:
+def _build_codes(count: int, table_bits: int, lengths: list[int]) -> _CodeTable:
     """Turn a table of code lengths into the lookup the decoder reads it through."""
-    codes = _Codes(
+    codes = _CodeTable(
         count=count,
         bits=table_bits,
         lengths=lengths,
@@ -518,7 +543,7 @@ def _fill_short(table: list[int], first: int, past: int, symbol: int) -> None:
         table[index] = symbol
 
 
-def _add_long(codes: _Codes, code: int, length: int, symbol: int, spare: int) -> int:
+def _add_long(codes: _CodeTable, code: int, length: int, symbol: int, spare: int) -> int:
     """Hang one over-long code off the flat table, a bit per tree level.
 
     The table slot the code's first ``bits`` bits land in holds a node index
@@ -559,7 +584,7 @@ def _read_pre_length(bits: _Bits) -> int:
     return length
 
 
-def _read_pre_codes(bits: _Bits, count: int, count_bits: int, skip_after: int) -> _Codes:
+def _read_pre_codes(bits: _Bits, count: int, count_bits: int, skip_after: int) -> _CodeTable:
     """A table whose lengths are sent literally — the pre-code and position tables.
 
     *skip_after* is the index at which a two-bit run says how many entries to
@@ -589,7 +614,7 @@ def _zero_run(bits: _Bits, code: int) -> int:
     return bits.take(_CODE_COUNT_BITS) + _RUN_LONG_BASE
 
 
-def _read_code_lengths(bits: _Bits, pre: _Codes) -> _Codes:
+def _read_code_lengths(bits: _Bits, pre: _CodeTable) -> _CodeTable:
     """The literal and match-length table, its lengths sent through the pre-code table."""
     stated = bits.take(_CODE_COUNT_BITS)
     if stated == 0:
@@ -608,7 +633,7 @@ def _read_code_lengths(bits: _Bits, pre: _Codes) -> _Codes:
     return _build_codes(_CODES, _CODE_TABLE_BITS, lengths)
 
 
-def _read_block_header(bits: _Bits) -> tuple[int, _Codes, _Codes]:
+def _read_block_header(bits: _Bits) -> tuple[int, _CodeTable, _CodeTable]:
     """A block's symbol count and its two working tables, in the order sent."""
     remaining = bits.take(_BLOCK_COUNT_BITS)
     pre = _read_pre_codes(bits, _PRE_CODES, _PRE_COUNT_BITS, _PRE_SKIP_AFTER)
@@ -617,7 +642,7 @@ def _read_block_header(bits: _Bits) -> tuple[int, _Codes, _Codes]:
     return remaining, codes, positions
 
 
-def _copy_match(out: bytearray, bits: _Bits, positions: _Codes, symbol: int) -> None:
+def _copy_match(out: bytearray, bits: _Bits, positions: _CodeTable, symbol: int) -> None:
     """One back-reference: its length from the symbol, its distance from the position table."""
     length = symbol - _LITERALS + _THRESHOLD
     code = _decode_symbol(bits, positions)
@@ -636,6 +661,14 @@ def _inflate_lh5(packed: bytes, original: int) -> bytes:
     out = bytearray()
     remaining, codes, positions = _read_block_header(bits)
     while len(out) < original:
+        if bits.past_end > _END_MARGIN_BITS:
+            # The stream is spent and the member is not finished: the size in
+            # the header is not the size these bytes decode to. Reading on
+            # would be reading zeros, one invented literal per turn.
+            raise CorruptMember(
+                f"the compressed stream ends after {len(out)} of the {original} bytes the header "
+                "states — the two do not describe the same member"
+            )
         if remaining <= 0:
             remaining, codes, positions = _read_block_header(bits)
         remaining -= 1

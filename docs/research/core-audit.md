@@ -164,11 +164,13 @@ rest:
    writes in place and a compressed or raw-disk one keeps nothing at all. `puae_floppy_write_redirect` gzips the write
    file at close, `puae_floppy_write_protection` discards every write and outranks it. Extended 2026-09-06 to the
    remaining classes: WHDLoad content mounts `<save dir>/WHDSaves` as a volume whose per-game sub directory WHDLoad
-   names from the slave's own `ws_name` (:6767-6785, whdload/WHDLoad.prefs:37), a hard-disk image or a mapped directory
-   takes its writes in place (:5709-5728), and a `.zip` is classified by the members the seam reads out of it. Fifteen
-   modes now; what the rule still refuses is a `.7z`, an archive it could not list, an archive holding more than one
-   launchable member, a launch pinning one member, and a playlist — each because the answer would otherwise be a guess
-   about a file this record does not read.
+   names from the slave's own `ws_name` (:6767-6785, whdload/WHDLoad.prefs:37), hard-disk content is listed and answers
+   by what boots off it — the helper volume being mounted before it (:6712, :6819 before :6873) — and a `.zip` is
+   classified by the members the seam reads out of it. Fifteen modes now, and what the rule refuses instead of guessing
+   is: a playlist, a `.7z`, an archive it could not list, one mixing classes, one holding two WHDLoad volumes, one whose
+   entries are no class at all, a launch pinning a member, a hard-disk image while the helper is mounted beside it, a
+   volume that boots nothing, WHDLoad prefs pointing elsewhere or unreadable, and any of these classes on an explicitly
+   selected CD model, whose non-volatile memory file would ride beside the class's own story.
 9. `geolith` — `geolith_memcard` / `geolith_memcard_wp`
 10. `virtualjaguar` — CRC-keyed `%s%08X.srm` names
 11. `melonds` / `melondsds` / `desmume` — `.dsv`(+`.bak`) / DSi-NAND title `.sav` / `libretropy_get_save_directory`

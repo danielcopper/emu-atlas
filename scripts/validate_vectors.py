@@ -879,7 +879,7 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
     _validate_input_archives(name, inp.get("archives", {}), inp["files"])
-    _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp.get("archives", {}))
+    _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp)
     _validate_input_queries(name, inp)
 
 
@@ -984,6 +984,10 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
 # no listing answers "not-archive" at the seam, which is what keeps a vector
 # that forgot the key from passing a file off as a listable archive.
 ARCHIVE_STATES = {"unreadable", "not-archive"}
+# The suffixes a reader claims. One rule decides what a container is, and both
+# machines share it: an archive suffix is read by the archive reader, a
+# directory is listed as itself, anything else is not a container.
+ARCHIVE_SUFFIXES = {"zip", "lha", "lzh"}
 # And the slave read's own two, which are all it adds: everything the
 # container can answer comes from the archive declaration, so the two reads
 # cannot contradict each other.
@@ -1002,12 +1006,23 @@ def _validate_input_archives(name: str, archives: Any, files: Any) -> None:
     if not isinstance(archives, dict):
         fail(f"{name}: input.archives must be an object")
     for path, spec in archives.items():
-        if not isinstance(path, str) or path not in files:
-            fail(f"{name}: archive {path!r} must name a declared file")
-        file_spec = files[path]
-        if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
-            fail(f"{name}: archive {path!r} sits on an unreadable file, whose bytes answer no walk")
+        _validate_archive_path(name, path, files)
         _validate_archive_spec(name, path, spec)
+
+
+def _validate_archive_path(name: str, path: Any, files: Any) -> None:
+    """An archive declaration names a readable file a reader claims by its suffix."""
+    if not isinstance(path, str) or path not in files:
+        fail(f"{name}: archive {path!r} must name a declared file")
+    if path.rpartition(".")[2].lower() not in ARCHIVE_SUFFIXES:
+        fail(
+            f"{name}: archive {path!r} must carry one of the suffixes a reader claims "
+            f"{sorted(ARCHIVE_SUFFIXES)} — a directory container is listed from the fixture "
+            "itself and is never declared here"
+        )
+    file_spec = files[path]
+    if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+        fail(f"{name}: archive {path!r} sits on an unreadable file, whose bytes answer no walk")
 
 
 def _validate_archive_spec(name: str, path: str, spec: Any) -> None:
@@ -1030,14 +1045,36 @@ def _validate_archive_member(name: str, path: str, member: str) -> None:
         fail(f"{name}: archive {path!r} member {member!r} names an empty, '.' or '..' segment")
 
 
-def _validate_input_whdload_slaves(name: str, slaves: Any, archives: Any) -> None:
+def _validate_input_whdload_slaves(name: str, slaves: Any, inp: Any) -> None:
     if not isinstance(slaves, dict):
         fail(f"{name}: input.whdload_slaves must be an object")
+    archives = inp.get("archives", {})
     for path, spec in slaves.items():
         members = archives.get(path) if isinstance(archives, dict) else None
         if not isinstance(members, list):
-            fail(f"{name}: whdload slave {path!r} must name an archive whose member list is declared")
+            members = _fixture_directory_members(name, path, inp)
         _validate_whdload_slave_spec(name, path, spec, members)
+
+
+def _fixture_directory_members(name: str, path: Any, inp: Any) -> list[str]:
+    """A directory container's listing, read off the fixture the way the machine reads it."""
+    if not isinstance(path, str) or not _fixture_has_directory(path, inp):
+        fail(
+            f"{name}: whdload slave {path!r} must name the container the core mounts — an archive "
+            "whose member list is declared, or a directory this fixture states"
+        )
+    prefix = path.rstrip("/") + "/"
+    sources = (*inp.get("files", {}), *inp.get("cores", {}))
+    return sorted(known[len(prefix) :] for known in sources if known.startswith(prefix))
+
+
+def _fixture_has_directory(path: str, inp: Any) -> bool:
+    """Is *path* a directory in this fixture — stated, or the parent of something stated?"""
+    if path in inp.get("dirs", []) or path in inp.get("unlistable", []):
+        return True
+    prefix = path.rstrip("/") + "/"
+    known = (*inp.get("files", {}), *inp.get("cores", {}), *inp.get("dirs", []))
+    return any(entry.startswith(prefix) for entry in known)
 
 
 def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list[Any]) -> None:

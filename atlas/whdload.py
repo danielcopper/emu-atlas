@@ -37,9 +37,16 @@ alike). At :61-82 it does exactly this, and this module mirrors it:
 - with none there and an ``.info`` at the root it stays put, and the only
   remaining branch takes a slave named after its own directory —
   ``<dir>/<dir>.slave`` (:74-81);
-- anything that gets this far with no slave reaches ``S:WBSelect`` (:176-177),
-  an interactive file requester over the ``.info`` files, and which program
-  runs is then a person's click.
+- what the script then *launches* is one step further than this module reads:
+  with no custom options set it runs the icon beside the slave rather than the
+  slave itself (:141-150), and only the custom path hands ``$SLAVE`` to
+  WHDLoad directly (:181-187). Between them it tries ``game.slave``
+  (:152-157), two Workbench icons (:159-170) and the drawer's own icon
+  (:172-174), and reaches the interactive selector ``S:WBSelect`` (:176-177)
+  only when no icon it could run stands closer. Upstream states the selector's
+  reach more widely — "Selector will be launched always when there is no exact
+  match for ``.slave``" (``README.md:396``) — and what this reading supports is
+  the narrower claim.
 
 ``List … TO ENV:`` writes *every* match, so two candidate slaves or two
 candidate directories leave a value the following ``CD`` and ``WHDLoad``
@@ -68,10 +75,29 @@ from __future__ import annotations
 import posixpath
 import struct
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 # The extensions dc_get_image_type calls WHDLoad content (libretro-dc.c:855-859).
 SUFFIXES = ("lha", "slave", "info")
+# The two of those that are not containers themselves: the core mounts the
+# drawer beside such a file rather than the file (libretro-core.c:5688-5700).
+LAUNCH_SUFFIXES = ("slave", "info")
+# The file whose presence hands the boot to the content's own script before
+# any slave is looked for (whdload/WHDLoad_files/S/Startup-Sequence:15-39).
+STARTUP_SEQUENCE = "s/startup-sequence"
+# The file at a mounted root whose contents are appended to WHDLoad's own
+# arguments, and which "always overrides WHDLoad.prefs" (README.md:364;
+# Startup-Sequence:115-116, :183-185).
+CUSTOM = "custom"
+# The two settings that move an installed program's saves, in the prefs and in
+# a `custom` file alike (WHDLoad manual, opt.html: SavePath/K and SaveDir/K).
+_SAVE_PATH = "savepath"
+_SAVE_DIR = "savedir"
+_SAVE_KEYS = (_SAVE_PATH, _SAVE_DIR)
+# What the core's baked prefs point SavePath at (whdload/WHDLoad.prefs:37) —
+# the volume every mode this package states is built on.
+SAVES_VOLUME = "whdsaves:"
+PREFS = "WHDLoad.prefs"
 
 # What the boot script looks for, lower-cased: the AmigaDOS pattern
 # ``#?.slav#?`` is ".slav" with anything on either side.
@@ -125,6 +151,28 @@ class Slave:
 
     version: int
     name: str | None
+
+
+def save_redirect(text: str) -> tuple[str | None, str | None]:
+    """The ``SavePath`` and ``SaveDir`` a prefs file or a ``custom`` file states.
+
+    Both are read the same way because WHDLoad reads them the same way: the
+    prefs file states one setting per line and a ``custom`` file states them
+    as arguments on one, so the text is taken as tokens either way. A ``;``
+    opens a comment to the end of the line (``whdload/WHDLoad.prefs:1-6``),
+    which is how the baked file carries its own explanations. Keys are matched
+    without regard to case, the way WHDLoad's own tooltype and argument
+    matching is, and the last statement of a key is the one returned — which
+    of two WHDLoad itself would take is not stated anywhere, so a file saying
+    one thing twice is [O].
+    """
+    found: dict[str, str] = {}
+    for line in text.splitlines():
+        for token in line.split(";", 1)[0].split():
+            key, sign, value = token.partition("=")
+            if sign and key.lower() in _SAVE_KEYS:
+                found[key.lower()] = value
+    return found.get(_SAVE_PATH), found.get(_SAVE_DIR)
 
 
 def read_slave(data: bytes) -> Slave:
@@ -190,6 +238,43 @@ def _u32(data: bytes, offset: int) -> int:
 # ---------------------------------------------------------------------------
 # What the core launches out of an archive, and what it mounts for it.
 # ---------------------------------------------------------------------------
+
+
+def mounted_container(path: str, is_directory: Callable[[str], bool]) -> str:
+    """What the core mounts as ``DH0:`` for one content path (:5688-5700, :5706-5711).
+
+    An archive and a directory are mounted as themselves. A ``.slave`` or an
+    ``.info`` is not: the core joins the file's own directory with its stem
+    and mounts that where it is a directory, else the directory the file sits
+    in — so a drawer icon mounts the drawer, and a slave lying loose mounts
+    the folder around it.
+    """
+    stem, dot, suffix = path.rpartition(".")
+    if not dot or suffix.lower() not in LAUNCH_SUFFIXES:
+        return path
+    return stem if is_directory(stem) else posixpath.dirname(path)
+
+
+def extracted_root(names: Sequence[str]) -> str | None:
+    """The prefix an extracted archive leaves mounted as ``DH0:``, or ``None``.
+
+    The core's walk accepts WHDLoad members and mounts the drawer beside the
+    one it took (:6332-6351); several such members that resolve to the *same*
+    drawer are one mount whichever the walk met first, and only members
+    resolving to different drawers make the answer depend on the order its
+    own directory listing returned them in — which is what ``None`` says.
+    With no WHDLoad member at all the walk falls to its last branch: the one
+    entry it ended on where that is a directory (:6355-6362), and the whole
+    extracted tree otherwise (:6296).
+    """
+    roots = {mounted_root(name, names) for name in accepted_members(names)}
+    if roots:
+        return roots.pop() if len(roots) == 1 else None
+    entries = _top_level(names)
+    walked = walked_entries(names)
+    if len(walked) == 1 and walked[0] in entries.directories:
+        return f"{walked[0]}/"
+    return ""
 
 
 def walked_entries(names: Sequence[str]) -> tuple[str, ...]:
@@ -278,11 +363,13 @@ def select_slave(names: Iterable[str]) -> Selection:
     own search runs first (:64-81). Where it names nothing, one inference
     stands in for it, and it is atlas's rather than the core's: **[D]** where
     the archive holds exactly one ``.slave`` member anywhere, that member is
-    named even though the script did not select it, because the launch then
-    goes to the ``.info`` selector — "Selector will be launched always when
-    there is no exact match for ``.slave``" (README.md:396, ``S:WBSelect``) —
-    and whichever icon a person picks there, WHDLoad has no other slave to
-    run. The save directory's name follows from the set, not from the launch.
+    named even though the script did not select it, because whatever the
+    launch turns out to be — one of the icons the script tries, or the
+    interactive selector it falls to (:141-177; README.md:396) — WHDLoad has
+    no other slave to be handed. The name follows from the set, not from the
+    launch path, which is what makes this the sounder of the two routes: the
+    script's own answer still has to be carried to WHDLoad by an icon whose
+    tooltypes nothing here reads.
 
     The one outcome that inference is kept out of is a ``load`` file at the
     root: it replaces the launch with a command of the archive's own (:61-62),

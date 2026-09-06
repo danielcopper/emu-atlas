@@ -1372,7 +1372,7 @@ class TestFixtureArchiveReads:
             ),
             pytest.param(
                 {"whdload_slaves": {"/roms/Game.lha": "no-slave"}},
-                "no archive with a member list",
+                "neither an archive with a member list nor a directory",
                 id="slave-without-archive",
             ),
             pytest.param(
@@ -1482,3 +1482,16 @@ class TestTheRouteThatNamedTheSlave:
                     }
                 },
             )
+
+
+def test_a_member_written_with_a_leading_dot_slash_is_the_name_it_extracts_to(tmp_path):
+    """``./Disk1.adf`` lands on disk as ``Disk1.adf``, and the core's walk sees that.
+
+    Left as written it would be passed over as a name starting with a dot —
+    the one shape of member the walk deliberately skips.
+    """
+    path = _zip_of(tmp_path / "Game.zip", {"./Disk1.adf": b"a", "/Disk2.adf": b"b"})
+
+    assert RealMachine().list_archive(path) == ArchiveListResult(
+        ARCHIVE_OK, ("Disk1.adf", "Disk2.adf")
+    )

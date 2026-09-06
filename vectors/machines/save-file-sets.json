@@ -9358,7 +9358,7 @@
     },
     {
       "name": "an-amiga-whdload-install-names-its-saves-from-the-slave",
-      "rationale": "WHDLoad gives each installed program a sub directory of SavePath:, and it names that directory from the slave it was started with. The archive's own directory, the slave's file name and ws_name are three different strings, so only the slave's bytes can say what the directory is called — here they say 'Alien Breed', and the answer states WHDSaves/Alien Breed with the reading that named it.",
+      "rationale": "WHDLoad gives each installed program a sub directory of SavePath:, and it names that directory from the slave it was started with. Here the slave is named after its own drawer, which is what the boot script's last branch looks for — and the name the saves land under is neither of those spellings but the ws_name inside the slave's own bytes, which only reading them gives.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9505,7 +9505,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -9522,6 +9522,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -9702,7 +9707,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "role": "battery",
-                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9) or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the archive holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed."
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
               }
             }
           ],
@@ -9719,6 +9724,16 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -9889,7 +9904,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "role": "battery",
-                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9) or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the archive holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed."
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
               }
             }
           ],
@@ -9906,6 +9921,16 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -10069,7 +10094,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "role": "battery",
-                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9) or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the archive holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed."
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
               }
             }
           ],
@@ -10086,6 +10111,16 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -10274,6 +10309,16 @@
                 "key": "puae_use_whdload",
                 "value": "hdfs",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -10458,6 +10503,16 @@
                 "key": "puae_use_whdload",
                 "value": "disabled",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -11665,7 +11720,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -11682,6 +11737,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -11714,8 +11774,8 @@
       }
     },
     {
-      "name": "an-amiga-archive-holding-a-hard-disk-image-loses-its-writes-with-the-tree",
-      "rationale": "A hard-disk member is mounted read-write like any other, but from the temporary tree — so the writes land inside a copy that is removed at the next start. That is the whole difference from the bare image, which keeps them.",
+      "name": "an-archived-amiga-hard-disk-image-is-unread-while-the-whdload-helper-is-mounted",
+      "rationale": "The helper volume is appended before the image and its script hands the boot back only to a volume carrying its own startup sequence — so whether this image boots itself, writing into a copy that dies with the tree, or holds a WHDLoad install writing to the saves volume, is inside an AmigaDOS filesystem nothing here reads.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -11825,9 +11885,9 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "declared",
+            "state": "unknown",
             "files": [],
-            "complete": true,
+            "complete": false,
             "groups": []
           },
           "caveats": [
@@ -11840,31 +11900,21 @@
               }
             },
             {
-              "code": "save-writes-discarded",
+              "code": "core-mode-unestablished",
               "data": {
                 "core": "puae",
-                "mode": "archived-hd-writeback-lost"
+                "reason": "hd-image-unread",
+                "extension": "zip"
               }
             }
           ],
-          "granularity": {
-            "value": "none",
-            "mode": "archived-hd-writeback-lost",
-            "readings": [
-              {
-                "key": "puae_model",
-                "value": "auto",
-                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
-              }
-            ],
-            "alternatives": []
-          }
+          "granularity": null
         }
       }
     },
     {
-      "name": "an-amiga-archive-of-nothing-recognised-is-mounted-as-the-tree-it-was-extracted-into",
-      "rationale": "Where no member matches a class the core mounts the extracted tree itself, so the answer is the same lost-writes statement a hard-disk member gets: there is somewhere to write and it does not survive.",
+      "name": "an-archived-amiga-folder-that-boots-nothing-answers-no-save-story",
+      "rationale": "With no member of a class the core mounts the one entry its walk ended on, and that directory is listed here: it carries neither a startup sequence of its own, which would boot it and take its writes, nor a slave the helper could run, which would put them in the saves volume. Nothing boots it, so no story begins.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -11975,9 +12025,9 @@
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "declared",
+            "state": "unknown",
             "files": [],
-            "complete": true,
+            "complete": false,
             "groups": []
           },
           "caveats": [
@@ -11990,31 +12040,20 @@
               }
             },
             {
-              "code": "save-writes-discarded",
+              "code": "core-mode-unestablished",
               "data": {
                 "core": "puae",
-                "mode": "archived-hd-writeback-lost"
+                "reason": "hd-boot-absent"
               }
             }
           ],
-          "granularity": {
-            "value": "none",
-            "mode": "archived-hd-writeback-lost",
-            "readings": [
-              {
-                "key": "puae_model",
-                "value": "auto",
-                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
-              }
-            ],
-            "alternatives": []
-          }
+          "granularity": null
         }
       }
     },
     {
-      "name": "an-amiga-archive-holding-two-launchable-things-names-neither",
-      "rationale": "A floppy member and a WHDLoad member in one archive are two different save stories, and which the core takes is the order its own directory listing returns them in. That is not a fact about the archive, so no story is stated.",
+      "name": "a-whdload-member-outranks-every-other-class-in-the-same-archive",
+      "rationale": "The walk's guard ends it only once a WHDLoad member has been taken, so a floppy already seen does not stop one: the member becomes the content and the playlist that floppy would have joined is never written. The answer is the WHDLoad story whichever order the core's own listing returned the two in.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12102,8 +12141,17 @@
         "archives": {
           "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
             "Disk1.adf",
-            "Game.slave"
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreed.slave"
           ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": {
+            "slave": "AlienBreedHD/AlienBreed.slave",
+            "version": 17,
+            "name": "Alien Breed",
+            "selected_by": "only-slave"
+          }
         }
       },
       "expected": {
@@ -12119,16 +12167,23 @@
           }
         ],
         "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves",
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
           "root_kind": "savefile_directory",
           "needs": [],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
-            "state": "unknown",
+            "state": "declared",
             "files": [],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [
             {
@@ -12140,18 +12195,61 @@
               }
             },
             {
-              "code": "core-mode-unestablished",
+              "code": "file-names-unestablished",
               "data": {
                 "core": "puae",
-                "reason": "archive-content-ambiguous",
-                "classes": [
-                  "floppy",
-                  "whdload"
-                ]
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
-          "granularity": null
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -12561,14 +12659,15 @@
       }
     },
     {
-      "name": "an-amiga-hard-disk-image-takes-its-writes-in-place",
-      "rationale": "An .hdf is mounted read-write and nothing switches that off, so the emulated machine writes into the image itself and no file of the core's own appears anywhere.",
+      "name": "an-amiga-hard-disk-image-takes-its-writes-in-place-with-the-helper-switched-off",
+      "rationale": "With WHDLoad support off nothing is mounted beside the image, so whatever it boots writes into the image itself. That is the one setting under which an image atlas cannot look inside still has a single answer.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf": "rom"
+          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_whdload = \"disabled\"\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -12697,6 +12796,11 @@
                 "key": "puae_model",
                 "value": "auto",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
             "alternatives": []
@@ -12705,14 +12809,15 @@
       }
     },
     {
-      "name": "an-amiga-game-directory-takes-its-writes-in-place-too",
-      "rationale": "A directory launched as content is a hard disk to the core — the same test that catches .hdf and .hdz catches it — and it is mounted read-write, so the writes land in the directory itself.",
+      "name": "an-amiga-game-directory-that-boots-its-own-script-takes-its-writes-in-place",
+      "rationale": "A directory is a volume this package can look inside, so what boots off it is read rather than guessed: it carries an S/Startup-Sequence of its own, which the helper's script hands the boot straight back to, and the writes land in the directory.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/AlienBreed.slave": "slave"
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/S/Startup-Sequence": "C:LoadWB\n",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/C/LoadWB": "code"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -12841,9 +12946,24 @@
                 "key": "puae_model",
                 "value": "auto",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
-            "alternatives": []
+            "alternatives": [
+              {
+                "mode": "hd-writeback",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
           }
         }
       }
@@ -12997,7 +13117,7 @@
                 "core": "puae2021",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6691-6709 at 58527ce) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6488-6512). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6691-6709 at 58527ce) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6492-6512, copying whatever stands there into the helper on every run, :5805-5828). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -13014,6 +13134,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -13194,7 +13319,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -13211,6 +13336,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -13390,7 +13520,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/The Chaos Engine",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -13407,6 +13537,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -13587,7 +13722,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -13604,6 +13739,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -13784,7 +13924,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "role": "battery",
-                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588). Its name is the slave's ws_name, reached one of two ways: the boot script's own search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82), or [D] the search named none and the archive offers WHDLoad exactly one .slave member, which is then the one it must run whichever icon a person picks in the selector the core falls back to (README.md:396, S/WBSelect). The second is atlas's inference from the set rather than the core's own choice, and the seam's answer says which route named it."
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
               }
             }
           ],
@@ -13801,6 +13941,11 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
               },
               {
                 "key": "ws_name",
@@ -13833,8 +13978,8 @@
       }
     },
     {
-      "name": "two-amiga-slaves-the-script-cannot-tell-apart-keep-the-volume-unnamed",
-      "rationale": "List writes every match into one variable, so two candidate slaves leave a value the following CD and WHDLoad cannot use — and with two of them the archive offers no single slave to fall back on either. The volume is stated and its per-game directory is not named, which is the honest end of both routes.",
+      "name": "two-amiga-slaves-at-an-archives-root-keep-the-volume-unnamed",
+      "rationale": "List writes every match into one variable, so two slaves at the mounted root leave a value the following CD and WHDLoad cannot use — and with two of them the archive offers no single slave to fall back on either. The volume is stated and its per-game directory is not named, which is the honest end of both routes.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13921,9 +14066,9 @@
         },
         "archives": {
           "/mnt/sd/retrodeck/roms/amiga/Cannon Fodder (1993)(Sensible)(HD).lha": [
-            "CannonFodder.info",
-            "CannonFodder/One.slave",
-            "CannonFodder/Two.slave"
+            "One.slave",
+            "Two.slave",
+            "ReadMe"
           ]
         },
         "whdload_slaves": {
@@ -13976,7 +14121,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "role": "battery",
-                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9) or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the archive holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed."
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
               }
             }
           ],
@@ -13993,6 +14138,16 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -14162,7 +14317,7 @@
                 "core": "puae",
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "role": "battery",
-                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9) or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the archive holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed."
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
               }
             }
           ],
@@ -14179,6 +14334,16 @@
                 "key": "puae_use_whdload",
                 "value": "files",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": [
@@ -14341,6 +14506,2604 @@
                   "Docs",
                   "Extras"
                 ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-install-launched-by-its-drawer-icon-mounts-the-drawer",
+      "rationale": "An .info is not a container: the core joins the file's own directory with its stem and mounts that, so the volume searched for a slave is the drawer beside the icon. The answer is the same named directory a launch of the archive itself would give.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD.info": "icon",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/AlienBreed.slave": "slave",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/ReadMe": "notes"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD.info"
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD": {
+            "slave": "AlienBreed.slave",
+            "version": 17,
+            "name": "Alien Breed",
+            "selected_by": "only-slave"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-game-directory-holding-a-slave-answers-the-whdload-story",
+      "rationale": "With no startup sequence of its own the helper's script searches the volume instead, so a directory holding a slave is a WHDLoad install however it was launched — and its saves land in the named directory under the saves volume rather than in the folder.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/AlienBreed.slave": "slave",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/ReadMe": "notes"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD"
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD": {
+            "slave": "AlienBreed.slave",
+            "version": 17,
+            "name": "Alien Breed",
+            "selected_by": "only-slave"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "hd-writeback",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-game-directory-that-boots-nothing-answers-no-save-story",
+      "rationale": "The volume was listed and holds neither a startup sequence nor a slave, so nothing boots it. That is a read, not a guess — which is the whole difference between a directory and an image here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/ReadMe": "notes",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/Manual": "text"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "hd-boot-absent"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-hard-disk-image-beside-the-whdload-helper-is-a-filesystem-this-package-does-not-read",
+      "rationale": "The helper is mounted before the image and takes the first word, and what it hands the boot back to depends on whether the image carries its own startup sequence. That is inside an AmigaDOS filesystem no reader here opens, so neither story is claimed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "hd-image-unread",
+                "extension": "hdf"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-hard-disk-image-with-the-helper-off-loses-its-writes-with-the-tree",
+      "rationale": "Switching WHDLoad support off settles what boots: the image is the only volume, it writes into itself, and the copy it is dies with the temporary tree at the next start.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_whdload = \"disabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Workbench.hdf"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-hd-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-hd-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-holding-a-hard-disk-image-and-something-else-is-still-a-hard-disk",
+      "rationale": "The core sorts every floppy, CD and hard-disk member into one playlist and runs that, so an entry it recognises as no class at all does not make the archive ambiguous — the hard-disk member is what it plays, and the answer is that member's.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1 (with extras).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1 (with extras).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1 (with extras).zip": [
+            "Workbench.hdf",
+            "ReadMe.txt"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "hd-image-unread",
+                "extension": "zip"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-mixing-floppies-and-discs-composes-two-save-stories",
+      "rationale": "The core does not choose between classes: it sorts all of them into one generated playlist and runs that. A floppy's write file and a disc's non-volatile memory are two different stories, and no mode here states what they amount to together.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Mixed media (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Mixed media (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Mixed media (Europe).zip": [
+            "Disk1.adf",
+            "Bonus.cue",
+            "Bonus.bin"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-content-mixed",
+                "classes": [
+                  "cd",
+                  "floppy"
+                ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "two-amiga-whdload-members-mounting-one-drawer-are-one-mount",
+      "rationale": "A slave and the icon beside it are both members the core would accept, and both mount the same drawer — so whichever its listing hands over first, the volume is the same one and there is nothing order-dependent about it. Here that drawer holds two slaves, which is what leaves the directory unnamed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(icon and slave).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(icon and slave).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(icon and slave).zip": [
+            "Game.info",
+            "Game/One.slave",
+            "Game/Two.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(icon and slave).zip": "ambiguous"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "role": "battery",
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none by either route. The boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or met candidates its own List … TO ENV: mechanism cannot tell apart (:64, :67), and the content holds no single .slave member to name instead; or the slave that was named could not be read; or it is older than ws_Version 10 and has no ws_name field at all; or the WHDLoad member inside an archive is itself an .lha, a second container extracted only while the core runs, whose members nothing here opens. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files-unnamed",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": null,
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "two-amiga-whdload-members-mounting-different-drawers-name-neither",
+      "rationale": "The core takes the first WHDLoad member its own directory listing hands it and stops looking. With two that mount different volumes, which one runs depends on an order this answer does not read, so neither volume's save story is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Two Installs (compilation).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Two Installs (compilation).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Two Installs (compilation).zip": [
+            "One.info",
+            "One/One.slave",
+            "Two.info",
+            "Two/Two.slave"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-content-ambiguous",
+                "classes": [
+                  "One/",
+                  "Two/"
+                ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-folder-that-boots-its-own-script-loses-its-writes-with-the-tree",
+      "rationale": "The one entry the walk ends on is a directory, and it carries a startup sequence of its own — so it boots itself and writes into itself, inside a temporary tree the core removes at the next start.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip": [
+            "Game/S/Startup-Sequence",
+            "Game/C/LoadWB"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-hd-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-hd-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "archived-hd-writeback-lost",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-folder-holding-a-slave-answers-the-whdload-story",
+      "rationale": "The same single-directory branch, with a slave in it instead of a startup sequence: the helper's search finds it and the saves land under the saves volume, which outlives the temporary tree the install itself is extracted into.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip": [
+            "Game/AlienBreed.slave",
+            "Game/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Bootable folder (Europe).zip": {
+            "slave": "Game/AlienBreed.slave",
+            "version": 17,
+            "name": "Alien Breed",
+            "selected_by": "only-slave"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "archived-hd-writeback-lost",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-prefs-that-name-the-volume-the-modes-are-built-on-change-nothing",
+      "rationale": "The prefs in the system directory are the ones in force — the core writes its baked copy there only when none is present, and copies whatever stands there into the helper on every run. A file that points SavePath at the volume the modes are built on is read, recorded as a reading, and changes no answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": "; the prefs the core bakes in\nSavePath=WHDSaves:\t\t;base directory for all saves\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Turrican",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-prefs-pointing-somewhere-else-take-the-saves-out-of-every-mode",
+      "rationale": "SavePath is what puts the per-game directories under the save root at all. Pointed anywhere else, the writes leave every mode this card states, and where they land is a volume assignment atlas does not follow.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": "SavePath=DH1:MySaves\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "whdload-savepath-unrecorded",
+                "savepath": "DH1:MySaves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-prefs-naming-a-save-directory-stop-the-name-being-derived",
+      "rationale": "SaveDir tells WHDLoad the sub directory's name outright, so it stops deriving one from the slave — which is the step every named mode here rests on.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": "SavePath=WHDSaves:\nSaveDir=Shared\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "whdload-savepath-unrecorded",
+                "savepath": "WHDSaves:",
+                "savedir": "Shared"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-prefs-that-cannot-be-read-leave-the-save-path-unestablished",
+      "rationale": "The prefs decide where the saves go, so a file that is there and will not open is not a missing default — it is the one fact the answer rests on, unread.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "whdload-prefs-unread"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-custom-file-at-the-mounted-root-can-move-the-saves-too",
+      "rationale": "A file named custom at the mounted root is appended to WHDLoad's own arguments and overrides the prefs outright, so it reaches the same refusal from the other direction.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/TurricanHD/Turrican.slave": "slave",
+          "/mnt/sd/retrodeck/roms/amiga/TurricanHD/custom": "SavePath=DH1:MySaves\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/TurricanHD"
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/TurricanHD": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "only-slave"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "whdload-savepath-unrecorded",
+                "savepath": "DH1:MySaves"
               }
             }
           ],

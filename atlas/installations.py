@@ -2587,8 +2587,15 @@ def _fill_rule_templates(
 
 
 def _carries_rule_template(group: SaveGroup) -> bool:
+    """Does this group name a template its card's rule has to fill?
+
+    ``observe`` counts beside ``files``: the fill reaches it, the card loader
+    accepts a template there, and a group whose only template sat in
+    ``observe`` would otherwise carry the token into an observation glob.
+    """
     return any(
-        token in (group.subdir or "") or any(token in name for name in group.files or ())
+        token in (group.subdir or "")
+        or any(token in name for name in (*(group.files or ()), *(group.observe or ())))
         for token in RULE_FILLED_TEMPLATES
     )
 

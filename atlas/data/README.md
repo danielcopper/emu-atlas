@@ -113,15 +113,27 @@ and are simply not derivable.
 
 ### File names are templates in the placement's own hole vocabulary
 
-A declared name may carry exactly two tokens, and they are not local to this file: they are the holes
-`SavefilePlacement.needs` speaks (`atlas/placement.py`, which the loader imports — one definition, not a second spelling
-here).
+A declared name may carry tokens from one vocabulary, and it is not local to this file: it is `atlas/placement.py`'s,
+which the loader imports — one definition, not a second spelling here. Four tokens exist, and they divide by **who fills
+them**.
+
+The two a placement speaks, which can reach a caller as a hole in `SavefilePlacement.needs`:
 
 - `<rom_stem>` — the resolver fills it from the content path. Not a hole in an answer: either it is substituted or the
   file set is honestly unknown.
 - `<save_id>` — the content's platform-native id (Flycast names a per-game VMU after the disc's product number). atlas
   never fills it, because reading an id out of a ROM is identification, not location. It stays in the stated name and
   `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name.
+
+And two a card's **own selection rule** fills from a machine read (`RULE_FILLED_TEMPLATES`), which therefore belong only
+to a card that states a `governing_rule` — the loader refuses one on a card with no rule behind it. Neither is ever a
+hole: where the read behind it fails, the rule selects a different mode that states no such name.
+
+- `<whdload_name>` — the program name inside a WHDLoad slave (`ws_name`), which is what WHDLoad derives its per-game
+  save directory from and what no spelling of the archive's own path gives.
+- `<archive_member_stem>` — one archived image's own stem, because a core that extracts an archive names each member's
+  write file after the member rather than after the question's content. The fill is a list, so the declared file list
+  grows with it: one name per member.
 
 A group may also carry `observe`: candidates wider than the declared defaults, probed on the machine because they exist
 only when configured (Flycast's slot-2 VMUs beside the four port-1 cards). Since issue #89 an **observation gate** can
@@ -138,10 +150,11 @@ the point of keeping one vocabulary: a card is data, and without the check a typ
 states as fact — the failure mode the "never guess" rule exists to prevent. A card that needs a new hole adds it to the
 placement vocabulary first. An empty list, an empty name and a literal angle bracket are refused for the same reason.
 
-A `subdir` segment may be a template too, from its own two-token vocabulary: `<rom_stem>` (prboom creates
-`<save dir>/<rom_stem>/`) and `<content_dir_name>` — the basename of the content's directory (the vitaquake2 family
-creates `<save dir>/baseq2/` for content in `baseq2/`). A token must be the **whole segment**: the resolver undoes a
-subdir by counting segments, and that arithmetic is exact only while one template fills to exactly one segment. Both are
+A `subdir` segment may be a template too, from a three-token vocabulary: `<rom_stem>` (prboom creates
+`<save dir>/<rom_stem>/`), `<content_dir_name>` — the basename of the content's directory (the vitaquake2 family creates
+`<save dir>/baseq2/` for content in `baseq2/`) — and the rule-filled `<whdload_name>` (PUAE creates
+`<save dir>/WHDSaves/<the slave's ws_name>/`). A token must be the **whole segment**: the resolver undoes a subdir by
+counting segments, and that arithmetic is exact only while one template fills to exactly one segment. Both are
 established only under the `savefile_directory` root — the loader refuses them elsewhere, because no read core keys a
 system or content subdirectory on the content. The resolver fills them from the content path; a content-less question
 keeps the token in `dir` and puts `rom_stem` / `content_dir_name` into `needs`, the shape `<content_dir>` has always

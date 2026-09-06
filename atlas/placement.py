@@ -592,6 +592,29 @@ REASON_ARCHIVE_MEMBER_PINNED = "archive-member-pinned"
 # writes land in is that listing's order and not a fact about the archive.
 # ``entries`` names what the walk saw.
 REASON_ARCHIVE_CONTENT_UNRECOGNISED = "archive-content-unrecognised"
+# The archive holds members of several classes at once. The core does not
+# choose between them: it writes one playlist across all of them and runs
+# that, and no mode here states what a composition of two save stories
+# amounts to. ``classes`` names the ones found.
+REASON_ARCHIVE_CONTENT_MIXED = "archive-content-mixed"
+# Hard-disk content whose boot this answer cannot settle. ``hd-image-unread``
+# is an image whose filesystem atlas does not read while the WHDLoad helper is
+# mounted alongside it, so whether the image boots its own startup script
+# (writing inside itself) or holds a WHDLoad install (writing to the saves
+# volume) is inside bytes nothing here opens — ``extension`` carries the one
+# seen. ``hd-boot-absent`` is content that was read and holds neither: no
+# startup script of its own and no slave to run, so nothing boots and no save
+# story begins.
+REASON_HD_IMAGE_UNREAD = "hd-image-unread"
+REASON_HD_BOOT_ABSENT = "hd-boot-absent"
+# WHDLoad's own prefs decide where the saves go, and these two say the answer
+# cannot rest on them: ``whdload-savepath-unrecorded`` is a SavePath or a
+# SaveDir stating something other than the volume the modes are built on
+# (``savepath`` / ``savedir`` carry what was read, from the prefs file or from
+# a ``custom`` file at the mounted root, which overrides it);
+# ``whdload-prefs-unread`` is a prefs file that is there and could not be read.
+REASON_WHDLOAD_SAVEPATH_UNRECORDED = "whdload-savepath-unrecorded"
+REASON_WHDLOAD_PREFS_UNREAD = "whdload-prefs-unread"
 # ScummVM's own save directory: its ini could not be read, or the path it sets
 # has no host spelling (``path`` carries the configured value).
 REASON_SAVEPATH_CONFIG_UNREADABLE = "savepath-config-unreadable"
@@ -635,6 +658,11 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_ARCHIVE_CONTENT_AMBIGUOUS,
     REASON_ARCHIVE_MEMBER_PINNED,
     REASON_ARCHIVE_CONTENT_UNRECOGNISED,
+    REASON_ARCHIVE_CONTENT_MIXED,
+    REASON_HD_IMAGE_UNREAD,
+    REASON_HD_BOOT_ABSENT,
+    REASON_WHDLOAD_SAVEPATH_UNRECORDED,
+    REASON_WHDLOAD_PREFS_UNREAD,
     REASON_EMULATED_MODEL_UNRECORDED,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,

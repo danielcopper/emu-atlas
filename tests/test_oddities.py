@@ -4333,3 +4333,41 @@ class TestARuleFilledTemplateBelongsToACardWithARule:
     def test_a_card_with_no_rule_may_not_carry_one(self, subdir, files):
         with pytest.raises(ValueError, match="declares no governing_rule"):
             load_oddities(self._card(rule=False, subdir=subdir, files=files))
+
+
+def test_a_rule_filled_template_in_observe_needs_a_rule_too():
+    """``observe`` carries names into a glob, so it is guarded like ``files``.
+
+    The fill reaches it and the loader's file-name grammar accepts a template
+    there, so a card whose only template sat in ``observe`` would state the
+    token as part of a name it looked for on disk.
+    """
+    card = json.dumps(
+        {
+            "schema": 1,
+            "cores": {
+                "x": {
+                    "identifiers": {"library_name": ["X"]},
+                    "saves": {
+                        "modes": {
+                            MODE_ALWAYS: {
+                                "root": "savefile_directory",
+                                "groups": [
+                                    {
+                                        "subdir": None,
+                                        "files": ["fixed.sav"],
+                                        "observe": ["<archive_member_stem>.sav"],
+                                        "granularity": GRANULARITY_PER_GAME_FILE,
+                                        "role": "battery",
+                                    }
+                                ],
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="declares no governing_rule"):
+        load_oddities(card)

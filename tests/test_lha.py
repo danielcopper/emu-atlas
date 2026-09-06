@@ -1,12 +1,12 @@
-"""Tests for atlas.lha — the header walk on built archives, ``-lh5-`` on a real one.
+"""Tests for atlas.lha — the header walk on built archives, ``-lh5-`` on a generated one.
 
 Every level-0, level-1 and level-2 archive here is assembled byte by byte
 from ``header.doc``'s own field table, so what the walk is proven against is
 the layout and not a copy of some archive's quirks. The compressed half
 cannot be built that way — a static-Huffman stream is not a struct — so it is
-proven against ``tests/data/whdload-sample.lha``, which
-``tests/data/make_lha_fixtures.py`` produced and which Lhasa, an independent
-LhA implementation, lists and CRC-tests clean.
+proven against ``tests/data/whdload-sample.lha``, an archive
+``tests/data/make_lha_fixtures.py`` generates with an encoder of its own and
+which Lhasa, an independent LhA implementation, lists and CRC-tests clean.
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ END_MARKER = b"\x00\x00"
 # header.doc's own table: the level byte, and level 0's packed size.
 LEVEL_BYTE = 20
 PACKED_SIZE_FIELD = 7
+ORIGINAL_SIZE_FIELD = 11
+NAME_LENGTH_FIELD = 21
 
 
 def bits_to_bytes(bits: str) -> bytes:
@@ -263,3 +265,37 @@ def test_a_block_whose_single_symbol_is_outside_its_alphabet_is_refused() -> Non
 
     with pytest.raises(lha.CorruptMember, match="single symbol"):
         lha.extract(archive, member)
+
+
+def test_a_member_whose_stated_size_outruns_its_bytes_is_refused() -> None:
+    # The size in the header is not a promise the bytes keep: past the stream
+    # the reader would invent one literal per turn, forever.
+    data = bytearray(SAMPLE.read_bytes())
+    struct.pack_into("<I", data, 2 + ORIGINAL_SIZE_FIELD, 4_000_000_000)
+    archive = bytes(data)
+    member = lha.members(archive)[0]
+
+    with pytest.raises(lha.CorruptMember, match="do not describe the same member"):
+        lha.extract(archive, member)
+
+
+def test_a_member_whose_compressed_bytes_run_out_early_is_refused() -> None:
+    data = SAMPLE.read_bytes()
+    member = lha.members(data)[0]
+    cut = lha.Member(
+        member.name, member.method, member.offset, member.packed_size // 4,
+        member.original_size, member.crc,
+    )
+
+    with pytest.raises(lha.CorruptMember):
+        lha.extract(data, cut)
+
+
+def test_a_nameless_member_is_no_member_at_all() -> None:
+    # A zip under an .lha suffix walks this far: a header whose name length is
+    # zero would otherwise be listed as a member nothing can name.
+    archive = bytearray(level0(b"x", b"y") + END)
+    archive[NAME_LENGTH_FIELD] = 0
+
+    with pytest.raises(lha.NotAnLha, match="states no name"):
+        lha.members(bytes(archive))
