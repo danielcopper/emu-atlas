@@ -721,12 +721,18 @@ class Caveat:
     """
 
     code: str
+    """The stable identifier a client branches on — a code from the ``CAVEAT_*`` or
+    ``HEALTH_ISSUE_*`` vocabularies, and part of the contract.
+    """
     message: str
-    # One value, several values or a tally — see :data:`DataValue`. Sequences
-    # arrive as any sequence of strings and are kept as tuples; the mapping
-    # form belongs to the two pairs the guide documents, the alternative-
-    # emulator tally and this code's read card-index options.
     data: Mapping[str, "DataValue"] = field(default_factory=dict)
+    """The machine-readable specifics a client acts on, as a read-only mapping.
+
+    One value, several values or a tally — see :data:`DataValue`. Sequences
+    arrive as any sequence of strings and are kept as tuples; the mapping
+    form belongs to the two pairs the guide documents, the alternative-
+    emulator tally and this code's read card-index options.
+    """
 
     def __post_init__(self) -> None:
         if not self.code:
@@ -859,9 +865,21 @@ class FileGroup:
     """
 
     dir: str
+    """The resolved directory this group's files lie in — groups of one answer may sit
+    under different roots.
+    """
     files: tuple[str, ...] | None
+    """The basenames lying in ``dir``, or ``None`` where save data is written here under
+    names nothing atlas reads establishes.
+    """
     granularity: str
+    """Whose data these files are — one of :data:`GRANULARITIES`, this game's or every
+    game's.
+    """
     role: str
+    """What kind of data this group holds — one of :data:`ROLES`, the word a syncing
+    client decides by.
+    """
 
     def __post_init__(self) -> None:
         if self.granularity not in GRANULARITIES:
@@ -929,10 +947,22 @@ class FileSet:
     """
 
     state: FileSetState
+    """Where these names come from: ``observed`` off disk, ``declared`` from a verified
+    rule card, or ``unknown`` for a set atlas will not guess.
+    """
     files: tuple[str, ...]
+    """The save's file names as they lie in the answer's own directory — basenames, or
+    templates keeping the holes ``needs`` lists.
+    """
     provenance: str
     complete: bool = False
+    """Whether these names close the save's candidate universe — ``False`` on every
+    answer atlas can give today, which is not the same as having no opinion.
+    """
     groups: tuple[FileGroup, ...] = ()
+    """Every place this save lives, where a card decomposed it by kind or owner — empty
+    means not decomposed, never no files.
+    """
 
     def __post_init__(self) -> None:
         if self.state not in _FILE_SET_STATES:
@@ -967,9 +997,18 @@ class OptionReading:
     """
 
     key: str
+    """The option key this reading is of, spelled the way the emulator's own file spells
+    it.
+    """
     value: str | None
+    """The live value read for ``key``, or ``None`` where nothing states it and the
+    provenance says what applies instead.
+    """
     provenance: str
     options_file: str | None
+    """The file to edit to change this switch — change it, ask again, and the new answer
+    confirms it; ``None`` where this answer resolved no such file.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -987,8 +1026,17 @@ class ModeAlternative:
     """
 
     mode: str
+    """The other mode this alternative names — what the grouping becomes if a caller
+    selects it.
+    """
     options: tuple[tuple[str, str], ...]
+    """The full option combination that reaches ``mode`` — one pair for a single-option
+    core, one pair per switch for a rule card.
+    """
     values: tuple[str, ...]
+    """Every distinct grouping among that mode's groups, in card order with the mode's
+    own first.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -1012,9 +1060,20 @@ class Granularity:
     """
 
     value: str
+    """How this emulator, configured as it is, groups save data — one of
+    :data:`GRANULARITIES`, or :data:`GRANULARITY_NONE` for a mode that keeps no save
+    at all.
+    """
     mode: str | None
+    """The rule-card mode in force, for display and never for branching — ``None`` where
+    no card speaks.
+    """
     readings: tuple[OptionReading, ...]
+    """One entry per switch that went into the selection — none where nothing selects, as
+    for a core with fixed behaviour.
+    """
     alternatives: tuple[ModeAlternative, ...]
+    """The other reachable modes, each with the option combination that selects it."""
     provenance: str
 
 
@@ -1059,14 +1118,38 @@ class SavefilePlacement:
     """
 
     dir: str
+    """The directory this emulator keeps the save in — concrete where the caller supplied
+    the content path, otherwise a template whose holes ``needs`` lists.
+    """
     root_kind: RootKind
+    """Which anchor ``dir`` hangs off — one of :data:`ROOT_KINDS`, from the configured
+    save root to a standalone emulator's own tree.
+    """
     needs: tuple[str, ...]
+    """The holes a caller fills, the directory template's and a declared file-set
+    template's together — an answer with none is fully resolved.
+    """
     file_set: FileSet
+    """The files the save consists of — observed, declared, or unknown, and never
+    guessed.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
     granularity: Granularity | None = None
+    """How this emulator groups save data and how to change it, and ``None`` wherever no
+    rule card states it.
+    """
     fallback_dir: str | None = None
+    """The unsorted root RetroArch silently reverts to when it cannot create ``dir``, and
+    ``None`` where the placement is not conditional.
+    """
     physical_dir: str | None = None
+    """The fully link-resolved backing directory where ``dir`` reaches its files through
+    symlinks, and ``None`` otherwise.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -1100,11 +1183,26 @@ class ScreenshotPlacement:
     """
 
     dir: str
+    """The directory this configuration's screenshots land in — concrete where content or
+    a configured root fills it, otherwise a template whose holes ``needs`` lists.
+    """
     root_kind: ScreenshotRootKind
+    """Which anchor ``dir`` hangs off — the configured screenshot directory, or the
+    content's own.
+    """
     needs: tuple[str, ...]
+    """The holes a caller fills to make ``dir`` concrete — empty on an answer that is
+    already a path.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
     physical_dir: str | None = None
+    """The fully link-resolved backing directory where ``dir`` reaches its files through
+    symlinks, and ``None`` otherwise.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -1231,12 +1329,18 @@ class Unresolved:
     """
 
     code: str
+    """The stable identifier a client branches on — why this question has no answer for
+    this entry.
+    """
     message: str
-    # The same value vocabulary a caveat's data has (:data:`DataValue`): one
-    # string, or the list-valued keys an aggregate refusal documents beside its
-    # code (``paths`` on the untranslatable-path code) — tuples here, JSON
-    # arrays in the serialized contract.
     data: Mapping[str, "DataValue"] = field(default_factory=dict)
+    """The machine-readable specifics of the refusal, as a read-only mapping.
+
+    The same value vocabulary a caveat's data has (:data:`DataValue`): one
+    string, or the list-valued keys an aggregate refusal documents beside its
+    code (``paths`` on the untranslatable-path code) — tuples here, JSON
+    arrays in the serialized contract.
+    """
 
     def __post_init__(self) -> None:
         if not self.code:
@@ -1278,13 +1382,34 @@ class SavestatePlacement:
     """
 
     dir: str
+    """The directory this emulator keeps savestates in — concrete where the caller
+    supplied the content path, otherwise a template whose holes ``needs`` lists.
+    """
     root_kind: StateRootKind
+    """Which anchor ``dir`` hangs off — one of :data:`STATE_ROOT_KINDS`, from the
+    configured savestate root to the launching process's own directory.
+    """
     needs: tuple[str, ...]
+    """The holes a caller fills to make ``dir`` concrete — an answer with none is fully
+    resolved.
+    """
     file_set: FileSet
+    """The files the savestates consist of — observed where a listing found them,
+    declared where a card names the emulator's own, unknown where neither did.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
     fallback_dir: str | None = None
+    """The unsorted root RetroArch silently reverts to when it cannot create ``dir``, and
+    ``None`` where the placement is not conditional.
+    """
     physical_dir: str | None = None
+    """The fully link-resolved backing directory where ``dir`` reaches its files through
+    symlinks, and ``None`` otherwise.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -1323,9 +1448,18 @@ class SavestateAbsence:
     """
 
     emulator: str
+    """The emulator this stated no is about, named by the token its packaged card
+    carries.
+    """
     citation: str
+    """The evidence for the no, contractual so that a client repeating the claim repeats
+    its source.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...] = ()
+    """What qualifies the claim itself — never what qualifies a tree, since an absence
+    names no path.
+    """
 
     def __post_init__(self) -> None:
         if not self.emulator:
@@ -1379,12 +1513,30 @@ class TexturePlacement:
     """
 
     dir: str
+    """The directory this emulator reads texture packs from — concrete where every hole
+    is filled, otherwise a template whose remaining holes ``needs`` lists.
+    """
     needs: tuple[str, ...]
+    """The holes a caller fills to make ``dir`` concrete — empty on an answer that is
+    already a path.
+    """
     enabled: bool | None
+    """Whether texture replacement is switched on right now, read from the switch that
+    governs it — ``None`` where no switch answered on this route.
+    """
     keying: Keying | None
+    """How the tree below ``dir`` is divided per game — one of :data:`KEYINGS`, and
+    ``None`` wherever no cited evidence states it.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
     physical_dir: str | None = None
+    """The fully link-resolved backing directory where ``dir`` reaches its files through
+    symlinks, and ``None`` otherwise.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -1417,9 +1569,19 @@ class ModTree:
     """
 
     dir: str
+    """The directory the emulator opens this mod tree at."""
     keying: Keying | None
+    """How the tree below ``dir`` is divided per game — one of :data:`KEYINGS`, and
+    ``None`` wherever no cited evidence states it.
+    """
     role: str | None = None
+    """The emulator's own word for what this tree is, and ``None`` where it reads mods
+    from one directory and there is nothing to tell apart.
+    """
     physical_dir: str | None = None
+    """The link-resolved directory the bytes are really in where an arrangement wired
+    one, and ``None`` otherwise.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -1453,10 +1615,22 @@ class ModPlacement:
     """
 
     trees: tuple[ModTree, ...]
+    """Every directory this emulator reads mods from, each a different mechanism rather
+    than an alternative to the others.
+    """
     needs: tuple[str, ...]
+    """The holes a caller fills in the trees' directories — one list, because a shared
+    root leaves the same hole for every tree hanging off it.
+    """
     enabled: bool | None
+    """Whether the switch that governs mods is on, read live where a live read exists —
+    ``None`` where nothing established it, and never to be read as off.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
 
     def __post_init__(self) -> None:
         if not self.trees:
@@ -1497,9 +1671,21 @@ class SoftPatchCandidate:
     """
 
     format: PatchFormat
+    """The patch format this candidate is — one of :data:`PATCH_FORMATS`, listed in the
+    order RetroArch tries them.
+    """
     path: str
+    """The absolute file name RetroArch would look for: the content's own basename with
+    its last extension stripped, plus this format's extension.
+    """
     continuations: tuple[str, ...]
+    """The nine indexed follow-ups RetroArch would look for on top of this one — the
+    same name with one digit appended, 1 through 9, listed rather than described.
+    """
     attempted: bool | None = None
+    """Whether the RetroArch on this machine tries this format at all, and ``None``
+    wherever nobody established that — which is not a no.
+    """
 
     def __post_init__(self) -> None:
         if self.format not in PATCH_FORMATS:
@@ -1553,9 +1739,17 @@ class SoftPatchAnswer:
     """
 
     candidates: tuple[SoftPatchCandidate, ...]
+    """The whole candidate set beside the content, in the order RetroArch attempts them."""
     applies: bool | None
+    """Whether patching reaches the named core: ``True`` where it loads content into
+    memory, ``False`` where it never does, ``None`` where atlas could not establish
+    it.
+    """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
 
 
 def build_soft_patch_candidates(
