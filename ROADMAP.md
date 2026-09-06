@@ -67,9 +67,9 @@ stronger check belongs.
 JSON on stdout, the conformance vectors run through its dispatch; the platform crosswalk (`systems_for_platform` /
 `platform_ids`, live `<platform>` tags against a pinned identity table); the AppImage reader (`atlas.squashfs`, pure
 stdlib) opening the catalogue sealed inside ES-DE's AppImage wherever the runtime has the zstd codec (3.14's
-`compression.zstd`, or `backports.zstd` a host vendors); the release artifacts — vectors, wheel, and the self-contained
-bundle (CLI + pinned CPython 3.14) for consumers without a Python; and the weekly canary deploying the newest RetroDECK
-from Flathub against the full suite, so drift announces itself.
+`compression.zstd`, `backports.zstd` a host vendors, or a provider the host hands over); the release artifacts —
+vectors, wheel, and the self-contained bundle (CLI + pinned CPython 3.14) for consumers without a Python; and the weekly
+canary deploying the newest RetroDECK from Flathub against the full suite, so drift announces itself.
 
 ## Next: follow-up branches
 

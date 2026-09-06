@@ -24,10 +24,19 @@ questions to every detected installation at once and answers each labelled with
 the handle it came from, so a machine carrying two arrangements gives two true
 answers instead of a silently chosen winner.
 
+One thing here is the host's to grant rather than atlas's to require. The zstd
+codec that opens an AppImage is discovered, never depended on:
+:func:`atlas.register_zstd_provider` hands over the module a host already has,
+which is what a host that vendors it under its own root needs, and
+:func:`atlas.zstd_provider` says which provider a zstd image would go through
+here and whether a host handed it over (:class:`atlas.ZstdProvider`). All three
+are re-exported here from ``atlas.squashfs``; none adds a dependency.
+
 **What this namespace is.** Everything below is the consumer API: the two entry
 points, the handles they answer with, every answer type, the vocabularies those
-answers speak, and the serializers that turn an answer into plain data. If you
-are writing a client, you never need to import from a submodule.
+answers speak, the serializers that turn an answer into plain data, and the one
+capability a host grants rather than atlas requiring it. If you are writing a
+client, you never need to import from a submodule.
 
 **What it deliberately is not.** The machine seam, the config and catalogue
 parsers, the packaged-data loaders and the module-level resolver functions are
@@ -53,6 +62,11 @@ __version__ = "0.11.0"  # x-release-please-version
 # --- The two entry points, and the aggregate over them -----------------------
 from .detect import detect
 from .every_installation import EveryInstallation, InstallationAnswer, every_installation
+
+# --- The one capability a host grants, rather than atlas requiring it --------
+# The zstd codec an AppImage read may need is discovered, never imported as a
+# dependency; a host whose own packaging holds it hands the module over here.
+from .squashfs import ZstdProvider, register_zstd_provider, zstd_provider
 
 # --- The vocabulary those questions take -------------------------------------
 # ES-DE's system names, and the two ways to check a name against them. A
@@ -476,6 +490,10 @@ __all__ = [
     # Entry points
     "detect",
     "every_installation",
+    # The one capability a host grants: which zstd provider opens an AppImage
+    "register_zstd_provider",
+    "zstd_provider",
+    "ZstdProvider",
     # The vocabulary the questions take, and how to check a name against it
     "from_esde_system",
     "known_systems",

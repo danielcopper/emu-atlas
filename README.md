@@ -191,11 +191,12 @@ data cites, at the line it cites. Drift announces itself instead of waiting to b
   reads the same hierarchy from its ES-DE's on-disk layers (EmuDeck's own `custom_systems` overlay, the gamelists,
   `es_settings.xml`) — and the bundled `es_systems.xml` sealed inside the ES-DE AppImage is read too, through atlas's
   own pure-stdlib squashfs reader, wherever the runtime has the image's codec (`compression.zstd` arrives with Python
-  3.14; the published `backports.zstd` grants it to older interpreters). Where the codec is absent the sealed layer
-  stays exactly that, stated with `emulator-catalogue-sealed` — the capability is the runtime's, never blamed on the
-  machine. Entries carry their core, so placement answers on that path need no core argument; a standalone entry answers
-  with a typed `Unresolved` outcome instead of raising. Where there are no entries the answer says which kind of none: a
-  bare RetroArch ships no catalogue at all, an EmuDeck arrangement with no ES-DE on disk may have one atlas has not
+  3.14; the published `backports.zstd` grants it to older interpreters, and a host that carries the codec under its own
+  packaging hands it over with `atlas.register_zstd_provider`). Where the codec is absent the sealed layer stays exactly
+  that, stated with `emulator-catalogue-sealed` — the capability is the runtime's, never blamed on the machine. Entries
+  carry their core, so placement answers on that path need no core argument; a standalone entry answers with a typed
+  `Unresolved` outcome instead of raising. Where there are no entries the answer says which kind of none: a bare
+  RetroArch ships no catalogue at all, an EmuDeck arrangement with no ES-DE on disk may have one atlas has not
   established the location of, a catalogue atlas could not read — missing, unreadable, or empty — is not an empty one,
   and a sealed catalogue's readable layers may simply not declare the system; four codes, because a client must not read
   the last three as "nothing here".

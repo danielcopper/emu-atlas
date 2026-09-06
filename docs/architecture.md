@@ -289,16 +289,17 @@ classDiagram
 
 ## What to import from where
 
-| You are…                        | You import                                                                                               |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| writing a client                | `import atlas` — entry points, handles, answers, vocabularies, serializers                               |
-| branching on a field's value    | `import atlas` — every closed set a field can hold, values and types alike                               |
-| writing a test or a fixture     | `from atlas.machine import FixtureMachine`                                                               |
-| porting the resolver            | the Tier-2 modules, as the reference for what each parser reads                                          |
-| reading a cfg / catalogue alone | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
-| validating your own system map  | `import atlas` — `from_esde_system`, `known_systems`                                                     |
-| arriving from a platform id     | the two platform questions on any handle; `from atlas.platforms import …` for the raw identity table     |
-| checking packaged knowledge     | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
+| You are…                          | You import                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| writing a client                  | `import atlas` — entry points, handles, answers, vocabularies, serializers                               |
+| branching on a field's value      | `import atlas` — every closed set a field can hold, values and types alike                               |
+| granting the runtime a zstd codec | `import atlas` — `register_zstd_provider`, `zstd_provider`                                               |
+| writing a test or a fixture       | `from atlas.machine import FixtureMachine`                                                               |
+| porting the resolver              | the Tier-2 modules, as the reference for what each parser reads                                          |
+| reading a cfg / catalogue alone   | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
+| validating your own system map    | `import atlas` — `from_esde_system`, `known_systems`                                                     |
+| arriving from a platform id       | the two platform questions on any handle; `from atlas.platforms import …` for the raw identity table     |
+| checking packaged knowledge       | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
 
 The rule behind the table: if a client acts on it, it is in `atlas`; if it exists so a port or a test can reproduce the
 resolver, it lives in its module. `DESIGN.md`'s "The two tiers" carries the reasoning.
