@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.12.0](https://github.com/danielcopper/emu-atlas/compare/v0.11.0...v0.12.0) (2026-09-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **catalogue:** every catalogue entry gains one key, `declared_index`, a JSON integer or null, and on some layers the entry list itself gets shorter — mirroring ES-DE's walk means a duplicate-labelled command and everything after a label-less one are no longer stated as entries at all. No shipped catalogue is such a layer, so no answer on a stock machine moves, but a hand-written `custom_systems` overlay can be one ([#397](https://github.com/danielcopper/emu-atlas/issues/397))
+* **saves:** opera names its nvram file per storage and version ([#396](https://github.com/danielcopper/emu-atlas/issues/396))
+
+### Features
+
+* **catalogue:** every entry carries its declared position ([#397](https://github.com/danielcopper/emu-atlas/issues/397)) ([a54fc0f](https://github.com/danielcopper/emu-atlas/commit/a54fc0f24904b0687195dde5158221df6a6bbb4d))
+* **saves:** a card names the flash file mednafen_ngp writes itself ([#388](https://github.com/danielcopper/emu-atlas/issues/388)) ([e8beccf](https://github.com/danielcopper/emu-atlas/commit/e8beccff4de95e903008689a67b45c8cc4800404)), closes [#385](https://github.com/danielcopper/emu-atlas/issues/385)
+* **saves:** card puae — floppy write-back, redirect and CD32/CDTV nvram ([#390](https://github.com/danielcopper/emu-atlas/issues/390)) ([414e836](https://github.com/danielcopper/emu-atlas/commit/414e836bf352eaf3bb42025a09e23bc66da9f5f9)), closes [#386](https://github.com/danielcopper/emu-atlas/issues/386)
+* **saves:** opera names its nvram file per storage and version ([#396](https://github.com/danielcopper/emu-atlas/issues/396)) ([c560632](https://github.com/danielcopper/emu-atlas/commit/c560632d4ac0769cc9e1a7c2d5b2cb6e4d1b9082)), closes [#387](https://github.com/danielcopper/emu-atlas/issues/387)
+* **squashfs:** a host may hand atlas its zstd provider ([#401](https://github.com/danielcopper/emu-atlas/issues/401)) ([5eed956](https://github.com/danielcopper/emu-atlas/commit/5eed956bf0512ba934bed102f4bd5770ade914a3)), closes [#400](https://github.com/danielcopper/emu-atlas/issues/400)
+
+
+### Documentation
+
+* **reference:** every field says how to read it ([#399](https://github.com/danielcopper/emu-atlas/issues/399)) ([70283b8](https://github.com/danielcopper/emu-atlas/commit/70283b894eecad34d9a7a96da4c4c033c46510c5))
+* the audit page follows the audit data, and the guide states the detection order ([#398](https://github.com/danielcopper/emu-atlas/issues/398)) ([6446090](https://github.com/danielcopper/emu-atlas/commit/64460906773db8725ceb0fb36d57ea7c64622c83))
+
 ## [0.11.0](https://github.com/danielcopper/emu-atlas/compare/v0.10.0...v0.11.0) (2026-09-05)
 
 
