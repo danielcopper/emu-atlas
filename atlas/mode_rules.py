@@ -25,14 +25,21 @@ from __future__ import annotations
 
 import posixpath
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Callable, Mapping
 
+from . import whdload
+from .machine import ARCHIVE_OK, ArchiveListResult, WhdloadSlaveResult
 from .placement import (
     CAVEAT_CORE_GENERATION_MISMATCH,
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
+    REASON_ARCHIVE_CONTENT_AMBIGUOUS,
+    REASON_ARCHIVE_MEMBER_PINNED,
+    REASON_ARCHIVE_FORMAT_UNREAD,
+    REASON_ARCHIVE_UNREAD,
     REASON_CARD_INDEX_OUTSIDE_RECORDED_NAMES,
     REASON_CONTENT_CLASS_UNNAMED,
     REASON_CONTENT_CLASS_UNRECORDED,
@@ -42,6 +49,8 @@ from .placement import (
     REASON_INI_SEARCH_PATH_UNLISTABLE,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,
+    TEMPLATE_ARCHIVE_MEMBER_STEM,
+    TEMPLATE_WHDLOAD_NAME,
     Caveat,
     DataValue,
     OptionReading,
@@ -96,6 +105,21 @@ class RuleReading:
     answers whether an emulator-spelled path is a directory on this machine —
     ``None`` where that could not be established (the path did not translate
     to a host view).
+
+    Four fields answer for the loaded content itself. ``content_path`` is the
+    path the question named, ``None`` where it named none — a different state
+    from an extension the rule does not know, and the only one that says *no
+    content was loaded*. The other three are reads, deferred until a rule asks
+    for them so a card that never looks inside content pays nothing:
+    ``content_is_directory`` answers what the emulator's own
+    ``path_is_directory`` answers about the launch path (a path whose ``stat``
+    fails is not a directory there, and not here either), ``archive_members``
+    lists the archive at that path, and ``whdload_slave`` reads the WHDLoad
+    slave inside it. A rule that decides on one of those reads says so by
+    putting the fact it used into ``ModeChoice.readings``: they are not option
+    keys, so the resolver's option recorder cannot see them, and an answer
+    that named a directory without saying where the name came from would be
+    the silent kind of claim this project refuses.
     """
 
     option_values: Mapping[str, str | None]
@@ -107,6 +131,15 @@ class RuleReading:
     home_entries: Callable[[str], "tuple[str, ...] | None"]
     save_dirs: tuple[str, ...]
     is_directory: Callable[[str], bool | None]
+    content_path: str | None
+    content_is_directory: Callable[[], bool]
+    archive_members: Callable[[], ArchiveListResult]
+    whdload_slave: Callable[[], WhdloadSlaveResult]
+
+
+# What a rule fills no template with — the state of every mode whose names
+# follow from the card alone.
+_NO_FILLS: Mapping[str, tuple[str, ...]] = MappingProxyType({})
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,12 +154,21 @@ class ModeChoice:
     for switches that are not core options at all (ScummVM's ``savepath``
     lives in the emulator's own ini); the consulted core options are recorded
     by the resolver and need no restating here.
+
+    ``fills`` carries the values for the templates a card's own rule fills
+    (:data:`~atlas.placement.RULE_FILLED_TEMPLATES`), keyed by the token
+    itself. One value fills a subdir segment; several expand a declared file
+    name into one name per value, which is how a mode states a save per
+    archived member. A mode whose groups carry such a token and a choice that
+    fills none of it is a build mistake and fails at apply time, exactly the
+    way a mode name the card does not state does.
     """
 
     mode: str | None
     alternatives: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
     caveats: tuple[Caveat, ...] = ()
     readings: tuple[OptionReading, ...] = ()
+    fills: Mapping[str, tuple[str, ...]] = _NO_FILLS
 
 
 def _value_unestablished(core: str, option_key: str) -> Caveat:
@@ -1148,12 +1190,81 @@ _PUAE_FLOPPY_REDIRECTED = "floppy-redirected"
 _PUAE_CD_PER_GAME = "cd-per-game"
 _PUAE_CD_SHARED = "cd-shared"
 _PUAE_CD_NO_NVRAM = "cd-no-nvram"
+_PUAE_WHDLOAD = "puae_use_whdload"
+_PUAE_WS_NAME = "ws_name"
+# 'puae_use_whdload' registers three values (libretro-core.c:1224-1237 at
+# 0043cf9, read at :4433-4438, the flag defaulting to 1 at :102) and the
+# handler has no else, so a value outside them leaves the flag as it was —
+# the rule refuses such a value rather than reading it as one the core saw.
+_PUAE_WHDLOAD_FILES = "files"
+_PUAE_WHDLOAD_HDFS = "hdfs"
+_PUAE_WHDLOAD_VALUES = (_PUAE_DISABLED, _PUAE_WHDLOAD_FILES, _PUAE_WHDLOAD_HDFS)
+# The three classes this round adds, and the extensions that carry them.
+_PUAE_CLASS_HD = "hd"
+_PUAE_CLASS_WHDLOAD = "whdload"
+_PUAE_CLASS_ARCHIVE = "archive"
+_PUAE_HD = frozenset({"hdf", "hdz"})
+_PUAE_WHDLOAD_EXTENSIONS = frozenset(whdload.SUFFIXES)
+_PUAE_ARCHIVE_EXTENSION = "zip"
+_PUAE_SEVEN_ZIP = "7z"
+# What RetroArch's browse-inside-an-archive launch path looks like, and what
+# the core tests for before it keeps the part after the last '#'.
+_PUAE_BROWSED_MARKERS = (".zip#", ".7z#")
+# The extension tests dc_get_image_type makes, in its own order. The archive
+# route reads a second table because the split between the two floppy classes
+# is not one it can act on: an extracted member keeps nothing whatever its
+# format, so both formats answer one mode there.
+_PUAE_BY_EXTENSION = (
+    (_PUAE_CLASS_FLOPPY, _PUAE_FLOPPY_IN_PLACE),
+    (_PUAE_CLASS_FLOPPY_READ_ONLY, _PUAE_FLOPPY_READ_ONLY),
+    (_PUAE_CLASS_CD, _PUAE_CD),
+    (_PUAE_CLASS_HD, _PUAE_HD),
+)
+_PUAE_ARCHIVE_BY_EXTENSION = (
+    (_PUAE_CLASS_FLOPPY, _PUAE_FLOPPY_IN_PLACE | _PUAE_FLOPPY_READ_ONLY),
+    (_PUAE_CLASS_CD, _PUAE_CD),
+    (_PUAE_CLASS_HD, _PUAE_HD),
+)
+_PUAE_HD_WRITEBACK = "hd-writeback"
+_PUAE_ARCHIVED_HD_LOST = "archived-hd-writeback-lost"
+_PUAE_ARCHIVED_FLOPPY_LOST = "archived-floppy-writeback-lost"
+_PUAE_ARCHIVED_FLOPPY_REDIRECTED = "archived-floppy-redirected"
+_PUAE_WHDLOAD_NAMED = "whdload-files"
+_PUAE_WHDLOAD_UNNAMED = "whdload-files-unnamed"
+_PUAE_WHDLOAD_IMAGE = "whdload-hdfs"
+_PUAE_WHDLOAD_OFF = "whdload-disabled"
+
+
+@dataclass(frozen=True, slots=True)
+class _PuaeFloppyModes:
+    """Which mode each floppy switch position selects, for one way of holding the image.
+
+    The two switches behave identically whether the image is the content file
+    or a copy the core extracted into its TEMP tree; what differs is the mode
+    those positions land on, so the pair travels as data and the switch logic
+    stays one function.
+    """
+
+    unswitched: str
+    redirected: str
+
+
 # What a floppy class does with both switches off — the only place the two
-# floppy classes differ.
-_PUAE_UNSWITCHED = {
-    _PUAE_CLASS_FLOPPY: _PUAE_FLOPPY_WRITEBACK,
-    _PUAE_CLASS_FLOPPY_READ_ONLY: _PUAE_FLOPPY_FORMAT_DISCARDED,
+# floppy classes differ — and where redirection puts the write file.
+_PUAE_BARE_FLOPPY_MODES = {
+    _PUAE_CLASS_FLOPPY: _PuaeFloppyModes(_PUAE_FLOPPY_WRITEBACK, _PUAE_FLOPPY_REDIRECTED),
+    _PUAE_CLASS_FLOPPY_READ_ONLY: _PuaeFloppyModes(
+        _PUAE_FLOPPY_FORMAT_DISCARDED, _PUAE_FLOPPY_REDIRECTED
+    ),
 }
+# An extracted member keeps nothing with both switches off whatever its
+# format, and its write file is named after the member rather than after the
+# archive — one pair for both floppy classes.
+_PUAE_ARCHIVED_FLOPPY_MODES = _PuaeFloppyModes(
+    _PUAE_ARCHIVED_FLOPPY_LOST, _PUAE_ARCHIVED_FLOPPY_REDIRECTED
+)
+
+
 
 
 def _puae_flipped(value: str) -> str:
@@ -1166,9 +1277,42 @@ def _puae_model_unrecorded(core: str, because: str, model: str) -> Caveat:
     return _mode_unestablished(core, REASON_EMULATED_MODEL_UNRECORDED, because, model=model)
 
 
-def _puae_class(core: str, extension: str | None) -> str | ModeChoice:
-    """The class token this extension carries, or the refusal to name one."""
-    if extension is None:
+def _puae_nvram_model(core: str, model: str, beside: str) -> ModeChoice | None:
+    """A model with an extended Kickstart composes an NVRAM file beside every other story.
+
+    The ``flash_file`` line is appended for the *model*, not for the content's
+    class (libretro-core.c:5577-5578, :5640-5661 at 0043cf9), so a floppy, a
+    hard disk or a WHDLoad install run on an explicitly selected CDTV, CD32 or
+    CD32FR keeps that file too — and no mode here states two stories at once,
+    so the combination is refused rather than under-stated. ``None`` where the
+    model keeps none, which is every other value the option can take.
+    """
+    if model not in _PUAE_CD_MODELS:
+        return None
+    return ModeChoice(
+        None,
+        caveats=(
+            _puae_model_unrecorded(
+                core,
+                f"the selected model {model!r} keeps a non-volatile memory file beside {beside} "
+                "— the flash_file line is appended for the model, not for the content's class — "
+                "and the recorded modes state only the one half",
+                model,
+            ),
+        ),
+    )
+
+
+def _puae_content_class(core: str, reading: RuleReading) -> str | ModeChoice:
+    """Which class the loaded content is, by the dispatch the core makes.
+
+    ``dc_get_image_type`` tests extensions in one order and reaches for the
+    filesystem once, so this does too (libretro-dc.c:825-868 at 0043cf9):
+    floppy, CD, then hard disk — ``hdf``/``hdz`` **or a directory** — then
+    WHDLoad, then archive. A launch path whose ``stat`` fails is not a
+    directory to the core either, so it is not one here.
+    """
+    if reading.content_path is None:
         return ModeChoice(
             None,
             caveats=(
@@ -1181,12 +1325,21 @@ def _puae_class(core: str, extension: str | None) -> str | ModeChoice:
                 ),
             ),
         )
-    if extension in _PUAE_FLOPPY_IN_PLACE:
-        return _PUAE_CLASS_FLOPPY
-    if extension in _PUAE_FLOPPY_READ_ONLY:
-        return _PUAE_CLASS_FLOPPY_READ_ONLY
-    if extension in _PUAE_CD:
-        return _PUAE_CLASS_CD
+    pinned = _puae_pinned_member(reading.content_path)
+    if pinned is not None:
+        return ModeChoice(None, caveats=(_puae_member_pinned(core, pinned),))
+    extension = reading.content_extension
+    named = next((token for token, group in _PUAE_BY_EXTENSION if extension in group), None)
+    if named is not None:
+        return named
+    if reading.content_is_directory():
+        return _PUAE_CLASS_HD
+    if extension in _PUAE_WHDLOAD_EXTENSIONS:
+        return _PUAE_CLASS_WHDLOAD
+    if extension == _PUAE_ARCHIVE_EXTENSION:
+        return _PUAE_CLASS_ARCHIVE
+    if extension == _PUAE_SEVEN_ZIP:
+        return ModeChoice(None, caveats=(_puae_archive_format_unread(core, extension),))
     return ModeChoice(
         None,
         caveats=(
@@ -1195,24 +1348,63 @@ def _puae_class(core: str, extension: str | None) -> str | ModeChoice:
                 REASON_CONTENT_CLASS_UNRECORDED,
                 f"the content's extension {extension!r} is outside every recorded class "
                 "(floppy: adf/raw written in place, adz/dms/fdi/ipf read-only; CD: "
-                "cue/ccd/nrg/mds/iso/chd), so which save story applies was never established",
-                extension=extension,
+                "cue/ccd/nrg/mds/iso/chd; hard disk: hdf/hdz or a directory; WHDLoad: "
+                "lha/slave/info; archive: zip), so which save story applies was never established",
+                extension=extension or "",
             ),
         ),
     )
 
 
-def _puae_floppy_mode(protect: str, redirect: str, unswitched: str) -> str:
+def _puae_pinned_member(path: str) -> str | None:
+    """The member a browse-inside launch path pins, or ``None`` for an ordinary path.
+
+    RetroArch can hand the core ``archive.zip#member``; the core keeps the
+    part after the last ``#`` and makes that member the content once the
+    archive is extracted (libretro-core.c:6266-6275, :6373-6374 at 0043cf9).
+    """
+    if not any(marker in path for marker in _PUAE_BROWSED_MARKERS):
+        return None
+    return path.rpartition("#")[2]
+
+
+def _puae_member_pinned(core: str, member: str) -> Caveat:
+    """A pinned member is a launch shape no mode here states."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_MEMBER_PINNED,
+        f"the launch path pins {member!r} inside the archive, and the core makes that member the "
+        "content once the archive is extracted (libretro-core.c:6266-6275, :6373-6374 at 0043cf9) "
+        "— a copy in a temporary tree, named after itself rather than after the archive, which no "
+        "mode here states",
+        member=member,
+    )
+
+
+def _puae_archive_format_unread(core: str, extension: str) -> Caveat:
+    """The core extracts this archive and atlas reads no such format."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_FORMAT_UNREAD,
+        f"the core extracts a {extension!r} archive into its own TEMP tree and re-dispatches on "
+        "what is inside (libretro-core.c:6280-6292 at 0043cf9), and no reader for that format "
+        "ships in a runtime this package may assume — so what the archive holds, and therefore "
+        "which save story applies, was never established",
+        extension=extension,
+    )
+
+
+def _puae_floppy_mode(protect: str, redirect: str, modes: "_PuaeFloppyModes") -> str:
     """Which floppy mode a pair of switch values selects — protection wins."""
     if protect == _PUAE_ENABLED:
         return _PUAE_FLOPPY_DISCARDED
     if redirect == _PUAE_ENABLED:
-        return _PUAE_FLOPPY_REDIRECTED
-    return unswitched
+        return modes.redirected
+    return modes.unswitched
 
 
 def _puae_floppy_alternatives(
-    protect: str, redirect: str, unswitched: str
+    protect: str, redirect: str, modes: "_PuaeFloppyModes"
 ) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
     """The one-edit neighbours — each floppy switch flipped on its own.
 
@@ -1220,38 +1412,25 @@ def _puae_floppy_alternatives(
     back on the mode in force; such a neighbour is dropped rather than offered
     as a change that changes nothing.
     """
-    here = _puae_floppy_mode(protect, redirect, unswitched)
+    here = _puae_floppy_mode(protect, redirect, modes)
     neighbours = (
-        (
-            _PUAE_PROTECT,
-            _puae_flipped(protect),
-            _puae_floppy_mode(_puae_flipped(protect), redirect, unswitched),
-        ),
-        (
-            _PUAE_REDIRECT,
-            _puae_flipped(redirect),
-            _puae_floppy_mode(protect, _puae_flipped(redirect), unswitched),
-        ),
+        (_PUAE_PROTECT, _puae_flipped(protect), _puae_floppy_mode(_puae_flipped(protect), redirect, modes)),
+        (_PUAE_REDIRECT, _puae_flipped(redirect), _puae_floppy_mode(protect, _puae_flipped(redirect), modes)),
     )
     return tuple((mode, ((key, value),)) for key, value, mode in neighbours if mode != here)
 
 
-def _puae_floppy(core: str, reading: RuleReading, model: str, content_class: str) -> ModeChoice:
+def _puae_floppy(
+    core: str,
+    reading: RuleReading,
+    model: str,
+    modes: "_PuaeFloppyModes",
+    fills: Mapping[str, tuple[str, ...]] = _NO_FILLS,
+) -> ModeChoice:
     """The floppy half: the two write switches, on a model that keeps no NVRAM."""
-    if model in _PUAE_CD_MODELS:
-        return ModeChoice(
-            None,
-            caveats=(
-                _puae_model_unrecorded(
-                    core,
-                    f"the selected model {model!r} keeps a non-volatile memory file beside the "
-                    "floppy's own save story — the flash_file line is appended for the model, "
-                    "not for the content's class — and the recorded floppy modes state only the "
-                    "floppy half",
-                    model,
-                ),
-            ),
-        )
+    refusal = _puae_nvram_model(core, model, "the floppy's own save story")
+    if refusal is not None:
+        return refusal
     protect = reading.option_values[_PUAE_PROTECT]
     redirect = reading.option_values[_PUAE_REDIRECT]
     switches = ((_PUAE_PROTECT, protect), (_PUAE_REDIRECT, redirect))
@@ -1261,11 +1440,11 @@ def _puae_floppy(core: str, reading: RuleReading, model: str, content_class: str
     alien = _refuse_alien(core, tuple((key, value, _PUAE_TOGGLES) for key, value in switches))
     if alien:
         return ModeChoice(None, caveats=alien)
-    unswitched = _PUAE_UNSWITCHED[content_class]
     here, there = protect or "", redirect or ""
     return ModeChoice(
-        _puae_floppy_mode(here, there, unswitched),
-        alternatives=_puae_floppy_alternatives(here, there, unswitched),
+        _puae_floppy_mode(here, there, modes),
+        alternatives=_puae_floppy_alternatives(here, there, modes),
+        fills=fills,
     )
 
 
@@ -1344,11 +1523,179 @@ def _puae_cd(core: str, reading: RuleReading, model: str) -> ModeChoice:
     )
 
 
+def _puae_hd(core: str, reading: RuleReading, model: str) -> ModeChoice:
+    """A hard-disk image or a mapped directory: mounted read-write, written in place."""
+    refusal = _puae_nvram_model(core, model, "the hard disk's own writes")
+    del reading
+    return refusal if refusal is not None else ModeChoice(_PUAE_HD_WRITEBACK)
+
+
+def _puae_whdload(core: str, reading: RuleReading, model: str) -> ModeChoice:
+    """The WHDLoad half: one switch, and whether the slave gives its saves a name."""
+    refusal = _puae_nvram_model(core, model, "the WHDLoad saves volume")
+    if refusal is not None:
+        return refusal
+    value = reading.option_values[_PUAE_WHDLOAD]
+    missing = _require_values(core, ((_PUAE_WHDLOAD, value),))
+    if missing:
+        return ModeChoice(None, caveats=missing)
+    alien = _refuse_alien(core, ((_PUAE_WHDLOAD, value, _PUAE_WHDLOAD_VALUES),))
+    if alien:
+        return ModeChoice(None, caveats=alien)
+    return _puae_whdload_choice(reading, value or "")
+
+
+def _puae_whdload_choice(reading: RuleReading, value: str) -> ModeChoice:
+    """Which of the four WHDLoad modes holds, and the three the switch reaches.
+
+    The slave is read whatever the switch says, because the ``files``
+    alternative must name the mode it would actually select — but the name it
+    yields rides the answer only where it is what the directory is called.
+    """
+    slave = reading.whdload_slave()
+    files = _PUAE_WHDLOAD_NAMED if slave.name is not None else _PUAE_WHDLOAD_UNNAMED
+    by_value = {
+        _PUAE_WHDLOAD_FILES: files,
+        _PUAE_WHDLOAD_HDFS: _PUAE_WHDLOAD_IMAGE,
+        _PUAE_DISABLED: _PUAE_WHDLOAD_OFF,
+    }
+    alternatives = tuple(
+        (by_value[other], ((_PUAE_WHDLOAD, other),))
+        for other in _PUAE_WHDLOAD_VALUES
+        if other != value
+    )
+    if value != _PUAE_WHDLOAD_FILES or slave.name is None:
+        return ModeChoice(by_value[value], alternatives=alternatives)
+    return ModeChoice(
+        files,
+        alternatives=alternatives,
+        fills={TEMPLATE_WHDLOAD_NAME: (slave.name,)},
+        readings=(_puae_slave_reading(slave),),
+    )
+
+
+def _puae_slave_reading(slave: WhdloadSlaveResult) -> OptionReading:
+    """Where the save directory's name came from — a field of the content, not a setting."""
+    return OptionReading(
+        _PUAE_WS_NAME,
+        slave.name,
+        f"the WHDLoad slave {slave.slave!r} inside the loaded content states ws_name = "
+        f"{slave.name!r}, which WHDLoad derives the per-game save directory from",
+        None,
+    )
+
+
+def _puae_archive(core: str, reading: RuleReading, model: str) -> ModeChoice:
+    """A zip: what the core finds inside decides which story applies.
+
+    The core extracts the archive into ``<save dir>/TEMP`` and classifies the
+    *extracted tree's top level* (libretro-core.c:6280-6362 at 0043cf9), so
+    that listing is what this reads. A member of one class is that class; more
+    than one launchable thing is not a fact about the archive, because which
+    one wins is the order the core's own directory listing returns them in;
+    and nothing recognised at all leaves the extracted tree itself mounted as
+    a hard disk.
+    """
+    listing = reading.archive_members()
+    if listing.status != ARCHIVE_OK:
+        return ModeChoice(None, caveats=(_puae_archive_unread(core, listing.status),))
+    entries = whdload.walked_entries(listing.members)
+    accepted = whdload.accepted_members(listing.members)
+    classes = _puae_archive_classes(entries)
+    ambiguous = sorted({*classes, *((_PUAE_CLASS_WHDLOAD,) if accepted else ())})
+    if len(ambiguous) > 1 or len(accepted) > 1:
+        return ModeChoice(None, caveats=(_puae_archive_ambiguous(core, ambiguous),))
+    if accepted:
+        return _puae_whdload(core, reading, model)
+    if _PUAE_CLASS_CD in classes:
+        return _puae_cd(core, reading, model)
+    if _PUAE_CLASS_FLOPPY in classes:
+        return _puae_archived_floppy(core, reading, model, entries)
+    return _puae_archived_hd(core, reading, model)
+
+
+def _puae_archived_floppy(
+    core: str, reading: RuleReading, model: str, entries: tuple[str, ...]
+) -> ModeChoice:
+    """Floppy members: the same two switches, over images that live in the TEMP tree."""
+    stems = tuple(
+        sorted({name.rpartition(".")[0] for name in entries if _puae_class_of(name) == _PUAE_CLASS_FLOPPY})
+    )
+    return _puae_floppy(
+        core,
+        reading,
+        model,
+        _PUAE_ARCHIVED_FLOPPY_MODES,
+        fills={TEMPLATE_ARCHIVE_MEMBER_STEM: stems},
+    )
+
+
+def _puae_archived_hd(core: str, reading: RuleReading, model: str) -> ModeChoice:
+    """A hard-disk member, or an archive nothing recognised: the writes land in TEMP."""
+    refusal = _puae_nvram_model(core, model, "the extracted tree's own writes")
+    del reading
+    return refusal if refusal is not None else ModeChoice(_PUAE_ARCHIVED_HD_LOST)
+
+
+def _puae_class_of(name: str) -> str | None:
+    """Which class one member's *name* carries — the same test, on the name alone.
+
+    The core classifies a member by calling ``dc_get_image_type`` on the bare
+    name (libretro-core.c:6324-6332 at 0043cf9), so its ``path_is_directory``
+    arm resolves against the emulator's own working directory rather than the
+    extracted tree: a member that is a directory answers no class here, which
+    is what leaves such an archive in the extracted-tree branch. [D]
+    """
+    extension = name.rpartition(".")[2].lower() if "." in name else None
+    return next((token for token, group in _PUAE_ARCHIVE_BY_EXTENSION if extension in group), None)
+
+
+def _puae_archive_classes(entries: tuple[str, ...]) -> frozenset[str]:
+    """The distinct classes the extracted tree's top level holds."""
+    return frozenset(token for token in map(_puae_class_of, entries) if token is not None)
+
+
+def _puae_archive_unread(core: str, status: str) -> Caveat:
+    """The archive is one atlas reads and this one did not yield its members."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_UNREAD,
+        "the core extracts the archive and re-dispatches on what is inside it "
+        "(libretro-core.c:6280-6362 at 0043cf9), and this archive's member list did not come "
+        f"back ({status}) — so which save story applies was never established",
+        status=status,
+    )
+
+
+def _puae_archive_ambiguous(core: str, classes: list[str]) -> Caveat:
+    """Several launchable members, and the core's own listing order picks one."""
+    return _mode_unestablished(
+        core,
+        REASON_ARCHIVE_CONTENT_AMBIGUOUS,
+        "the archive holds more than one thing the core could launch "
+        f"({', '.join(classes)}), and which of them it takes is decided by the order its own "
+        "directory listing returns them in (libretro-core.c:6310-6362 at 0043cf9) — not a fact "
+        "about the archive, so no one save story is stated",
+        classes=classes,
+    )
+
+
+# Which half answers for each class. The two floppy classes are not here: they
+# share one function and differ only in what an unswitched write does, which
+# is the image's format rather than the dispatch.
+_PUAE_HALVES: Mapping[str, Callable[[str, RuleReading, str], ModeChoice]] = {
+    _PUAE_CLASS_CD: _puae_cd,
+    _PUAE_CLASS_HD: _puae_hd,
+    _PUAE_CLASS_WHDLOAD: _puae_whdload,
+    _PUAE_CLASS_ARCHIVE: _puae_archive,
+}
+
+
 def _puae_rule(core: str) -> Callable[[RuleReading], ModeChoice]:
     """Both PUAE generations read the same switches; only the caveats' core differs."""
 
     def rule(reading: RuleReading) -> ModeChoice:
-        content_class = _puae_class(core, reading.content_extension)
+        content_class = _puae_content_class(core, reading)
         if isinstance(content_class, ModeChoice):
             return content_class
         model = reading.option_values[_PUAE_MODEL]
@@ -1356,9 +1703,10 @@ def _puae_rule(core: str) -> Callable[[RuleReading], ModeChoice]:
             return ModeChoice(None, caveats=(_value_unestablished(core, _PUAE_MODEL),))
         if model not in _PUAE_MODELS:
             return ModeChoice(None, caveats=(_unknown_value(core, _PUAE_MODEL, model),))
-        if content_class == _PUAE_CLASS_CD:
-            return _puae_cd(core, reading, model)
-        return _puae_floppy(core, reading, model, content_class)
+        half = _PUAE_HALVES.get(content_class)
+        if half is not None:
+            return half(core, reading, model)
+        return _puae_floppy(core, reading, model, _PUAE_BARE_FLOPPY_MODES[content_class])
 
     return rule
 

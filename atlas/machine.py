@@ -176,7 +176,10 @@ WHDLOAD_SLAVE_UNREADABLE: WhdloadSlaveStatus = "slave-unreadable"
 # accepts both LhA spellings (sources/src/zfile.c:1483-1484 at 0043cf9), and
 # ``.7z`` is deliberately absent: no reader for it ships in a runtime atlas
 # may assume, so an archive in that format is answered as one atlas does not
-# read rather than guessed at.
+# read rather than guessed at. A zip's *listing* needs no codec at all, and a
+# member's bytes need whatever compressed them — a runtime without ``zlib``
+# raises where a deflated member is read, which the slave read reports as a
+# member it could not get back rather than as a broken archive.
 ARCHIVE_ZIP = "zip"
 ARCHIVE_LHA_SUFFIXES = ("lha", "lzh")
 ARCHIVE_SUFFIXES = (ARCHIVE_ZIP, *ARCHIVE_LHA_SUFFIXES)
@@ -595,10 +598,10 @@ def _whdload_root(path: str, members: tuple[str, ...]) -> str | None:
     """
     if _archive_suffix(path) != ARCHIVE_ZIP:
         return ""
-    member = whdload.launched_member(members)
-    if member is None or member.lower().endswith(_NESTED_ARCHIVE_SUFFIX):
+    accepted = whdload.accepted_members(members)
+    if len(accepted) != 1 or accepted[0].lower().endswith(_NESTED_ARCHIVE_SUFFIX):
         return None
-    return whdload.mounted_root(member, members)
+    return whdload.mounted_root(accepted[0], members)
 
 
 def _read_slave_member(path: str, member: str) -> WhdloadSlaveResult:

@@ -175,12 +175,14 @@ def test_a_listing_with_nothing_to_find_names_no_slave() -> None:
         pytest.param(["Game.slave"], "Game.slave", id="a-bare-slave"),
         pytest.param(["Game.info", "Game/Game.slave"], "Game.info", id="an-info-with-its-drawer"),
         pytest.param(["Game.info", "Game.slave"], None, id="two-candidates-name-neither"),
+        pytest.param([".hidden.slave", "Game.m3u"], None, id="names-the-walk-passes-over"),
         pytest.param(["Game.info"], None, id="an-info-with-neither"),
         pytest.param(["Game.adf", "Notes.txt"], None, id="nothing-whdload-about-it"),
     ],
 )
-def test_the_launched_member_is_the_one_the_core_accepts(names: list[str], expected: str | None) -> None:
-    assert whdload.launched_member(names) == expected
+def test_the_accepted_members_are_the_ones_the_core_would_take(names: list[str], expected: str | None) -> None:
+    accepted = whdload.accepted_members(names)
+    assert (accepted[0] if len(accepted) == 1 else None) == expected
 
 
 def test_the_mounted_root_is_the_drawer_beside_the_member_where_there_is_one() -> None:

@@ -80,6 +80,9 @@ _INFO_SUFFIX = ".info"
 _SLAVE_SUFFIX = ".slave"
 # A file of this name at the root replaces the launch entirely (:61-62).
 _LOAD = "load"
+# What the core's archive walk passes over beside a leading dot: a playlist
+# it may have generated itself.
+_PLAYLIST_SUFFIX = "m3u"
 
 _HUNK_HEADER = 0x3F3
 _HUNK_CODE = 0x3E9
@@ -184,20 +187,38 @@ def _u32(data: bytes, offset: int) -> int:
 # ---------------------------------------------------------------------------
 
 
-def launched_member(names: Sequence[str]) -> str | None:
-    """The WHDLoad member PUAE takes out of an extracted archive (:6332-6351).
+def walked_entries(names: Sequence[str]) -> tuple[str, ...]:
+    """The entries the core's archive walk classifies, in the listing's order.
 
-    The core's walk reads the extracted tree's top level and accepts the
-    first entry whose extension says WHDLoad *and* whose slave or directory
-    is really there — an ``.info`` counts only where the drawer it belongs to
-    or a same-named ``.slave`` exists beside it. It then stops looking, so a
-    second candidate never wins; but the walk is a directory listing in the
-    filesystem's own order, so where two could be accepted which one is is
-    not established, and this answers ``None`` rather than choosing.
+    The walk reads the *extracted* tree's top level, so a member inside a
+    directory contributes that directory's name and nothing deeper, and it
+    passes over two kinds of name outright: one starting with a dot, and one
+    ending in ``m3u`` (``libretro-core.c:6314`` at 0043cf9).
     """
     entries = _top_level(names)
-    accepted = [name for name in entries.files if _accepted_whdload(name, entries)]
-    return accepted[0] if len(accepted) == 1 else None
+    return tuple(name for name in (*entries.files, *entries.directories) if not _skipped(name))
+
+
+def _skipped(name: str) -> bool:
+    return name.startswith(".") or name.endswith(_PLAYLIST_SUFFIX)
+
+
+def accepted_members(names: Sequence[str]) -> tuple[str, ...]:
+    """Every WHDLoad member of an extracted archive the core would accept (:6332-6351).
+
+    A member counts by its extension alone, except an ``.info``, which counts
+    only where the drawer it belongs to or a same-named ``.slave`` is really
+    there. The core takes the first it meets and stops looking, so a second
+    never wins — but the walk is a directory listing in the filesystem's own
+    order, so *which* is first is not a fact about the archive. All of them
+    are returned and the caller decides; one is an answer, two are not.
+    """
+    entries = _top_level(names)
+    return tuple(
+        name
+        for name in entries.files
+        if not _skipped(name) and _accepted_whdload(name, entries)
+    )
 
 
 def _accepted_whdload(name: str, entries: "_TopLevel") -> bool:

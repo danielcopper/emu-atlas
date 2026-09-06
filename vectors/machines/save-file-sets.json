@@ -6165,6 +6165,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -6329,6 +6337,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -6496,6 +6512,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -6652,6 +6676,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -6837,6 +6869,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -6997,6 +7037,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -7161,6 +7209,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -7313,6 +7369,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -7361,132 +7425,6 @@
                 "core": "puae",
                 "reason": "emulated-model-unrecorded",
                 "model": "CD32"
-              }
-            }
-          ],
-          "granularity": null
-        }
-      }
-    },
-    {
-      "name": "an-amiga-archive-is-a-class-the-record-refuses-to-name",
-      "rationale": "An archive is extracted into the save root's TEMP tree and re-dispatched by what is inside it — floppies whose writes die with the tree unless the redirect switch is on, or WHDLoad content whose saves outlive it in a directory of their own. Which applies is a fact inside a file atlas does not read, so the extension is named and no mode is claimed.",
-      "input": {
-        "home": "/home/deck",
-        "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
-        },
-        "dirs": [
-          "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
-        ],
-        "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
-            "library_name": "PUAE",
-            "library_version": "5.3.0 0043cf9",
-            "options": {
-              "puae_model": {
-                "default": "auto",
-                "values": [
-                  "auto",
-                  "A500OG",
-                  "A500",
-                  "A500PLUS",
-                  "A600",
-                  "A1200OG",
-                  "A1200",
-                  "A2000OG",
-                  "A2000",
-                  "A4030",
-                  "A4040",
-                  "CDTV",
-                  "CD32",
-                  "CD32FR"
-                ]
-              },
-              "puae_floppy_write_protection": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_floppy_write_redirect": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_shared_nvram": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_use_boot_hd": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "files",
-                  "hdf20",
-                  "hdf40",
-                  "hdf80",
-                  "hdf128",
-                  "hdf256",
-                  "hdf512"
-                ]
-              }
-            }
-          }
-        },
-        "savefile_query": {
-          "core_so": "puae_libretro.so",
-          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
-        }
-      },
-      "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "label": "RetroDECK",
-            "kinds": [
-              "retrodeck"
-            ],
-            "root": "/mnt/sd/retrodeck",
-            "health": []
-          }
-        ],
-        "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves",
-          "root_kind": "savefile_directory",
-          "needs": [],
-          "fallback_dir": null,
-          "physical_dir": null,
-          "file_set": {
-            "state": "unknown",
-            "files": [],
-            "complete": false,
-            "groups": []
-          },
-          "caveats": [
-            {
-              "code": "unverified-version",
-              "data": {
-                "core": "puae",
-                "arrangement": "retrodeck",
-                "verification": "never-verified"
-              }
-            },
-            {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "puae",
-                "reason": "content-class-unrecorded",
-                "extension": "zip"
               }
             }
           ],
@@ -7565,6 +7503,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -7613,132 +7559,6 @@
                 "core": "puae",
                 "reason": "content-class-unrecorded",
                 "extension": "m3u"
-              }
-            }
-          ],
-          "granularity": null
-        }
-      }
-    },
-    {
-      "name": "amiga-whdload-content-is-outside-this-record",
-      "rationale": "WHDLoad content mounts a saves volume of the core's own under the frontend's save root, which this round did not card: the extension is outside every recorded class and rides the answer as a key, so a client sees which content class went unanswered rather than a guess about it.",
-      "input": {
-        "home": "/home/deck",
-        "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (Europe).lha": "rom"
-        },
-        "dirs": [
-          "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
-        ],
-        "cores": {
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
-            "library_name": "PUAE",
-            "library_version": "5.3.0 0043cf9",
-            "options": {
-              "puae_model": {
-                "default": "auto",
-                "values": [
-                  "auto",
-                  "A500OG",
-                  "A500",
-                  "A500PLUS",
-                  "A600",
-                  "A1200OG",
-                  "A1200",
-                  "A2000OG",
-                  "A2000",
-                  "A4030",
-                  "A4040",
-                  "CDTV",
-                  "CD32",
-                  "CD32FR"
-                ]
-              },
-              "puae_floppy_write_protection": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_floppy_write_redirect": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_shared_nvram": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "enabled"
-                ]
-              },
-              "puae_use_boot_hd": {
-                "default": "disabled",
-                "values": [
-                  "disabled",
-                  "files",
-                  "hdf20",
-                  "hdf40",
-                  "hdf80",
-                  "hdf128",
-                  "hdf256",
-                  "hdf512"
-                ]
-              }
-            }
-          }
-        },
-        "savefile_query": {
-          "core_so": "puae_libretro.so",
-          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (Europe).lha"
-        }
-      },
-      "expected": {
-        "installations": [
-          {
-            "kind": "retrodeck",
-            "label": "RetroDECK",
-            "kinds": [
-              "retrodeck"
-            ],
-            "root": "/mnt/sd/retrodeck",
-            "health": []
-          }
-        ],
-        "savefile_location": {
-          "dir": "/mnt/sd/retrodeck/saves",
-          "root_kind": "savefile_directory",
-          "needs": [],
-          "fallback_dir": null,
-          "physical_dir": null,
-          "file_set": {
-            "state": "unknown",
-            "files": [],
-            "complete": false,
-            "groups": []
-          },
-          "caveats": [
-            {
-              "code": "unverified-version",
-              "data": {
-                "core": "puae",
-                "arrangement": "retrodeck",
-                "verification": "never-verified"
-              }
-            },
-            {
-              "code": "core-mode-unestablished",
-              "data": {
-                "core": "puae",
-                "reason": "content-class-unrecorded",
-                "extension": "lha"
               }
             }
           ],
@@ -7815,6 +7635,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -7940,6 +7768,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -8067,6 +7903,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -8224,6 +8068,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -8379,6 +8231,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -8536,6 +8396,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -8721,6 +8589,14 @@
                   "hdf128",
                   "hdf256",
                   "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
                 ]
               }
             }
@@ -9026,6 +8902,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -9194,6 +9078,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -9359,6 +9251,14 @@
                   "hdf256",
                   "hdf512"
                 ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
               }
             }
           }
@@ -9441,6 +9341,3872 @@
                 },
                 "values": [
                   "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-install-names-its-saves-from-the-slave",
+      "rationale": "WHDLoad gives each installed program a sub directory of SavePath:, and it names that directory from the slave it was started with. The archive's own directory, the slave's file name and ws_name are three different strings, so only the slave's bytes can say what the directory is called — here they say 'Alien Breed', and the answer states WHDSaves/Alien Breed with the reading that named it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-install-whose-slave-was-not-selected-keeps-the-volume-unnamed",
+      "rationale": "The shape a public install archive has — a drawer icon at the root and a slave inside the drawer under some other name — is one the core's own boot script resolves to no slave at all, so nothing names the sub directory. The volume is still stated, because the core creates and mounts it whatever the script then does.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreed.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "role": "battery",
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or the slave it selected could not be read, or the slave is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files-unnamed",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-slave-older-than-version-ten-has-no-name-to-give",
+      "rationale": "Every slave field from ws_name on is evaluated only for ws_Version >= 10, so an older slave carries none. The manual says the file name is used instead and does not say in which spelling, so the answer takes the unnamed volume rather than a guessed directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 8,
+            "name": null
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "role": "battery",
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or the slave it selected could not be read, or the slave is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files-unnamed",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-slave-whose-bytes-do-not-come-back-keeps-the-volume-unnamed",
+      "rationale": "A slave the boot script selects and this runtime cannot decompress or parse is a read that failed, not a name — and the two reach the same answer as a slave that was never selected, because in both the directory exists and its name is not atlas's to state.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "slave-unreadable"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "role": "battery",
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or the slave it selected could not be read, or the slave is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files-unnamed",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-archive-that-cannot-be-listed-keeps-the-volume-unnamed",
+      "rationale": "The class is the extension's and needs no read; only the directory's name needed one. So an .lha whose member list did not come back still answers the WHDLoad story — with the name unread, which is exactly the degradation the unnamed mode is for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "unreadable"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
+                "role": "battery",
+                "citation": "the same volume, with the per-game directory's own name unread. WHDLoad derives that name from the slave it was started with, and this content yielded none: the boot script's search selected no slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82 at 0043cf9), or the slave it selected could not be read, or the slave is older than ws_Version 10 and has no ws_name field at all. The manual says the file name is used when ws_name is not set, and does not say in which spelling — so the directory under <save dir>/WHDSaves is stated as one this configuration writes into and its name is not guessed"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files-unnamed",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-saves-land-in-one-image-when-the-switch-says-hdfs",
+      "rationale": "The legacy mode mounts a single WHDSaves.hdf as the same volume, so every installed program's saves share one file and no directory is named after anything. The slave's name still decides which mode the 'files' alternative names.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_whdload = \"hdfs\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "WHDSaves.hdf"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "WHDSaves.hdf"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "whdload-hdfs",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "hdfs",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-files",
+                "options": {
+                  "puae_use_whdload": "files"
+                },
+                "values": [
+                  "per-game-directory"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-support-switched-off-keeps-no-save-for-whdload-content",
+      "rationale": "With the switch disabled the whole WHDLoad block is skipped: no helper volume, no WHDSaves volume, nothing pointing a SavePath anywhere. The .lha is still mounted, read-only, and no WHDLoad runs it — so nothing of this content's reaches the save root.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_whdload = \"disabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "whdload-disabled"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "whdload-disabled",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-files",
+                "options": {
+                  "puae_use_whdload": "files"
+                },
+                "values": [
+                  "per-game-directory"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-cd-model-under-a-whdload-install-adds-a-save-the-whdload-modes-do-not-state",
+      "rationale": "The flash_file line is appended for the model and not for the content's class, so a WHDLoad install on an explicitly selected CD32 keeps a non-volatile memory file beside its WHDSaves directory. No mode states two stories at once, so the rule refuses rather than under-stating — the same refusal the floppy half makes on such a model.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CD32\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "emulated-model-unrecorded",
+                "model": "CD32"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-of-floppies-keeps-nothing-because-its-tree-is-wiped",
+      "rationale": "The core extracts an archive into the save root's TEMP tree and plays the members from there. With both floppy switches off a plain image's tracks are written back into that copy, and the tree is removed at the next start — so the writes are real and gone, which is a different statement from the un-archived answer's save-inside-content.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Disk1.adf",
+            "Disk2.adf"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-floppy-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-floppy-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "archived-floppy-redirected",
+                "options": {
+                  "puae_floppy_write_redirect": "enabled"
+                },
+                "values": [
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-redirected-archive-of-amiga-floppies-names-a-write-file-after-every-member",
+      "rationale": "The write file is named after the opened image's own stem, and inside an archive that is the member rather than the archive. Two members therefore make two saves, each under the two spellings the file takes — the plain one while the core holds the disk and the gzipped one at rest.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_redirect = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Disk1.adf",
+            "Disk2.adf"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Disk1_save.adf",
+              "Disk2_save.adf",
+              "Disk1_save.adf.gz",
+              "Disk2_save.adf.gz"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Disk1_save.adf",
+                  "Disk2_save.adf",
+                  "Disk1_save.adf.gz",
+                  "Disk2_save.adf.gz"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "archived-floppy-redirected",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "floppy-discarded",
+                "options": {
+                  "puae_floppy_write_protection": "enabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "archived-floppy-writeback-lost",
+                "options": {
+                  "puae_floppy_write_redirect": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "write-protection-discards-an-archived-amiga-floppy-just-the-same",
+      "rationale": "Protection write-protects every drive whatever the image is and stops any write file from being created, so it outranks both the redirect switch and the fact that the member is a copy — the archived answer is the un-archived one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_floppy_write_protection = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Disk1.adf",
+            "Disk2.adf"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "floppy-discarded"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "floppy-discarded",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_protection",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_floppy_write_redirect",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "archived-floppy-writeback-lost",
+                "options": {
+                  "puae_floppy_write_protection": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-cd-keeps-its-non-volatile-memory-under-the-archives-own-name",
+      "rationale": "A CD member reaches the same NVRAM story as a bare disc, and under the same name: the file is named from the basename of what the core ends up loading, which for an archive is the playlist it generated, whose stem is the archive's own.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CD32\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip": [
+            "Roadkill.cue",
+            "Roadkill.bin"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Roadkill (Europe)(CD32).nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Roadkill (Europe)(CD32).nvr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-per-game",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "CD32",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_shared_nvram": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-cd-shares-its-non-volatile-memory-when-the-switch-says-so",
+      "rationale": "The sharing switch reaches an archived disc exactly as it reaches a bare one, which is what makes the CD modes reusable here: nothing about being extracted changes the file the emulated flash chip is opened at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"CD32\"\npuae_shared_nvram = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Roadkill (Europe)(CD32).zip": [
+            "Roadkill.cue",
+            "Roadkill.bin"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "puae_libretro.nvr",
+              "puae_libretro_cdtv.nvr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "puae_libretro.nvr",
+                  "puae_libretro_cdtv.nvr"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "cd-shared",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "CD32",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-per-game",
+                "options": {
+                  "puae_shared_nvram": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-holding-a-whdload-install-reads-the-slave-out-of-it",
+      "rationale": "The core takes the WHDLoad member out of the extracted tree and mounts the drawer beside it, so the slave that names the save directory is a member of the archive. Reading it is what turns an archive into the named answer instead of the unnamed one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).zip": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).zip": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6564-6588)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-holding-a-hard-disk-image-loses-its-writes-with-the-tree",
+      "rationale": "A hard-disk member is mounted read-write like any other, but from the temporary tree — so the writes land inside a copy that is removed at the next start. That is the whole difference from the bare image, which keeps them.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Workbench.hdf"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-hd-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-hd-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-of-nothing-recognised-is-mounted-as-the-tree-it-was-extracted-into",
+      "rationale": "Where no member matches a class the core mounts the extracted tree itself, so the answer is the same lost-writes statement a hard-disk member gets: there is somewhere to write and it does not survive.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Data/level1",
+            "Data/level2"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-hd-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-hd-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-holding-two-launchable-things-names-neither",
+      "rationale": "A floppy member and a WHDLoad member in one archive are two different save stories, and which the core takes is the order its own directory listing returns them in. That is not a fact about the archive, so no story is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": [
+            "Disk1.adf",
+            "Game.slave"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-content-ambiguous",
+                "classes": [
+                  "floppy",
+                  "whdload"
+                ]
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-archive-that-is-no-archive-names-no-class",
+      "rationale": "The class of archived content is what is inside it, so an archive whose member list did not come back leaves the question unanswered — the extension is not enough, which is exactly why the seam reads it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip": "not-archive"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-unread",
+                "status": "not-archive"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-seven-zip-amiga-archive-is-a-format-this-package-reads-none-of",
+      "rationale": "The core extracts a .7z and re-dispatches on what is inside, and no reader for that format ships in a runtime this package may assume. The refusal names the format rather than pretending the archive holds nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).7z": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).7z"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-format-unread",
+                "extension": "7z"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-launch-that-pins-one-archive-member-is-a-shape-no-mode-states",
+      "rationale": "RetroArch can hand the core archive.zip#member, and the core makes that member the content once the archive is extracted — a copy in a temporary tree, named after itself rather than after the archive. No mode states that shape, so the rule refuses it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip#Disk1.adf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ruff and Tumble (Europe).zip#Disk1.adf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "archive-member-pinned",
+                "member": "Disk1.adf"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-hard-disk-image-takes-its-writes-in-place",
+      "rationale": "An .hdf is mounted read-write and nothing switches that off, so the emulated machine writes into the image itself and no file of the core's own appears anywhere.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Workbench 3.1.hdf"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae",
+                "mode": "hd-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "hd-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-game-directory-takes-its-writes-in-place-too",
+      "rationale": "A directory launched as content is a hard disk to the core — the same test that catches .hdf and .hdz catches it — and it is mounted read-write, so the writes land in the directory itself.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD/AlienBreed.slave": "slave"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/AlienBreedHD"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae",
+                "mode": "hd-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "hd-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "the-2021-generation-answers-the-same-whdload-story",
+      "rationale": "The 2021 generation's WHDLoad block is the same code at other line numbers, and the boot script inside its helper image is byte-identical — so the named answer is the same one, under that generation's own card.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
+            "library_name": "PUAE 2021",
+            "library_version": "2.6.1 58527ce",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae2021_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": [
+            "AlienBreedHD.info",
+            "AlienBreedHD/AlienBreedHD.slave",
+            "AlienBreedHD/ReadMe"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(HD).lha": {
+            "slave": "AlienBreedHD/AlienBreedHD.slave",
+            "version": 17,
+            "name": "Alien Breed"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae2021",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae2021",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6691-6709 at 58527ce) that the baked WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37, copied to the system directory at :6488-6512)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "ws_name",
+                "value": "Alien Breed",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
                 ]
               }
             ]

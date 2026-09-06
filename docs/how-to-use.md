@@ -956,6 +956,10 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `virtual-sd-disabled`                 | the emulated SD card is switched off                                               | —                          |
 | `content-class-unnamed`               | the answer splits on the content's class and no content was named                  | —                          |
 | `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
+| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                              | `extension`                |
+| `archive-unread`                      | the loaded archive's member list did not come back                                 | `status`                   |
+| `archive-content-ambiguous`           | the archive holds several launchable members and its listing order picks one       | `classes`                  |
+| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states          | `member`                   |
 | `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
 | `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
 | `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |

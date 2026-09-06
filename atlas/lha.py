@@ -452,8 +452,12 @@ def _flat_codes(count: int, table_bits: int, symbol: int) -> _Codes:
 
     It costs no bits at all: every lookup answers that symbol, and its length
     is zero, so the stream does not advance. The format spells this as a
-    stated count of zero followed by the symbol.
+    stated count of zero followed by the symbol, in a field wide enough to
+    hold a number no alphabet here has — so the symbol is checked rather than
+    used as an index into tables it would run past.
     """
+    if symbol >= count:
+        raise CorruptMember(f"a block states the single symbol {symbol} for an alphabet of {count}")
     return _Codes(
         count=count,
         bits=table_bits,

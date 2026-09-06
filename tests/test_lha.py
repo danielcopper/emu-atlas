@@ -252,3 +252,14 @@ def test_an_lh5_member_decodes_to_the_text_the_generator_compressed() -> None:
     assert content.startswith("Test Game\n")
     # The repeated line is what the encoder's matches are made of.
     assert content.count("installed for the atlas fixture, nothing real.\n") == 8
+
+
+def test_a_block_whose_single_symbol_is_outside_its_alphabet_is_refused() -> None:
+    # The stated-count-of-zero form carries the symbol in a field wider than
+    # any alphabet here, so a corrupt stream can name one that is not a symbol.
+    packed = bits_to_bytes("0" * 15 + "1" + "00000" + "11111")
+    archive = level0(b"x", packed, method=lha.LH5, crc=0) + END
+    (member,) = lha.members(archive)
+
+    with pytest.raises(lha.CorruptMember, match="single symbol"):
+        lha.extract(archive, member)

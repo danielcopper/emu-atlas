@@ -1037,7 +1037,7 @@ def _validate_input_whdload_slaves(name: str, slaves: Any, archives: Any) -> Non
         _validate_whdload_slave_spec(name, path, spec, members)
 
 
-def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list) -> None:
+def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list[Any]) -> None:
     if isinstance(spec, str):
         if spec not in WHDLOAD_SLAVE_STATES:
             fail(
@@ -1055,7 +1055,7 @@ def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list)
     _validate_whdload_slave_fields(name, path, spec)
 
 
-def _validate_whdload_slave_fields(name: str, path: str, spec: dict) -> None:
+def _validate_whdload_slave_fields(name: str, path: str, spec: dict[str, Any]) -> None:
     version, program = spec["version"], spec["name"]
     if not isinstance(version, int) or isinstance(version, bool) or version < 1:
         fail(f"{name}: whdload slave {path!r} version must be the slave's own ws_Version")
