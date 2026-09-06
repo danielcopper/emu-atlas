@@ -8803,6 +8803,158 @@
       }
     },
     {
+      "name": "a-model-without-nvram-keeps-its-cd32-alternative-with-a-boot-hard-drive",
+      "rationale": "The cell the miss described in issue #393 lives in: the same model without non-volatile memory, now with a boot hard drive configured. The alternative still has to name CD32 and not auto, because an explicit CD model reaches the NVRAM mode whatever the boot hard drive says while auto reaches it only when puae_use_boot_hd is disabled (_puae_cd_model, atlas/mode_rules.py:1277-1309). Without this machine the corpus states the claim only where the boot hard drive is off, which is the one arrangement in which the wrong alternative would work anyway.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_model = \"A500\"\npuae_shared_nvram = \"enabled\"\npuae_use_boot_hd = \"files\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amigacd32/Banshee (Europe).cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "cd-no-nvram"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "cd-no-nvram",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "A500",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_shared_nvram",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-shared",
+                "options": {
+                  "puae_model": "CD32"
+                },
+                "values": [
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "an-unrecognised-boot-hard-drive-value-falls-back-to-the-registered-default",
       "rationale": "The resolver normalises a persisted value before a rule sees it, but only where all four conditions hold: a value was read at all, the probe captured the option, the value is outside the set the core registers, and the core registers a default to fall back to. All four hold here, so the stray value is stated as unknown-option-value and the registered default governs — what RetroArch's own option manager does with an invalid persisted value — and the answer is the ordinary per-game one with the discarded setting named beside it. Where a condition fails the raw value reaches the rule instead and its own refusal answers, which is how a rule card covers two of the states the normalisation leaves open: an option a core registers without a default (PUAE registers three such, none of them read by this rule), and a value a newer core generation registers that the record has not been re-audited for.",
       "input": {
