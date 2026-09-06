@@ -152,6 +152,7 @@ from .oddities import (
     lookup_card,
 )
 from .save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
+from .squashfs import zstd_provider
 from .textures import (
     XDG_CONFIG,
     XDG_DATA,
@@ -16792,9 +16793,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     _ESDE_SETTINGS_SUFFIX = os.path.join("settings", "es_settings.xml")
     _ROM_DIRECTORY_SETTING = "ROMDirectory"
     _FRONTEND_MARKER_KEY = "doInstallESDE"
+    # The catalogue's provenance, with a hole for the zstd provider that opens
+    # the AppImage-embedded layer: which provider answers is the runtime's
+    # state and not a constant, so :meth:`_catalogue_provenance` fills it.
     _CATALOGUE_SOURCE = (
         "ES-DE catalogue read live (es_systems.xml — on-disk layers under ~/ES-DE, "
-        "and the AppImage-embedded bundled layer where the runtime can open it)"
+        "and the AppImage-embedded bundled layer where the runtime can open it{provider})"
     )
     _ROM_DIRECTORY_SOURCE = "ES-DE ROMDirectory read live (es_settings.xml)"
 
@@ -16914,6 +16918,37 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             {"system": system} if system is not None else {},
         )
 
+    def _catalogue_provenance(self, exclusive: bool) -> str:
+        """Where a catalogue answer was read — and which provider opens the sealed layer.
+
+        The exclusive reading names no AppImage at all: a document-level
+        ``<loadExclusive/>`` makes the overlay the whole catalogue, and the
+        embedded layer is opened by neither ES-DE nor atlas. Every other
+        reading may reach the image, so the sentence names the provider zstd
+        images go through here (:func:`atlas.zstd_provider`) — the runtime
+        capability that decides whether the sealed layer can be opened at all,
+        and the one a host can now hand over itself.
+
+        It is a statement about the runtime, never about this read. No
+        per-read provenance exists at that seam and none is invented here:
+        :class:`atlas.machine.AppImageReadResult` carries a status and the
+        text, and a gzip image is decompressed through ``zlib`` without
+        touching a zstd provider at all. Where none resolves the sentence
+        stays exactly what it always was, and the ``sealed`` caveat states the
+        consequence.
+        """
+        if exclusive:
+            return _CATALOGUE_SOURCE_EXCLUSIVE
+        provider = zstd_provider()
+        if provider is None:
+            return self._CATALOGUE_SOURCE.format(provider="")
+        through = (
+            f"the host's registered provider {provider.name}"
+            if provider.registered
+            else provider.name
+        )
+        return self._CATALOGUE_SOURCE.format(provider=f"; zstd images go through {through}")
+
     def _catalogue_exclusive(self, system: str | None = None) -> tuple[Caveat, ...]:
         return _catalogue_exclusive_caveat(
             os.path.join(self._esde_appdata_dir(), self._ESDE_OVERLAY_SUFFIX), system
@@ -16950,12 +16985,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         against the deployed AppImage — and where that read answers text,
         the catalogue is ``complete`` and nothing is sealed. Every other
         outcome of that read — no AppImage, not an AppImage, no such entry,
-        an interpreter without the image's codec (zstd needs Python >= 3.14),
-        unreadable bytes — leaves the ``sealed`` state exactly as it always
-        was: ``complete`` ``False``, the caveat naming the sealed layer. A
-        ``<loadExclusive/>`` in the shadow or the embedded file is ignored
-        the way ES-DE ignores one in the bundled layer (the LogWarning
-        branch, ``:886-895``).
+        an interpreter without the image's codec (zstd needs a provider — see
+        :mod:`atlas.squashfs`), unreadable bytes — leaves the ``sealed`` state
+        exactly as it always was: ``complete`` ``False``, the caveat naming
+        the sealed layer. A ``<loadExclusive/>`` in the shadow or the embedded
+        file is ignored the way ES-DE ignores one in the bundled layer (the
+        LogWarning branch, ``:886-895``).
 
         The overlay is EmuDeck's own write (``emuDeckESDE.sh:18,127``,
         deployed from ``configs/emulationstation/custom_systems/`` and
@@ -17248,9 +17283,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return SystemsAnswer(caveats=snapshot.refusal), version
         systems = set(snapshot.by_system)
         derived_mark: tuple[Caveat, ...] = ()
-        sources: tuple[str, ...] = (
-            _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
-        )
+        sources: tuple[str, ...] = (self._catalogue_provenance(snapshot.exclusive),)
         if not snapshot.complete:
             context = self._derived_context(snapshot)
             derived = {
@@ -17301,9 +17334,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             name: declaration.platforms for name, declaration in snapshot.by_system.items()
         }
         vocabulary_backed: set[str] = set()
-        sources: tuple[str, ...] = (
-            _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
-        )
+        sources: tuple[str, ...] = (self._catalogue_provenance(snapshot.exclusive),)
         derived_mark: tuple[Caveat, ...] = ()
         if not snapshot.complete:
             context = self._derived_context(snapshot)
@@ -17386,7 +17417,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                     system_roms_dir=anchor.directory,
                     content_path=content_path,
                 ),
-                (_CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,),
+                (self._catalogue_provenance(snapshot.exclusive),),
                 (*snapshot.findings, *snapshot.tail, *anchor.caveats),
             ),
             version,
@@ -17464,7 +17495,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 entry=entry,
                 alternatives=alternatives,
                 sources=(
-                    _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+                    self._catalogue_provenance(snapshot.exclusive),
                     *core_reader.sources,
                     *sources,
                 ),
@@ -17496,7 +17527,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,
             sources=(
-                _CATALOGUE_SOURCE_EXCLUSIVE if snapshot.exclusive else self._CATALOGUE_SOURCE,
+                self._catalogue_provenance(snapshot.exclusive),
                 *resolved.sources,
             ),
             caveats=(*snapshot.findings, *snapshot.tail, *resolved.caveats),

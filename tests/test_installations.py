@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 from collections import Counter
 
 import pytest
@@ -5343,6 +5345,65 @@ class TestEmuDeckEsdeCatalogue:
 
     def _codes(self, answer):
         return [c.code for c in answer.caveats]
+
+    EXCLUSIVE_OVERLAY = (
+        '<?xml version="1.0"?><loadExclusive/>'
+        "<systemList><system><name>atarijaguar</name>"
+        "<path>%ROMPATH%/atarijaguar</path><extension>.j64</extension>"
+        '<command label="Virtual Jaguar">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>'
+        "</system></systemList>"
+    )
+    VENDORED = "_vendor.backports.zstd"
+
+    @pytest.fixture(autouse=True)
+    def _registry_left_empty(self):
+        """The zstd registry is process-global: no test in this class may hand a provider to the next."""
+        yield
+        atlas.register_zstd_provider(None)
+
+    def _host_provider(self):
+        return types.SimpleNamespace(decompress=lambda data: data, __name__=self.VENDORED)
+
+    def test_the_catalogue_provenance_names_the_zstd_provider(self):
+        # Whether the sealed layer can be opened at all is the runtime's
+        # capability, so the provenance says which provider it holds — here
+        # one the host handed over under its own vendored name.
+        atlas.register_zstd_provider(self._host_provider())
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        named = f"zstd images go through the host's registered provider {self.VENDORED}"
+        assert any(named in source for source in ed.emulators_for("atarijaguar").sources)
+
+    def test_the_provenance_names_no_provider_where_the_runtime_has_none(self, monkeypatch):
+        # Nothing registered and neither name importable: the sentence stays
+        # exactly what it was, with no hole left showing.
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        source = ed.emulators_for("atarijaguar").sources[0]
+        assert source.endswith("where the runtime can open it)")
+        assert "{" not in source
+
+    def test_the_provenance_names_the_module_the_probe_imported(self, monkeypatch):
+        # The phrasing a runtime that imports the codec itself produces — CI's
+        # 3.14 leg and the release bundle among them — with nothing registered.
+        monkeypatch.setitem(
+            sys.modules, "compression.zstd", types.SimpleNamespace(decompress=lambda data: data)
+        )
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        source = ed.emulators_for("atarijaguar").sources[0]
+        assert source.endswith("zstd images go through compression.zstd)")
+
+    def test_an_exclusive_catalogue_names_no_provider_at_all(self):
+        # <loadExclusive/> means the overlay is the whole catalogue and the
+        # image is opened by nobody — naming a codec there would describe a
+        # read that never happens.
+        atlas.register_zstd_provider(self._host_provider())
+        ed = self._emudeck(
+            {f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.EXCLUSIVE_OVERLAY}
+        )
+        sources = ed.emulators_for("atarijaguar").sources
+        assert any("loadExclusive" in source for source in sources)
+        assert not any(self.VENDORED in source for source in sources)
 
     def test_the_appdata_tree_alone_is_presence(self):
         # An AppImage moved away from a configuration that still runs: the

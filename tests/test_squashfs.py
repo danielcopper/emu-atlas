@@ -4,10 +4,15 @@ The fixtures are genuine mksquashfs images behind a minimal ELF prefix
 (``tests/data/make_appimage_fixtures.py``), one per codec: the gzip twin
 proves the walk — directories, fragments, multi-block files, all three
 symlink shapes — on every interpreter, and the zstd twin proves exactly the
-codec gate: readable where a PEP 784 provider exists (``compression.zstd``,
-or its published backport ``backports.zstd``), the honest
-``capability-missing`` where none does. The two carry identical content,
-so nothing about the walk hides behind the codec.
+codec gate: readable where a PEP 784 provider exists (one a host registered,
+``compression.zstd``, or its published backport ``backports.zstd``), the
+honest ``capability-missing`` where none does. The two carry identical
+content, so nothing about the walk hides behind the codec.
+
+The registration tests never need a real codec: a provider whose
+``decompress`` raises a marker proves *which* object the read called, which
+is the whole claim precedence makes, and it makes that claim on every
+interpreter rather than only on one that ships zstd.
 """
 
 from __future__ import annotations
@@ -47,6 +52,37 @@ def _provider_exists(name: str) -> bool:
 
 _HAS_STDLIB_ZSTD = _provider_exists("compression.zstd")
 _HAS_ZSTD = _HAS_STDLIB_ZSTD or _provider_exists("backports.zstd")
+
+_VENDORED = "_vendor.backports.zstd"
+
+
+class _ProviderReached(Exception):
+    """A marked provider's decompress ran — the read chose this object."""
+
+
+def _marked(name: str) -> types.SimpleNamespace:
+    """A provider that answers by raising its own name, so a read says which one it called."""
+
+    def decompress(_data: bytes) -> bytes:
+        raise _ProviderReached(name)
+
+    return types.SimpleNamespace(decompress=decompress, __name__=name)
+
+
+def _poisoned(name: str) -> types.SimpleNamespace:
+    """A provider that must never be reached — reaching it fails the test that placed it."""
+
+    def decompress(_data: bytes) -> bytes:
+        raise AssertionError(f"{name} was reached and something outranks it")
+
+    return types.SimpleNamespace(decompress=decompress)
+
+
+@pytest.fixture(autouse=True)
+def _leave_no_provider_registered():
+    """The registry is process-global: no test in this file may hand one to the next."""
+    yield
+    squashfs.register_zstd_provider(None)
 
 
 class TestTheReaderWalksARealImage:
@@ -92,7 +128,7 @@ class TestTheReaderWalksARealImage:
 class TestTheCodecGate:
     def test_the_zstd_twin_reads_where_the_codec_exists(self):
         if not _HAS_ZSTD:
-            pytest.skip("compression.zstd needs Python >= 3.14")
+            pytest.skip("no zstd provider is importable here")
         assert squashfs.read_appimage_entry(
             ZSTD_IMAGE, CATALOGUE_ENTRY
         ) == squashfs.read_appimage_entry(GZIP_IMAGE, CATALOGUE_ENTRY)
@@ -136,6 +172,111 @@ class TestTheCodecGate:
             sys.modules, "backports.zstd", types.SimpleNamespace(decompress=poisoned)
         )
         assert b"<systemList>" in squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+
+class TestAHostHandsOverItsProvider:
+    """``register_zstd_provider`` — the codec handed over, not found by name (issue #400).
+
+    A host that vendors the backport under its own root imports it as
+    ``_vendor.backports.zstd``, which neither probed name matches; the
+    registration is that host's seam, and it is tried before both names.
+    """
+
+    def test_a_registered_provider_serves_where_neither_name_imports(self, monkeypatch):
+        # Both canonical names dead — nothing but the registration can answer,
+        # and the marker proves the read reached it rather than the gate.
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        squashfs.register_zstd_provider(_marked(_VENDORED))
+        with pytest.raises(_ProviderReached, match=_VENDORED):
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+    def test_the_registered_provider_outranks_both_names(self, monkeypatch):
+        # Both names poisoned and both importable: reaching either fails the
+        # test, so the marker's exception is the precedence itself.
+        monkeypatch.setitem(sys.modules, "compression.zstd", _poisoned("compression.zstd"))
+        monkeypatch.setitem(sys.modules, "backports.zstd", _poisoned("backports.zstd"))
+        squashfs.register_zstd_provider(_marked(_VENDORED))
+        with pytest.raises(_ProviderReached, match=_VENDORED):
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+    def test_clearing_the_registration_hands_the_names_back_the_decision(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "compression.zstd", _marked("compression.zstd"))
+        squashfs.register_zstd_provider(_marked(_VENDORED))
+        squashfs.register_zstd_provider(None)
+        with pytest.raises(_ProviderReached, match="compression.zstd"):
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+    def test_the_registered_provider_reads_the_zstd_twin(self, monkeypatch):
+        # The end-to-end proof where a real codec exists: registered by object
+        # while both names are dead, the image reads byte-for-byte.
+        if not _HAS_ZSTD:
+            pytest.skip("reading through a registered provider needs a real codec to register")
+        real = importlib.import_module(
+            "compression.zstd" if _HAS_STDLIB_ZSTD else "backports.zstd"
+        )
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        squashfs.register_zstd_provider(real)
+        assert squashfs.read_appimage_entry(
+            ZSTD_IMAGE, CATALOGUE_ENTRY
+        ) == squashfs.read_appimage_entry(GZIP_IMAGE, CATALOGUE_ENTRY)
+
+    def test_an_object_with_no_decompress_is_refused_where_it_was_handed_over(self):
+        with pytest.raises(TypeError, match="decompress"):
+            squashfs.register_zstd_provider(object())
+
+    def test_a_refused_object_never_becomes_the_provider(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        with pytest.raises(TypeError):
+            squashfs.register_zstd_provider(object())
+        assert squashfs.zstd_provider() is None
+
+    def test_the_refusal_names_all_three_routes(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        with pytest.raises(squashfs.CodecUnavailable) as refusal:
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+        message = str(refusal.value)
+        assert "register_zstd_provider" in message
+        assert "compression.zstd" in message
+        assert "backports.zstd" in message
+
+
+class TestTheRuntimeCanNameItsProvider:
+    """``zstd_provider`` — which provider zstd images go through here, and by which route."""
+
+    def test_a_registered_module_is_named_by_its_own_name(self):
+        squashfs.register_zstd_provider(_marked(_VENDORED))
+        assert squashfs.zstd_provider() == squashfs.ZstdProvider(_VENDORED, True)
+
+    def test_a_nameless_provider_is_named_by_its_type(self):
+        class HostZstd:
+            def decompress(self, data: bytes) -> bytes:
+                return data
+
+        squashfs.register_zstd_provider(HostZstd())
+        assert squashfs.zstd_provider() == squashfs.ZstdProvider("HostZstd", True)
+
+    def test_the_route_is_read_from_the_registry_not_guessed_from_the_name(self):
+        # A host may hand over the very module the probe would have imported.
+        # The name is then a probed name and the route is still registration —
+        # inferring one from the other would report this as an import.
+        squashfs.register_zstd_provider(_marked("compression.zstd"))
+        assert squashfs.zstd_provider() == squashfs.ZstdProvider("compression.zstd", True)
+
+    def test_an_imported_provider_is_named_by_the_probed_name(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", _marked(_VENDORED))
+        # The name is the one the probe asked for, not the object's own: what
+        # answered here is whatever sits under `backports.zstd`.
+        assert squashfs.zstd_provider() == squashfs.ZstdProvider("backports.zstd", False)
+
+    def test_no_provider_at_all_is_named_by_nothing(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "compression.zstd", None)
+        monkeypatch.setitem(sys.modules, "backports.zstd", None)
+        assert squashfs.zstd_provider() is None
 
 
 class TestTheSeamMapsEveryOutcome:

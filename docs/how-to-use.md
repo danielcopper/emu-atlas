@@ -87,20 +87,37 @@ inside that image, and atlas opens the image itself wherever the runtime has the
 the codec's only consumer: the resolver asks for AppImage contents in exactly one place (EmuDeck's embedded-catalogue
 read, `atlas/installations.py`), gzip images decompress everywhere through the stdlib, and a consumer asking only
 RetroDECK — whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the
-stdlib's `compression.zstd` answers the probe and nothing below applies.
+stdlib's `compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
 
-On an older interpreter the probe looks for `backports.zstd`, and a host that vendors the backport under its own parent
-package grants the capability without editing the copy: register the vendored module under the probed name before the
-first atlas call —
+On an older interpreter the codec has to come from the host, and a host that vendors the backport under its own parent
+package imports it as `_vendor.backports.zstd` — neither name the probe tries. Hand the module over instead, before the
+first atlas call:
+
+```python
+import importlib
+import atlas
+
+atlas.register_zstd_provider(importlib.import_module("_vendor.backports.zstd"))
+```
+
+Every zstd AppImage read in the process then goes through that object. It is duck-typed on `decompress(bytes) -> bytes`,
+so atlas imports nothing and gains no dependency, and anything else, `None` apart, is refused with `TypeError` at the
+registration, where the caller can still see what it handed over. There is one slot: the last registration wins, and
+`atlas.register_zstd_provider(None)` clears it. `atlas.zstd_provider()` says which provider zstd images go through here
+and by which route — or `None` where no provider resolves at all. Otherwise the result is an `atlas.ZstdProvider`:
+`name` is the registered object's own name, or the name the probe imported it under, and `registered` says which of the
+two it was.
+
+Aliasing the vendored module under the probed name works too, and needs no atlas call:
 
 ```python
 import importlib, sys
 sys.modules["backports.zstd"] = importlib.import_module("_vendor.backports.zstd")
 ```
 
-— and the probe finds it, because `atlas/squashfs.py` goes through the import machinery (`importlib.import_module`), and
-the import machinery consults `sys.modules` before it searches anywhere. The copy stays literal; nothing in it is
-patched.
+The probe finds it because `atlas/squashfs.py` goes through the import machinery (`importlib.import_module`), and the
+import machinery consults `sys.modules` before it searches anywhere. Either way the copy stays literal; nothing in it is
+patched. A registration outranks both names, so a host that does both gets the object it registered.
 
 The first consumer has measured the runtime side of this on its own bundle and published what it found
 ([danielcopper/romm-tender#1660](https://github.com/danielcopper/romm-tender/issues/1660#issuecomment-5481535804)) —
@@ -1755,11 +1772,13 @@ force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
 `sealed` is also capability-dependent since the AppImage reader landed: atlas opens the AppImage's embedded
 `es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the runtime has the image's codec —
 `compression.zstd` arrives with Python 3.14, and `backports.zstd` (the same code, published for older interpreters) is
-accepted equally, so a host application that vendors the backport grants its 3.11 runtime the capability without atlas
-gaining a dependency — and the catalogue is then complete: nothing sealed, no list derived, and an embedded system's
-`<platform>` tag reads live like any other. On older interpreters, and wherever the image is missing, replaced or
-restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_, so the same machine
-can answer differently under two Pythons — both answers are honest, and the caveat says which one you got.
+accepted equally. So is the module a host hands over with `atlas.register_zstd_provider`, which is what a host that
+vendors the codec under its own packaging needs. A host application that carries the backport grants its 3.11 runtime
+the capability without atlas gaining a dependency — and the catalogue is then complete: nothing sealed, no list derived,
+and an embedded system's `<platform>` tag reads live like any other. On older interpreters, and wherever the image is
+missing, replaced or restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_,
+so the same machine can answer differently under two Pythons — both answers are honest, and the caveat says which one
+you got.
 
 Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
 these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
