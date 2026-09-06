@@ -38,6 +38,12 @@ def generated() -> str:
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
+@pytest.fixture(scope="module")
+def built() -> reference.Reference:
+    """The six readings, run once — every one of them re-reads the whole package."""
+    return reference.read_everything()
+
+
 def code_table_of(page: str) -> str:
     """The `Caveat codes` section alone, where one row per exported code lives."""
     start = page.index(CODE_SECTION)
@@ -405,14 +411,186 @@ class TestEveryPathTheWalkStoppedAtIsNamed:
 
 class TestTheProseTheAnswerTypesCarry:
     def test_it_counts_docstrings_and_comments_apart(self) -> None:
-        # `Caveat` declares code, message and data, and only `data` is preceded
-        # by a comment about that one field. A count that lumped the two forms
-        # together would let the page claim prose it cannot quote.
+        # `Caveat` writes a docstring under two of its three attributes and no
+        # comment; `CoreDeclarations` is the other way round. A count that
+        # lumped the two forms together would let the page claim prose it
+        # cannot quote, since only the docstring reaches the meaning column.
+        from atlas.firmware import CoreDeclarations
         from atlas.placement import Caveat
 
         assert reference.attribute_prose([Caveat]) == reference.AttributeProse(
-            attributes=3, docstrings=0, commented=1
+            attributes=3, docstrings=2, commented=0
         )
+        assert reference.attribute_prose([CoreDeclarations]) == reference.AttributeProse(
+            attributes=11, docstrings=0, commented=1
+        )
+
+    def test_an_attribute_that_says_nothing_is_still_counted(self) -> None:
+        # `FileSet` writes a docstring under four of its five attributes;
+        # `provenance` is prose the contract never carries and says nothing
+        # about itself. A count that only saw documented attributes would let
+        # the page claim a coverage it does not have.
+        from atlas.placement import FileSet
+
+        assert reference.attribute_prose([FileSet]) == reference.AttributeProse(
+            attributes=5, docstrings=4, commented=0
+        )
+
+
+class TestTheMeaningEveryFieldStates:
+    """The sixth reading: what a field means, and the gate that admits no blank.
+
+    Every other column has a true weaker thing to say when its reading is
+    silent — `not stated`, an empty vocabulary. This one does not: a blank
+    cell is a field a consumer has to guess at, so the tests below hold both
+    ends, that the column is on every table and that a missing sentence stops
+    the generation rather than reaching the page.
+    """
+
+    def test_every_field_table_names_the_column_last(self, generated: str) -> None:
+        headers = [
+            [cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in generated.splitlines()
+            if line.startswith("| field ") and "closed vocabulary" in line
+        ]
+        assert headers, "the page states no field table at all"
+        assert all(header[-1] == "meaning" for header in headers)
+
+    def test_no_row_of_a_field_table_is_blank_there(self, built: reference.Reference) -> None:
+        blank = [
+            f"{title}: {row[0]}"
+            for title, walk in built.walks.items()
+            for row in reference.field_rows(walk, built.sentences)
+            if not row[-1]
+        ]
+        assert not blank, blank
+
+    def test_the_package_as_it_stands_states_every_meaning(
+        self, built: reference.Reference
+    ) -> None:
+        assert reference.unstated_meanings(built.walks, built.sentences) == []
+
+    def test_an_attribute_with_no_docstring_stops_the_generation(
+        self, built: reference.Reference
+    ) -> None:
+        # A COPY of the sentences with one entry dropped, which is the state a
+        # newly added attribute reaches: the real reading is never mutated, and
+        # the probe asserts it reached a sentence, so one that stops finding
+        # its target fails loudly instead of passing over an untouched map.
+        target = ("LaunchabilityAnswer", "verdict")
+        thinned = {key: value for key, value in built.sentences.items() if key != target}
+        assert len(thinned) == len(built.sentences) - 1, "the probe reached no sentence to drop"
+        failures = reference.unstated_meanings(built.walks, thinned)
+        assert len(failures) == 1
+        assert "'verdict'" in failures[0]
+        assert "LaunchabilityAnswer.verdict" in failures[0]
+        assert "no docstring" in failures[0]
+
+    def test_build_carries_the_gate_among_its_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate is only a gate if `build()` carries it: deleting the one
+        # line that wires it in leaves every other test in this class passing,
+        # because they all call `unstated_meanings` themselves. This one asks
+        # `build()` for its failures, which is what `main()` exits on.
+        real = reference.attribute_sentences
+
+        def one_short(classes: object) -> dict[tuple[str, str], str]:
+            sentences = dict(real(classes))  # type: ignore[arg-type]
+            assert sentences.pop(("LaunchabilityAnswer", "verdict"), None), "the probe found nothing to drop"
+            return sentences
+
+        monkeypatch.setattr(reference, "attribute_sentences", one_short)
+        _, failures = reference.build()
+        assert any("LaunchabilityAnswer.verdict" in failure for failure in failures), failures
+
+    def test_it_reads_an_attribute_docstring_and_a_property_docstring_alike(self) -> None:
+        from atlas.firmware import FirmwareRequirement
+
+        sentences = reference.attribute_sentences([FirmwareRequirement])
+        assert sentences[("FirmwareRequirement", "need")].startswith("What the core asks for")
+        assert sentences[("FirmwareRequirement", "satisfied")] == (
+            "Is the right file where this core will look for it?"
+        )
+        # An attribute that says nothing is absent rather than mapped to "",
+        # which is what lets the gate tell silence from an empty sentence.
+        assert ("FirmwareRequirement", "description") not in sentences
+
+    def test_a_summary_is_the_first_paragraph_on_one_line(self) -> None:
+        assert reference.summary("First line\nstill first.\n\nA body paragraph.") == (
+            "First line still first."
+        )
+
+    def test_a_period_inside_a_summary_does_not_end_it(self) -> None:
+        # `e.g.` and a cited `file.c:12` both carry a period a sentence
+        # splitter would stop at. The paragraph is taken whole instead.
+        summary = reference.summary("A revert (e.g. an unsorted root), at runloop.c:8942.")
+        assert summary == "A revert (e.g. an unsorted root), at runloop.c:8942."
+
+    def test_a_summary_spells_rst_the_way_markdown_does(self) -> None:
+        # The formatter rewrites `*x*` to `_x_`, so a page publishing the RST
+        # spelling would be one `deno fmt` immediately changes.
+        assert reference.summary("``None`` where *nothing* was read.") == (
+            "`None` where _nothing_ was read."
+        )
+
+    def test_strong_emphasis_is_markdown_already_and_survives(self) -> None:
+        # `**x**` is what the package writes for strong emphasis and what
+        # markdown reads it as, so the single-asterisk rule must not eat half
+        # of the pair. 116 docstrings in `atlas/` carry one.
+        assert reference.summary("A **strong** claim.") == "A **strong** claim."
+        # Nor may one emphasis span a strong pair: an emphasis never contains
+        # its own delimiter, which is what the body's negated class says.
+        assert reference.summary("A *a**a* run.") == "A *a**a* run."
+
+    def test_an_asterisk_inside_a_code_span_is_a_spelling_not_an_emphasis(self) -> None:
+        # `CAVEAT_*` and `HEALTH_ISSUE_*` stand in one sentence on
+        # `Caveat.code`. Read as a pair of delimiters they would italicise the
+        # words between them and lose both trailing asterisks.
+        assert reference.summary("A code from ``CAVEAT_*`` or ``HEALTH_ISSUE_*``.") == (
+            "A code from `CAVEAT_*` or `HEALTH_ISSUE_*`."
+        )
+
+    def test_a_cross_reference_becomes_the_name_it_points_at(self) -> None:
+        # A markdown table has no link to give a role, so the role name goes
+        # and the target stays — abbreviated by the leading `~` the way RST
+        # abbreviates it, rather than printed as a module path nobody reads.
+        assert reference.summary("One of :data:`KEYINGS`, or :class:`~atlas.placement.FileSet`.") == (
+            "One of `KEYINGS`, or `FileSet`."
+        )
+
+    def test_a_step_into_an_array_of_answer_types_states_the_member_type(
+        self, built: reference.Reference
+    ) -> None:
+        from atlas.placement import Caveat
+
+        walk = built.walks["launchable_contract"]
+        assert reference.meaning_cell("caveats[]", walk.fields["caveats[]"], built.sentences) == (
+            reference.summary(Caveat.__doc__ or "")
+        )
+
+    def test_a_step_into_an_array_of_strings_keeps_the_attributes_own_sentence(
+        self, built: reference.Reference
+    ) -> None:
+        walk = built.walks["launchable_contract"]
+        assert reference.meaning_cell(
+            "accepted[]", walk.fields["accepted[]"], built.sentences
+        ) == built.sentences[("LaunchabilityAnswer", "accepted")]
+
+    def test_a_renamed_key_states_the_attribute_it_serializes(
+        self, built: reference.Reference
+    ) -> None:
+        # `alternatives` is the one JSON key filled from a differently named
+        # attribute, and the sentence follows the same join the other columns
+        # do — `FirmwareAlternatives.options`, not a key nothing declares.
+        path = "cores[].requirements[].alternatives"
+        walk = built.walks["firmware_contract"]
+        assert reference.meaning_cell(path, walk.fields[path], built.sentences) == (
+            built.sentences[("FirmwareAlternatives", "options")]
+        )
+
+    def test_a_path_that_resolved_no_attribute_states_nothing(self) -> None:
+        assert reference.meaning_cell("label", None, {}) == reference.NOTHING_STATED
 
 
 class TestDescribingACaveatDataKeysValues:
@@ -469,6 +647,14 @@ class TestTheMarkdownTheFormatterLeavesAlone:
         lines = reference.wrap(f"{'word ' * 22}[a link with spaces](#somewhere) and more words after it")
         assert any("[a link with spaces](#somewhere)" in line for line in lines)
         assert max(len(line) for line in lines) <= reference.LINE_WIDTH
+
+    def test_a_links_trailing_punctuation_stays_against_it(self) -> None:
+        # A link is one word and so is the period after it: tokenizing that
+        # period on its own put a space before it, which dprint then removed —
+        # a page the formatter immediately rewrites. Asserted on `wrap` rather
+        # than on the page, so it holds however the sections are worded.
+        assert reference.wrap("see [a link](#target).") == ["see [a link](#target)."]
+        assert reference.wrap("[a link](#target), then more") == ["[a link](#target), then more"]
 
     def test_a_pipe_in_a_cell_is_escaped(self) -> None:
         assert reference.cell("str | None") == "str \\| None"

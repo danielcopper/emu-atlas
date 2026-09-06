@@ -2401,8 +2401,8 @@ Structured fields in these dicts are contractual; prose (`sources`, caveat messa
 aggregate answer has no serializer of its own — `installation_answers_contract` composes the label with whichever of
 these you asked for, so a labelled answer and a handle-route answer serialize identically.
 
-Per question, [the contract reference](contract-reference.md) is the generated field-by-field lookup for what comes
-back.
+Per question, [the contract reference](contract-reference.md) is the generated field-by-field lookup for what comes back
+— what each field is called, whether it can be `null`, and a sentence or two on what it means.
 
 ### Telling the shapes apart, including one you have never seen
 

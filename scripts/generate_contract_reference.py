@@ -2,9 +2,9 @@
 
 The reference answers one question per row: a consumer holding a serialized
 answer wants to know which fields come back, what they are called, which can be
-``null``, and which caveat codes carry which data keys. Nothing here is
-hand-written — every cell is derived from one of five readings, and the page
-says which reading spoke:
+``null``, what each of them means, and which caveat codes carry which data keys.
+Nothing here is hand-written — every cell is derived from one of six readings,
+and the page says which reading spoke:
 
 - **the annotations** — :func:`typing.get_type_hints`, :func:`dataclasses.fields`
   and the properties of the answer types. Authoritative on what *can* appear: a
@@ -32,6 +32,13 @@ says which reading spoke:
   Where the vectors say what a value *was*, this one says what it *can be*, and
   the page states both — a pair the corpus has not reached keeps its guarantee
   and says the corpus has not reached it.
+- **the attribute docstrings** — an AST scan of the answer types for the string
+  written under each attribute, and for the docstring of each property and
+  method the contract serializes. The only reading that says what a field
+  *means*: a docstring is an expression with an end, so its summary can be
+  quoted, where a comment would leave this generator deciding where a sentence
+  stops. It is the one reading with no fallback — a serialized field whose
+  attribute writes nothing stops the generation rather than publishing a blank.
 
 Joining the first two means matching a JSON key to the attribute it serializes.
 That match is by name, with two mechanical exceptions: a key filled by a list
@@ -59,6 +66,7 @@ import ast
 import collections.abc
 import dataclasses
 import functools
+import inspect
 import json
 import re
 import sys
@@ -87,14 +95,38 @@ CAVEAT_SHAPE = frozenset({"code", "data"})
 # is what ``detect()`` must find rather than something a caller asks for.
 DETECTION_BLOCK = "installations"
 EMPTY_ARRAY = "empty array"
+# What a path ends in for one step into an array.
+ELEMENT_STEP = "[]"
+# What a cell says where its reading has nothing at all to state, which is not
+# the same as a reading that came back empty.
+NOTHING_STATED = "—"
 # How many distinct values a caveat data key may show before the page states the
 # count instead of the list. A reader branching on a key needs the values; a
 # reader looking at forty paths needs to be told there are forty.
 VALUE_LIST_LIMIT = 8
 VALUE_LENGTH_LIMIT = 60
-# What the line filler treats as one word: a whole markdown link, or a run of
-# non-space. The formatter breaks a line at neither's inside.
-WORD = re.compile(r"\[[^\]]*\]\([^)]*\)|\S+")
+# What the line filler treats as one word: a whole markdown link with whatever
+# punctuation follows it, or a run of non-space. The formatter breaks a line at
+# neither's inside, and it keeps a link's trailing period against the link — so
+# a filler that tokenized the period on its own would put a space before it.
+WORD = re.compile(r"\[[^\]]*\]\([^)]*\)\S*|\S+")
+# RST emphasis, which the package writes and markdown spells with underscores.
+# The formatter rewrites `*x*` to `_x_`, so a page that published the RST
+# spelling would be one the formatter immediately rewrites. Strong emphasis is
+# not this: `**x**` is markdown already, so both delimiters are held to a single
+# asterisk rather than eating one half of a `**` pair. The body is a negated
+# class rather than a reluctant `.*?` because an emphasis never contains its own
+# delimiter — saying so outright is what the pattern means, and it keeps a run
+# like `*a**a*` from being read as one emphasis spanning a strong pair.
+RST_EMPHASIS = re.compile(r"(?<!\*)\*(?!\*)(\S|\S[^*]*\S)(?<!\*)\*(?!\*)")
+# A markdown code span. What is inside one is a spelling, not prose: `CAVEAT_*`
+# and `HEALTH_ISSUE_*` in one sentence would otherwise read as an emphasis pair
+# and swallow the words between them.
+CODE_SPAN = re.compile(r"`[^`]*`")
+# An RST cross-reference role — ``:data:`GRANULARITIES```. Markdown has no
+# link to give it, so what survives is the name it points at, in code. The
+# leading ``~`` is RST's own "print the last component only".
+RST_ROLE = re.compile(r":[a-z]+:`(~?)([^`]*)`")
 
 
 # --------------------------------------------------------------------------
@@ -503,15 +535,32 @@ def attribute_prose(classes: Iterable[type[Any]]) -> AttributeProse:
     """The annotated attributes of *classes*, and the prose written about them.
 
     A docstring is the one form of per-attribute prose a generator can quote:
-    it is an expression with an end. A preceding comment is prose too, and
-    quoting it would mean deciding where its sentence stops, so it is counted
-    instead. Counted rather than assumed, because the page's silence about what
-    a field means is only honest if it states what the source actually holds.
+    it is an expression with an end, which is why the meaning column is built
+    from docstrings alone. A preceding comment is prose too, and quoting it
+    would mean deciding where its sentence stops, so it is counted instead.
+    Counted rather than assumed, because what the page claims about its own
+    coverage is only honest if it states what the source actually holds.
+    """
+    counted = [_class_prose(node, source) for node, source in answer_type_bodies(classes)]
+    return AttributeProse(
+        sum(one.attributes for one in counted),
+        sum(one.docstrings for one in counted),
+        sum(one.commented for one in counted),
+    )
+
+
+def answer_type_bodies(
+    classes: Iterable[type[Any]],
+) -> Iterator[tuple[ast.ClassDef, Sequence[str]]]:
+    """Every class of *classes* as its own module states it, with that module's lines.
+
+    The one place the answer types are matched back to their source, so the
+    counter and the sixth reading below cannot come to disagree about which
+    class they are reading.
     """
     by_module: dict[str, set[str]] = {}
     for cls in classes:
         by_module.setdefault(cls.__module__, set()).add(cls.__name__)
-    counted: list[AttributeProse] = []
     for path, tree in package_modules():
         names = by_module.get(f"atlas.{path.stem}", set())
         if not names:
@@ -519,12 +568,7 @@ def attribute_prose(classes: Iterable[type[Any]]) -> AttributeProse:
         source = path.read_text(encoding="utf-8").splitlines()
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name in names:
-                counted.append(_class_prose(node, source))
-    return AttributeProse(
-        sum(one.attributes for one in counted),
-        sum(one.docstrings for one in counted),
-        sum(one.commented for one in counted),
-    )
+                yield node, source
 
 
 def _class_prose(node: ast.ClassDef, source: Sequence[str]) -> AttributeProse:
@@ -534,12 +578,100 @@ def _class_prose(node: ast.ClassDef, source: Sequence[str]) -> AttributeProse:
         if not isinstance(statement, ast.AnnAssign):
             continue
         attributes += 1
-        following = node.body[index + 1] if index + 1 < len(node.body) else None
-        if isinstance(following, ast.Expr) and isinstance(following.value, ast.Constant):
-            docstrings += isinstance(following.value.value, str)
+        docstrings += _string_expression(node.body, index + 1) is not None
         above = source[statement.lineno - 2].strip() if statement.lineno >= 2 else ""
         commented += above.startswith("#")
     return AttributeProse(attributes, docstrings, commented)
+
+
+def _string_expression(body: Sequence[ast.stmt], index: int) -> str | None:
+    """The string statement *index* of *body* is, where it is one and there is one.
+
+    An attribute docstring in the form PEP 257 gives it: the expression
+    statement standing directly under the assignment, and nothing else.
+    """
+    statement = body[index] if index < len(body) else None
+    if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant):
+        value = statement.value.value
+        return value if isinstance(value, str) else None
+    return None
+
+
+# --------------------------------------------------------------------------
+# Reading 6 — the attribute docstrings
+# --------------------------------------------------------------------------
+
+
+def summary(docstring: str) -> str:
+    """A docstring's summary — its first paragraph, on one line, as markdown.
+
+    PEP 257's own division: everything up to the first blank line is the
+    summary and what follows elaborates. Taking the paragraph whole rather
+    than splitting on a period is what keeps ``e.g.`` and
+    ``runloop.c:8942-8949`` from ending a sentence that has not ended. The
+    package writes RST and the page is markdown, so the markup is converted
+    rather than published: a double backtick becomes a single one, an
+    ``*emphasis*`` becomes the underscores the formatter would rewrite it to
+    anyway, and a cross-reference role becomes the name it points at, since a
+    markdown table has no link to give it.
+    """
+    paragraph = inspect.cleandoc(docstring).split("\n\n")[0]
+    one_line = RST_ROLE.sub(_plain_role, " ".join(paragraph.split()))
+    return _emphasis_outside_code(one_line.replace("``", "`"))
+
+
+def _plain_role(match: re.Match[str]) -> str:
+    """One RST role as markdown: the name it points at, abbreviated as RST abbreviates it."""
+    abbreviated, target = match.groups()
+    return f"`{target.rpartition('.')[2] if abbreviated else target}`"
+
+
+def _emphasis_outside_code(text: str) -> str:
+    """*text* with RST emphasis converted, leaving every code span exactly as it is."""
+    out: list[str] = []
+    last = 0
+    for span in CODE_SPAN.finditer(text):
+        out.append(RST_EMPHASIS.sub(r"_\1_", text[last : span.start()]))
+        out.append(span.group())
+        last = span.end()
+    out.append(RST_EMPHASIS.sub(r"_\1_", text[last:]))
+    return "".join(out)
+
+
+def attribute_sentences(classes: Iterable[type[Any]]) -> dict[tuple[str, str], str]:
+    """``(class, attribute)`` → what that attribute's docstring says it means.
+
+    The sixth reading, and the only one that speaks about meaning. Both forms
+    a docstring takes are read: the string expression under an annotated
+    attribute (PEP 257's attribute docstring) and the docstring of a property
+    or a method, because the contract serializes all three kinds of member.
+    Nothing else is read — a comment beside an attribute is prose this cannot
+    quote, and the counter above says how much of it the package still holds.
+    """
+    found: dict[tuple[str, str], str] = {}
+    for node, _ in answer_type_bodies(classes):
+        for name, docstring in (*_attribute_docstrings(node), *_member_docstrings(node)):
+            found[(node.name, name)] = summary(docstring)
+    return found
+
+
+def _attribute_docstrings(node: ast.ClassDef) -> Iterator[tuple[str, str]]:
+    """``(attribute, docstring)`` for every attribute docstring one class writes."""
+    for index, statement in enumerate(node.body):
+        if not isinstance(statement, ast.AnnAssign) or not isinstance(statement.target, ast.Name):
+            continue
+        docstring = _string_expression(node.body, index + 1)
+        if docstring is not None:
+            yield statement.target.id, docstring
+
+
+def _member_docstrings(node: ast.ClassDef) -> Iterator[tuple[str, str]]:
+    """``(name, docstring)`` for every function one class declares that carries one."""
+    for statement in node.body:
+        if isinstance(statement, ast.FunctionDef):
+            docstring = ast.get_docstring(statement)
+            if docstring:
+                yield statement.name, docstring
 
 
 def declared_vocabularies() -> dict[str, tuple[str, ...]]:
@@ -1313,14 +1445,44 @@ def nullable_cell(reference: FieldRef | None, ambiguous: bool) -> str:
 
 def declared_cell(reference: FieldRef | None) -> str:
     if reference is None:
-        return "—"
+        return NOTHING_STATED
     if reference.kind == METHOD:
         return "derived (method)"
     suffix = " (property)" if reference.kind == PROPERTY else ""
     return f"`{reference.annotation}`{suffix}"
 
 
-def field_rows(walk: ShapeWalk) -> list[list[str]]:
+def meaning_cell(
+    path: str, reference: FieldRef | None, sentences: Mapping[tuple[str, str], str]
+) -> str:
+    """What one path means, in the words the attribute it serializes writes.
+
+    A path that resolved to no attribute has nothing to quote and says so with
+    the dash the annotation columns use. A step into an array is the one row
+    whose subject is not the attribute: the source writes about the list, so
+    where one member of it is an answer type of atlas's own, that type's own
+    summary is what describes a member. The container's sentence stands
+    everywhere else — a list of strings, which carries no answer type; a list
+    whose members are two, where neither describes a member alone; and a list
+    a method derives, whose member the walk never typed.
+    """
+    if reference is None:
+        return NOTHING_STATED
+    member = _member_of_an_array(path, reference)
+    if member is not None:
+        return summary(member.__doc__ or "")
+    return sentences.get((reference.owner, reference.name), "")
+
+
+def _member_of_an_array(path: str, reference: FieldRef) -> type[Any] | None:
+    """The one answer type a step into an array carries, where there is one that speaks."""
+    if not path.endswith(ELEMENT_STEP) or len(reference.descends_into) != 1:
+        return None
+    member = reference.descends_into[0]
+    return member if (member.__doc__ or "").strip() else None
+
+
+def field_rows(walk: ShapeWalk, sentences: Mapping[tuple[str, str], str]) -> list[list[str]]:
     rows: list[list[str]] = []
     for path in sorted(walk.paths):
         observation = walk.paths[path]
@@ -1334,9 +1496,34 @@ def field_rows(walk: ShapeWalk) -> list[list[str]]:
                 "yes" if observation.nulls else "no",
                 f"{observation.answers}/{walk.answers}",
                 cell(backticked([v.name for v in reference.vocabularies]) if reference else ""),
+                cell(meaning_cell(path, reference, sentences)),
             ]
         )
     return rows
+
+
+def unstated_meanings(
+    walks: Mapping[str, ShapeWalk], sentences: Mapping[tuple[str, str], str]
+) -> list[str]:
+    """Serialized fields whose attribute writes nothing about what they mean.
+
+    The sixth reading's gate. Every other column has a true weaker thing to
+    say where its reading is silent — ``not stated``, an empty vocabulary —
+    and this one has none: a blank cell is a field a consumer has to guess at.
+    So a field the walk resolved to an attribute with no docstring stops the
+    generation and names the attribute to write one on.
+    """
+    found: list[str] = []
+    for title, walk in sorted(walks.items()):
+        for path in sorted(walk.paths):
+            reference = walk.fields.get(path)
+            if reference is None or meaning_cell(path, reference, sentences):
+                continue
+            found.append(
+                f"{title}: '{path}' serializes {reference.owner}.{reference.name}, which carries "
+                "no docstring — nothing else states what the field means"
+            )
+    return found
 
 
 def contradictions(walks: Mapping[str, ShapeWalk]) -> list[str]:
@@ -1395,7 +1582,7 @@ def registry_disagreements(
 
 @dataclasses.dataclass(frozen=True)
 class Reference:
-    """What the five readings established, gathered once for the sections to render.
+    """What the six readings established, gathered once for the sections to render.
 
     Assembled by :func:`read_everything` and read-only from there on: a section
     states what is already known rather than reading the repository again, so
@@ -1404,6 +1591,7 @@ class Reference:
 
     annotations: Annotations
     prose: AttributeProse
+    sentences: dict[tuple[str, str], str]
     produced: dict[str, list[Shape]]
     vocabularies: dict[str, tuple[str, ...]]
     enumerations: dict[tuple[str, str], str]
@@ -1423,7 +1611,7 @@ class Reference:
 
 
 def read_everything() -> Reference:
-    """Run the five readings and walk every shape the corpus states."""
+    """Run the six readings and walk every shape the corpus states."""
     annotations = Annotations()
     produced = contract_shapes()
     sites, unattributed_sites = caveat_construction_sites()
@@ -1442,6 +1630,7 @@ def read_everything() -> Reference:
     return Reference(
         annotations=annotations,
         prose=attribute_prose(annotations.seen_types),
+        sentences=attribute_sentences(annotations.seen_types),
         produced=produced,
         vocabularies=declared_vocabularies(),
         enumerations=registered_enumerations(),
@@ -1521,13 +1710,14 @@ def corpus_header(reference: Reference) -> list[str]:
         "",
         *paragraph(
             "Regenerate with `python scripts/generate_contract_reference.py` (then `deno fmt`). Every cell below is "
-            "derived from one of five readings of this repository, and each says which one spoke: the **annotations** "
+            "derived from one of six readings of this repository, and each says which one spoke: the **annotations** "
             "on the answer types (what a field _can_ be), the **vectors** under `vectors/machines/` (what an answer "
             "_did_ carry), an AST scan of the **construction sites** in `atlas/` (which caveat data keys the source "
             "itself spells out), an AST scan of the **serializers** in `atlas/contract.py` (which function returns "
-            "which shape, and which key it fills from a differently named attribute), and the **data registry** "
+            "which shape, and which key it fills from a differently named attribute), the **data registry** "
             "`atlas.ENUMERATED_DATA` (which `(code, key)` values are refused at construction, whether or "
-            "not a vector exercises them). An attribute an answer type "
+            "not a vector exercises them), and the **attribute docstrings** on the answer types (what a field "
+            "_means_). An attribute an answer type "
             "declares and no serialized answer carries is listed under "
             "[attributes no answer carries](#attributes-no-answer-carries) rather than described."
         ),
@@ -1571,18 +1761,32 @@ def how_to_read_a_field_table(reference: Reference) -> list[str]:
             "vocabulary is declared for it."
         ),
         *paragraph(
+            "**Meaning** is the summary of the docstring written on the attribute the path serializes — its first "
+            "paragraph, on one line, with the package's RST spelled the way markdown spells it. It reads `—` "
+            "on the rows that state no attribute, which are the same rows **declared as** dashes. A step into an "
+            "array is the one row whose subject is not the attribute: the source writes about the list, so where one "
+            "member of it is an answer type of atlas's own the summary of _that type_ is what describes a member, and "
+            "the attribute's own sentence stands everywhere else — a list of strings, a list whose members are two "
+            "types, and a list a method derives. This column is the one with no weaker thing to say when its reading "
+            "is silent, so a "
+            "serialized field whose attribute carries no docstring stops the generation instead of publishing a "
+            "blank."
+        ),
+        *paragraph(
             "A caveat serializes as `{code, data}` everywhere it appears, and its `data` keys are data rather than "
             "declared attributes, so a field table stops at `data` and the caveat tables below carry the keys — and "
             "those two rows read `—` where the attribute the caveat hangs off declares no members of its own, as "
             "installation health does."
         ),
         *paragraph(
-            f"There is no column saying what a field means. Of the {prose.attributes} attributes the {len(types)} "
-            f"answer types below declare, {prose.docstrings} carry a docstring and {prose.commented} are preceded by "
-            f"a comment, and {documented} of the types carry a class docstring. A docstring is an expression with an "
-            "end and could be quoted; a comment is not, and quoting one would mean this generator deciding where its "
-            "sentence stops — a per-field sentence the page did not derive. Each shape names its type and module "
-            "instead, and the source is where the comments are read."
+            f"What the column can reach: of the {prose.attributes} attributes the {len(types)} answer types below "
+            f"declare, {prose.docstrings} carry a docstring and {prose.commented} are preceded by a comment, and "
+            f"{documented} of the types carry a class docstring. The two forms are counted apart because only one of "
+            "them can be quoted: a docstring is an expression with an end, while quoting a comment would mean this "
+            "generator deciding where its sentence stops — a per-field sentence the page did not derive. Every "
+            "attribute a field table below resolves a path to carries a docstring, which is what the gate holds; so "
+            "an attribute without one is among those listed under "
+            "[attributes no answer carries](#attributes-no-answer-carries)."
         ),
     ]
 
@@ -1695,8 +1899,9 @@ def answer_shapes_section(reference: Reference) -> list[str]:
                     "null observed",
                     "answers",
                     "closed vocabulary",
+                    "meaning",
                 ],
-                field_rows(walk),
+                field_rows(walk, reference.sentences),
             )
         )
         lines.append("")
@@ -1891,7 +2096,7 @@ def value_shape(values: Sequence[Any]) -> str:
 
 def refused_cell(vocabulary: str | None) -> str:
     """The allowed-values cell: the tuple the constructors check, or nothing to say."""
-    return f"closed set `{vocabulary}`, refused at construction" if vocabulary else "—"
+    return f"closed set `{vocabulary}`, refused at construction" if vocabulary else NOTHING_STATED
 
 
 def caveat_data_values(reference: Reference) -> list[str]:
@@ -1968,6 +2173,7 @@ def build() -> tuple[list[str], list[str]]:
         *shape_disagreements(reference.witnessed),
         *registry_disagreements(reference.witnessed, reference.enumerations),
         *ambiguous_vocabulary_names(reference.enumerations),
+        *unstated_meanings(reference.walks, reference.sentences),
     ]
     return lines, failures
 
@@ -1975,10 +2181,11 @@ def build() -> tuple[list[str], list[str]]:
 def main() -> None:
     lines, failures = build()
     if failures:
-        # Four gates print here and they do not share a pair of readings: the
+        # Five gates print here and they do not share a pair of readings: the
         # null cross-check is annotations against vectors, the shape and
         # registry checks are the corpus against itself and against the
-        # registry, and the naming check is the package against itself.
+        # registry, the naming check is the package against itself, and the
+        # meaning gate is the walk against the docstrings.
         print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)

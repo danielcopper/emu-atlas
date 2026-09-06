@@ -12895,8 +12895,14 @@ class CatalogueAnswer:
     """
 
     entries: tuple[EmulatorEntry, ...] = ()
+    """The launch entries this catalogue declares for the system, in effective order —
+    an empty list says nothing on its own, and the caveats say which empty it is.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, and on an empty one the statement of which of
+    the three empties it is.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -12909,8 +12915,12 @@ class SystemsAnswer:
     """
 
     systems: tuple[str, ...] = ()
+    """Every system this frontend catalogue declares, in the catalogue's own spelling."""
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, and on an empty one the statement of whether
+    the catalogue declares no systems or could not be read.
+    """
 
 
 # The three statuses a platform question states about a system (issue #68).
@@ -12943,9 +12953,19 @@ class PlatformSystemMatch:
     """
 
     system: str
+    """The system that answers to the queried platform id."""
     status: str
+    """How firmly this system is here — ``declared``, ``disabled`` in the catalogue's own
+    text, or ``absent`` and known to the vocabulary alone.
+    """
     platforms: tuple[str, ...]
+    """The system's whole platform tag list, not just the matching tag — a consumer
+    deciding between two matches reads it.
+    """
     tags_source: str
+    """Where those tags came from — ``catalogue`` for a read of this machine,
+    ``vocabulary`` for the stated build's snapshot column.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -12960,11 +12980,26 @@ class PlatformSystemsAnswer:
     """
 
     vocabulary: str
+    """The platform vocabulary the question was asked in, one of
+    :data:`~atlas.platforms.KNOWN_PLATFORM_VOCABULARIES`.
+    """
     value: str
+    """The platform id the question was asked with, verbatim — a numeric id passes as its
+    decimal string.
+    """
     platforms: tuple[str, ...] = ()
+    """What the crosswalk resolved the id to — empty exactly when the
+    ``platform-unmapped`` caveat states why.
+    """
     matches: tuple[PlatformSystemMatch, ...] = ()
+    """Every system answering to those platforms, each qualified by how firmly it is
+    here — declared first, then disabled, then absent, each group alphabetical.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, including the statement that no platform
+    corresponds to the id.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -12980,15 +13015,31 @@ class SystemPlatformsAnswer:
     """
 
     system: str
+    """The system the question was asked about, echoed back as the caller spelled it."""
     status: str
+    """How firmly that system is here — ``declared``, ``disabled`` in the catalogue's own
+    text, or ``absent``, which this installation does not have.
+    """
     tags_source: str
+    """Where the tags came from — ``catalogue`` for a read of this machine,
+    ``vocabulary`` for the stated build's snapshot column and for a name nobody knows.
+    """
     platforms: tuple[str, ...] = ()
+    """The system's platform tags; empty under ``declared`` is the catalogue's own
+    statement that the system block carries none.
+    """
     identities: tuple[PlatformIdentities, ...] = ()
+    """One entry per tag the crosswalk knows — a tag it does not know is stated as a
+    caveat instead, so the two lists and the caveats always add up.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, and the statement for every tag no identity is
+    listed for.
+    """
 
 
-# The launchability verdicts (issue #36) — four claims that never collapse.
+# The launchability verdicts (issue #36) — five claims that never collapse.
 # "not-accepted" is a read of the machine: the frontend's accept-list for the
 # system does not carry this file's extension, so ES-DE never scans it and
 # nothing here will launch it. "needs-installation" is that same 'no' with its
@@ -13057,12 +13108,28 @@ class LaunchabilityAnswer:
     """
 
     verdict: str
+    """Whether this file launches as this system's content here, and why not when not —
+    one of :data:`LAUNCH_VERDICTS`, which never collapse into one another.
+    """
     extension: str
+    """The token ES-DE would derive from the file, from the last dot with case preserved
+    — stated on every verdict, so a no shows the exact string that missed.
+    """
     accepted: tuple[str, ...] = ()
+    """The system's declared accept-list verbatim, and empty where nothing was read."""
     entry: EmulatorEntry | None = None
+    """The launch entry that would run, the frontend's own selection hierarchy applied —
+    stated on the two verdicts where one exists, and ``None`` on the others.
+    """
     alternatives: tuple[str, ...] = ()
+    """The labels of the declared entries established to take this file — one of the two
+    remedies the entry-not-accepted verdict leaves open, and empty on every other.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, stated structurally so a client branches on the
+    code rather than on prose.
+    """
 
 
 # Flatpak's per-app overrides are GKeyFile INI, and only the environment they
@@ -13982,10 +14049,22 @@ class RomPlacement:
     """
 
     dir: str | None = None
+    """The directory this system's ROMs live in, from the catalogue's own declaration —
+    ``None`` wherever atlas could not resolve one, and never a partial path.
+    """
     physical_dir: str | None = None
+    """The fully link-resolved backing directory where ``dir`` reaches its files through
+    symlinks, and ``None`` otherwise.
+    """
     extensions: tuple[str, ...] = ()
+    """The extensions the catalogue declares for this system, verbatim — the frontend's
+    declaration, never a filter atlas applies.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, and on an absent ``dir`` the statement of which
+    kind of unresolved it is.
+    """
 
 
 def _declared_entries(
@@ -14013,18 +14092,24 @@ class EmulatorEntry:
 
     @property
     def system(self) -> str:
+        """The system this entry launches, in the catalogue's own spelling."""
         return self._spec.system
 
     @property
     def label(self) -> str:
+        """The name this entry carries on this machine, as the catalogue spells it."""
         return self._spec.label
 
     @property
     def kind(self) -> str:
+        """Whether this entry launches a libretro core or a standalone emulator."""
         return self._spec.kind
 
     @property
     def core_so(self) -> str | None:
+        """The ``.so`` short name of the core this entry loads, and ``None`` for a standalone
+        entry, which loads none.
+        """
         return self._spec.core_so
 
     @property
@@ -18832,14 +18917,28 @@ class Installation(Protocol):
     """
 
     @property
-    def kind(self) -> str: ...
+    def kind(self) -> str:
+        """The identifier of the arrangement this handle answers for — a key to branch and
+        store on, never a name to show.
+        """
+        ...
 
     @property
-    def kinds(self) -> tuple[str, ...]: ...
+    def kinds(self) -> tuple[str, ...]:
+        """Every arrangement description this handle claims, since one installation can be
+        more than one thing — EmuDeck is also a configured RetroArch Flatpak.
+        """
+        ...
 
-    def root(self) -> str: ...
+    def root(self) -> str:
+        """The directory this installation is anchored at, as its own arrangement defines it."""
+        ...
 
-    def health(self) -> Health: ...
+    def health(self) -> Health:
+        """What is structurally wrong with this installation, as findings a client acts on —
+        an answer with none is a healthy installation.
+        """
+        ...
 
     def savefile_location(
         self,
