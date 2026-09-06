@@ -1190,7 +1190,7 @@ _PUAE_FLOPPY_REDIRECTED = "floppy-redirected"
 _PUAE_CD_PER_GAME = "cd-per-game"
 _PUAE_CD_SHARED = "cd-shared"
 _PUAE_CD_NO_NVRAM = "cd-no-nvram"
-_PUAE_WHDLOAD = "puae_use_whdload"
+_PUAE_WHDLOAD_OPTION = "puae_use_whdload"
 _PUAE_WS_NAME = "ws_name"
 # 'puae_use_whdload' registers three values (libretro-core.c:1224-1237 at
 # 0043cf9, read at :4433-4438, the flag defaulting to 1 at :102) and the
@@ -1203,7 +1203,7 @@ _PUAE_WHDLOAD_VALUES = (_PUAE_DISABLED, _PUAE_WHDLOAD_FILES, _PUAE_WHDLOAD_HDFS)
 _PUAE_CLASS_HD = "hd"
 _PUAE_CLASS_WHDLOAD = "whdload"
 _PUAE_CLASS_ARCHIVE = "archive"
-_PUAE_HD = frozenset({"hdf", "hdz"})
+_PUAE_HD_EXTENSIONS = frozenset({"hdf", "hdz"})
 _PUAE_WHDLOAD_EXTENSIONS = frozenset(whdload.SUFFIXES)
 _PUAE_ARCHIVE_EXTENSION = "zip"
 _PUAE_SEVEN_ZIP = "7z"
@@ -1218,12 +1218,12 @@ _PUAE_BY_EXTENSION = (
     (_PUAE_CLASS_FLOPPY, _PUAE_FLOPPY_IN_PLACE),
     (_PUAE_CLASS_FLOPPY_READ_ONLY, _PUAE_FLOPPY_READ_ONLY),
     (_PUAE_CLASS_CD, _PUAE_CD),
-    (_PUAE_CLASS_HD, _PUAE_HD),
+    (_PUAE_CLASS_HD, _PUAE_HD_EXTENSIONS),
 )
 _PUAE_ARCHIVE_BY_EXTENSION = (
     (_PUAE_CLASS_FLOPPY, _PUAE_FLOPPY_IN_PLACE | _PUAE_FLOPPY_READ_ONLY),
     (_PUAE_CLASS_CD, _PUAE_CD),
-    (_PUAE_CLASS_HD, _PUAE_HD),
+    (_PUAE_CLASS_HD, _PUAE_HD_EXTENSIONS),
 )
 _PUAE_HD_WRITEBACK = "hd-writeback"
 _PUAE_ARCHIVED_HD_LOST = "archived-hd-writeback-lost"
@@ -1394,7 +1394,7 @@ def _puae_archive_format_unread(core: str, extension: str) -> Caveat:
     )
 
 
-def _puae_floppy_mode(protect: str, redirect: str, modes: "_PuaeFloppyModes") -> str:
+def _puae_floppy_mode(protect: str, redirect: str, modes: _PuaeFloppyModes) -> str:
     """Which floppy mode a pair of switch values selects — protection wins."""
     if protect == _PUAE_ENABLED:
         return _PUAE_FLOPPY_DISCARDED
@@ -1404,7 +1404,7 @@ def _puae_floppy_mode(protect: str, redirect: str, modes: "_PuaeFloppyModes") ->
 
 
 def _puae_floppy_alternatives(
-    protect: str, redirect: str, modes: "_PuaeFloppyModes"
+    protect: str, redirect: str, modes: _PuaeFloppyModes
 ) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
     """The one-edit neighbours — each floppy switch flipped on its own.
 
@@ -1424,7 +1424,7 @@ def _puae_floppy(
     core: str,
     reading: RuleReading,
     model: str,
-    modes: "_PuaeFloppyModes",
+    modes: _PuaeFloppyModes,
     fills: Mapping[str, tuple[str, ...]] = _NO_FILLS,
 ) -> ModeChoice:
     """The floppy half: the two write switches, on a model that keeps no NVRAM."""
@@ -1535,11 +1535,11 @@ def _puae_whdload(core: str, reading: RuleReading, model: str) -> ModeChoice:
     refusal = _puae_nvram_model(core, model, "the WHDLoad saves volume")
     if refusal is not None:
         return refusal
-    value = reading.option_values[_PUAE_WHDLOAD]
-    missing = _require_values(core, ((_PUAE_WHDLOAD, value),))
+    value = reading.option_values[_PUAE_WHDLOAD_OPTION]
+    missing = _require_values(core, ((_PUAE_WHDLOAD_OPTION, value),))
     if missing:
         return ModeChoice(None, caveats=missing)
-    alien = _refuse_alien(core, ((_PUAE_WHDLOAD, value, _PUAE_WHDLOAD_VALUES),))
+    alien = _refuse_alien(core, ((_PUAE_WHDLOAD_OPTION, value, _PUAE_WHDLOAD_VALUES),))
     if alien:
         return ModeChoice(None, caveats=alien)
     return _puae_whdload_choice(reading, value or "")
@@ -1560,7 +1560,7 @@ def _puae_whdload_choice(reading: RuleReading, value: str) -> ModeChoice:
         _PUAE_DISABLED: _PUAE_WHDLOAD_OFF,
     }
     alternatives = tuple(
-        (by_value[other], ((_PUAE_WHDLOAD, other),))
+        (by_value[other], ((_PUAE_WHDLOAD_OPTION, other),))
         for other in _PUAE_WHDLOAD_VALUES
         if other != value
     )
