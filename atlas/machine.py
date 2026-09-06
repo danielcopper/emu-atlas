@@ -77,11 +77,12 @@ import os
 import stat as _stat
 import subprocess
 import sys
+import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Callable, Iterable, Literal, Mapping, Protocol
 
-from . import ps2_bios, squashfs
+from . import lha, ps2_bios, squashfs, whdload
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40
@@ -142,6 +143,43 @@ PS2_BIOS_OK: Ps2BiosHeaderStatus = "ok"
 PS2_BIOS_MISSING: Ps2BiosHeaderStatus = "missing"
 PS2_BIOS_UNREADABLE: Ps2BiosHeaderStatus = "unreadable"
 PS2_BIOS_NOT_A_BIOS: Ps2BiosHeaderStatus = "not-a-bios"
+
+# Listing an archive has one way to fail beyond a plain file read:
+# "not-archive" is a file that was opened and is not an archive of a kind
+# atlas reads — a finding about the bytes, or about a suffix no reader here
+# claims, never a read failure.
+ArchiveStatus = Literal["ok", "missing", "unreadable", "not-archive"]
+ARCHIVE_OK: ArchiveStatus = "ok"
+ARCHIVE_MISSING: ArchiveStatus = "missing"
+ARCHIVE_UNREADABLE: ArchiveStatus = "unreadable"
+ARCHIVE_NOT_ARCHIVE: ArchiveStatus = "not-archive"
+
+# Reading the WHDLoad slave out of an archive adds two more, and they are a
+# different claim each: "no-slave" is an archive the core's own boot script
+# selects nothing out of (there is none, or the script's search cannot tell
+# two candidates apart), and "slave-unreadable" is a slave the script *does*
+# select whose bytes do not come back — a compression method this runtime does
+# not implement, a failed CRC, or bytes that are no slave. The first says the
+# archive has no name to give; the second says it has one and atlas could not
+# read it, and a caller states those differently.
+WhdloadSlaveStatus = Literal[
+    "ok", "missing", "unreadable", "not-archive", "no-slave", "slave-unreadable"
+]
+WHDLOAD_OK: WhdloadSlaveStatus = "ok"
+WHDLOAD_MISSING: WhdloadSlaveStatus = "missing"
+WHDLOAD_UNREADABLE: WhdloadSlaveStatus = "unreadable"
+WHDLOAD_NOT_ARCHIVE: WhdloadSlaveStatus = "not-archive"
+WHDLOAD_NO_SLAVE: WhdloadSlaveStatus = "no-slave"
+WHDLOAD_SLAVE_UNREADABLE: WhdloadSlaveStatus = "slave-unreadable"
+
+# The archive suffixes this seam reads, and which reader each takes. UAE
+# accepts both LhA spellings (sources/src/zfile.c:1483-1484 at 0043cf9), and
+# ``.7z`` is deliberately absent: no reader for it ships in a runtime atlas
+# may assume, so an archive in that format is answered as one atlas does not
+# read rather than guessed at.
+ARCHIVE_ZIP = "zip"
+ARCHIVE_LHA_SUFFIXES = ("lha", "lzh")
+ARCHIVE_SUFFIXES = (ARCHIVE_ZIP, *ARCHIVE_LHA_SUFFIXES)
 
 KIND_FILE: PathKind = "file"
 KIND_DIRECTORY: PathKind = "directory"
@@ -205,6 +243,59 @@ class Ps2BiosHeaderResult:
         if (self.header is None) == (self.status == PS2_BIOS_OK):
             raise ValueError(
                 f"Ps2BiosHeaderResult: header must be set exactly when status is 'ok' (got {self.status!r})"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class ArchiveListResult:
+    """One archive listing's explicit outcome — the member names, in the archive's own order.
+
+    ``members`` are archive-internal paths with ``/`` separators, and they are
+    empty for every status but ``ok`` — where an ``ok`` listing may still be
+    empty, because an archive with nothing in it is a real state and a
+    different one from a file that could not be opened. The order is the
+    archive's own: it is what an emulator walking the container sees.
+    """
+
+    status: ArchiveStatus
+    members: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.members and self.status != ARCHIVE_OK:
+            raise ValueError(
+                f"ArchiveListResult: members are listed only by an 'ok' read (got {self.status!r})"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class WhdloadSlaveResult:
+    """What the slave inside an archive states — the member it came from, and its two fields.
+
+    ``slave`` is the member the core's boot script selects and ``version`` its
+    ``ws_Version``; both are set exactly when ``status`` is ok, because every
+    other status is a read that produced no slave to state anything about.
+    ``name`` is ``ws_name``, and it is the one field that can be absent from a
+    successful read: a slave older than
+    :data:`atlas.whdload.NAMED_FROM_VERSION` carries no such field at all, and
+    the manual does not say which spelling of the file name WHDLoad falls back
+    to — so the answer is *no name*, never a guessed one.
+    """
+
+    status: WhdloadSlaveStatus
+    slave: str | None = None
+    version: int | None = None
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        stated = self.slave is not None and self.version is not None
+        if stated != (self.status == WHDLOAD_OK):
+            raise ValueError(
+                "WhdloadSlaveResult: the member and its version are stated exactly when status is "
+                f"'ok' (got {self.status!r})"
+            )
+        if self.name is not None and self.status != WHDLOAD_OK:
+            raise ValueError(
+                f"WhdloadSlaveResult: only an 'ok' read names a program (got {self.status!r})"
             )
 
 
@@ -407,6 +498,130 @@ class _GlobWalk:
         return kept
 
 
+class _ArchiveOutcome(Exception):
+    """An archive read that stopped short, carrying the status to answer with.
+
+    The two archive reads share their opening steps, and each step can end the
+    read for a reason the caller states verbatim — so the reason travels as
+    the status itself rather than being re-derived from an exception type at
+    every return.
+    """
+
+    def __init__(self, status: ArchiveStatus) -> None:
+        super().__init__(status)
+        self.status: ArchiveStatus = status
+
+
+# What a member decode can raise short of an outright read failure: a
+# container defect, a compression method neither reader implements, a member
+# the listing named and the container cannot produce, bytes that are no
+# slave. Each is the same claim to a caller — the slave was selected and its
+# content did not come back.
+_SLAVE_UNREADABLE_ERRORS = (
+    lha.LhaError,
+    whdload.NotASlave,
+    zipfile.BadZipFile,
+    KeyError,
+    NotImplementedError,
+    RuntimeError,
+    EOFError,
+    StopIteration,
+)
+# A WHDLoad member inside a zip that is itself an LhA: a second container,
+# extracted only while the core runs, so its bytes are nowhere atlas can read.
+_NESTED_ARCHIVE_SUFFIX = ".lha"
+
+
+def _archive_suffix(path: str) -> str:
+    """The path's extension, lowered and without the dot — what picks the reader."""
+    return os.path.splitext(path)[1].lower().lstrip(".")
+
+
+def _stat_regular_file(path: str) -> None:
+    """Refuse anything but a regular file before it is opened.
+
+    The same check ``file_digest`` makes and for the same reason: these paths
+    come out of a launch command, and opening a FIFO with no writer blocks
+    forever — a hang is not a degraded answer, it is no answer at all.
+    """
+    try:
+        st = os.stat(path)
+    except (FileNotFoundError, NotADirectoryError):
+        raise _ArchiveOutcome(ARCHIVE_MISSING) from None
+    except OSError:
+        raise _ArchiveOutcome(ARCHIVE_UNREADABLE) from None
+    if not _stat.S_ISREG(st.st_mode):
+        raise _ArchiveOutcome(ARCHIVE_UNREADABLE)
+
+
+def _archive_bytes(path: str) -> bytes:
+    """A whole LhA archive in memory — its headers are spread through the file."""
+    _stat_regular_file(path)
+    try:
+        with open(path, "rb") as handle:
+            return handle.read()
+    except OSError:
+        raise _ArchiveOutcome(ARCHIVE_UNREADABLE) from None
+
+
+def _archive_names(path: str, suffix: str) -> tuple[str, ...]:
+    """The member names one archive holds, by the reader its suffix picks."""
+    if suffix == ARCHIVE_ZIP:
+        return _zip_names(path)
+    try:
+        return tuple(member.name for member in lha.members(_archive_bytes(path)))
+    except lha.NotAnLha:
+        raise _ArchiveOutcome(ARCHIVE_NOT_ARCHIVE) from None
+
+
+def _zip_names(path: str) -> tuple[str, ...]:
+    _stat_regular_file(path)
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return tuple(archive.namelist())
+    except zipfile.BadZipFile:
+        raise _ArchiveOutcome(ARCHIVE_NOT_ARCHIVE) from None
+    except OSError:
+        raise _ArchiveOutcome(ARCHIVE_UNREADABLE) from None
+
+
+def _whdload_root(path: str, members: tuple[str, ...]) -> str | None:
+    """The prefix inside the archive the core mounts as ``DH0:``, or ``None`` where it mounts none.
+
+    An LhA archive is mounted whole, so the prefix is empty. A zip is
+    extracted first and one member launched out of it, and what gets mounted
+    is the drawer beside that member — unless the member is a second archive,
+    which is where this stops.
+    """
+    if _archive_suffix(path) != ARCHIVE_ZIP:
+        return ""
+    member = whdload.launched_member(members)
+    if member is None or member.lower().endswith(_NESTED_ARCHIVE_SUFFIX):
+        return None
+    return whdload.mounted_root(member, members)
+
+
+def _read_slave_member(path: str, member: str) -> WhdloadSlaveResult:
+    """Decompress exactly the selected member and read the structure at its start."""
+    try:
+        slave = whdload.read_slave(_archive_member_bytes(path, member))
+    except _ArchiveOutcome as outcome:
+        return WhdloadSlaveResult(outcome.status)
+    except _SLAVE_UNREADABLE_ERRORS:
+        return WhdloadSlaveResult(WHDLOAD_SLAVE_UNREADABLE)
+    return WhdloadSlaveResult(WHDLOAD_OK, member, slave.version, slave.name)
+
+
+def _archive_member_bytes(path: str, member: str) -> bytes:
+    if _archive_suffix(path) == ARCHIVE_ZIP:
+        _stat_regular_file(path)
+        with zipfile.ZipFile(path) as archive:
+            return archive.read(member)
+    data = _archive_bytes(path)
+    entry = next(found for found in lha.members(data) if found.name == member)
+    return lha.extract(data, entry)
+
+
 class Machine(Protocol):
     """Narrow machine port: read a file, glob, classify a path, follow links, ask a core.
 
@@ -428,6 +643,10 @@ class Machine(Protocol):
     def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult: ...
 
     def read_ps2_bios_header(self, path: str) -> Ps2BiosHeaderResult: ...
+
+    def list_archive(self, path: str) -> ArchiveListResult: ...
+
+    def read_whdload_slave(self, path: str) -> WhdloadSlaveResult: ...
 
     def glob(self, pattern: str) -> GlobResult: ...
 
@@ -536,6 +755,45 @@ class RealMachine:
         except OSError:
             return Ps2BiosHeaderResult(PS2_BIOS_UNREADABLE)
         return Ps2BiosHeaderResult(PS2_BIOS_OK, header)
+
+    def list_archive(self, path: str) -> ArchiveListResult:
+        """The member names inside one archive — the read PUAE's own archive walk makes.
+
+        The suffix decides the reader, the way the core's own dispatch does,
+        and a suffix no reader here claims is answered as *not an archive*
+        rather than sniffed for. Regular files only, checked before opening,
+        for the reason :meth:`read_text` checks.
+        """
+        suffix = _archive_suffix(path)
+        if suffix not in ARCHIVE_SUFFIXES:
+            return ArchiveListResult(ARCHIVE_NOT_ARCHIVE)
+        try:
+            return ArchiveListResult(ARCHIVE_OK, _archive_names(path, suffix))
+        except _ArchiveOutcome as outcome:
+            return ArchiveListResult(outcome.status)
+
+    def read_whdload_slave(self, path: str) -> WhdloadSlaveResult:
+        """The slave the core would launch out of this archive, and what it states.
+
+        The archive is listed first, the boot script's search
+        (:func:`atlas.whdload.select_slave`) picks the member out of that
+        listing, and only that one member is decompressed. A zip is a step
+        longer: the core launches one member out of the extracted tree and
+        mounts the drawer beside it, so the search runs under that prefix —
+        and where the member is itself an ``.lha`` there is a second archive
+        in the way, which this seam does not open.
+        """
+        listed = self.list_archive(path)
+        if listed.status != ARCHIVE_OK:
+            return WhdloadSlaveResult(listed.status)
+        root = _whdload_root(path, listed.members)
+        if root is None:
+            return WhdloadSlaveResult(WHDLOAD_NO_SLAVE)
+        inside = [name[len(root) :] for name in listed.members if name.startswith(root)]
+        selected = whdload.select_slave(inside)
+        if selected is None:
+            return WhdloadSlaveResult(WHDLOAD_NO_SLAVE)
+        return _read_slave_member(path, root + selected)
 
     def glob(self, pattern: str) -> GlobResult:
         return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)
@@ -989,6 +1247,134 @@ def _fixture_ps2_bios_header(path: str, spec: Mapping[str, object]) -> ps2_bios.
     return ps2_bios.Ps2BiosHeader.from_strings(strings["romver"], strings["serial"])
 
 
+# The states a fixture archive may declare short of a member list: what
+# RealMachine can report about a file it opened. "missing" is not among them —
+# an absent archive is modeled by not declaring the file.
+_FIXTURE_ARCHIVE_STATES = ("unreadable", "not-archive")
+# And the states a fixture slave read may declare short of the structure. The
+# container's own failures are not among them: they come from the archive
+# declaration, so the two reads cannot contradict each other.
+_FIXTURE_WHDLOAD_STATES = ("no-slave", "slave-unreadable")
+_FIXTURE_WHDLOAD_FIELDS = ("slave", "version", "name")
+
+
+def _validate_fixture_archives(
+    archives: Mapping[str, object],
+    files: Mapping[str, tuple[ReadStatus, str | None]],
+) -> dict[str, tuple[str, ...] | str]:
+    """The declared listings — a member list, or the state a real read would report.
+
+    An archive describes a file's bytes, so its path must be a declared file,
+    and one whose bytes can be read: a member list beside ``unreadable`` would
+    let a vector assert a walk the machine it models never completes.
+    """
+    validated: dict[str, tuple[str, ...] | str] = {}
+    for path, spec in archives.items():
+        _refuse_unlistable_archive(path, files)
+        validated[path] = _fixture_archive(path, spec)
+    return validated
+
+
+def _refuse_unlistable_archive(
+    path: str, files: Mapping[str, tuple[ReadStatus, str | None]]
+) -> None:
+    if path not in files:
+        raise ValueError(
+            f"archive {path!r}: a listing describes a file's bytes, and no file is declared there"
+        )
+    if files[path][0] == READ_UNREADABLE:
+        raise ValueError(
+            f"archive {path!r}: an unreadable file states no member list — its bytes are what "
+            "cannot be read, so a real one answers 'unreadable' before any walk"
+        )
+
+
+def _fixture_archive(path: str, spec: object) -> tuple[str, ...] | str:
+    if not isinstance(spec, str):
+        return _fixture_members(path, spec)
+    if spec not in _FIXTURE_ARCHIVE_STATES:
+        raise ValueError(
+            f"archive {path!r}: a state must be one of {_FIXTURE_ARCHIVE_STATES}, got {spec!r}"
+        )
+    return spec
+
+
+def _fixture_members(path: str, spec: object) -> tuple[str, ...]:
+    """A member list: archive-internal paths, which are relative and ``/``-separated."""
+    if not isinstance(spec, list) or not all(isinstance(name, str) for name in spec):
+        raise ValueError(f"archive {path!r}: expected a state or a list of member names, got {spec!r}")
+    members = tuple(str(name) for name in spec)
+    for name in members:
+        segments = name.rstrip("/").split("/")
+        if not name or name.startswith("/") or "\\" in name or any(
+            segment in ("", ".", "..") for segment in segments
+        ):
+            raise ValueError(
+                f"archive {path!r}: member {name!r} is not an archive-internal path — those are "
+                "relative, '/'-separated, and name no empty, '.' or '..' segment"
+            )
+    return members
+
+
+def _validate_fixture_whdload_slaves(
+    slaves: Mapping[str, object],
+    archives: Mapping[str, tuple[str, ...] | str],
+) -> dict[str, tuple[str, int, str | None] | str]:
+    """The declared slave reads — the two fields the structure yields, or a state.
+
+    A slave sits inside an archive, so its path must be one whose member list
+    is declared, and a stated member must be in it: the real machine picks the
+    member out of that listing, and a fixture naming one that is not there
+    would model a read no machine makes.
+    """
+    validated: dict[str, tuple[str, int, str | None] | str] = {}
+    for path, spec in slaves.items():
+        members = archives.get(path)
+        if not isinstance(members, tuple):
+            raise ValueError(
+                f"whdload slave {path!r}: a slave is a member of an archive, and no archive with a "
+                "member list is declared there"
+            )
+        if isinstance(spec, str):
+            if spec not in _FIXTURE_WHDLOAD_STATES:
+                raise ValueError(
+                    f"whdload slave {path!r}: a state must be one of {_FIXTURE_WHDLOAD_STATES}, "
+                    f"got {spec!r}"
+                )
+            validated[path] = spec
+            continue
+        validated[path] = _fixture_slave(path, spec, members)
+    return validated
+
+
+def _fixture_slave(path: str, spec: object, members: tuple[str, ...]) -> tuple[str, int, str | None]:
+    """One declared structure, checked against what a real slave can state."""
+    if not isinstance(spec, Mapping) or set(spec) != set(_FIXTURE_WHDLOAD_FIELDS):
+        raise ValueError(
+            f"whdload slave {path!r}: expected a state or an object with exactly "
+            f"{_FIXTURE_WHDLOAD_FIELDS}, got {spec!r}"
+        )
+    member = spec["slave"]
+    if member not in members:
+        raise ValueError(f"whdload slave {path!r}: member {member!r} is not in this archive's listing")
+    version, name = _fixture_slave_fields(path, spec["version"], spec["name"])
+    return str(member), version, name
+
+
+def _fixture_slave_fields(path: str, version: object, name: object) -> tuple[int, str | None]:
+    """``ws_Version`` and ``ws_name``, checked against what a real structure can hold."""
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise ValueError(f"whdload slave {path!r}: version is the slave's own ws_Version, got {version!r}")
+    if name is not None and not (isinstance(name, str) and name):
+        raise ValueError(f"whdload slave {path!r}: name is ws_name or null, got {name!r}")
+    if name is not None and version < whdload.NAMED_FROM_VERSION:
+        raise ValueError(
+            f"whdload slave {path!r}: a slave older than version {whdload.NAMED_FROM_VERSION} has no "
+            "ws_name field at all, so it can state no name"
+        )
+    return version, name if isinstance(name, str) else None
+
+
 class FixtureMachine:
     """A machine backed by plain data: files, directories, symlinks, core answers.
 
@@ -1005,9 +1391,16 @@ class FixtureMachine:
     maps link paths to their targets (absolute, or relative to the link's
     directory). ``cores`` maps ``.so`` paths to core-answer objects
     (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
-    present but unloadable. ``appimages`` and ``ps2_bios_headers`` model two
-    content reads at the seam rather than as bytes — see
-    :meth:`read_appimage_text` and :meth:`read_ps2_bios_header`.
+    present but unloadable. ``appimages``, ``ps2_bios_headers``, ``archives``
+    and ``whdload_slaves`` model four content reads at the seam rather than as
+    bytes — see :meth:`read_appimage_text`, :meth:`read_ps2_bios_header`,
+    :meth:`list_archive` and :meth:`read_whdload_slave`. The last two are a
+    pair: ``archives`` maps an archive's path to its member list (or to
+    ``"unreadable"`` / ``"not-archive"``), and ``whdload_slaves`` maps the
+    same path to what the slave inside it states — ``{"slave": ..., "version":
+    ..., "name": ...}`` with a nullable name, or ``"no-slave"`` /
+    ``"slave-unreadable"``. A slave declaration must name a member the archive
+    lists, so the two can never describe different machines.
 
     Two lists say what cannot be read, and which one applies is decided by one
     question: does the ``stat`` succeed?
@@ -1054,12 +1447,16 @@ class FixtureMachine:
         unlistable: Iterable[str] | None = None,
         appimages: Mapping[str, Mapping[str, object] | str] | None = None,
         ps2_bios_headers: Mapping[str, Mapping[str, object] | str] | None = None,
+        archives: Mapping[str, object] | None = None,
+        whdload_slaves: Mapping[str, object] | None = None,
     ) -> None:
         self._files, self._blobs = _index_fixture_files(files)
         self._symlinks = dict(symlinks or {})
         self._cores = dict(cores or {})
         self._appimages = _validate_fixture_appimages(appimages or {})
         self._ps2_bios_headers = _validate_fixture_ps2_bios_headers(ps2_bios_headers or {}, self._files)
+        self._archives = _validate_fixture_archives(archives or {}, self._files)
+        self._whdload_slaves = _validate_fixture_whdload_slaves(whdload_slaves or {}, self._archives)
         self._inaccessible = set(inaccessible or ())
         self._unlistable = set(unlistable or ())
         _refuse_both_unreadable_lists(self._inaccessible, self._unlistable)
@@ -1208,6 +1605,52 @@ class FixtureMachine:
         if resolved in self._dirs or self._files.get(resolved, (READ_MISSING, None))[0] == READ_UNREADABLE:
             return Ps2BiosHeaderResult(PS2_BIOS_UNREADABLE)
         return Ps2BiosHeaderResult(PS2_BIOS_MISSING)
+
+    def list_archive(self, path: str) -> ArchiveListResult:
+        """The modeled archive listing — member names in, the outcomes RealMachine reports out.
+
+        Modeling lives beside the seam rather than in ``files`` for the reason
+        ``appimages`` does: what a real listing needs is a container's bytes,
+        which is exactly what a fixture must not carry. A declared file with
+        no entry here answers ``not-archive`` — the same answer the real
+        machine gives a file no reader claims, and the one that keeps a vector
+        that forgot the key from passing a file off as a listable archive.
+        """
+        if self._is_inaccessible(path):
+            return ArchiveListResult(ARCHIVE_UNREADABLE)
+        resolved = self._resolve(path).path
+        if resolved is None:
+            return ArchiveListResult(ARCHIVE_MISSING)
+        spec = self._archives.get(resolved)
+        if isinstance(spec, str):
+            status: ArchiveStatus = spec  # type: ignore[assignment]  # validated at construction
+            return ArchiveListResult(status)
+        if spec is not None:
+            return ArchiveListResult(ARCHIVE_OK, spec)
+        if resolved in self._dirs or self._files.get(resolved, (READ_MISSING, None))[0] == READ_UNREADABLE:
+            return ArchiveListResult(ARCHIVE_UNREADABLE)
+        return ArchiveListResult(ARCHIVE_NOT_ARCHIVE if resolved in self._files else ARCHIVE_MISSING)
+
+    def read_whdload_slave(self, path: str) -> WhdloadSlaveResult:
+        """The modeled slave read — the container's outcome first, then the structure.
+
+        Everything the container can answer comes from the archive
+        declaration, so the two reads cannot disagree about the same file. A
+        listed archive with no entry here answers ``no-slave``, which is the
+        weaker of the two claims a vector could want and therefore the safe
+        one to fall to.
+        """
+        listed = self.list_archive(path)
+        if listed.status != ARCHIVE_OK:
+            return WhdloadSlaveResult(listed.status)
+        spec = self._whdload_slaves.get(self._resolve(path).path or path)
+        if spec is None:
+            return WhdloadSlaveResult(WHDLOAD_NO_SLAVE)
+        if isinstance(spec, str):
+            status: WhdloadSlaveStatus = spec  # type: ignore[assignment]  # validated at construction
+            return WhdloadSlaveResult(status)
+        member, version, name = spec
+        return WhdloadSlaveResult(WHDLOAD_OK, member, version, name)
 
     def read_text(self, path: str) -> ReadResult:
         if self._is_inaccessible(path):

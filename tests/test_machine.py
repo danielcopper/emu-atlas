@@ -13,24 +13,38 @@ import hashlib
 import os
 import random
 import shutil
+import struct
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+import atlas.lha
 import atlas.machine
 from atlas.machine import (
+    ARCHIVE_MISSING,
+    ARCHIVE_NOT_ARCHIVE,
+    ARCHIVE_OK,
+    ARCHIVE_UNREADABLE,
     DIGEST_ALGORITHMS,
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
     SYMLINK_HOPS,
+    WHDLOAD_MISSING,
+    WHDLOAD_NO_SLAVE,
+    WHDLOAD_NOT_ARCHIVE,
+    WHDLOAD_OK,
+    WHDLOAD_SLAVE_UNREADABLE,
+    ArchiveListResult,
     GlobResult,
     CoreInfo,
     FixtureMachine,
     ReadResult,
     RealMachine,
+    WhdloadSlaveResult,
 )
 
 
@@ -1143,3 +1157,244 @@ class TestFixtureRealParity:
         real = RealMachine()
         for spec in (identity, {"status": "invalid-text", **identity}):
             _assert_same_answers(FixtureMachine({str(blob): spec}), real, str(blob))
+
+
+# ---------------------------------------------------------------------------
+# The two archive reads.
+# ---------------------------------------------------------------------------
+
+SAMPLE_ARCHIVE = str(Path(__file__).parent / "data" / "whdload-sample.lha")
+SAMPLE_MEMBERS = ("TestGame.info", "TestGame/TestGame.slave", "TestGame/ReadMe")
+SAMPLE_SLAVE = "TestGame/TestGame.slave"
+
+
+def _stored_lha(members: dict[str, bytes]) -> bytes:
+    """A level-0 LhA archive, every member stored — enough to be listed and read."""
+    out = b""
+    for name, content in members.items():
+        encoded = name.encode("latin-1")
+        body = (
+            b"-lh0-"
+            + struct.pack("<II", len(content), len(content))
+            + struct.pack("<HH", 0, 0)
+            + b"\x20\x00"
+            + bytes([len(encoded)])
+            + encoded
+            + struct.pack("<H", atlas.lha.crc16(content))
+        )
+        out += bytes([len(body), sum(body) & 0xFF]) + body + content
+    return out + b"\x00"
+
+
+def _zip_of(path: Path, members: dict[str, bytes]) -> str:
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, content in members.items():
+            archive.writestr(name, content)
+    return str(path)
+
+
+class TestArchiveReads:
+    """RealMachine's two archive reads, and the fixture's model of them."""
+
+    def test_an_lha_lists_its_members_in_the_archives_own_order(self):
+        assert RealMachine().list_archive(SAMPLE_ARCHIVE) == ArchiveListResult(
+            ARCHIVE_OK, SAMPLE_MEMBERS
+        )
+
+    def test_a_zip_lists_its_members_through_the_stdlib(self, tmp_path):
+        path = _zip_of(tmp_path / "Game.zip", {"Disk1.adf": b"a", "notes/read.me": b"b"})
+
+        assert RealMachine().list_archive(path) == ArchiveListResult(
+            ARCHIVE_OK, ("Disk1.adf", "notes/read.me")
+        )
+
+    def test_an_archive_that_is_not_there_is_missing_rather_than_unreadable(self, tmp_path):
+        assert RealMachine().list_archive(str(tmp_path / "gone.lha")).status == ARCHIVE_MISSING
+
+    def test_a_directory_spelled_like_an_archive_is_unreadable(self, tmp_path):
+        (tmp_path / "Game.zip").mkdir()
+
+        assert RealMachine().list_archive(str(tmp_path / "Game.zip")).status == ARCHIVE_UNREADABLE
+
+    def test_a_file_whose_bytes_cannot_be_read_is_unreadable(self, tmp_path):
+        path = tmp_path / "Game.zip"
+        path.write_bytes(b"PK\x03\x04")
+
+        with _mode(path, 0):
+            assert RealMachine().list_archive(str(path)).status == ARCHIVE_UNREADABLE
+
+    @pytest.mark.parametrize(
+        ("name", "content"),
+        [
+            pytest.param("Game.txt", b"plain text", id="a-suffix-no-reader-claims"),
+            pytest.param("Game.7z", b"7z\xbc\xaf'\x1c", id="a-format-atlas-reads-none-of"),
+            pytest.param("Game.zip", b"not a zip at all", id="a-zip-that-is-not-one"),
+            pytest.param("Game.lha", b"not an lha at all", id="an-lha-that-is-not-one"),
+        ],
+    )
+    def test_what_is_no_archive_says_so_rather_than_failing_a_read(self, tmp_path, name, content):
+        path = tmp_path / name
+        path.write_bytes(content)
+
+        assert RealMachine().list_archive(str(path)).status == ARCHIVE_NOT_ARCHIVE
+
+    def test_the_slave_inside_an_lha_states_its_version_and_name(self):
+        assert RealMachine().read_whdload_slave(SAMPLE_ARCHIVE) == WhdloadSlaveResult(
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+        )
+
+    def test_the_slave_inside_a_zip_is_found_under_the_drawer_the_core_mounts(self, tmp_path):
+        data = Path(SAMPLE_ARCHIVE).read_bytes()
+        members = {member.name: atlas.lha.extract(data, member) for member in atlas.lha.members(data)}
+        path = _zip_of(tmp_path / "Game.zip", members)
+
+        assert RealMachine().read_whdload_slave(path) == WhdloadSlaveResult(
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+        )
+
+    def test_a_whdload_archive_inside_a_zip_is_a_container_this_seam_does_not_open(self, tmp_path):
+        path = _zip_of(tmp_path / "Game.zip", {"Game.lha": Path(SAMPLE_ARCHIVE).read_bytes()})
+
+        assert RealMachine().read_whdload_slave(path).status == WHDLOAD_NO_SLAVE
+
+    def test_an_archive_the_boot_script_selects_nothing_from_has_no_slave(self, tmp_path):
+        path = _zip_of(tmp_path / "Game.zip", {"Disk1.adf": b"a", "Disk2.adf": b"b"})
+
+        assert RealMachine().read_whdload_slave(path).status == WHDLOAD_NO_SLAVE
+
+    def test_a_selected_member_whose_bytes_are_no_slave_says_so(self, tmp_path):
+        path = tmp_path / "Game.lha"
+        path.write_bytes(_stored_lha({"Game.slave": b"not an executable"}))
+
+        assert RealMachine().read_whdload_slave(str(path)).status == WHDLOAD_SLAVE_UNREADABLE
+
+    def test_a_member_compressed_by_a_method_this_reader_lacks_says_so(self, tmp_path):
+        broken = bytearray(_stored_lha({"Game.slave": b"whatever"}))
+        broken[2:7] = b"-lh7-"
+        path = tmp_path / "Game.lha"
+        path.write_bytes(bytes(broken))
+
+        assert RealMachine().read_whdload_slave(str(path)).status == WHDLOAD_SLAVE_UNREADABLE
+
+    def test_an_archive_that_is_not_there_carries_through_to_the_slave_read(self, tmp_path):
+        assert RealMachine().read_whdload_slave(str(tmp_path / "gone.lha")).status == WHDLOAD_MISSING
+
+
+class TestFixtureArchiveReads:
+    """The fixture's model of the two reads: data in, the same words out."""
+
+    def _machine(self, **extra):
+        return FixtureMachine({"/roms/Game.lha": {"status": "invalid-text"}}, **extra)
+
+    def test_a_declared_listing_is_what_the_walk_answers(self):
+        machine = self._machine(archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)})
+
+        assert machine.list_archive("/roms/Game.lha") == ArchiveListResult(ARCHIVE_OK, SAMPLE_MEMBERS)
+
+    @pytest.mark.parametrize("state", ["unreadable", "not-archive"])
+    def test_a_declared_state_is_what_the_walk_answers(self, state):
+        machine = self._machine(archives={"/roms/Game.lha": state})
+
+        assert machine.list_archive("/roms/Game.lha").status == state
+
+    def test_a_file_nobody_called_an_archive_is_not_one(self):
+        assert self._machine().list_archive("/roms/Game.lha").status == ARCHIVE_NOT_ARCHIVE
+
+    def test_a_path_that_is_not_there_is_missing(self):
+        assert self._machine().list_archive("/roms/Other.lha").status == ARCHIVE_MISSING
+
+    def test_a_declared_slave_answers_its_two_fields(self):
+        machine = self._machine(
+            archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)},
+            whdload_slaves={"/roms/Game.lha": {"slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game"}},
+        )
+
+        assert machine.read_whdload_slave("/roms/Game.lha") == WhdloadSlaveResult(
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game"
+        )
+
+    def test_a_slave_older_than_ten_states_no_name(self):
+        machine = self._machine(
+            archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)},
+            whdload_slaves={"/roms/Game.lha": {"slave": SAMPLE_SLAVE, "version": 8, "name": None}},
+        )
+
+        assert machine.read_whdload_slave("/roms/Game.lha").name is None
+
+    @pytest.mark.parametrize("state", ["no-slave", "slave-unreadable"])
+    def test_a_declared_slave_state_is_what_the_read_answers(self, state):
+        machine = self._machine(
+            archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)}, whdload_slaves={"/roms/Game.lha": state}
+        )
+
+        assert machine.read_whdload_slave("/roms/Game.lha").status == state
+
+    def test_a_listed_archive_nobody_read_a_slave_out_of_has_none(self):
+        machine = self._machine(archives={"/roms/Game.lha": list(SAMPLE_MEMBERS)})
+
+        assert machine.read_whdload_slave("/roms/Game.lha").status == WHDLOAD_NO_SLAVE
+
+    def test_the_containers_own_failure_carries_through_to_the_slave_read(self):
+        machine = self._machine(archives={"/roms/Game.lha": "not-archive"})
+
+        assert machine.read_whdload_slave("/roms/Game.lha").status == WHDLOAD_NOT_ARCHIVE
+
+    @pytest.mark.parametrize(
+        ("kwargs", "reason"),
+        [
+            pytest.param({"archives": {"/roms/Nope.lha": []}}, "no file is declared", id="no-such-file"),
+            pytest.param({"archives": {"/roms/Game.lha": "gone"}}, "state must be one of", id="bad-state"),
+            pytest.param(
+                {"archives": {"/roms/Game.lha": ["/absolute"]}},
+                "archive-internal path",
+                id="absolute-member",
+            ),
+            pytest.param(
+                {"archives": {"/roms/Game.lha": ["a/../b"]}},
+                "archive-internal path",
+                id="climbing-member",
+            ),
+            pytest.param(
+                {"whdload_slaves": {"/roms/Game.lha": "no-slave"}},
+                "no archive with a member list",
+                id="slave-without-archive",
+            ),
+            pytest.param(
+                {
+                    "archives": {"/roms/Game.lha": ["a.slave"]},
+                    "whdload_slaves": {"/roms/Game.lha": {"slave": "b.slave", "version": 17, "name": "X"}},
+                },
+                "not in this archive's listing",
+                id="slave-outside-the-listing",
+            ),
+            pytest.param(
+                {
+                    "archives": {"/roms/Game.lha": ["a.slave"]},
+                    "whdload_slaves": {"/roms/Game.lha": {"slave": "a.slave", "version": 8, "name": "X"}},
+                },
+                "ws_name field at all",
+                id="a-name-an-old-slave-cannot-have",
+            ),
+        ],
+    )
+    def test_a_fixture_that_describes_no_machine_fails_to_build(self, kwargs, reason):
+        with pytest.raises(ValueError, match=reason):
+            self._machine(**kwargs)
+
+    def test_a_listing_beside_an_unreadable_file_is_refused(self):
+        with pytest.raises(ValueError, match="states no member list"):
+            FixtureMachine(
+                {"/roms/Game.lha": {"status": "unreadable"}}, archives={"/roms/Game.lha": ["a"]}
+            )
+
+    def test_the_fixture_and_the_real_machine_answer_an_archive_alike(self):
+        real = RealMachine().read_whdload_slave(SAMPLE_ARCHIVE)
+        fixture = FixtureMachine(
+            {SAMPLE_ARCHIVE: {"status": "invalid-text"}},
+            archives={SAMPLE_ARCHIVE: list(SAMPLE_MEMBERS)},
+            whdload_slaves={
+                SAMPLE_ARCHIVE: {"slave": SAMPLE_SLAVE, "version": 17, "name": "Test Game"}
+            },
+        ).read_whdload_slave(SAMPLE_ARCHIVE)
+
+        assert fixture == real
