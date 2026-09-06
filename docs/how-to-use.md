@@ -314,9 +314,21 @@ Every question a handle answers, the aggregate asks all of them: `health()`, `sa
   that arrangement does not have. Branch on the type before reading `dir`.
 
 The aggregate resolves nothing itself. It merges nothing, drops no duplicates, and prefers nothing beyond detection
-order (RetroDECK, EmuDeck, bare Flatpak, bare native): a machine that runs PPSSPP under two arrangements gives you
-PPSSPP twice, once with each arrangement's wiring, and the label is which is which. Handing you both is not guessing —
-picking one would be.
+order: a machine that runs PPSSPP under two arrangements gives you PPSSPP twice, once with each arrangement's wiring,
+and the label is which is which. Handing you both is not guessing — picking one would be.
+
+Detection order is `detect`'s probe order, highest priority first (`atlas/detect.py:50-63`) — the order `detect()`
+returns handles in and `every_installation` asks them in:
+
+1. RetroDECK
+2. EmuDeck
+3. the bare RetroArch Flatpak — only where EmuDeck is absent: EmuDeck _is_ a configured `org.libretro.RetroArch`, so its
+   handle claims that Flatpak and carries both descriptions in `kinds` instead of a second handle appearing
+4. a bare native RetroArch — probed independently, so it appears beside EmuDeck rather than being claimed by it
+
+A consumer with its own priority does not reorder the list: it reads `answered.installation.kind` and picks. **The order
+is part of the contract.** Changing it, or inserting a new arrangement kind anywhere but at the end, is a breaking
+change and is released as one.
 
 An empty result is `atlas.detect`'s empty result: nothing is installed. That is its only meaning, because detection
 triggers on marker existence — a present-but-broken installation is still detected, still answers, and still carries its
