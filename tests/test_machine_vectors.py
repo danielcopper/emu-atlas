@@ -46,7 +46,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _VECTOR_DIR = _REPO_ROOT / "vectors" / "machines"
 
 
-def _load_vectors():
+def load_vectors():
     files = sorted(_VECTOR_DIR.glob("*.json"))
     assert files, f"no vector files found in {_VECTOR_DIR}"
     for path in files:
@@ -57,7 +57,7 @@ def _load_vectors():
             yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
 
 
-def _machine(inp) -> FixtureMachine:
+def fixture_machine(inp) -> FixtureMachine:
     return FixtureMachine(
         inp["files"],
         symlinks=inp.get("symlinks"),
@@ -273,13 +273,13 @@ QUESTIONS = {
 }
 
 
-@pytest.mark.parametrize("vector", list(_load_vectors()))
+@pytest.mark.parametrize("vector", list(load_vectors()))
 def test_machine_vector(vector):
     inp = vector["input"]
     expected = vector["expected"]
     name = vector["name"]
     rationale = vector.get("rationale", name)
-    machine = _machine(inp)
+    machine = fixture_machine(inp)
 
     installs = atlas.detect(inp["home"], machine)
     assert [installation_contract(i) for i in installs] == expected["installations"], rationale

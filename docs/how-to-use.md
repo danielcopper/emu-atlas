@@ -730,9 +730,11 @@ for a in g.alternatives:
 ```
 
 An alternative names the **full option combination** that reaches its mode, so "switch to per-game saves" is a concrete
-edit of concrete keys in a concrete file, not a guess. One special value: `g.value == atlas.GRANULARITY_NONE` (only ever
-beside `save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are then
-exactly the way out.
+edit of concrete keys in a concrete file, not a guess — and a test holds it there: every alternative the conformance
+corpus publishes, except any the test names as unappliable, is written into the fixture it came from and the question
+asked again, and the answer has to select exactly the mode the alternative named. One special value:
+`g.value == atlas.GRANULARITY_NONE` (only ever beside `save-writes-discarded`) means this configuration keeps no save at
+all — the readings and alternatives are then exactly the way out.
 
 **A mixed mode states every grouping.** `granularity.value` is _one_ word — the first group's — and for the mode in
 force that is exact, because `file_set.groups` carries every part with its own grouping and role. An alternative has no
