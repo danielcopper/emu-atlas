@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.13.0](https://github.com/danielcopper/emu-atlas/compare/v0.12.0...v0.13.0) (2026-09-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** the machines vector family is schema 4 — a port must implement Machine.list_archive and Machine.read_whdload_slave and model the two new fixture inputs. Every PUAE vector's fixture changes, because the card now reads puae_use_whdload and the fixtures did not model the core registering it, and the two vectors that recorded the archive and WHDLoad refusals are replaced by the answers those classes now get.
+
+### Features
+
+* **saves:** puae answers the archive, WHDLoad and hard-disk classes ([#406](https://github.com/danielcopper/emu-atlas/issues/406)) ([4612c4b](https://github.com/danielcopper/emu-atlas/commit/4612c4bb42e52e48762ac8cffabc20dd5d213a36)), closes [#392](https://github.com/danielcopper/emu-atlas/issues/392)
+
+
+### Documentation
+
+* **readme:** the front page opens the way tender's does ([#403](https://github.com/danielcopper/emu-atlas/issues/403)) ([80c71f9](https://github.com/danielcopper/emu-atlas/commit/80c71f92a0d48613ab314f13687edecdbc587977))
+
 ## [0.12.0](https://github.com/danielcopper/emu-atlas/compare/v0.11.0...v0.12.0) (2026-09-06)
 
 
