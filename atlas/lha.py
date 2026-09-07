@@ -146,7 +146,7 @@ _END_MARGIN_BITS = 32
 # of 65535 against a table holding one zero-length symbol) turns a few
 # thousand compressed bytes into tens of megabytes before the end of the
 # stream is reached.
-_MAX_MEMBER_BYTES = 16 << 20
+_MAX_MEMBER_BYTES = 4 << 20
 
 _CRC16_POLYNOMIAL = 0xA001
 

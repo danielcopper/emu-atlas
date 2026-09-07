@@ -8590,11 +8590,13 @@ class TestTheTemplatesACardsOwnRuleFills:
         assert _fill_rule_templates("puae", "cd-per-game", plain, {}) is plain
 
     def test_a_subdir_the_rule_filled_with_two_values_fails_loudly(self):
+        mode = self._mode(self.GROUP)
+
         with pytest.raises(ValueError, match="one directory"):
-            _fill_rule_templates(
-                "puae", "whdload-files", self._mode(self.GROUP), {"<whdload_name>": ("a", "b")}
-            )
+            _fill_rule_templates("puae", "whdload-files", mode, {"<whdload_name>": ("a", "b")})
 
     def test_a_file_template_the_rule_filled_with_nothing_fails_loudly(self):
+        mode = self._mode(self.FILES)
+
         with pytest.raises(ValueError, match="filled it with nothing"):
-            _fill_rule_templates("puae", "archived-floppy-redirected", self._mode(self.FILES), {})
+            _fill_rule_templates("puae", "archived-floppy-redirected", mode, {})

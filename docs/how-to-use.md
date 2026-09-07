@@ -958,7 +958,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
 | `archive-format-unread`               | the loaded archive is in a format atlas reads none of                              | `extension`                |
 | `archive-unread`                      | the loaded archive's member list did not come back                                 | `status`                   |
-| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one       | `classes`                  |
+| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one       | `volumes`                  |
 | `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states          | `member`                   |
 | `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted | `entries`                  |
 | `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist     | `classes`                  |

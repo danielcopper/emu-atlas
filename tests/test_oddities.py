@@ -4331,8 +4331,10 @@ class TestARuleFilledTemplateBelongsToACardWithARule:
         ],
     )
     def test_a_card_with_no_rule_may_not_carry_one(self, subdir, files):
+        card = self._card(rule=False, subdir=subdir, files=files)
+
         with pytest.raises(ValueError, match="declares no governing_rule"):
-            load_oddities(self._card(rule=False, subdir=subdir, files=files))
+            load_oddities(card)
 
 
 def test_a_rule_filled_template_in_observe_needs_a_rule_too():

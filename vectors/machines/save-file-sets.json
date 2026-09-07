@@ -17850,6 +17850,705 @@
           }
         }
       }
+    },
+    {
+      "name": "an-lha-is-mounted-whole-so-its-own-startup-sequence-outranks-the-drawer-inside-it",
+      "rationale": "An .lha is handed to the emulator as one volume, so DH0: is the archive's own root and the S/Startup-Sequence lying there boots it. The drawer beside it holds a slave the helper would have run, and none of that is reached — reading this volume at the drawer instead would have named a save directory the machine never writes. (Its own S drawer is a second directory at that root, which is what leaves the script's search unable to tell them apart and the slave named by the inference instead.)",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(whole volume).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(whole volume).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(whole volume).lha": [
+            "Game.info",
+            "Game/Game.slave",
+            "S/Startup-Sequence"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(whole volume).lha": {
+            "slave": "Game/Game.slave",
+            "version": 17,
+            "name": "Ports of Call",
+            "selected_by": "only-slave"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "volume-boots-itself",
+                "container": "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(whole volume).lha"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-startup-sequence-inside-a-drawer-does-not-boot-the-lha-around-it",
+      "rationale": "The same archive with the script one level down: DH0: is still the archive's root, which carries no script of its own, so the helper searches it and runs the slave the drawer's icon points at. The script inside the drawer is WHDLoad's business, not the boot's.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(HD).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(HD).lha": [
+            "Game.info",
+            "Game/Game.slave",
+            "Game/S/Startup-Sequence"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Ports of Call (1986)(Aegis)(HD).lha": {
+            "slave": "Game/Game.slave",
+            "version": 17,
+            "name": "Ports of Call",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Ports of Call",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "whdload-disabled",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "none"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-startup-sequence-inside-a-directorys-drawer-leaves-the-slave-to-name-the-saves",
+      "rationale": "A directory is mounted whole too, so the same shape answers the same way: the volume's root carries no script, the helper searches it, and the slave names the save directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallHD/Game.info": "icon",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallHD/Game/Game.slave": "slave",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallHD/Game/S/Startup-Sequence": "script"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/PortsOfCallHD"
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallHD": {
+            "slave": "Game/Game.slave",
+            "version": 17,
+            "name": "Ports of Call",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "puae",
+                "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
+                "role": "battery",
+                "citation": "WHDLoad gives each installed program a sub directory of SavePath: and the program writes whatever it writes into it — save games, high scores, its own configuration — so the file names inside follow from the game rather than from anything atlas reads. The directory itself is stated: the core creates <save dir>/WHDSaves and mounts it as the WHDSaves: volume (libretro/libretro-core.c:6767-6785 at 0043cf9) that WHDLoad.prefs points SavePath at (whdload/WHDLoad.prefs:37; the copy in the system directory is what governs, and the core writes the baked one there only when none is present, :6568-6588, copying whatever stands there into the helper on every run, :5881-5904). Its name is the slave's ws_name, reached one of two ways, and both are derived. [D] The boot script's search named the slave (whdload/WHDLoad_files/S/Startup-Sequence:61-82) — but what the script then launches is the icon beside it rather than the slave itself (:141-150), and which slave that icon's tooltypes name is not read here, so the step from the search's answer to the program that runs is an assumption. [D] Or the search named none and the archive holds exactly one .slave member, which is then the only one WHDLoad can be handed however the launch reaches it — the sound case, and the one that does not rest on the icon"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "whdload-files",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "SavePath",
+                "value": "WHDSaves:",
+                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
+              },
+              {
+                "key": "ws_name",
+                "value": "Ports of Call",
+                "options_file": null
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "hd-writeback",
+                "options": {
+                  "puae_use_whdload": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              },
+              {
+                "mode": "whdload-hdfs",
+                "options": {
+                  "puae_use_whdload": "hdfs"
+                },
+                "values": [
+                  "shared-card"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-directorys-own-startup-sequence-outranks-a-slave-in-a-drawer-beside-it",
+      "rationale": "The other half of the same pair: here the script really is at the volume's root, so the helper hands the boot straight back and never runs the slave in the drawer — and a directory is mounted read-write, so those writes land in the directory itself rather than in the WHDSaves volume.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallWB/S/Startup-Sequence": "script",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallWB/C/LoadWB": "command",
+          "/mnt/sd/retrodeck/roms/amiga/PortsOfCallWB/Game/Game.slave": "slave"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/PortsOfCallWB"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae",
+                "mode": "hd-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "hd-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

@@ -82,17 +82,28 @@ core with no `options` key and one whose `options` is `{}` is load-bearing: the 
 second is evidence that the core registers none.
 
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
-`/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file, because a listing describes that
-file's bytes; a declared file with no entry here answers **not an archive**, so a vector that forgot the key cannot pass
-a file off as one that lists.
+`/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
+`lzh`, because a listing here describes that file's bytes and those are the three formats a machine opens; a declared
+file with no entry answers **not an archive**, so a vector that forgot the key cannot pass a file off as one that lists.
 
-**`whdload_slaves`** — the same archive path → what the WHDLoad slave inside it states:
+A **directory** is a container too, and it is never declared here: a machine lists one as itself and its members follow
+from the paths in `files`. That holds whatever the directory is called — a directory named `Game.zip` is a directory,
+because the core asks what a path _is_ before it looks at the name, so declaring it under `archives` is a shape no
+machine can answer.
+
+**`whdload_slaves`** — the path of the container the core **mounts** → what the WHDLoad slave inside it states:
 `{"slave": "Game/Game.slave", "version": 17, "name": "Alien Breed", "selected_by": "script"}`, where `name` is `null`
 for a slave older than version 10 (which has no such field) and `selected_by` is `"script"` (the core's own boot-script
-search named the member) or `"only-slave"` (the script named none and the archive offers WHDLoad exactly one), or one of
-the states `"no-slave"` / `"ambiguous"` / `"slave-unreadable"`. The archive's own failures are not spelled here — they
-come from `archives`, so the two reads can never describe different machines — and a stated `slave` must be a member
-that archive lists. A listed archive with no entry here answers **no slave**.
+search named the member) or `"only-slave"` (the script named none and the container offers WHDLoad exactly one), or one
+of the states `"no-slave"` / `"ambiguous"` / `"slave-unreadable"`. The key is the mount rather than the launch path, so
+an archive and a directory stand under themselves while a `.slave` or an `.info` stands under the **drawer** beside it.
+The container's own failures are not spelled here — they come from `archives`, or from `files` for a directory, so the
+two reads can never describe different machines — and a stated `slave` must be a member that container lists. A listed
+container with no entry here answers **no slave**.
+
+Both fields of that entry are held to the reader: the reference suite selects a slave over the declared listing and
+fails the vector where the member or the route it returns is not the one declared, so a fixture cannot state a route the
+boot script would not have taken.
 
 **`unlistable` vs `inaccessible`** — two ways to be unreadable, told apart by one question: does the `stat` succeed?
 

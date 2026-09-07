@@ -24,9 +24,9 @@ live value, and where to change it.
 from __future__ import annotations
 
 import posixpath
-from dataclasses import dataclass, replace as _dc_replace
+from dataclasses import dataclass, field, replace as _dc_replace
 from types import MappingProxyType
-from typing import Callable, Mapping
+from typing import Callable, Mapping, cast
 
 from . import whdload
 from .machine import (
@@ -152,7 +152,9 @@ class RuleReading:
 
 
 # What a rule fills no template with — the state of every mode whose names
-# follow from the card alone.
+# follow from the card alone. It reaches ModeChoice through a factory rather
+# than as a bare default: a dataclass rejects a default whose class is not
+# hashable, and mappingproxy became hashable only in 3.12.
 _NO_FILLS: Mapping[str, tuple[str, ...]] = MappingProxyType({})
 
 
@@ -182,7 +184,7 @@ class ModeChoice:
     alternatives: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
     caveats: tuple[Caveat, ...] = ()
     readings: tuple[OptionReading, ...] = ()
-    fills: Mapping[str, tuple[str, ...]] = _NO_FILLS
+    fills: Mapping[str, tuple[str, ...]] = field(default_factory=lambda: _NO_FILLS)
 
 
 def _value_unestablished(core: str, option_key: str) -> Caveat:
@@ -1254,11 +1256,12 @@ _PUAE_WHDLOAD_OFF = "whdload-disabled"
 # Where the writes of a volume that boots its own script land, by the shape
 # the content was launched as: the drawer beside a launch file is a directory
 # on this machine, an extracted archive's is a copy inside the temporary tree,
-# and an .lha is read-only and answers neither.
+# and an .lha is read-only and answers neither. A directory is not keyed here
+# at all — it is what it is whatever it is called, so it is tested first.
 _PUAE_BOOTS_ITSELF_MODES = {
     "slave": _PUAE_HD_WRITEBACK,
     "info": _PUAE_HD_WRITEBACK,
-    "zip": _PUAE_ARCHIVED_HD_LOST,
+    _PUAE_ARCHIVE_EXTENSION: _PUAE_ARCHIVED_HD_LOST,
 }
 
 
@@ -1626,12 +1629,15 @@ def _puae_whdload(
     here = _puae_whdload_body(core, reading, switch, switched_off)
     if here.mode is None:
         return here
-    return _dc_replace(
-        here,
-        alternatives=_puae_switch_alternatives(
-            lambda other: _puae_whdload_body(core, reading, other, switched_off).mode,
-            switch,
-            here.mode,
+    return cast(
+        ModeChoice,
+        _dc_replace(
+            here,
+            alternatives=_puae_switch_alternatives(
+                lambda other: _puae_whdload_body(core, reading, other, switched_off).mode,
+                switch,
+                here.mode,
+            ),
         ),
     )
 
@@ -1645,7 +1651,7 @@ def _puae_whdload_body(
     question of the values it does *not* hold, so an alternative can only
     ever name the mode it really selects.
     """
-    booted = _puae_volume_boots_itself(core, reading)
+    booted = _puae_volume_boots_itself(core, reading, value)
     if booted is not None:
         # A volume that boots its own script answers the same whatever the
         # switch says: with the helper on it hands the boot straight back,
@@ -1684,42 +1690,87 @@ def _puae_switch_alternatives(
     return tuple(offered)
 
 
-def _puae_volume_boots_itself(core: str, reading: RuleReading) -> ModeChoice | None:
+def _puae_volume_boots_itself(core: str, reading: RuleReading, value: str) -> ModeChoice | None:
     """A volume carrying its own startup script is not searched for a slave at all.
 
     The helper's script hands the boot straight back to it and quits
     (whdload/WHDLoad_files/S/Startup-Sequence:15-39 at 0043cf9), so where its
     writes go is what that script does. Where the volume is one the
-    writes can land in — the drawer beside a ``.slave`` or an ``.info``,
-    mounted read-write (:5709-5711), or the copy of one inside an extracted
-    archive — that is the in-place mode. An ``.lha`` is mounted read-only
-    (:5706-5708), so they cannot land in it at all and where that script
-    sends them instead is not read here.
+    writes can land in — a directory or the drawer beside a ``.slave`` or an
+    ``.info``, mounted read-write (:5709-5711), or the copy of one inside an
+    extracted archive — that is the in-place mode. An ``.lha`` is mounted
+    read-only (:5706-5708), so they cannot land in it at all and where that
+    script sends them instead is not read here.
+
+    The answer is the same for every value of the switch, which is why this
+    runs before it is consulted; *value* only says which of the two ways the
+    volume came to boot the refusal should state.
     """
     listing = reading.archive_members()
     if listing.status != ARCHIVE_OK:
         return None
-    root = whdload.extracted_root(listing.members) or ""
+    root = _puae_mounted_root(reading, listing.members)
     inside = [name[len(root) :] for name in listing.members if name.startswith(root)]
     if not any(name.lower() == whdload.STARTUP_SEQUENCE for name in inside):
         return None
+    if reading.content_is_directory():
+        return ModeChoice(_PUAE_HD_WRITEBACK)
     in_place = _PUAE_BOOTS_ITSELF_MODES.get(reading.content_extension or "")
     if in_place is None:
-        return ModeChoice(None, caveats=(_puae_boots_itself(core, reading),))
+        return ModeChoice(None, caveats=(_puae_boots_itself(core, reading, value),))
     return ModeChoice(in_place)
 
 
-def _puae_boots_itself(core: str, reading: RuleReading) -> Caveat:
+def _puae_mounted_root(reading: RuleReading, members: tuple[str, ...]) -> str:
+    """The prefix of a listing the core leaves mounted as ``DH0:`` — the seam's own root.
+
+    Only a zip is extracted at all (libretro-core.c:6280-6296 at 0043cf9 —
+    the branch takes ``.7z`` and ``.rp9`` too, and this card refuses both:
+    the first as a format it reads none of, the second as no recorded class),
+    and only an extracted tree has a prefix inside it the core then picks
+    (:6332-6362). An ``.lha`` (:5706-5708) and a directory (:5709-5711) are
+    mounted whole, and a ``.slave`` or an ``.info`` mounts the drawer beside
+    it (:5688-5700), which is a directory too — for all of them ``DH0:`` is
+    the listing's own root, which is what the seam reads the volume at
+    (``machine._mounted_root``). Reading the two at different roots is how a
+    script one of them carries lands in the wrong story.
+    """
+    if reading.content_is_directory() or reading.content_extension != _PUAE_ARCHIVE_EXTENSION:
+        return ""
+    return whdload.extracted_root(members) or ""
+
+
+def _puae_boots_itself(core: str, reading: RuleReading, value: str) -> Caveat:
     """A read-only archive that boots its own script — its writes go somewhere unread."""
     return _mode_unestablished(
         core,
         REASON_VOLUME_BOOTS_ITSELF,
-        "the volume carries an S/Startup-Sequence of its own, so the WHDLoad helper hands the "
-        "boot straight back to it and never searches it for a slave "
-        "(whdload/WHDLoad_files/S/Startup-Sequence:15-39 at 0043cf9) — and this volume is an "
-        "archive, mounted read-only (libretro-core.c:5706-5708), so its writes cannot land in it "
-        "and where that script sends them instead is not something this answer reads",
+        "the volume carries an S/Startup-Sequence of its own, so "
+        + _puae_boots_itself_clause(value)
+        + " — and this volume is an archive, mounted read-only (libretro-core.c:5706-5708), so its "
+        "writes cannot land in it and where that script sends them instead is not something this "
+        "answer reads",
         container=reading.content_path or "",
+    )
+
+
+def _puae_boots_itself_clause(value: str) -> str:
+    """How this volume came to boot — which is not the same story with the helper off.
+
+    With ``puae_use_whdload`` on, the helper volume takes the first word and
+    its own script hands the boot straight back. With it off nothing of
+    WHDLoad's is mounted at all (libretro-core.c:6543), so there is no helper
+    to hand anything: this volume boots because it is the only one there is.
+    """
+    if value == _PUAE_DISABLED:
+        return (
+            "with 'puae_use_whdload' disabled it is the only volume mounted "
+            "(libretro-core.c:6543 at 0043cf9) and boots itself, with no helper to search it for "
+            "a slave"
+        )
+    return (
+        "the WHDLoad helper hands the boot straight back to it and never searches it for a slave "
+        "(whdload/WHDLoad_files/S/Startup-Sequence:15-39 at 0043cf9)"
     )
 
 
@@ -1802,7 +1853,7 @@ def _puae_save_redirect(
 
 def _puae_redirect_because(save_path: str | None, save_dir: str | None) -> str:
     """What the file did, in the words the caveat's own data will bear out."""
-    volume = f"the WHDSaves: volume the core mounts under the save root"
+    volume = "the WHDSaves: volume the core mounts under the save root"
     if save_path is None and save_dir is None:
         return (
             "states no SavePath at all, and it is the prefs the core copies into its helper on "
@@ -1998,12 +2049,17 @@ def _puae_hard_disk(
     here = _puae_hd_outcome(core, reading, in_place, inside, switch, extension)
     if here.mode is None:
         return here
-    return _dc_replace(
-        here,
-        alternatives=_puae_switch_alternatives(
-            lambda other: _puae_hd_outcome(core, reading, in_place, inside, other, extension).mode,
-            switch,
-            here.mode,
+    return cast(
+        ModeChoice,
+        _dc_replace(
+            here,
+            alternatives=_puae_switch_alternatives(
+                lambda other: _puae_hd_outcome(
+                    core, reading, in_place, inside, other, extension
+                ).mode,
+                switch,
+                here.mode,
+            ),
         ),
     )
 

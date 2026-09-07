@@ -559,6 +559,19 @@ def _archive_suffix(path: str) -> str:
     return os.path.splitext(path)[1].lower().lstrip(".")
 
 
+def _container_suffix(container: str) -> str:
+    """Which reader a mounted container takes, asking what it *is* before what it is called.
+
+    The core tests ``path_is_directory`` before it looks at any extension
+    (libretro-dc.c:850-853 before :862-864; libretro-core.c:5710 mounts on the
+    same test), so a directory named ``Game.zip`` is a directory and its
+    members are files under it. Every read of a container goes through this
+    rather than through the extension alone, or such a directory would be
+    handed to ``zipfile`` and answer unreadable for its whole contents.
+    """
+    return "" if os.path.isdir(container) else _archive_suffix(container)
+
+
 def _stat_regular_file(path: str) -> None:
     """Refuse anything but a regular file before it is opened.
 
@@ -623,7 +636,7 @@ def _original_name(container: str, member: str) -> str:
     be, and opening ``Game.slave`` in an archive that wrote ``./Game.slave``
     finds nothing.
     """
-    suffix = _archive_suffix(container)
+    suffix = _container_suffix(container)
     if suffix not in ARCHIVE_SUFFIXES:
         return member
     return next((raw for raw in _raw_names(container, suffix) if _normalise(raw) == member), member)
@@ -667,7 +680,7 @@ def _mounted_root(container: str, members: tuple[str, ...]) -> str | None:
     container, extracted only while the core runs, so nothing on disk holds
     its slave for this seam to read.
     """
-    if _archive_suffix(container) != ARCHIVE_ZIP:
+    if _container_suffix(container) != ARCHIVE_ZIP:
         return ""
     accepted = whdload.accepted_members(members)
     if any(name.lower().endswith(_NESTED_ARCHIVE_SUFFIX) for name in accepted):
@@ -735,7 +748,7 @@ def _custom_text(container: str, root: str, inside: list[str]) -> str | None:
 
 def _member_bytes(container: str, member: str) -> bytes:
     """One member's bytes, out of whichever container this is."""
-    suffix = _archive_suffix(container)
+    suffix = _container_suffix(container)
     if suffix == ARCHIVE_ZIP:
         _stat_regular_file(container)
         with zipfile.ZipFile(container) as archive:

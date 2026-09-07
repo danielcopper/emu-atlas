@@ -1270,6 +1270,22 @@ class TestArchiveReads:
             WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game", "script"
         )
 
+    def test_a_slave_under_a_directory_spelled_like_an_archive_is_still_read(self, tmp_path):
+        # The listing already tests "is it a directory?" first; so must every
+        # read that follows it, or the drawer under a directory called
+        # Game.zip is handed to zipfile and the slave inside answers unread.
+        data = Path(SAMPLE_ARCHIVE).read_bytes()
+        root = tmp_path / "Game.zip"
+        for member in atlas.lha.members(data):
+            path = root / member.name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(atlas.lha.extract(data, member))
+        (root / "custom").write_bytes(b"SavePath=DH1:Elsewhere\n")
+
+        assert RealMachine().read_whdload_slave(str(root)) == WhdloadSlaveResult(
+            WHDLOAD_OK, SAMPLE_SLAVE, 17, "Test Game", "script", "SavePath=DH1:Elsewhere\n"
+        )
+
     def test_a_whdload_archive_inside_a_zip_is_a_container_this_seam_does_not_open(self, tmp_path):
         path = _zip_of(tmp_path / "Game.zip", {"Game.lha": Path(SAMPLE_ARCHIVE).read_bytes()})
 

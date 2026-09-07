@@ -107,9 +107,10 @@ def test_bytes_that_are_not_a_slave_are_refused(data: bytes, reason: str) -> Non
 def test_a_name_pointing_outside_the_hunk_is_refused() -> None:
     body = bytearray(slave_body())
     struct.pack_into(">H", body, 36, 4000)
+    data = hunk_file(bytes(body))
 
     with pytest.raises(whdload.NotASlave, match="outside"):
-        whdload.read_slave(hunk_file(bytes(body)))
+        whdload.read_slave(data)
 
 
 # ---------------------------------------------------------------------------
