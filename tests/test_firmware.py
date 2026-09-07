@@ -108,8 +108,10 @@ from atlas.machine import (
     FixtureMachine,
     GlobResult,
     PathKind,
+    ArchiveListResult,
     Ps2BiosHeaderResult,
     ReadResult,
+    WhdloadSlaveResult,
 )
 from atlas.placement import CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR, CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
 from atlas.systems import known_systems
@@ -3042,6 +3044,14 @@ class _CountingMachine:
     def read_ps2_bios_header(self, path: str) -> Ps2BiosHeaderResult:
         self._count("read_ps2_bios_header")
         return self._inner.read_ps2_bios_header(path)
+
+    def list_archive(self, path: str) -> ArchiveListResult:
+        self._count("list_archive")
+        return self._inner.list_archive(path)
+
+    def read_whdload_slave(self, path: str) -> WhdloadSlaveResult:
+        self._count("read_whdload_slave")
+        return self._inner.read_whdload_slave(path)
 
     def glob(self, pattern: str) -> GlobResult:
         self._count("glob")

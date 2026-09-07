@@ -11,7 +11,9 @@ import pytest
 
 import atlas
 from atlas.firmware import resolve_links
+from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPrivateUsage]
 from atlas.machine import SYMLINK_HOPS, FixtureMachine
+from atlas.oddities import SaveGroup, SaveMode
 from tests.answers import placed, state_placed
 
 HOME = "/home/deck"
@@ -6402,6 +6404,12 @@ class _CountingMachine:
     def read_ps2_bios_header(self, path):
         return self._inner.read_ps2_bios_header(path)
 
+    def list_archive(self, path):
+        return self._inner.list_archive(path)
+
+    def read_whdload_slave(self, path):
+        return self._inner.read_whdload_slave(path)
+
     def glob(self, pattern):
         return self._inner.glob(pattern)
 
@@ -8529,3 +8537,66 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
             esde=esde,
         )
         self._refused(entry.savestate_location())
+
+
+class TestTheTemplatesACardsOwnRuleFills:
+    """The rule-filled templates are substituted once, before anything reads the mode.
+
+    A caller never sees one of these tokens: where the read behind it fails the
+    rule selects a mode that states no such name. So the tests here are about
+    the substitution itself and about the two ways a card and its rule can ship
+    out of step, which fail loudly rather than reaching an answer.
+    """
+
+    GROUP = SaveGroup(
+        subdir="WHDSaves/<whdload_name>", files=None, granularity="per-game-directory",
+        role="battery", unnamed="the program names its own files",
+    )
+    FILES = SaveGroup(
+        subdir=None, files=("<archive_member_stem>_save.adf", "<archive_member_stem>_save.adf.gz"),
+        granularity="per-game-files", role="disk-diff",
+    )
+
+    def _mode(self, group):
+        return SaveMode(root="savefile_directory", groups=(group,))
+
+    def test_a_subdir_segment_takes_the_one_value_the_rule_filled(self):
+        filled = _fill_rule_templates(
+            "puae", "whdload-files", self._mode(self.GROUP), {"<whdload_name>": ("Alien Breed",)}
+        )
+
+        assert filled.subdir == "WHDSaves/Alien Breed"
+
+    def test_a_file_name_expands_in_place_once_per_value(self):
+        filled = _fill_rule_templates(
+            "puae",
+            "archived-floppy-redirected",
+            self._mode(self.FILES),
+            {"<archive_member_stem>": ("Disk1", "Disk2")},
+        )
+
+        assert filled.files == (
+            "Disk1_save.adf",
+            "Disk2_save.adf",
+            "Disk1_save.adf.gz",
+            "Disk2_save.adf.gz",
+        )
+
+    def test_a_mode_with_no_template_is_handed_back_unchanged(self):
+        plain = self._mode(
+            SaveGroup(subdir=None, files=("<rom_stem>.nvr",), granularity="per-game-file", role="battery")
+        )
+
+        assert _fill_rule_templates("puae", "cd-per-game", plain, {}) is plain
+
+    def test_a_subdir_the_rule_filled_with_two_values_fails_loudly(self):
+        mode = self._mode(self.GROUP)
+
+        with pytest.raises(ValueError, match="one directory"):
+            _fill_rule_templates("puae", "whdload-files", mode, {"<whdload_name>": ("a", "b")})
+
+    def test_a_file_template_the_rule_filled_with_nothing_fails_loudly(self):
+        mode = self._mode(self.FILES)
+
+        with pytest.raises(ValueError, match="filled it with nothing"):
+            _fill_rule_templates("puae", "archived-floppy-redirected", mode, {})

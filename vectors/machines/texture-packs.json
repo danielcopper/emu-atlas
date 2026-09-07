@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md 'Placements'; atlas/textures.py; docs/research/core-audit.md",
   "description": "Where each emulator reads texture packs. The root is read live and the fragment below it is packaged world knowledge, so these vectors pin both halves of that join — plus the switch that says whether replacement is on, the keying of the tree where a citation states it, and the three ways this question refuses to name a directory at all.",
   "vectors": [

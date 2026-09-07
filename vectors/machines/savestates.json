@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md — savestate placement; docs/research/retrodeck-save-placement.md §18",
   "description": "Whole fixture machines in; the canonical SavestatePlacement serialization (atlas.contract.savestate_placement_contract) out, asserted with exact equality: dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, and caveat codes + data. There is no granularity field and its absence is contractual — no core writes a savestate, so no rule card can ever state one. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h/core_info.c at the pinned revision; see docs/research/retrodeck-save-placement.md §18.",
   "vectors": [

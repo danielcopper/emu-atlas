@@ -956,6 +956,17 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `virtual-sd-disabled`                 | the emulated SD card is switched off                                               | —                          |
 | `content-class-unnamed`               | the answer splits on the content's class and no content was named                  | —                          |
 | `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
+| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                              | `extension`                |
+| `archive-unread`                      | the loaded archive's member list did not come back                                 | `status`                   |
+| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one       | `volumes`                  |
+| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states          | `member`                   |
+| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted | `entries`                  |
+| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist     | `classes`                  |
+| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it   | `extension`                |
+| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots  | —                          |
+| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on          | `savepath`, `savedir`      |
+| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                      | —                          |
+| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                | `container`                |
 | `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
 | `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
 | `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |

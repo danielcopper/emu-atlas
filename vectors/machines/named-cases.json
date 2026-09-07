@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md — installations, the machine seam, save locations",
   "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and — per query — the full SavefilePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [

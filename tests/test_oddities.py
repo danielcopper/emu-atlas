@@ -4161,9 +4161,17 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             # the '.gz' is appended at run time to a path the '_save.adf'
             # literal already ends: no field of either binary carries the
             # finished name, and the half that can be pinned is pinned on the
-            # plain spelling beside it.
+            # plain spelling beside it. The archived spelling of the same pair
+            # is the same name over a different stem. The WHDLoad per-game
+            # directory is not the core's name at all — WHDLoad derives it
+            # from the slave's own ws_name at run time — while the volume it
+            # stands under ('WHDSaves') is a whole literal and is pinned.
+            ("puae", "<archive_member_stem>_save.adf.gz", "unprotected"),
             ("puae", "<rom_stem>_save.adf.gz", "unprotected"),
+            ("puae", "<whdload_name>", "unprotected"),
+            ("puae2021", "<archive_member_stem>_save.adf.gz", "unprotected"),
             ("puae2021", "<rom_stem>_save.adf.gz", "unprotected"),
+            ("puae2021", "<whdload_name>", "unprotected"),
             # quasi88's diff is named after the opened disk image's stem at run
             # time, composed from the whole format '%s%c%s.srm'. The in-place
             # mode no longer records a name: the save is the content file
@@ -4258,3 +4266,110 @@ class TestTheAnchorsAreLiteralsInTheDeployedCore:
             "either no shipped card anchors anything any more, or the cores moved out of this "
             "directory and the tripwire is silently checking nothing"
         )
+
+
+class TestARuleFilledTemplateBelongsToACardWithARule:
+    """The two templates a card's own rule fills, and where they may stand.
+
+    They are not holes: nothing hands one to a caller, because the rule either
+    fills it or selects a mode that states no such name. That only holds while
+    a card carrying one really has a rule behind it, which is what the loader
+    checks — a card without one would state the token verbatim as a directory
+    or a file name, the exact defect the template grammar exists to prevent.
+    """
+
+    def _card(self, *, rule: bool, subdir: str | None, files: list[str] | None) -> str:
+        saves: dict[str, object] = {
+            "modes": {
+                (MODE_ALWAYS if not rule else "only"): {
+                    "root": "savefile_directory",
+                    "groups": [
+                        {
+                            "subdir": subdir,
+                            "files": files,
+                            "granularity": GRANULARITY_PER_GAME_FILE,
+                            "role": "battery",
+                            **({} if files else {"unnamed": "the program names its own files"}),
+                        }
+                    ],
+                }
+            }
+        }
+        if rule:
+            saves["governing_rule"] = {"options": []}
+        return json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    ("scummvm" if rule else "x"): {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": saves,
+                    }
+                },
+            }
+        )
+
+    def test_a_rule_card_may_key_a_directory_on_a_template_its_rule_fills(self):
+        card = load_oddities(
+            self._card(rule=True, subdir="WHDSaves/<whdload_name>", files=None)
+        )[0]
+
+        assert card.modes["only"].subdir == "WHDSaves/<whdload_name>"
+
+    def test_a_rule_card_may_name_a_file_after_one(self):
+        card = load_oddities(
+            self._card(rule=True, subdir=None, files=["<archive_member_stem>_save.adf"])
+        )[0]
+
+        assert card.modes["only"].files == ("<archive_member_stem>_save.adf",)
+
+    @pytest.mark.parametrize(
+        ("subdir", "files"),
+        [
+            pytest.param("WHDSaves/<whdload_name>", None, id="in-a-subdir"),
+            pytest.param(None, ["<archive_member_stem>_save.adf"], id="in-a-file-name"),
+        ],
+    )
+    def test_a_card_with_no_rule_may_not_carry_one(self, subdir, files):
+        card = self._card(rule=False, subdir=subdir, files=files)
+
+        with pytest.raises(ValueError, match="declares no governing_rule"):
+            load_oddities(card)
+
+
+def test_a_rule_filled_template_in_observe_needs_a_rule_too():
+    """``observe`` carries names into a glob, so it is guarded like ``files``.
+
+    The fill reaches it and the loader's file-name grammar accepts a template
+    there, so a card whose only template sat in ``observe`` would state the
+    token as part of a name it looked for on disk.
+    """
+    card = json.dumps(
+        {
+            "schema": 1,
+            "cores": {
+                "x": {
+                    "identifiers": {"library_name": ["X"]},
+                    "saves": {
+                        "modes": {
+                            MODE_ALWAYS: {
+                                "root": "savefile_directory",
+                                "groups": [
+                                    {
+                                        "subdir": None,
+                                        "files": ["fixed.sav"],
+                                        "observe": ["<archive_member_stem>.sav"],
+                                        "granularity": GRANULARITY_PER_GAME_FILE,
+                                        "role": "battery",
+                                    }
+                                ],
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="declares no governing_rule"):
+        load_oddities(card)

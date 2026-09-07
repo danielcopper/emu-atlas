@@ -1,4 +1,4 @@
-"""Validate the shape of every vector file under vectors/ (schema 3). Stdlib only.
+"""Validate the shape of every vector file under vectors/ (schema 4). Stdlib only.
 
 Catches malformed vectors independently of the runner: a vector file must
 parse, carry the family header and schema matching its directory, and every
@@ -19,12 +19,14 @@ from typing import Any, NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Schema 3 asks more of a port than 2 did: `glob` answers how much of the walk
-# it could read, and a fixture can state a directory that exists and cannot be
-# listed. A port built to 2 would answer a bare list and model no such
-# directory, so the corpus is not the same contract — the number says so
-# instead of leaving it to be discovered one failing vector at a time.
-SCHEMA = 3
+# Schema 4 asks more of a port than 3 did: a machine answers two archive
+# reads — the member list of a zip or an LhA, and the WHDLoad slave inside
+# one — and a fixture models both. A port built to 3 implements neither, so
+# the corpus is not the same contract; the number says so instead of leaving
+# it to be discovered one failing vector at a time. (Schema 3 was where `glob`
+# began reporting how much of the walk it could read, and where a fixture
+# could state a directory that exists and cannot be listed.)
+SCHEMA = 4
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
 INPUT_FIELDS_OPTIONAL = {
@@ -35,6 +37,8 @@ INPUT_FIELDS_OPTIONAL = {
     "unlistable",
     "appimages",
     "ps2_bios_headers",
+    "archives",
+    "whdload_slaves",
     "savefile_query",
     "aggregate_query",
     "catalogue_query",
@@ -874,6 +878,8 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_cores(name, inp.get("cores", {}))
     _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
+    _validate_input_archives(name, inp.get("archives", {}), inp["files"])
+    _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp)
     _validate_input_queries(name, inp)
 
 
@@ -969,6 +975,142 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
         fail(f"{name}: ps2 bios header {path!r} romver must be {PS2_BIOS_ROMVER_LENGTH} characters")
     if len(spec["serial"]) > PS2_BIOS_SERIAL_LENGTH:
         fail(f"{name}: ps2 bios header {path!r} serial must be at most {PS2_BIOS_SERIAL_LENGTH} characters")
+
+
+# The archive modeling vocabulary — mirrored from FixtureMachine
+# (atlas/machine.py): the states RealMachine can report about a file it
+# opened, short of a member list. A listing describes a declared file's bytes,
+# so its path names one, and not one declared unreadable; a declared file with
+# no listing answers "not-archive" at the seam, which is what keeps a vector
+# that forgot the key from passing a file off as a listable archive.
+ARCHIVE_STATES = {"unreadable", "not-archive"}
+# The suffixes a reader claims. One rule decides what a container is, and both
+# machines share it: an archive suffix is read by the archive reader, a
+# directory is listed as itself, anything else is not a container.
+ARCHIVE_SUFFIXES = {"zip", "lha", "lzh"}
+# And the slave read's own two, which are all it adds: everything the
+# container can answer comes from the archive declaration, so the two reads
+# cannot contradict each other.
+WHDLOAD_SLAVE_STATES = {"no-slave", "ambiguous", "slave-unreadable"}
+WHDLOAD_SLAVE_FIELDS = {"slave", "version", "name", "selected_by"}
+# How a named member was arrived at: the core's own boot-script search, or
+# atlas's inference from an archive that offers WHDLoad exactly one slave.
+WHDLOAD_SELECTION_ROUTES = {"script", "only-slave"}
+# The version from which a slave has a ws_name field at all (WHDLoad autodoc,
+# WHDLoad.Slave: the fields from ws_name on are evaluated only for
+# ws_Version >= 10).
+WHDLOAD_NAMED_FROM_VERSION = 10
+
+
+def _validate_input_archives(name: str, archives: Any, files: Any) -> None:
+    if not isinstance(archives, dict):
+        fail(f"{name}: input.archives must be an object")
+    for path, spec in archives.items():
+        _validate_archive_path(name, path, files)
+        _validate_archive_spec(name, path, spec)
+
+
+def _validate_archive_path(name: str, path: Any, files: Any) -> None:
+    """An archive declaration names a readable file a reader claims by its suffix."""
+    if not isinstance(path, str) or path not in files:
+        fail(f"{name}: archive {path!r} must name a declared file")
+    if path.rpartition(".")[2].lower() not in ARCHIVE_SUFFIXES:
+        fail(
+            f"{name}: archive {path!r} must carry one of the suffixes a reader claims "
+            f"{sorted(ARCHIVE_SUFFIXES)} — a directory container is listed from the fixture "
+            "itself and is never declared here"
+        )
+    file_spec = files[path]
+    if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+        fail(f"{name}: archive {path!r} sits on an unreadable file, whose bytes answer no walk")
+
+
+def _validate_archive_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec not in ARCHIVE_STATES:
+            fail(f"{name}: archive {path!r} state must be one of {sorted(ARCHIVE_STATES)}, got {spec!r}")
+        return
+    if not isinstance(spec, list) or not all(isinstance(member, str) for member in spec):
+        fail(f"{name}: archive {path!r} must be a state or a list of member names")
+    for member in spec:
+        _validate_archive_member(name, path, member)
+
+
+def _validate_archive_member(name: str, path: str, member: str) -> None:
+    """A member name is an archive-internal path: relative, and '/'-separated."""
+    segments = member.rstrip("/").split("/")
+    if not member or member.startswith("/") or "\\" in member:
+        fail(f"{name}: archive {path!r} member {member!r} must be a relative, '/'-separated path")
+    if any(segment in ("", ".", "..") for segment in segments):
+        fail(f"{name}: archive {path!r} member {member!r} names an empty, '.' or '..' segment")
+
+
+def _validate_input_whdload_slaves(name: str, slaves: Any, inp: Any) -> None:
+    if not isinstance(slaves, dict):
+        fail(f"{name}: input.whdload_slaves must be an object")
+    archives = inp.get("archives", {})
+    for path, spec in slaves.items():
+        members = archives.get(path) if isinstance(archives, dict) else None
+        if not isinstance(members, list):
+            members = _fixture_directory_members(name, path, inp)
+        _validate_whdload_slave_spec(name, path, spec, members)
+
+
+def _fixture_directory_members(name: str, path: Any, inp: Any) -> list[str]:
+    """A directory container's listing, read off the fixture the way the machine reads it."""
+    if not isinstance(path, str) or not _fixture_has_directory(path, inp):
+        fail(
+            f"{name}: whdload slave {path!r} must name the container the core mounts — an archive "
+            "whose member list is declared, or a directory this fixture states"
+        )
+    prefix = path.rstrip("/") + "/"
+    sources = (*inp.get("files", {}), *inp.get("cores", {}))
+    return sorted(known[len(prefix) :] for known in sources if known.startswith(prefix))
+
+
+def _fixture_has_directory(path: str, inp: Any) -> bool:
+    """Is *path* a directory in this fixture — stated, or the parent of something stated?"""
+    if path in inp.get("dirs", []) or path in inp.get("unlistable", []):
+        return True
+    prefix = path.rstrip("/") + "/"
+    known = (*inp.get("files", {}), *inp.get("cores", {}), *inp.get("dirs", []))
+    return any(entry.startswith(prefix) for entry in known)
+
+
+def _validate_whdload_slave_spec(name: str, path: str, spec: Any, members: list[Any]) -> None:
+    if isinstance(spec, str):
+        if spec not in WHDLOAD_SLAVE_STATES:
+            fail(
+                f"{name}: whdload slave {path!r} state must be one of "
+                f"{sorted(WHDLOAD_SLAVE_STATES)}, got {spec!r}"
+            )
+        return
+    if not isinstance(spec, dict) or set(spec) != WHDLOAD_SLAVE_FIELDS:
+        fail(
+            f"{name}: whdload slave {path!r} must be a state or an object with exactly "
+            f"{sorted(WHDLOAD_SLAVE_FIELDS)}"
+        )
+    if spec["slave"] not in members:
+        fail(f"{name}: whdload slave {path!r} names {spec['slave']!r}, which its archive does not list")
+    if spec["selected_by"] not in WHDLOAD_SELECTION_ROUTES:
+        fail(
+            f"{name}: whdload slave {path!r} selected_by must be one of "
+            f"{sorted(WHDLOAD_SELECTION_ROUTES)}, got {spec['selected_by']!r}"
+        )
+    _validate_whdload_slave_fields(name, path, spec)
+
+
+def _validate_whdload_slave_fields(name: str, path: str, spec: dict[str, Any]) -> None:
+    version, program = spec["version"], spec["name"]
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        fail(f"{name}: whdload slave {path!r} version must be the slave's own ws_Version")
+    if program is not None and (not isinstance(program, str) or not program):
+        fail(f"{name}: whdload slave {path!r} name must be ws_name or null")
+    if program is not None and version < WHDLOAD_NAMED_FROM_VERSION:
+        fail(
+            f"{name}: whdload slave {path!r} is older than version {WHDLOAD_NAMED_FROM_VERSION}, "
+            "which has no ws_name field at all"
+        )
 
 
 def _validate_distribution_label(name: str, identifier: str, label: Any, where: str) -> None:

@@ -20,7 +20,7 @@ One family today, `machines`. Every file carries a header and its vectors:
 | key           | meaning                                                   |
 | ------------- | --------------------------------------------------------- |
 | `family`      | must match the directory (`machines`)                     |
-| `schema`      | the generation of the fixture grammar — **3** (see below) |
+| `schema`      | the generation of the fixture grammar — **4** (see below) |
 | `spec`        | which document this file's guarantees come from           |
 | `description` | what this file covers                                     |
 | `vectors`     | the vectors themselves                                    |
@@ -34,9 +34,11 @@ and part of no contract. Two uniqueness rules matter more than they look:
 
 ### Why the schema number
 
-Schema 3 asks more of a port than 2 did: `glob` reports how much of the walk it could read, and a fixture can state a
-directory that exists and cannot be listed. A port built to 2 models neither, so the corpus is not the same promise —
-the number says so once, instead of leaving it to be discovered one failing vector at a time.
+Schema 4 asks more of a port than 3 did: a machine answers two archive reads — the member list of a zip or an LhA, and
+the WHDLoad slave inside one — and a fixture models both (`archives`, `whdload_slaves`). A port built to 3 implements
+neither, so the corpus is not the same promise — the number says so once, instead of leaving it to be discovered one
+failing vector at a time. Schema 3 was the previous such step: `glob` began reporting how much of the walk it could
+read, and a fixture could state a directory that exists and cannot be listed.
 
 ## `input` — a machine as plain data
 
@@ -78,6 +80,30 @@ is a **dead** link, which is a state the corpus deliberately covers.
 (`{key: {"default": str|null, "values": [str, …]}}`). `null` means **present but unloadable**. The distinction between a
 core with no `options` key and one whose `options` is `{}` is load-bearing: the first says nothing was captured, the
 second is evidence that the core registers none.
+
+**`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
+`/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
+`lzh`, because a listing here describes that file's bytes and those are the three formats a machine opens; a declared
+file with no entry answers **not an archive**, so a vector that forgot the key cannot pass a file off as one that lists.
+
+A **directory** is a container too, and it is never declared here: a machine lists one as itself and its members follow
+from the paths in `files`. That holds whatever the directory is called — a directory named `Game.zip` is a directory,
+because the core asks what a path _is_ before it looks at the name, so declaring it under `archives` is a shape no
+machine can answer.
+
+**`whdload_slaves`** — the path of the container the core **mounts** → what the WHDLoad slave inside it states:
+`{"slave": "Game/Game.slave", "version": 17, "name": "Alien Breed", "selected_by": "script"}`, where `name` is `null`
+for a slave older than version 10 (which has no such field) and `selected_by` is `"script"` (the core's own boot-script
+search named the member) or `"only-slave"` (the script named none and the container offers WHDLoad exactly one), or one
+of the states `"no-slave"` / `"ambiguous"` / `"slave-unreadable"`. The key is the mount rather than the launch path, so
+an archive and a directory stand under themselves while a `.slave` or an `.info` stands under the **drawer** beside it.
+The container's own failures are not spelled here — they come from `archives`, or from `files` for a directory, so the
+two reads can never describe different machines — and a stated `slave` must be a member that container lists. A listed
+container with no entry here answers **no slave**.
+
+Both fields of that entry are held to the reader: the reference suite selects a slave over the declared listing and
+fails the vector where the member or the route it returns is not the one declared, so a fixture cannot state a route the
+boot script would not have taken.
 
 **`unlistable` vs `inaccessible`** — two ways to be unreadable, told apart by one question: does the `stat` succeed?
 

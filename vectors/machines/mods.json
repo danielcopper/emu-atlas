@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md 'Placements'; atlas/mods.py; docs/research/core-audit.md",
   "description": "Where each emulator reads mods. The root is read live and the fragment below it is packaged world knowledge, so these vectors pin both halves of that join — and the half this family adds: an emulator may read mods from SEVERAL directories that are different mechanisms rather than alternatives, each with its own role, keying and link. Beside them: the switch, including the value a card writes down for a core that registers its options too late for any probe to read; the caveat that says the frontend patches this core's content as well; and the three ways this question refuses to name a directory at all.",
   "vectors": [

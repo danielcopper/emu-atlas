@@ -76,7 +76,7 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev 
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
   resolve against the _main checkout_ while you work in a worktree — trust `mise run test`, not stale diagnostics. The
   shell cwd resets between Bash calls: start commands with an explicit `cd` into the worktree.
-- The `machines` vector family (schema 3) models whole machines: `files` (string content, or
+- The `machines` vector family (schema 4) models whole machines: `files` (string content, or
   `{"status": "unreadable"|"invalid-text"}` for read failures, optionally with a `size` — the chmod-000 file stats fine
   and only its bytes fail), `dirs` (explicit empty directories), `symlinks` (dead links included), `cores` (`null` =
   present but unloadable), `appimages` (modeled at the seam: entry paths to text, or a whole-archive state
@@ -84,11 +84,20 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev 
   `ps2_bios_headers` (the ROMDIR read at the seam: a declared file's path to its `romver` (14 characters) and `serial`
   (up to 15) strings — the two the walk yields, from which the fixture builds the same fields the reader builds — or a
   state `"unreadable"|"not-a-bios"`; a declared file with no entry answers `missing`, which the folder route states as
-  `firmware-unreadable`, so a vector that forgot the key cannot pass a file as no BIOS), and two ways to be unreadable:
-  `inaccessible` (the `stat` fails — declaring a directory declares its whole subtree) and `unlistable` (it _is_ a
-  directory and its contents cannot be read, which is the only state a resolver reaches after passing an "is it a
-  directory?" check). Configured save roots must be _directories_ in fixtures (`path_is_directory` validation) — list
-  them in `dirs` or place a file inside. Expected blocks are the canonical contract serializations
-  (`atlas/contract.py`), asserted with exact equality — prose (sources, messages) is non-contractual.
+  `firmware-unreadable`, so a vector that forgot the key cannot pass a file as no BIOS), `archives` (an archive-suffixed
+  path (`zip`, `lha`, `lzh`) to the member list a walk of it answers — relative, `/`-separated — or a state
+  `"unreadable"|"not-archive"`; a declared file with no entry answers `not-archive`, so a vector that forgot the key
+  cannot pass a file as one that lists, while a **directory** is a container too, never declared here, its listing
+  derived from `files`) and `whdload_slaves` (the path of the container the core mounts — the drawer beside a
+  `.slave`/`.info`, not the launch file — to what the slave inside states: `{"slave", "version", "name", "selected_by"}`
+  with a nullable `name` and the route that named the member (`script` or the derived `only-slave`), or a state
+  `"no-slave"|"ambiguous"|"slave-unreadable"` — the container's own failures come from `archives`, a stated `slave` must
+  be a member that container lists, and the reference suite holds the declared slave and route against what the reader
+  would select over that listing), and two ways to be unreadable: `inaccessible` (the `stat` fails — declaring a
+  directory declares its whole subtree) and `unlistable` (it _is_ a directory and its contents cannot be read, which is
+  the only state a resolver reaches after passing an "is it a directory?" check). Configured save roots must be
+  _directories_ in fixtures (`path_is_directory` validation) — list them in `dirs` or place a file inside. Expected
+  blocks are the canonical contract serializations (`atlas/contract.py`), asserted with exact equality — prose (sources,
+  messages) is non-contractual.
 - Live verification against the real RetroDECK installation on this machine is the final check for resolver changes;
   fixtures prove logic, the machine proves reality.

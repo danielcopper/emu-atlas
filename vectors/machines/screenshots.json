@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md — installations, the machine seam, screenshot locations (issue #142)",
   "description": "Whole fixture machines in; the canonical ScreenshotPlacement serialization (atlas/contract.py) out, asserted with exact equality: dir, root_kind in the question's own two-word vocabulary, needs, physical_dir, caveat codes + data. No file_set (the names are dated), no fallback_dir (the directory is created at the moment of the shot). Layout facts are sourced from RetroArch task_screenshot.c and configuration.c at the pinned revision.",
   "vectors": [

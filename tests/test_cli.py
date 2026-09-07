@@ -78,6 +78,8 @@ def _machine(inp) -> FixtureMachine:
         unlistable=inp.get("unlistable"),
         appimages=inp.get("appimages"),
         ps2_bios_headers=inp.get("ps2_bios_headers"),
+        archives=inp.get("archives"),
+        whdload_slaves=inp.get("whdload_slaves"),
     )
 
 

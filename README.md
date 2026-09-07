@@ -300,7 +300,7 @@ source-verified everywhere:
   versions and points at [`docs/re-verification.md`](docs/re-verification.md), so pinned knowledge cannot age in
   silence. The status is packaged data, so verifying an arrangement retires the caveat without touching a resolver.
 
-The conformance vectors (`vectors/`, schema 3) are whole fixture machines — files, directories, symlinks, AppImage
+The conformance vectors (`vectors/`, schema 4) are whole fixture machines — files, directories, symlinks, AppImage
 contents, core answers, firmware blobs and read-failure states — each replayed against the canonical serialization and
 asserted with exact equality, alongside the unit suite on every push. Each release attaches the vectors, the wheel, the
 bundle and a `SHA256SUMS` manifest.

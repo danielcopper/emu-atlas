@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 3,
+  "schema": 4,
   "spec": "DESIGN.md 'Placements'; atlas/mods.py; RetroArch a79435a (runloop.c, tasks/task_patch.c, tasks/task_content.c)",
   "description": "Which files RetroArch patches this content with before any core sees it. The candidate names follow from the content path by upstream arithmetic atlas ports, so these vectors pin that composition — the extension truncation, the archive rule, the attempt order and the indexed continuations — plus the two readings around it: whether this core loads its content into memory, and whether anyone established which formats this build attempts.",
   "vectors": [
