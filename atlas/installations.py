@@ -41,6 +41,7 @@ from typing import (
 from dataclasses import dataclass, replace as _dc_replace
 
 from . import _xml as _ET
+from . import whdload
 from .content_path import (
     content_basename,
     content_file_name,
@@ -2369,19 +2370,26 @@ def _rule_entries(machine: Machine, base: str | None, name: str) -> tuple[str, .
     return tuple(os.path.basename(match) for match in listing.matches)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class _ContentReads:
-    """The three reads a rule can make of the loaded content, each deferred.
+    """The three reads a rule can make of the loaded content, each deferred and each made once.
 
     The content path is the caller's own spelling of a host path: it comes
     from the question rather than from a config an emulator wrote inside its
     sandbox, so it takes no translation — every other content-path read in
     this module treats it the same way. Nothing here runs until a rule asks,
-    so a card that never looks inside content pays nothing for these.
+    so a card that never looks inside content pays nothing for these; and a
+    rule that asks the same question from several branches — which the
+    alternatives do, by asking what each switch value would select — pays for
+    it once, because each answer is kept. One object serves one question, so
+    what is kept cannot outlive the machine it was read from.
     """
 
     machine: Machine
     path: str | None
+    _directory: bool | None = None
+    _members: ArchiveListResult | None = None
+    _slave: WhdloadSlaveResult | None = None
 
     def is_directory(self) -> bool:
         """What the emulator's own ``path_is_directory`` answers about the launch path.
@@ -2390,17 +2398,40 @@ class _ContentReads:
         ``stat`` plus a mode test — so an unreachable path answers false here
         too rather than becoming a third state no dispatch has.
         """
-        return self.path is not None and self.machine.path_kind(self.path) == KIND_DIRECTORY
+        if self._directory is None:
+            self._directory = (
+                self.path is not None and self.machine.path_kind(self.path) == KIND_DIRECTORY
+            )
+        return self._directory
 
     def members(self) -> ArchiveListResult:
-        if self.path is None:
-            return ArchiveListResult(ARCHIVE_MISSING)
-        return self.machine.list_archive(self.path)
+        """What the container the core mounts holds — the drawer, not the launch file.
+
+        The mount is resolved first, the way the seam resolves it before its
+        own listing (:func:`atlas.whdload.mounted_container`), so a rule and
+        the seam are looking at one volume rather than two.
+        """
+        if self._members is None:
+            self._members = (
+                ArchiveListResult(ARCHIVE_MISSING)
+                if self.path is None
+                else self.machine.list_archive(
+                    whdload.mounted_container(self.path, self.is_directory_at)
+                )
+            )
+        return self._members
+
+    def is_directory_at(self, path: str) -> bool:
+        return self.machine.path_kind(path) == KIND_DIRECTORY
 
     def slave(self) -> WhdloadSlaveResult:
-        if self.path is None:
-            return WhdloadSlaveResult(WHDLOAD_MISSING)
-        return self.machine.read_whdload_slave(self.path)
+        if self._slave is None:
+            self._slave = (
+                WhdloadSlaveResult(WHDLOAD_MISSING)
+                if self.path is None
+                else self.machine.read_whdload_slave(self.path)
+            )
+        return self._slave
 
 
 def _rule_reading(

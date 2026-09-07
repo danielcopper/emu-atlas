@@ -587,31 +587,46 @@ def _archive_bytes(path: str) -> bytes:
 
 
 def _archive_names(path: str, suffix: str) -> tuple[str, ...]:
-    """The member names one archive holds, by the reader its suffix picks."""
+    """The member names one archive holds, as the tree it extracts to spells them."""
+    return tuple(_normalise(raw) for raw in _raw_names(path, suffix) if _normalise(raw))
+
+
+def _raw_names(path: str, suffix: str) -> tuple[str, ...]:
+    """The member names the archive itself carries, by the reader its suffix picks."""
     if suffix == ARCHIVE_ZIP:
-        return _normalised(_zip_names(path))
+        return _zip_names(path)
     try:
-        return _normalised(tuple(member.name for member in lha.members(_archive_bytes(path))))
+        return tuple(member.name for member in lha.members(_archive_bytes(path)))
     except lha.NotAnLha:
         raise _ArchiveOutcome(ARCHIVE_NOT_ARCHIVE) from None
 
 
-def _normalised(members: tuple[str, ...]) -> tuple[str, ...]:
-    """Member names as the extracted tree spells them: relative, no ``./`` in front.
+def _normalise(member: str) -> str:
+    """One member name as the extracted tree spells it: relative, no ``./`` in front.
 
     An archive may write a member as ``./Disk1.adf`` or with a leading ``/``,
     and what lands on disk is ``Disk1.adf`` either way. Leaving the spelling
     alone would hide such a member from a walk that passes over names starting
-    with a dot, which is exactly the walk the core makes.
+    with a dot, which is exactly the walk the core makes — so the listing is
+    normalised, and :func:`_original_name` maps back when bytes are wanted.
     """
-    spelled: list[str] = []
-    for member in members:
-        name = member.lstrip("/")
-        while name.startswith("./"):
-            name = name[2:]
-        if name:
-            spelled.append(name)
-    return tuple(spelled)
+    name = member.lstrip("/")
+    while name.startswith("./"):
+        name = name[2:]
+    return name
+
+
+def _original_name(container: str, member: str) -> str:
+    """The spelling the container itself uses for a member the listing normalised.
+
+    A directory's listing is already its own spelling; an archive's may not
+    be, and opening ``Game.slave`` in an archive that wrote ``./Game.slave``
+    finds nothing.
+    """
+    suffix = _archive_suffix(container)
+    if suffix not in ARCHIVE_SUFFIXES:
+        return member
+    return next((raw for raw in _raw_names(container, suffix) if _normalise(raw) == member), member)
 
 
 def _zip_names(path: str) -> tuple[str, ...]:
@@ -677,13 +692,21 @@ def _no_root_status(members: tuple[str, ...]) -> WhdloadSlaveStatus:
 def _slave_of(
     container: str, root: str, inside: list[str], selection: whdload.Selection
 ) -> WhdloadSlaveResult:
-    """One selection turned into the seam's answer, with the ``custom`` file beside it."""
-    custom = _custom_text(container, root, inside)
+    """One selection turned into the seam's answer, with the ``custom`` file beside it.
+
+    A ``load`` file at the root replaces the launch with the volume's own
+    command, and the block that would have read ``custom`` is inside the
+    branch it skips (Startup-Sequence:61-62 over :115-122) — so where one is
+    there, no ``custom`` is read either.
+    """
+    overridden = any(name.lower() == whdload.LOAD for name in inside)
+    custom = None if overridden else _custom_text(container, root, inside)
     if selection.slave is None:
         status = WHDLOAD_AMBIGUOUS if selection.ambiguous else WHDLOAD_NO_SLAVE
         return WhdloadSlaveResult(status, custom=custom)
     try:
-        slave = whdload.read_slave(_member_bytes(container, root + selection.slave))
+        member = _original_name(container, root + selection.slave)
+        slave = whdload.read_slave(_member_bytes(container, member))
     except _ArchiveOutcome as outcome:
         return WhdloadSlaveResult(outcome.status)
     except _SLAVE_UNREADABLE_ERRORS:
@@ -705,7 +728,7 @@ def _custom_text(container: str, root: str, inside: list[str]) -> str | None:
     if named is None:
         return None
     try:
-        return _member_bytes(container, root + named).decode("latin-1")
+        return _member_bytes(container, _original_name(container, root + named)).decode("latin-1")
     except (_ArchiveOutcome, *_SLAVE_UNREADABLE_ERRORS):
         return None
 
@@ -871,18 +894,25 @@ class RealMachine:
         """What one container holds — the read PUAE's own walk over a mounted volume makes.
 
         One rule decides which container this is, and both machines and the
-        vector validator share it: an archive suffix is read by the archive
-        reader, a **directory** is listed as itself (the core mounts one as a
-        filesystem exactly as it mounts an archive), and anything else is not
-        a container this reads. Regular files only for the archive half,
+        vector validator share it, in the order the core's own dispatch makes
+        the tests: a **directory** is listed as itself whatever it is called
+        (the core mounts one as a filesystem exactly as it mounts an archive),
+        then an archive suffix is read by the archive reader, and anything
+        else is not a container this reads. Regular files only for the archive half,
         checked before opening, for the reason :meth:`read_text` checks.
         """
-        suffix = _archive_suffix(path)
+        kind = self.path_kind(path)
+        if kind == KIND_MISSING:
+            return ArchiveListResult(ARCHIVE_MISSING)
         try:
+            # A directory first, the way the core's own dispatch tests it: a
+            # directory named Game.zip is a directory to it, not an archive
+            # (libretro-dc.c:850-853 before :862-864 at 0043cf9).
+            if kind == KIND_DIRECTORY:
+                return ArchiveListResult(ARCHIVE_OK, _directory_names(path))
+            suffix = _archive_suffix(path)
             if suffix in ARCHIVE_SUFFIXES:
                 return ArchiveListResult(ARCHIVE_OK, _archive_names(path, suffix))
-            if self.path_kind(path) == KIND_DIRECTORY:
-                return ArchiveListResult(ARCHIVE_OK, _directory_names(path))
         except _ArchiveOutcome as outcome:
             return ArchiveListResult(outcome.status)
         return ArchiveListResult(ARCHIVE_NOT_ARCHIVE)
@@ -1781,9 +1811,11 @@ class FixtureMachine:
             return ArchiveListResult(ARCHIVE_UNREADABLE)
         if resolved in self._dirs:
             return ArchiveListResult(ARCHIVE_OK, self._directory_members(resolved))
-        if self._files.get(resolved, (READ_MISSING, None))[0] == READ_UNREADABLE:
+        if resolved not in self._files:
+            return ArchiveListResult(ARCHIVE_MISSING)
+        if self._files[resolved][0] == READ_UNREADABLE:
             return ArchiveListResult(ARCHIVE_UNREADABLE)
-        return ArchiveListResult(ARCHIVE_NOT_ARCHIVE if resolved in self._files else ARCHIVE_MISSING)
+        return ArchiveListResult(ARCHIVE_NOT_ARCHIVE)
 
     def _directory_members(self, resolved: str) -> tuple[str, ...]:
         """Everything the fixture puts under one directory, relative and ``/``-separated."""

@@ -94,6 +94,7 @@ CUSTOM = "custom"
 _SAVE_PATH = "savepath"
 _SAVE_DIR = "savedir"
 _SAVE_KEYS = (_SAVE_PATH, _SAVE_DIR)
+_QUOTES = ("\"", "'")
 # What the core's baked prefs point SavePath at (whdload/WHDLoad.prefs:37) —
 # the volume every mode this package states is built on.
 SAVES_VOLUME = "whdsaves:"
@@ -104,8 +105,10 @@ PREFS = "WHDLoad.prefs"
 _SLAVE_FRAGMENT = ".slav"
 _INFO_SUFFIX = ".info"
 _SLAVE_SUFFIX = ".slave"
-# A file of this name at the root replaces the launch entirely (:61-62).
-_LOAD = "load"
+# A file of this name at the root replaces the launch entirely (:61-62), and
+# with it the whole block that would have read a `custom` file (:115-122).
+LOAD = "load"
+_LOAD = LOAD
 # How a named slave was arrived at: the boot script's own search, or atlas's
 # inference from an archive that offers WHDLoad exactly one.
 BY_SCRIPT = "script"
@@ -160,19 +163,58 @@ def save_redirect(text: str) -> tuple[str | None, str | None]:
     prefs file states one setting per line and a ``custom`` file states them
     as arguments on one, so the text is taken as tokens either way. A ``;``
     opens a comment to the end of the line (``whdload/WHDLoad.prefs:1-6``),
-    which is how the baked file carries its own explanations. Keys are matched
-    without regard to case, the way WHDLoad's own tooltype and argument
-    matching is, and the last statement of a key is the one returned — which
-    of two WHDLoad itself would take is not stated anywhere, so a file saying
-    one thing twice is [O].
+    which is how the baked file carries its own explanations.
+
+    Both spellings a keyword takes are read: ``SavePath=WHDSaves:`` and
+    ``SavePath WHDSaves:``. [D] The second is how AmigaDOS ``ReadArgs``
+    accepts a ``/K`` keyword, and a ``custom`` file's contents are appended
+    to the command line, so it holds there; whether the prefs parser accepts
+    it too is [O], and reading it as a setting either way is the safe
+    direction — it can only make this refuse a redirection, never miss one.
+    Quotes around a value are taken off, since that is how a value with
+    spaces is written. Keys match without regard to case, and the last
+    statement of a key is the one returned — which of two WHDLoad itself
+    would take is stated nowhere, so a file saying one thing twice is [O].
     """
     found: dict[str, str] = {}
     for line in text.splitlines():
-        for token in line.split(";", 1)[0].split():
-            key, sign, value = token.partition("=")
-            if sign and key.lower() in _SAVE_KEYS:
-                found[key.lower()] = value
+        _scan_settings(line.split(";", 1)[0].split(), found)
     return found.get(_SAVE_PATH), found.get(_SAVE_DIR)
+
+
+def _scan_settings(tokens: list[str], found: dict[str, str]) -> None:
+    """One line's tokens, in both spellings a keyword takes."""
+    index = 0
+    while index < len(tokens):
+        key, sign, value = tokens[index].partition("=")
+        if key.lower() in _SAVE_KEYS:
+            if not sign and index + 1 < len(tokens):
+                index += 1
+                value = tokens[index]
+            value, index = _quoted_value(value, tokens, index)
+            found[key.lower()] = _unquoted(value)
+        index += 1
+
+
+def _quoted_value(value: str, tokens: list[str], index: int) -> tuple[str, int]:
+    """A value the split cut in half, put back — a quoted path may hold spaces."""
+    quote = value[:1]
+    if quote not in _QUOTES or (len(value) > 1 and value.endswith(quote)):
+        return value, index
+    while index + 1 < len(tokens):
+        index += 1
+        value = f"{value} {tokens[index]}"
+        if value.endswith(quote):
+            break
+    return value, index
+
+
+def _unquoted(value: str) -> str:
+    """A value with the quotes AmigaDOS uses around one that has spaces taken off."""
+    quote = value[:1]
+    if quote in _QUOTES and len(value) > 1 and value.endswith(quote):
+        return value[1:-1]
+    return value
 
 
 def read_slave(data: bytes) -> Slave:
@@ -324,8 +366,11 @@ def _accepted_whdload(name: str, entries: "_TopLevel") -> bool:
 def mounted_root(member: str, names: Sequence[str]) -> str:
     """The prefix of *names* the core mounts as ``DH0:`` for that member (:5688-5700).
 
-    An ``.lha`` member is mounted as itself, which this cannot express — the
-    caller knows it holds a second archive. For a ``.slave`` or an ``.info``
+    An ``.lha`` member is mounted as itself — the core hands the archive to
+    UAE rather than a directory — which this cannot express, and the caller
+    knows it holds a second container. It falls out as the empty prefix, the
+    same answer a loose ``.slave`` gives, and the two are told apart by the
+    member's own suffix rather than by this. For a ``.slave`` or an ``.info``
     the core joins the member's directory with the member's stem and mounts
     that where it is a directory, else its parent: inside an extracted
     archive that is the drawer beside the member, or the whole extracted tree

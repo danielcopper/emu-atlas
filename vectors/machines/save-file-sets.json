@@ -10505,11 +10505,6 @@
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               },
               {
-                "key": "SavePath",
-                "value": "WHDSaves:",
-                "options_file": "/mnt/sd/retrodeck/bios/WHDLoad.prefs"
-              },
-              {
                 "key": "ws_name",
                 "value": "Alien Breed",
                 "options_file": null
@@ -11904,7 +11899,7 @@
               "data": {
                 "core": "puae",
                 "reason": "hd-image-unread",
-                "extension": "zip"
+                "extension": "hdf"
               }
             }
           ],
@@ -12150,7 +12145,7 @@
             "slave": "AlienBreedHD/AlienBreed.slave",
             "version": 17,
             "name": "Alien Breed",
-            "selected_by": "only-slave"
+            "selected_by": "script"
           }
         }
       },
@@ -12953,17 +12948,7 @@
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
-            "alternatives": [
-              {
-                "mode": "hd-writeback",
-                "options": {
-                  "puae_use_whdload": "disabled"
-                },
-                "values": [
-                  "per-game-file"
-                ]
-              }
-            ]
+            "alternatives": []
           }
         }
       }
@@ -13777,7 +13762,7 @@
     },
     {
       "name": "an-amiga-whdload-install-the-script-misses-is-named-from-the-only-slave-it-holds",
-      "rationale": "The shape a public install archive has — a drawer icon at the root and the slave inside under some other name — is one the script resolves to nothing, so the core falls back to its .info selector. Whichever icon a person picks there, WHDLoad has this one slave to run, so the save directory's name follows from the set rather than from the launch. That step is atlas's inference and the seam says so; the answer is the same named directory.",
+      "rationale": "The shape a public install archive has — a drawer icon at the root and the slave inside under some other name — is one the boot script's own search resolves to nothing, so the launch falls to the core's .info selector. Whatever it turns out to be, WHDLoad has this one slave to be handed, so the save directory's name follows from the set rather than from the launch. That step is this package's inference and the seam says so; the answer is the same named directory.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -14607,7 +14592,7 @@
             "slave": "AlienBreed.slave",
             "version": 17,
             "name": "Alien Breed",
-            "selected_by": "only-slave"
+            "selected_by": "script"
           }
         }
       },
@@ -14803,7 +14788,7 @@
             "slave": "AlienBreed.slave",
             "version": 17,
             "name": "Alien Breed",
-            "selected_by": "only-slave"
+            "selected_by": "script"
           }
         }
       },
@@ -15461,7 +15446,7 @@
               "data": {
                 "core": "puae",
                 "reason": "hd-image-unread",
-                "extension": "zip"
+                "extension": "hdf"
               }
             }
           ],
@@ -15944,7 +15929,7 @@
               "data": {
                 "core": "puae",
                 "reason": "archive-content-ambiguous",
-                "classes": [
+                "volumes": [
                   "One/",
                   "Two/"
                 ]
@@ -16105,17 +16090,7 @@
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
-            "alternatives": [
-              {
-                "mode": "archived-hd-writeback-lost",
-                "options": {
-                  "puae_use_whdload": "disabled"
-                },
-                "values": [
-                  "none"
-                ]
-              }
-            ]
+            "alternatives": []
           }
         }
       }
@@ -16218,7 +16193,7 @@
             "slave": "Game/AlienBreed.slave",
             "version": 17,
             "name": "Alien Breed",
-            "selected_by": "only-slave"
+            "selected_by": "script"
           }
         }
       },
@@ -17061,7 +17036,7 @@
             "slave": "Turrican.slave",
             "version": 17,
             "name": "Turrican",
-            "selected_by": "only-slave"
+            "selected_by": "script"
           }
         }
       },
@@ -17108,6 +17083,771 @@
             }
           ],
           "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-amiga-whdload-archive-that-boots-its-own-script-sends-its-writes-somewhere-unread",
+      "rationale": "The helper's script hands the boot straight back to a volume carrying its own S/Startup-Sequence and never searches it for a slave — and an .lha is mounted read-only, so the writes that script makes cannot land in it and where they do land is inside a script this package does not read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Workbench Demo (1992)(bootable).lha": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Workbench Demo (1992)(bootable).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Workbench Demo (1992)(bootable).lha": [
+            "S/Startup-Sequence",
+            "C/LoadWB",
+            "Game.slave"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "volume-boots-itself",
+                "container": "/mnt/sd/retrodeck/roms/amiga/Workbench Demo (1992)(bootable).lha"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "an-archived-amiga-whdload-drawer-that-boots-its-own-script-loses-its-writes-with-the-tree",
+      "rationale": "The same precedence inside an archive: the drawer the core mounts carries its own startup sequence, so it boots itself rather than being searched for the slave beside it — and being a copy in the extracted tree, its writes die with the tree.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(bootable drawer).zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(bootable drawer).zip"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Alien Breed (1991)(Team 17)(bootable drawer).zip": [
+            "Game.info",
+            "Game/S/Startup-Sequence",
+            "Game/C/LoadWB",
+            "Game/Game.slave"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "archived-hd-writeback-lost"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "archived-hd-writeback-lost",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "an-amiga-drawer-launched-by-its-icon-that-boots-its-own-script-writes-in-place",
+      "rationale": "A drawer mounted by its icon is a directory on this machine and mounted read-write, so when its own startup sequence takes the boot the writes land in the drawer itself.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/BootableHD.info": "icon",
+          "/mnt/sd/retrodeck/roms/amiga/BootableHD/S/Startup-Sequence": "C:LoadWB\n",
+          "/mnt/sd/retrodeck/roms/amiga/BootableHD/Game.slave": "slave"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/BootableHD.info"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/amiga",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-inside-content",
+              "data": {
+                "core": "puae",
+                "mode": "hd-writeback"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "hd-writeback",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "files",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-prefs-that-state-no-save-path-take-the-saves-out-of-every-mode",
+      "rationale": "The prefs in the system directory are copied into the helper on every run, and the core writes its own baked copy only when none is there. A file that states no SavePath is therefore not the baked default: WHDLoad runs with none, and the program's writes stay in its own data directory rather than in the volume every mode here is built on.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": "; a prefs file that sets everything but the save path\nButtonWait\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "puae",
+                "reason": "whdload-savepath-unrecorded"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "amiga-whdload-support-switched-off-answers-before-the-prefs-are-read",
+      "rationale": "With the helper off nothing of WHDLoad's is mounted, no prefs are copied and no SavePath is read — so prefs that would take the answer out of every mode do not reach this one. They do cost the alternatives: turning the switch on would select no mode at all, so neither value is offered.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": "rom",
+          "/mnt/sd/retrodeck/bios/WHDLoad.prefs": "SavePath=DH1:MySaves\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "puae_use_whdload = \"disabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
+            "library_name": "PUAE",
+            "library_version": "5.3.0 0043cf9",
+            "options": {
+              "puae_model": {
+                "default": "auto",
+                "values": [
+                  "auto",
+                  "A500OG",
+                  "A500",
+                  "A500PLUS",
+                  "A600",
+                  "A1200OG",
+                  "A1200",
+                  "A2000OG",
+                  "A2000",
+                  "A4030",
+                  "A4040",
+                  "CDTV",
+                  "CD32",
+                  "CD32FR"
+                ]
+              },
+              "puae_floppy_write_protection": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_floppy_write_redirect": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_shared_nvram": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "puae_use_boot_hd": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdf20",
+                  "hdf40",
+                  "hdf80",
+                  "hdf128",
+                  "hdf256",
+                  "hdf512"
+                ]
+              },
+              "puae_use_whdload": {
+                "default": "files",
+                "values": [
+                  "disabled",
+                  "files",
+                  "hdfs"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "core_so": "puae_libretro.so",
+          "content_path": "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha"
+        },
+        "archives": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": [
+            "Turrican.slave"
+          ]
+        },
+        "whdload_slaves": {
+          "/mnt/sd/retrodeck/roms/amiga/Turrican (1990)(Rainbow Arts)(HD).lha": {
+            "slave": "Turrican.slave",
+            "version": 17,
+            "name": "Turrican",
+            "selected_by": "script"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "puae",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "puae",
+                "mode": "whdload-disabled"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "whdload-disabled",
+            "readings": [
+              {
+                "key": "puae_model",
+                "value": "auto",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "puae_use_whdload",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "ws_name",
+                "value": "Turrican",
+                "options_file": null
+              }
+            ],
+            "alternatives": []
+          }
         }
       }
     }

@@ -154,11 +154,12 @@ A `subdir` segment may be a template too, from a three-token vocabulary: `<rom_s
 `<save dir>/<rom_stem>/`), `<content_dir_name>` — the basename of the content's directory (the vitaquake2 family creates
 `<save dir>/baseq2/` for content in `baseq2/`) — and the rule-filled `<whdload_name>` (PUAE creates
 `<save dir>/WHDSaves/<the slave's ws_name>/`). A token must be the **whole segment**: the resolver undoes a subdir by
-counting segments, and that arithmetic is exact only while one template fills to exactly one segment. Both are
+counting segments, and that arithmetic is exact only while one template fills to exactly one segment. All three are
 established only under the `savefile_directory` root — the loader refuses them elsewhere, because no read core keys a
-system or content subdirectory on the content. The resolver fills them from the content path; a content-less question
-keeps the token in `dir` and puts `rom_stem` / `content_dir_name` into `needs`, the shape `<content_dir>` has always
-had.
+system or content subdirectory on the content. The resolver fills the first two from the content path; a content-less
+question keeps the token in `dir` and puts `rom_stem` / `content_dir_name` into `needs`, the shape `<content_dir>` has
+always had. `<whdload_name>` is filled by the card's own rule instead, from a read of the content, and never becomes a
+hole: where that read fails the rule selects a mode with no such segment.
 
 ### Two fields for what one file list cannot say
 

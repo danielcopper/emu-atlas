@@ -14,11 +14,14 @@ does.
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 from pathlib import Path
 
 import pytest
 
 import atlas
+import atlas.machine
+from atlas import whdload
 from atlas import placement, retroarch_cfg
 from atlas.machine import FixtureMachine
 from tests.corpus import caveat_blocks, expected_blocks
@@ -702,3 +705,71 @@ class TestTheGrammarRefusesContradictions:
         )
         with pytest.raises(validate_vectors.VectorError, match="states entries"):
             validate_vectors.validate_machines_vector(vector)
+
+
+class TestEveryDeclaredSlaveIsTheOneTheReaderWouldSelect:
+    """A fixture may not declare a selection the reader would not make.
+
+    ``whdload_slaves`` models the *bytes* a slave holds, which no fixture can
+    carry — but which member those bytes belong to, and by which route, is not
+    modelling at all: it follows from the container's own listing, which the
+    fixture does declare. So it is computed here and held against what the
+    vector says, and a fixture claiming the script found a slave it could not
+    have found fails rather than teaching the corpus a selection nobody
+    implements.
+
+    The check lives here rather than in ``scripts/validate_vectors.py``
+    because that script is stdlib-only on purpose — a port author runs it
+    without importing atlas — and this claim is atlas's own reader.
+    """
+
+    def _members(self, container, inp):
+        declared = inp.get("archives", {}).get(container)
+        if isinstance(declared, list):
+            return tuple(declared)
+        prefix = container.rstrip("/") + "/"
+        sources = (*inp.get("files", {}), *inp.get("cores", {}))
+        return tuple(sorted(name[len(prefix) :] for name in sources if name.startswith(prefix)))
+
+    def _selection(self, container, inp):
+        members = self._members(container, inp)
+        root = atlas.machine._mounted_root(container, members)  # pyright: ignore[reportPrivateUsage]
+        if root is None:
+            return None, whdload.Selection()
+        inside = [name[len(root) :] for name in members if name.startswith(root)]
+        return root, whdload.select_slave(inside)
+
+    def _declarations(self):
+        for parameters in load_vectors():
+            vector = cast("dict[str, Any]", parameters.values[0])
+            for container, spec in vector["input"].get("whdload_slaves", {}).items():
+                yield vector["name"], container, spec, vector["input"]
+
+    def test_a_declared_member_and_route_are_the_ones_the_reader_returns(self):
+        wrong = []
+        for name, container, spec, inp in self._declarations():
+            if not isinstance(spec, dict):
+                continue
+            root, selection = self._selection(container, inp)
+            expected = None if selection.slave is None else f"{root}{selection.slave}"
+            if (spec["slave"], spec["selected_by"]) != (expected, selection.route):
+                wrong.append(
+                    f"{name}: declares {spec['slave']!r} by {spec['selected_by']!r}, "
+                    f"the reader selects {expected!r} by {selection.route!r}"
+                )
+        assert wrong == []
+
+    def test_a_declared_state_is_one_the_reader_would_reach(self):
+        wrong = []
+        for name, container, spec, inp in self._declarations():
+            if not isinstance(spec, str):
+                continue
+            _, selection = self._selection(container, inp)
+            reached = {
+                "no-slave": selection.slave is None and not selection.ambiguous,
+                "ambiguous": selection.ambiguous,
+                "slave-unreadable": selection.slave is not None,
+            }[spec]
+            if not reached:
+                wrong.append(f"{name}: declares {spec!r}, which this listing does not reach")
+        assert wrong == []

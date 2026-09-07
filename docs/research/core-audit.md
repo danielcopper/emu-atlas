@@ -169,8 +169,9 @@ rest:
    classified by the members the seam reads out of it. Fifteen modes now, and what the rule refuses instead of guessing
    is: a playlist, a `.7z`, an archive it could not list, one mixing classes, one holding two WHDLoad volumes, one whose
    entries are no class at all, a launch pinning a member, a hard-disk image while the helper is mounted beside it, a
-   volume that boots nothing, WHDLoad prefs pointing elsewhere or unreadable, and any of these classes on an explicitly
-   selected CD model, whose non-volatile memory file would ride beside the class's own story.
+   volume that boots nothing, an archive that boots its own script from a volume mounted read-only, WHDLoad prefs
+   pointing elsewhere, stating none at all or unreadable, and any of these classes on an explicitly selected CD model,
+   whose non-volatile memory file would ride beside the class's own story.
 9. `geolith` — `geolith_memcard` / `geolith_memcard_wp`
 10. `virtualjaguar` — CRC-keyed `%s%08X.srm` names
 11. `melonds` / `melondsds` / `desmume` — `.dsv`(+`.bak`) / DSi-NAND title `.sav` / `libretropy_get_save_directory`

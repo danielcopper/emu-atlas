@@ -966,6 +966,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots  | —                          |
 | `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on          | `savepath`, `savedir`      |
 | `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                      | —                          |
+| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                | `container`                |
 | `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
 | `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
 | `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |

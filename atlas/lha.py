@@ -32,11 +32,13 @@ zero size *and* a zero checksum, or simply at the end of the file — both are
 in the wild, and the two-byte test is what keeps a level-2 header whose size
 is a multiple of 256 from being read as the end.
 
-The reader never runs longer than its input: the decode loop stops as soon as
-the bit reader is spent, so a header whose stated size does not match the
-bytes behind it ends in :class:`CorruptMember` rather than in an endless run
-of invented literals. Work is bounded by the compressed bytes, not by the
-size the header claims.
+Two guards bound the decode, and between them the work is bounded. The loop
+stops as soon as the bit reader is spent, so a header whose stated size does
+not match the bytes behind it ends in :class:`CorruptMember` rather than in
+an endless run of invented literals; and no member is decoded past
+:data:`_MAX_MEMBER_BYTES`, because a legal stream of degenerate blocks can
+expand a few thousand compressed bytes into tens of megabytes before the
+first guard has anything to say.
 
 **The compression.** Only two methods are read here. ``-lh0-`` is the member
 stored verbatim. ``-lh5-`` is LZSS over an 8 KiB window with static Huffman
@@ -138,6 +140,13 @@ _RUN_LONG_BASE = 20
 # than any one symbol can ask for, and past it the reader is decoding zeros —
 # which is what turns a forged original size into an endless run of literals.
 _END_MARGIN_BITS = 32
+# The most any member this package decodes can weigh. A slave is a few
+# kilobytes and a `custom` file is bytes, so nothing legitimate comes near it
+# — and without a ceiling a legal stream of degenerate blocks (a symbol count
+# of 65535 against a table holding one zero-length symbol) turns a few
+# thousand compressed bytes into tens of megabytes before the end of the
+# stream is reached.
+_MAX_MEMBER_BYTES = 16 << 20
 
 _CRC16_POLYNOMIAL = 0xA001
 
@@ -653,8 +662,18 @@ def _copy_match(out: bytearray, bits: _Bits, positions: _CodeTable, symbol: int)
         out.append(out[-distance])
 
 
+def _refuse_impossible_size(original: int) -> None:
+    """No member this package reads is anywhere near the ceiling, and past it nothing is decoded."""
+    if original > _MAX_MEMBER_BYTES:
+        raise CorruptMember(
+            f"the header states {original} bytes, past the {_MAX_MEMBER_BYTES} this reader "
+            "decodes — no member it is here to read is that size"
+        )
+
+
 def _inflate_lh5(packed: bytes, original: int) -> bytes:
     """Decode one ``-lh5-`` member: blocks of symbols over a sliding window."""
+    _refuse_impossible_size(original)
     if original == 0:
         return b""
     bits = _Bits(packed)

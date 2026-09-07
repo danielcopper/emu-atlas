@@ -240,3 +240,19 @@ def test_the_sample_archive_resolves_end_to_end() -> None:
 
     assert (choice.slave, choice.route) == ("TestGame/TestGame.slave", "script")
     assert whdload.read_slave(lha.extract(data, member)) == whdload.Slave(17, "Test Game")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        pytest.param("SavePath=WHDSaves:\t;a comment", ("WHDSaves:", None), id="the-baked-form"),
+        pytest.param("SavePath WHDSaves:", ("WHDSaves:", None), id="the-keyword-form"),
+        pytest.param('SavePath "DH1:My Saves"', ("DH1:My Saves", None), id="quoted-with-spaces"),
+        pytest.param("Custom1=1 SaveDir=Shared", (None, "Shared"), id="among-other-arguments"),
+        pytest.param(";SavePath=DH1:x\nButtonWait", (None, None), id="commented-out"),
+        pytest.param("SavePath=a\nSavePath=b", ("b", None), id="the-last-of-two"),
+        pytest.param("ButtonWait\nPreload\n", (None, None), id="nothing-of-the-kind"),
+    ],
+)
+def test_the_two_settings_that_move_the_saves_are_read_in_both_spellings(text, expected) -> None:
+    assert whdload.save_redirect(text) == expected

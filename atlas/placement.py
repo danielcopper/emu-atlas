@@ -573,10 +573,11 @@ REASON_EMULATED_MODEL_UNRECORDED = "emulated-model-unrecorded"
 # (``extension`` carries the one seen); ``archive-unread`` is an archive of a
 # format atlas does read whose member list this machine did not yield
 # (``status`` carries the seam's own word); ``archive-content-ambiguous`` is an
-# archive holding more than one thing the core could launch, where which one
-# it takes is decided by the order its own directory listing returns them in
-# — not a fact about the archive at all (``classes`` names the content classes
-# found).
+# archive holding WHDLoad members that mount *different* volumes, where which
+# one the core takes is decided by the order its own directory listing returns
+# them in — not a fact about the archive at all (``volumes`` names the mounted
+# roots it could take, which is what those members differ in; members mounting
+# one volume are one mount and no refusal).
 REASON_ARCHIVE_FORMAT_UNREAD = "archive-format-unread"
 REASON_ARCHIVE_UNREAD = "archive-unread"
 REASON_ARCHIVE_CONTENT_AMBIGUOUS = "archive-content-ambiguous"
@@ -615,6 +616,12 @@ REASON_HD_BOOT_ABSENT = "hd-boot-absent"
 # ``whdload-prefs-unread`` is a prefs file that is there and could not be read.
 REASON_WHDLOAD_SAVEPATH_UNRECORDED = "whdload-savepath-unrecorded"
 REASON_WHDLOAD_PREFS_UNREAD = "whdload-prefs-unread"
+# The mounted volume carries a startup sequence of its own, so it boots itself
+# rather than letting the WHDLoad helper search it for a slave — and the
+# volume is an archive, mounted read-only, so where the writes its own script
+# makes end up is inside a script this package does not read. ``container``
+# names the archive.
+REASON_VOLUME_BOOTS_ITSELF = "volume-boots-itself"
 # ScummVM's own save directory: its ini could not be read, or the path it sets
 # has no host spelling (``path`` carries the configured value).
 REASON_SAVEPATH_CONFIG_UNREADABLE = "savepath-config-unreadable"
@@ -663,6 +670,7 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_HD_BOOT_ABSENT,
     REASON_WHDLOAD_SAVEPATH_UNRECORDED,
     REASON_WHDLOAD_PREFS_UNREAD,
+    REASON_VOLUME_BOOTS_ITSELF,
     REASON_EMULATED_MODEL_UNRECORDED,
     REASON_SAVEPATH_CONFIG_UNREADABLE,
     REASON_SAVEPATH_UNTRANSLATABLE,

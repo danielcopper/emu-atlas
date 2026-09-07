@@ -2,8 +2,8 @@
 
 ``whdload-sample.lha`` is a WHDLoad install archive in miniature, in exactly
 the shape a real one has: a drawer icon ``TestGame.info`` at the root and a
-drawer ``TestGame/`` holding ``TestGame.slave`` beside a couple of other
-files. That shape is what the core's boot script resolves — the slave named
+drawer ``TestGame/`` holding ``TestGame.slave`` beside one other file
+(``ReadMe``). That shape is what the core's boot script resolves — the slave named
 after its own directory — so one fixture carries the container, the ``-lh5-``
 stream, the AmigaDOS hunk file and the ``WHDLoadSlave`` structure at once.
 

@@ -1219,10 +1219,20 @@ class TestArchiveReads:
     def test_an_archive_that_is_not_there_is_missing_rather_than_unreadable(self, tmp_path):
         assert RealMachine().list_archive(str(tmp_path / "gone.lha")).status == ARCHIVE_MISSING
 
-    def test_a_directory_spelled_like_an_archive_is_unreadable(self, tmp_path):
+    def test_a_directory_spelled_like_an_archive_is_still_a_directory(self, tmp_path):
+        # The core tests path_is_directory before it looks at the suffix, so a
+        # directory called Game.zip is a directory to it.
         (tmp_path / "Game.zip").mkdir()
+        (tmp_path / "Game.zip" / "Disk1.adf").write_bytes(b"a")
 
-        assert RealMachine().list_archive(str(tmp_path / "Game.zip")).status == ARCHIVE_UNREADABLE
+        assert RealMachine().list_archive(str(tmp_path / "Game.zip")) == ArchiveListResult(
+            ARCHIVE_OK, ("Disk1.adf",)
+        )
+
+    def test_a_container_that_is_not_there_is_missing_whatever_it_is_called(self, tmp_path):
+        for name in ("gone.zip", "gone.txt", "gone"):
+            assert RealMachine().list_archive(str(tmp_path / name)).status == ARCHIVE_MISSING
+            assert FixtureMachine({}).list_archive(f"/roms/{name}").status == ARCHIVE_MISSING
 
     def test_a_file_whose_bytes_cannot_be_read_is_unreadable(self, tmp_path):
         path = tmp_path / "Game.zip"
@@ -1495,3 +1505,39 @@ def test_a_member_written_with_a_leading_dot_slash_is_the_name_it_extracts_to(tm
     assert RealMachine().list_archive(path) == ArchiveListResult(
         ARCHIVE_OK, ("Disk1.adf", "Disk2.adf")
     )
+
+
+class TestAMemberIsOpenedByTheNameItsContainerWrote:
+    """The listing is normalised; the bytes still have to be asked for by the real name."""
+
+    def test_a_slave_written_with_a_leading_dot_slash_is_still_read(self, tmp_path):
+        path = _zip_of(tmp_path / "Game.zip", {"./Game.slave": _slave_bytes()})
+
+        answer = RealMachine().read_whdload_slave(path)
+
+        assert (answer.status, answer.slave) == (WHDLOAD_OK, "Game.slave")
+
+    def test_a_slave_written_with_a_leading_slash_is_still_read(self, tmp_path):
+        path = _zip_of(tmp_path / "Game.zip", {"/Game.slave": _slave_bytes()})
+
+        assert RealMachine().read_whdload_slave(path).status == WHDLOAD_OK
+
+    def test_a_custom_file_written_with_a_leading_dot_slash_is_still_read(self, tmp_path):
+        path = _zip_of(
+            tmp_path / "Game.zip",
+            {"Game.slave": _slave_bytes(), "./custom": b"SavePath=DH1:Mine\n"},
+        )
+
+        assert RealMachine().read_whdload_slave(path).custom == "SavePath=DH1:Mine\n"
+
+    def test_a_load_file_leaves_the_custom_file_unread(self, tmp_path):
+        # The script executes the volume's own command and skips the block
+        # that would have read `custom` along with everything else.
+        path = _zip_of(
+            tmp_path / "Game.zip",
+            {"load": b"C:Run Game\n", "Game.slave": _slave_bytes(), "custom": b"SavePath=DH1:x\n"},
+        )
+
+        answer = RealMachine().read_whdload_slave(path)
+
+        assert (answer.status, answer.custom) == (WHDLOAD_NO_SLAVE, None)

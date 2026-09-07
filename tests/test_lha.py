@@ -267,15 +267,24 @@ def test_a_block_whose_single_symbol_is_outside_its_alphabet_is_refused() -> Non
         lha.extract(archive, member)
 
 
-def test_a_member_whose_stated_size_outruns_its_bytes_is_refused() -> None:
+@pytest.mark.parametrize(
+    ("size", "reason"),
+    [
+        pytest.param(4_000_000_000, "no member it is here to read is that size", id="past-the-ceiling"),
+        pytest.param(1 << 20, "do not describe the same member", id="within-the-ceiling"),
+    ],
+)
+def test_a_member_whose_stated_size_outruns_its_bytes_is_refused(size, reason) -> None:
     # The size in the header is not a promise the bytes keep: past the stream
-    # the reader would invent one literal per turn, forever.
+    # the reader would invent one literal per turn, forever. A size past the
+    # ceiling is refused before any of that, and one under it as soon as the
+    # stream is spent.
     data = bytearray(SAMPLE.read_bytes())
-    struct.pack_into("<I", data, 2 + ORIGINAL_SIZE_FIELD, 4_000_000_000)
+    struct.pack_into("<I", data, ORIGINAL_SIZE_FIELD, size)
     archive = bytes(data)
     member = lha.members(archive)[0]
 
-    with pytest.raises(lha.CorruptMember, match="do not describe the same member"):
+    with pytest.raises(lha.CorruptMember, match=reason):
         lha.extract(archive, member)
 
 
@@ -299,3 +308,35 @@ def test_a_nameless_member_is_no_member_at_all() -> None:
 
     with pytest.raises(lha.NotAnLha, match="states no name"):
         lha.members(bytes(archive))
+
+
+def test_a_stream_of_degenerate_blocks_cannot_expand_without_end() -> None:
+    """A legal block can cost almost nothing and produce 65535 bytes.
+
+    Every table may be stated as one symbol at zero bits, so a block header of
+    some thirty bits yields its whole symbol count as literals. Nothing stops
+    a stream repeating that, which is expansion the spent-stream guard does
+    not see until far too late.
+    """
+    # Fifty-two bits: a symbol count of 65535, then each of the three tables
+    # stated as one symbol at zero bits — the literal 'A' for the content.
+    block = "1" * 16 + "00000" + "00000" + "0" * 9 + "001000001" + "0000" + "0000"
+    packed = bits_to_bytes(block * 200)
+    archive = level0(b"x", packed, method=lha.LH5, crc=0) + END
+    (member,) = lha.members(archive)
+    huge = lha.Member(member.name, member.method, member.offset, member.packed_size, 1 << 30, None)
+
+    with pytest.raises(lha.CorruptMember, match="no member it is here to read is that size"):
+        lha.extract(archive, huge)
+
+
+def test_a_degenerate_block_still_decodes_where_the_size_is_one_a_member_has() -> None:
+    # The ceiling is the guard, not a ban on the shape: the same stream with a
+    # size a real member could have decodes to exactly that many bytes.
+    block = "1" * 16 + "00000" + "00000" + "0" * 9 + "001000001" + "0000" + "0000"
+    packed = bits_to_bytes(block * 2)
+    archive = level0(b"x", packed, method=lha.LH5, crc=lha.crc16(b"A" * 64)) + END
+    (member,) = lha.members(archive)
+    sized = lha.Member(member.name, member.method, member.offset, member.packed_size, 64, member.crc)
+
+    assert lha.extract(archive, sized) == b"A" * 64

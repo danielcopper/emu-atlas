@@ -84,13 +84,16 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev 
   `ps2_bios_headers` (the ROMDIR read at the seam: a declared file's path to its `romver` (14 characters) and `serial`
   (up to 15) strings — the two the walk yields, from which the fixture builds the same fields the reader builds — or a
   state `"unreadable"|"not-a-bios"`; a declared file with no entry answers `missing`, which the folder route states as
-  `firmware-unreadable`, so a vector that forgot the key cannot pass a file as no BIOS), `archives` (an archive path to
-  the member list a walk of it answers — relative, `/`-separated — or a state `"unreadable"|"not-archive"`; a declared
-  file with no entry answers `not-archive`, so a vector that forgot the key cannot pass a file as one that lists) and
-  `whdload_slaves` (the same path to what the slave inside states: `{"slave", "version", "name", "selected_by"}` with a
-  nullable `name` and the route that named the member (`script` or the derived `only-slave`), or a state
-  `"no-slave"|"ambiguous"|"slave-unreadable"` — the container's own failures come from `archives`, and a stated `slave`
-  must be a member that archive lists), and two ways to be unreadable: `inaccessible` (the `stat` fails — declaring a
+  `firmware-unreadable`, so a vector that forgot the key cannot pass a file as no BIOS), `archives` (an archive-suffixed
+  path (`zip`, `lha`, `lzh`) to the member list a walk of it answers — relative, `/`-separated — or a state
+  `"unreadable"|"not-archive"`; a declared file with no entry answers `not-archive`, so a vector that forgot the key
+  cannot pass a file as one that lists, while a **directory** is a container too, never declared here, its listing
+  derived from `files`) and `whdload_slaves` (the path of the container the core mounts — the drawer beside a
+  `.slave`/`.info`, not the launch file — to what the slave inside states: `{"slave", "version", "name", "selected_by"}`
+  with a nullable `name` and the route that named the member (`script` or the derived `only-slave`), or a state
+  `"no-slave"|"ambiguous"|"slave-unreadable"` — the container's own failures come from `archives`, a stated `slave` must
+  be a member that container lists, and the reference suite holds the declared slave and route against what the reader
+  would select over that listing), and two ways to be unreadable: `inaccessible` (the `stat` fails — declaring a
   directory declares its whole subtree) and `unlistable` (it _is_ a directory and its contents cannot be read, which is
   the only state a resolver reaches after passing an "is it a directory?" check). Configured save roots must be
   _directories_ in fixtures (`path_is_directory` validation) — list them in `dirs` or place a file inside. Expected
