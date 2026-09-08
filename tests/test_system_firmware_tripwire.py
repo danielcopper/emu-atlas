@@ -126,9 +126,8 @@ def _all_optional(text: str) -> bool | None:
         # Is firmware optional or not, if not defined RetroArch will assume it is required
 
     That line is documentation rather than the citation, and it is nearly gone:
-    two of the 291 files matching ``*_libretro.info`` still carry it — the
-    glob this walk uses; the template and
-    ``puzzlescript_libretro.info:45``. The rule is stated here rather than left
+    two of the 291 files matching ``*_libretro.info`` — the glob this walk uses
+    — still carry it, the template and ``puzzlescript_libretro.info:45``. The rule is stated here rather than left
     to the port because reading an absent flag as optional is what would let a
     system disappear from this tripwire silently. One deployed core is written
     that way today (``ecwolf``), and

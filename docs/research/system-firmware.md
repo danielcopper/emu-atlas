@@ -54,10 +54,25 @@ The dates run the opposite way to what a reader would guess, so they are worth s
 
 The **deployed** build is about eight months **older** than the pinned source. The setting is therefore missing from the
 _newer_ source and present in the _older_ build, which reads as **[D]** upstream having removed it — not as the pin
-lagging behind something new. Two readings support that: the settings framing the literal in the deployed binary's
-string table, `load_dummy_on_core_shutdown` and `builtin_mediaplayer_enable`, both still register at the pin
-(`configuration.c:1804` and `:1816`), and the five between them there are all core-info settings with no firmware one
-among them. The practical point is unchanged either way — the setting is a `[V-binary]` plus config reading of what is
+lagging behind something new.
+
+**Comparing version strings will not show this.** The pinned source declares `PACKAGE_VERSION "1.22.2"`
+(`a79435a:version.all:9`), which is exactly what the deployed build reports. A maintainer checking the offset the
+obvious way sees 1.22.2 on both sides and gets a false all-clear, at precisely the check this note exists to warn about.
+The dates are the only thing that separates them, and eight months is enough to matter.
+
+Two readings support the removal: the settings framing the literal in the deployed binary's string table,
+`load_dummy_on_core_shutdown` and `builtin_mediaplayer_enable`, both still register at the pin (`configuration.c:1804`
+and `:1816`), and the five distinct settings between them there are unrelated core settings with no firmware one among
+them. Two of the five carry the `core_info_` prefix (`core_info_savestate_bypass`, `core_info_cache_enable`); the other
+three (`core_option_category_enable`, `core_set_supports_no_game_enable`, `always_reload_core_on_run_content`) are
+core-related but not core-info, so "core-info settings" would overstate it. What holds exactly is the load-bearing half:
+none of them is a firmware setting.
+
+**What the `[D]` assumes, stated rather than buried.** It takes the deployed build for unmodified upstream. A downstream
+patch would produce the same two observations, and this machine cannot tell the difference: the local RetroArch clone is
+shallow — one commit, `.git/shallow` present — so no history is available here to check when or whether the setting was
+removed. The practical point is unchanged either way — the setting is a `[V-binary]` plus config reading of what is
 deployed, never a source citation.
 
 **A separate finding, pre-existing and first measured here:** this repo's RetroArch pin is _newer_ than the RetroArch
@@ -287,12 +302,15 @@ The one entry that is not `open` carries its evidence in two places, and they sh
 - **The exemption's `reason`**, which is not evidence for the verdict at all — one `[V-binary]` mark over
   `pcsx_rearmed_bios` and one `[V-live]` mark over ReARMed playing a game through with no BIOS present.
 
-So the entry as a whole rests on three observations and two binary readings, across four evidence marks — but the
-verdict rests on the first bullet alone: **the two observations together with the SwanStation options reading**, and on
-no reading of any switch. That is the one answer to "what does the verdict rest on", and the data file's own `source`
-closes with the same sentence rather than a narrower one. The `source` also records what it does **not** establish: the
-two unobserved Beetle switches, and the four declaring entries whose binaries were never read. A verdict that hides its
-own gaps is the kind a reader stops trusting the moment they find one.
+So the entry as a whole rests on three observations and two binary readings. Those five pieces are introduced under six
+evidence marks — `[V-live]`, `[V-binary]`, `[D]` and `[O]` in the verdict's `source`, `[V-binary]` and `[V-live]` in the
+exemption — and the `source` names two of them a second time when it summarises, so counting mark _occurrences_ in the
+file gives eight rather than six. The verdict rests on the first bullet alone: **the two observations together with the
+SwanStation options reading**, and on no reading of any switch. That is the one answer to "what does the verdict rest
+on", and the data file's own `source` closes with the same sentence rather than a narrower one. The `source` also
+records what it does **not** establish: the two unobserved Beetle switches, and the four declaring entries whose
+binaries were never read. A verdict that hides its own gaps is the kind a reader stops trusting the moment they find
+one.
 
 ## Exempting a core that is right
 
@@ -306,11 +324,9 @@ read this table, where a system needing firmware must not be reported against a 
 is **not** what makes the derivation pass. The derivation compares whole systems and never consults the field, so
 removing it changes no verdict and only leaves the staleness check below with nothing to do.
 
-It is not unread, though. An earlier draft of this paragraph claimed removing it failed no check and called that
-measured; the measurement had run one test class rather than the suite. Deleting the field and running the **whole**
-suite fails `test_playstation_cannot_run_without_firmware_and_exempts_rearmed`, which pins the shipped entry's contents.
-So **two** checks read the field today — that unit test and the staleness one — and the disagreement derivation is
-neither of them.
+It is not unread, though. Deleting the field and running the **whole** suite — not one test class — fails
+`test_playstation_cannot_run_without_firmware_and_exempts_rearmed`, which pins the shipped entry's contents. So **two**
+checks read the field today, that unit test and the staleness one, and the disagreement derivation is neither of them.
 
 PCSX ReARMed is the case the field was written around, and its entry states its own limits. The core registers a `bios`
 option carrying `HLE`, and it was observed playing a game through with no BIOS present. Which of its two values was in

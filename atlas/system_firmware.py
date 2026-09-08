@@ -106,8 +106,7 @@ class CoreAlternative:
     checks read it today — the staleness one, which fails when a named core has
     stopped declaring everything optional for that system, and the unit test
     pinning this shipped entry's contents. Measured by deleting the field and
-    running the whole suite; an earlier note here said "no check" on the
-    strength of one test class.
+    running the whole suite.
 
     ``reason`` carries the evidence rather than a bare exemption: what the core
     offers, and what was seen.
