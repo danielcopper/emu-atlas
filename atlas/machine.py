@@ -816,11 +816,13 @@ class RealMachine:
     a crashing core costs one answer, not the host process — wherever an
     interpreter to run it under could be named
     (:func:`core_probe_interpreter`), and memoizes per ``(path, mtime, size)``:
-    a cached live read, not shipped data, invalidated the moment the ``.so``
-    changes. A probe that timed out without printing a usable line is
-    remembered too, so a hanging core costs its timeout once per machine rather
-    than once per question. That memory reaches exactly as far as this object
-    and no further, which is the part a consumer has to act on:
+    a cached live read, not shipped data, keyed on the file's metadata rather
+    than its content — a rebuild moves the mtime and is read again, while a
+    replacement preserving mtime and size (``cp -p``, a timestamp-normalising
+    deploy) keeps the key. A probe that timed out without printing a usable
+    line is remembered too, so a hanging core costs its timeout once per
+    machine rather than once per question. That memory reaches exactly as far
+    as this object and no further, which is the part a consumer has to act on:
     :func:`atlas.detect` builds a fresh machine whenever it is handed none, so
     a caller that re-detects per question pays the timeout every time, while
     one that keeps its installations, or passes its own machine, pays it once.

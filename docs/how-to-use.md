@@ -248,14 +248,19 @@ Rules that hold for every answer:
   set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
   `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Handles are live, and worth keeping.** Every query re-reads its sources — that is what makes asking twice a drift
-  check. The one read remembered rather than repeated is the core probe: what a core reports about itself is read once
-  per machine object, keyed on the `.so`'s path, mtime and size, and a probe that hung without printing a usable line is
-  remembered the same way. A rebuilt or replaced core changes that key and is read again, so nothing stale outlives the
-  file it came from. What it does cost is a decision about lifetime: that memory lives on the machine behind the
-  handles, and `atlas.detect` builds a fresh machine whenever it is handed none, so a caller that re-detects for every
-  question pays every probe again — including the fifteen seconds atlas waits out a core that hangs. Keep the
-  installations one `detect` returned and they share its machine; pass your own `machine` to `detect` and the lifetime
-  is yours.
+  check. The core probe is the one read that can be remembered instead, and only two of its outcomes are: a core that
+  answered, and a probe that hung without printing a usable line. Both are kept per machine object under the `.so`'s
+  path, mtime and size. A probe that ended on its own with nothing usable is asked again, and so is a core no
+  interpreter could be launched for — on purpose, because the reason can be gone by the next question: a core that
+  answered `core-unqueryable` for want of a host library answers with its `library_name` once that library is installed,
+  on the same machine and without a new one. The key is metadata rather than content, so a rebuild moves the mtime and
+  is read again, while a replacement that preserves mtime and size (`cp -p`, a timestamp-normalising deploy) is answered
+  from the memory. What is left to you is lifetime. That memory lives on the machine behind the handles, and both entry
+  points build a fresh machine whenever they are handed none — `atlas.detect`, and `atlas.every_installation`, which
+  calls `detect` for you — so re-detecting, or re-aggregating, for every question pays every probe again, including the
+  fifteen seconds atlas waits out a core that hangs. Keep the installations one `detect` returned and they share its
+  machine; or construct your own (`from atlas.machine import RealMachine`) and pass it as `machine=` to either entry
+  point.
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
@@ -2727,10 +2732,12 @@ for req in ident.requirements:
 
 ### Flow 5 — "Did the layout drift since the last sync?"
 
-Handles are live — every query re-reads its sources. So drift detection is: ask again, compare. The one remembered read
-does not blunt it: a core's own report is kept per machine object and keyed on the `.so`'s path, mtime and size, so a
-core that was rebuilt or replaced is read again — what that memory costs a caller who re-detects is under
-[the standard query pattern](#the-standard-query-pattern).
+Handles are live — every query re-reads its sources. So drift detection is: ask again, compare. One read is remembered
+rather than repeated, and it is narrow enough not to blunt that: a core's own report is kept per machine object under
+the `.so`'s path, mtime and size, and a rebuild moves that key. A probe that failed is kept only where it had to be
+killed for hanging, so the core that answered `core-unqueryable` for want of a host library answers with its
+`library_name` at the next question, on the handle you already hold. What the memory costs a caller who re-detects
+instead is under [the standard query pattern](#the-standard-query-pattern).
 
 ```python
 placement = entry.savefile_location(content_path=rom.file_path)
