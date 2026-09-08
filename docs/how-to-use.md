@@ -251,11 +251,11 @@ Rules that hold for every answer:
   check. The core probe is the one read that can be remembered instead, and only two of its outcomes are: a core that
   answered, and a probe that hung without printing a usable line. Both are kept per machine object under the `.so`'s
   path, mtime and size. A probe that ended on its own with nothing usable is asked again, and so is a core no
-  interpreter could be launched for — on purpose, because the reason can be gone by the next question: a core that
-  answered `core-unqueryable` for want of a host library answers with its `library_name` once that library is installed,
-  on the same machine and without a new one. The key is metadata rather than content, so a rebuild moves the mtime and
-  is read again, while a replacement that preserves mtime and size (`cp -p`, a timestamp-normalising deploy) is answered
-  from the memory. What is left to you is lifetime. That memory lives on the machine behind the handles, and both entry
+  interpreter could be launched for — on purpose, because the reason can be gone by the next question: where a placement
+  carried `core-unqueryable` for want of a host library, the core answers with its `library_name` once that library is
+  installed, on the same machine and without a new one. The key is metadata rather than content, so a rebuild moves the
+  mtime and is read again, while a replacement that preserves mtime and size (`cp -p`, a timestamp-normalising deploy)
+  keeps the key. What is left to you is lifetime. That memory lives on the machine behind the handles, and both entry
   points build a fresh machine whenever they are handed none — `atlas.detect`, and `atlas.every_installation`, which
   calls `detect` for you — so re-detecting, or re-aggregating, for every question pays every probe again, including the
   fifteen seconds atlas waits out a core that hangs. Keep the installations one `detect` returned and they share its
@@ -2735,8 +2735,8 @@ for req in ident.requirements:
 Handles are live — every query re-reads its sources. So drift detection is: ask again, compare. One read is remembered
 rather than repeated, and it is narrow enough not to blunt that: a core's own report is kept per machine object under
 the `.so`'s path, mtime and size, and a rebuild moves that key. A probe that failed is kept only where it had to be
-killed for hanging, so the core that answered `core-unqueryable` for want of a host library answers with its
-`library_name` at the next question, on the handle you already hold. What the memory costs a caller who re-detects
+killed for hanging, so where a placement carried `core-unqueryable` for want of a host library, the core answers with
+its `library_name` at the next question, on the handle you already hold. What the memory costs a caller who re-detects
 instead is under [the standard query pattern](#the-standard-query-pattern).
 
 ```python
