@@ -16,6 +16,8 @@ from atlas.oddities import (
     ANCHOR_KINDS,
     MODE_ALWAYS,
     CoreCard,
+    SaveGroup,
+    SaveMode,
     load_audit,
     load_oddities,
     lookup_card,
@@ -288,6 +290,97 @@ class TestADirectoryWhoseNamesAreNotEstablished:
             _text(c, "dir") for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
         }
         assert flagged <= {g.dir for g in p.file_set.groups}
+
+
+MAME2010_CORE = {"library_name": "MAME 2010", "options": {}}
+# The shared CFG sorts saves by the content's directory, so the card's own
+# subtree nests under `arcade/` — the order the frontend hands directories to
+# cores, and the same path the declared answer's groups carry.
+MAME2010_NVRAM = "/mnt/sd/retrodeck/saves/arcade/mame2010/nvram"
+
+
+def _mame2010_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/mame2010_libretro.so": MAME2010_CORE})
+    return placed(rd.savefile_location(content_path=MAME_ROM, core_so="mame2010_libretro.so"))
+
+
+class TestAnUnnamedGroupSpeaksOnlyForItsOwnDirectory:
+    """The claim a nameless group makes is about *its* directory, not the answer's.
+
+    MAME 2010 states eight of them, and three refuse their file names — the
+    differencing images, the memory cards, the controller maps. None of those
+    directories is the one an observation of ``nvram/`` read, so none of them
+    may speak for what was found there: a file the nvram group does not name is
+    still a file nothing established a role for.
+    """
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, MAME_ROM: "", SAVES_KEEP: ""}
+
+    def test_a_stray_beside_the_named_file_is_unknown_not_the_neighbours_role(self):
+        p = _mame2010_query(
+            {**self.FILES, f"{MAME2010_NVRAM}/dkong.nv": "nv", f"{MAME2010_NVRAM}/dkong.txt": "?"}
+        )
+        assert p.dir == MAME2010_NVRAM
+        assert p.file_set.state == "observed"
+        assert [(g.files, g.role) for g in p.file_set.groups] == [
+            (("dkong.nv",), atlas.ROLE_BATTERY),
+            (("dkong.txt",), atlas.ROLE_UNKNOWN),
+        ]
+
+    def test_the_nameless_neighbours_still_travel_as_caveats(self):
+        # They are not in the observation's groups, and the reason they are
+        # reachable at all is the caveat that names each directory.
+        p = _mame2010_query({**self.FILES, f"{MAME2010_NVRAM}/dkong.nv": "nv"})
+        flagged = {
+            _text(c, "dir") for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
+        }
+        assert len(flagged) == 3
+        assert MAME2010_NVRAM not in flagged
+        assert {g.dir for g in p.file_set.groups} == {MAME2010_NVRAM}
+
+    def test_a_lone_nameless_group_next_door_does_not_reach_across(self):
+        """The modern MAME card states exactly one nameless group, in ``diff/``.
+
+        With only one, "the nameless group of this mode" would be unambiguous —
+        and still wrong, because it is a claim about ``diff/`` and the file was
+        found in ``nvram/``. This is the case that separates *the nameless group
+        of this directory* from *the nameless group of this mode*; the sibling
+        class above cannot, because MAME 2010 states three.
+        """
+        p = _mame_query({**self.FILES, "/mnt/sd/retrodeck/saves/arcade/mame/nvram/dkong.txt": "?"})
+        assert p.dir == "/mnt/sd/retrodeck/saves/arcade/mame/nvram"
+        assert p.file_set.state == "observed"
+        assert [(g.dir, g.files, g.role) for g in p.file_set.groups] == [
+            (p.dir, ("dkong.txt",), atlas.ROLE_UNKNOWN)
+        ]
+
+    def test_two_nameless_claims_on_one_directory_settle_on_unknown(self):
+        """Two groups speaking for one directory name no single role, so none is stated.
+
+        No shipped card has this shape — measured over ``core_oddities.json``,
+        which is why it is exercised against the decomposition directly rather
+        than through a fixture machine. The arm exists so that the day a card
+        does state two, the answer degrades to the value that means *nothing
+        established this* instead of picking whichever came first.
+        """
+        from atlas.installations import _observed_groups  # pyright: ignore[reportPrivateUsage]
+
+        def group(role: str) -> SaveGroup:
+            return SaveGroup(
+                subdir=None, files=None, granularity="per-game-files", role=role, unnamed="why not"
+            )
+
+        one = SaveMode(root="savefile_directory", groups=(group("battery"),))
+        two = SaveMode(root="savefile_directory", groups=(group("battery"), group("settings")))
+        found = ("slot.001",)
+        assert [
+            (g.files, g.role)
+            for g in _observed_groups(found, directory="/saves", rom_stem="slot", mode=one)
+        ] == [(found, atlas.ROLE_BATTERY)]
+        assert [
+            (g.files, g.role)
+            for g in _observed_groups(found, directory="/saves", rom_stem="slot", mode=two)
+        ] == [(found, atlas.ROLE_UNKNOWN)]
 
 
 PRBOOM_ROM = "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad"
@@ -1873,6 +1966,12 @@ class TestARuleSelectedCard:
         only the declared names were grouped, that file would look exactly like
         a file with no role — which is the reading that lost data — so it gets
         a group of its own and the one role no declaration may state.
+
+        This is also the guard that ``unknown`` stays reachable now that a group
+        stating a directory's role without its names claims what is left there
+        (:class:`TestScummvmSavepath`). This card states no such group, so
+        nothing here can speak for the stray, and the honest value is the one
+        that survives.
         """
         stray = f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.srm"
         p = _saturn_query({**self.FILES, **self.WRITTEN, stray: "from another core"})
@@ -2094,6 +2193,36 @@ class TestScummvmSavepath:
         assert stated
         assert stated[0].data["reason"] == atlas.REASON_SAVEPATH_CONFIG_UNREADABLE
         assert "could not be read" in stated[0].message
+
+    SLOT = "/mnt/sd/retrodeck/saves/scummvm/monkey1.s01"
+
+    def test_a_slot_file_keeps_the_role_the_card_stated_without_its_names(self):
+        """The card refused the names, never the role — and it still does.
+
+        A group that states a directory and no file names is a claim about what
+        lies there, which is why its ``file-names-unestablished`` caveat carries
+        a ``role``. Before, the file found in that directory matched no group's
+        names, fell through to ``unknown``, and sat beside a caveat calling the
+        same directory a battery: one answer saying two things.
+        """
+        declared = _scummvm_query(self.FILES)
+        observed = _scummvm_query({**self.FILES, self.SLOT: "slot"})
+        assert declared.file_set.state == "declared"
+        assert observed.file_set.state == "observed"
+        assert [(g.files, g.granularity, g.role) for g in declared.file_set.groups] == [
+            (None, "per-game-files", atlas.ROLE_BATTERY)
+        ]
+        assert [(g.files, g.granularity, g.role) for g in observed.file_set.groups] == [
+            (("monkey1.s01",), "per-game-files", atlas.ROLE_BATTERY)
+        ]
+
+    def test_the_caveat_beside_it_states_the_same_role(self):
+        # The contradiction this closes is between two halves of one answer, so
+        # it is asserted across both halves rather than inside the groups.
+        p = _scummvm_query({**self.FILES, self.SLOT: "slot"})
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED)
+        assert caveat.data["role"] == atlas.ROLE_BATTERY
+        assert [g.role for g in p.file_set.groups] == [caveat.data["role"]]
 
 
 MAME_INI_DIR = "/mnt/sd/retrodeck/bios/mame/ini"

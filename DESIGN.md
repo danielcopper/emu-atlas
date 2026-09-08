@@ -294,12 +294,15 @@ findings:
   directory is empty and without them once the game has run, which is how a consumer's "never sync a settings file" rule
   stopped protecting exactly when there was something to protect; without the second, a file the declaration does not
   name still looks like a file with no role, and the trap survives one step narrower. So every file a savefile
-  observation found is in one of its groups, and one whose kind nothing established says so in a word (`role: unknown`)
-  rather than by an empty field. Absence is never a value — that is the same rule `granularity` and `checked` already
-  obey. What such an answer does **not** state is the card's other directories: its groups decompose the one directory
-  that was read, so a card that also writes into a sibling subdirectory (`kronos/stv` beside `kronos/saturn`, seven of
-  MAME 2010's eight) has parts that only the declared answer states as groups, and only an unnamed part keeps its
-  `file-names-unestablished` caveat. The full map of places is a declared answer's guarantee, not an observation's.
+  observation found is in one of its groups: under the role the declaration states for its name, or — where the card
+  states a directory's role and refuses its file names, as it does for ScummVM's slot files and WHDLoad's drawer — under
+  that directory's role, and only a file no group of that directory covers says so in a word (`role: unknown`). Absence
+  is never a value, and neither is a missing _name_ a missing kind — that is the same rule `granularity` and `checked`
+  already obey. What such an answer does **not** state is the card's other directories: its groups decompose the one
+  directory that was read, so a card that also writes into a sibling subdirectory (`kronos/stv` beside `kronos/saturn`,
+  seven of MAME 2010's eight) has parts that only the declared answer states as groups, and only an unnamed part keeps
+  its `file-names-unestablished` caveat. The full map of places is the guarantee of a declared answer a card decomposed
+  — the standard rule states one list in one directory and no groups at all — never an observation's.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is

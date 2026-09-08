@@ -243,9 +243,12 @@ GRANULARITY_NONE = "none"
 # about :data:`ROLE_UNKNOWN` below; see ``docs/how-to-use.md``.
 #
 # :data:`ROLE_UNKNOWN` is the one value no evidence states — it is what a group
-# carries where a file is on the machine and nothing atlas read says what kind
-# of data it holds. It is a value rather than an absence on purpose, and the
-# reason is a consumer that lost data: a save sync that skips
+# carries where a file is on the machine and no declaration covering that
+# directory says what kind of data it holds. Not knowing the *name* is not the
+# same as not knowing the kind: a card that states a directory's role and
+# refuses its file names has said what lies there, and a file found there takes
+# that role rather than this one. It is a value rather than an absence on
+# purpose, and the reason is a consumer that lost data: a save sync that skips
 # :data:`ROLE_SETTINGS` read "no role stated" as "ordinary progress" and copied
 # a console's settings file over the other device's. Absence is what misled it,
 # so the answer says *there is nothing to say about this file* in a word a
@@ -1047,10 +1050,12 @@ class FileSet:
     the declared set said which of the files were the console's settings, and
     the moment the game had run once the same question came back with the names
     and no roles at all. A client reading the absence as "ordinary progress"
-    then synchronised a settings file the user had chosen on that device. So the
-    roles do not depend on whether anything was found, and a file nothing names
-    says so in a word. The savestate question's observation is the one that is
-    not decomposed at all — see :class:`SavestatePlacement`.
+    then synchronised a settings file the user had chosen on that device. So a
+    role does not depend on whether anything was found: a name the declaration
+    covers keeps it, and so does a file in a directory whose role the card
+    states without its file names. A file no group of that directory covers says
+    so in a word. The savestate question's observation is the one that is not
+    decomposed at all — see :class:`SavestatePlacement`.
 
     Where ``groups`` is populated, ``files`` stays exactly what it always was —
     the names lying in ``dir`` — and that is enforced: every group under the

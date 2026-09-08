@@ -3554,6 +3554,34 @@ def _observation_names(group: SaveGroup, rom_stem: str | None) -> frozenset[str]
     return frozenset(_card_files(names, rom_stem) or ())
 
 
+def _unnamed_here(mode: SaveMode | None) -> SaveGroup | None:
+    """The group that states this directory's role and refuses its file names.
+
+    Such a group is a claim about the directory, not about a list: ScummVM
+    names its slot files per engine from the launcher target, and a WHDLoad
+    save is a drawer whose contents the installer decides. The card still says
+    what lies there — that is why its ``file-names-unestablished`` caveat
+    carries a ``role`` — so a file found there is that group's data, and the
+    only thing missing was ever the name.
+
+    ``None`` where no such group covers the answer's own directory, and
+    deliberately ``None`` where two would: a name two groups both claim has no
+    role atlas read, which is what :data:`~atlas.placement.ROLE_UNKNOWN` says.
+    No shipped card has two in one directory; the arm exists so that the day
+    one does, the answer degrades to the honest value instead of picking.
+    """
+    if mode is None or mode.stated is not None:
+        # A groups-less mode has no directory of its own to claim, and reading
+        # `primary` there would reach past an empty tuple.
+        return None
+    here = [
+        group
+        for group in mode.unnamed
+        if group.root is None and group.subdir == mode.primary.subdir
+    ]
+    return here[0] if len(here) == 1 else None
+
+
 def _observed_groups(
     observed: tuple[str, ...], *, directory: str, rom_stem: str | None, mode: SaveMode | None
 ) -> tuple[FileGroup, ...]:
@@ -3566,24 +3594,34 @@ def _observed_groups(
     "ordinary progress" and copied a console settings file between devices.
 
     Groups come in the card's own order and hold the names in the answer's,
-    which is what the two states can each honestly say. A file no group
-    recognises is a group of its own with :data:`~atlas.placement.ROLE_UNKNOWN`
-    rather than being left out — "nothing is known about this file" is a
-    statement, and it is the one a caller must not be able to mistake for
-    "nothing is here". Its granularity is read off the names like every other
-    fact here: the observation matched the content's own stem, so these are this
-    game's files rather than every game's, and one or several of them the way a
-    card counts its own group's.
+    which is what the two states can each honestly say. Three passes, most
+    specific first:
 
-    What this does *not* produce is the card's other directories. It walks
-    ``mode.here`` — the groups in the answer's own directory — because that is
-    the directory the observation read, so a mode with groups in sibling
-    subdirectories (``kronos/stv`` beside ``kronos/saturn``) states them while
-    the set is declared and not once it is observed. An unnamed part keeps its
-    ``file-names-unestablished`` caveat either way; a named one travels in
-    neither. The type's own docstring states that limit for callers, and closing
-    it is a decision about what an observed answer may carry, not a change to
-    this function's shape.
+    1. the named groups take the names they declare or watch for;
+    2. the group that states this directory's role without its names — see
+       :func:`_unnamed_here` — takes what is left, because the card did say
+       what lies here and only refused to spell it;
+    3. whatever no group covers is a group of its own with
+       :data:`~atlas.placement.ROLE_UNKNOWN`, rather than being left out.
+
+    The third is a statement, and it is the one a caller must not be able to
+    mistake for "nothing is here". Its granularity is read off the names like
+    every other fact here: the observation matched the content's own stem, so
+    these are this game's files rather than every game's, and one or several of
+    them the way a card counts its own group's. The second pass keeps that value
+    for what it is for — ScummVM's slot files and a WHDLoad drawer would
+    otherwise come back roleless beside a caveat naming their role, an answer
+    contradicting itself in one envelope.
+
+    What this does *not* produce is the card's other directories. Every pass
+    above is about the answer's own directory, because that is the one the
+    observation read, so a mode with groups in sibling subdirectories
+    (``kronos/stv`` beside ``kronos/saturn``) states them while the set is
+    declared and not once it is observed. Those keep their
+    ``file-names-unestablished`` caveat where they are unnamed and travel
+    nowhere where they state files. The type's own docstring states that limit
+    for callers, and closing it is a decision about what an observed answer may
+    carry, not a change to this function's shape.
     """
     unclaimed = list(observed)
     groups: list[FileGroup] = []
@@ -3596,6 +3634,17 @@ def _observed_groups(
         groups.append(
             FileGroup(dir=directory, files=mine, granularity=group.granularity, role=group.role)
         )
+    catchall = _unnamed_here(mode) if unclaimed else None
+    if catchall is not None:
+        groups.append(
+            FileGroup(
+                dir=directory,
+                files=tuple(unclaimed),
+                granularity=catchall.granularity,
+                role=catchall.role,
+            )
+        )
+        unclaimed = []
     if unclaimed:
         groups.append(
             FileGroup(

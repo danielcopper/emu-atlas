@@ -718,10 +718,11 @@ its dip switches in `mame/cfg/` beside an emulator-wide `default.cfg`, and hard-
 Handing that back as one flat list would tell you the names and hide which of them are the player's progress and which
 belong to every game at once.
 
-`groups` is that decomposition. On a **declared** answer it is **the complete list of places** — `dir` and `files` are
-one of them, the first; on an observed one it is what was found in the directory that was read, which is not the same
-promise (see "an observation's groups" below). Each entry carries its own resolved `dir`, its own `files`, and two
-fields that answer two different questions:
+`groups` is that decomposition. Where a **card** decomposed a declared answer it is **the complete list of places** —
+`dir` and `files` are one of them, the first. It is empty where nothing decomposed the answer, which the standard rule
+never does; and on an observed answer it is what was found in the directory that was read, which is not the same promise
+(see "an observation's groups" below). Each entry carries its own resolved `dir`, its own `files`, and two fields that
+answer two different questions:
 
 ```python
 for g in placement.file_set.groups:
@@ -736,9 +737,10 @@ packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title ML
 carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat, exactly as the
 file-name templates do it.
 
-On a declared answer, one walk over `groups` reaches every directory the card knows about. `placement.dir` and
-`placement.file_set.files` stay exactly what they always were — the first group's directory and the names in it — so a
-client that reads only those keeps working unchanged and gets the save's own state, which is the part cards state first.
+Where a card decomposed the answer, one walk over `groups` reaches every directory that card knows about.
+`placement.dir` and `placement.file_set.files` stay exactly what they always were — the first group's directory and the
+names in it — so a client that reads only those keeps working unchanged and gets the save's own state, which is the part
+cards state first.
 
 **The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
 and `default.cfg` sit in one directory with the same role and differ only in whom they belong to. So neither field can
@@ -758,11 +760,15 @@ restoring one game's copy overwrites every other game's state in them. A tool ma
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
 
 **`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
-read says what kind of data it is: no rule card covers this core, or the file is not one the card names. It is a value
-rather than a missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a
-settings file the user had chosen on that device over the other device's, because while the directory was still empty
-the declared answer had named the roles and the observed one that replaced it named none. So the line above keeps
-`unknown` groups, and that is a decision you should make deliberately rather than inherit:
+read says what kind of data it is. Three ways to get there: no rule card covers this core, the card covers it and names
+neither this file nor its directory's contents, or two of the card's groups both speak for the same directory without
+naming files, so no one role follows. What it does _not_ mean is that a name was unavailable: a card that states a
+directory's role and refuses its file names — ScummVM's slot files, a WHDLoad drawer — has said what lies there, and
+what is found there carries that role. It is a value rather than a missing field on purpose. A save sync once read "no
+role stated" as "ordinary progress" and copied a settings file the user had chosen on that device over the other
+device's, because while the directory was still empty the declared answer had named the roles and the observed one that
+replaced it named none. So the line above keeps `unknown` groups, and that is a decision you should make deliberately
+rather than inherit:
 
 ```python
 mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
