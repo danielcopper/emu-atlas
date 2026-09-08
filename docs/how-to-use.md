@@ -760,15 +760,16 @@ restoring one game's copy overwrites every other game's state in them. A tool ma
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
 
 **`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
-read says what kind of data it is. Three ways to get there: no rule card covers this core, the card covers it and names
-neither this file nor its directory's contents, or two of the card's groups both speak for the same directory without
-naming files, so no one role follows. What it does _not_ mean is that a name was unavailable: a card that states a
-directory's role and refuses its file names — ScummVM's slot files, a WHDLoad drawer — has said what lies there, and
-what is found there carries that role. It is a value rather than a missing field on purpose. A save sync once read "no
-role stated" as "ordinary progress" and copied a settings file the user had chosen on that device over the other
-device's, because while the directory was still empty the declared answer had named the roles and the observed one that
-replaced it named none. So the line above keeps `unknown` groups, and that is a decision you should make deliberately
-rather than inherit:
+read says what kind of data it is. Two ways to get there: no rule card covers this core, or the card covers it and names
+neither this file nor its directory's contents. A third exists in the resolver and you will not meet it today — two of
+the card's groups speaking for the same directory without naming files, so no one role follows — because no shipped card
+states two; it is a guard against a card that one day might, not a case to write code for. What it does _not_ mean is
+that a name was unavailable: a card that states a directory's role and refuses its file names — ScummVM's slot files, a
+WHDLoad drawer — has said what lies there, and what is found there carries that role. It is a value rather than a
+missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a settings file the
+user had chosen on that device over the other device's, because while the directory was still empty the declared answer
+had named the roles and the observed one that replaced it named none. So the line above keeps `unknown` groups, and that
+is a decision you should make deliberately rather than inherit:
 
 ```python
 mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]

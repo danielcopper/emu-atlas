@@ -3609,9 +3609,14 @@ def _observed_groups(
     every other fact here: the observation matched the content's own stem, so
     these are this game's files rather than every game's, and one or several of
     them the way a card counts its own group's. The second pass keeps that value
-    for what it is for — ScummVM's slot files and a WHDLoad drawer would
-    otherwise come back roleless beside a caveat naming their role, an answer
-    contradicting itself in one envelope.
+    for what it is for. ScummVM's slot files are the case that arrives: they
+    carry the content's own stem, so the observation sees them, and without this
+    pass they came back roleless beside a caveat naming their role — an answer
+    contradicting itself in one envelope. A WHDLoad drawer reaches the same
+    contradiction only through a file inside it that happens to carry the
+    content's name, since that is what the observation globs for; a save under
+    the name WHDLoad's own installer chose is not seen at all and the answer
+    stays declared.
 
     What this does *not* produce is the card's other directories. Every pass
     above is about the answer's own directory, because that is the one the
