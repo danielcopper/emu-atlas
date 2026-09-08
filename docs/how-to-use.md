@@ -760,9 +760,9 @@ that is the caller's decision, which is exactly why atlas names them rather than
 **`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
 read says what kind of data it is: no rule card covers this core, or the file is not one the card names. It is a value
 rather than a missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a
-console's settings file — twelve bytes the user had chosen on that device — over the other device's, because while the
-directory was still empty the declared answer had named the roles and the observed one that replaced it named none. So
-the line above keeps `unknown` groups, and that is a decision you should make deliberately rather than inherit:
+settings file the user had chosen on that device over the other device's, because while the directory was still empty
+the declared answer had named the roles and the observed one that replaced it named none. So the line above keeps
+`unknown` groups, and that is a decision you should make deliberately rather than inherit:
 
 ```python
 mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
@@ -849,10 +849,11 @@ is the savefile observation: an answer that found files has a group for every on
 `files` is still exactly the names lying in `dir`: every group under the first group's directory, and for a declared set
 in the card's own order. So a card that splits one list into two by role moves no name out of `files`.
 
-**An observation's groups are what was found, in the answer's order — and they describe one directory.** A declared set
-lists the parts a card states, including the ones no file has been written for yet, in the order the card states them;
-an observed set lists only what is there, in the directory that was read, and its `files` comes back in that directory's
-own order while the groups follow the declaration's. So compare the two by name, never by position.
+**An observation's groups are what was found, and they describe one directory.** A declared set lists the parts a card
+states, including the ones no file has been written for yet, in the order the card states them; an observed set lists
+only what is there, in the directory that was read. Its two lists come out of different passes — the groups follow the
+declaration's order, `files` follows the observation's (sorted basenames where atlas globs a directory, the card's own
+candidate order where it checks the card's names one by one) — so compare them by name, never by position.
 
 **The parts a card keeps in another directory are in no group of an observed answer**, and there are two kinds. A part
 under _another_ root — Flycast's unmoved shared cards — is a group only where the set is declared, and the

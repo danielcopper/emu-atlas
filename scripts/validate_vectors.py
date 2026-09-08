@@ -1262,10 +1262,13 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
             if g["dir"] == groups[0]["dir"] and g["files"] is not None
             for f in g["files"]
         ]
-        # A card states its parts in its own order and a directory listing
-        # comes back in the answer's, so the sequence is held where it is
-        # stated and the names alone where they were found. Neither may lose,
-        # invent or double a name.
+        # The sequence is held only where it is stated. A card states its parts
+        # in its own order; an observation's two lists come out of different
+        # passes — the groups follow the declaration, while `files` follows the
+        # observation (sorted basenames from a globbed directory, the card's own
+        # candidate order where its names are checked one by one) — so only the
+        # names are held there. Neither may lose, invent or double a name, and
+        # neither says anything about a set that carries no groups at all.
         observed = file_set["state"] == "observed"
         ordered = "" if observed else ", in order"
         if (sorted(here) if observed else here) != (

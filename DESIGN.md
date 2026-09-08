@@ -279,7 +279,7 @@ class Machine(Protocol):
 
 ## Placements
 
-A placement answers "where does this emulator, configured as it is, keep this save?". Its shape follows four research
+A placement answers "where does this emulator, configured as it is, keep this save?". Its shape follows five research
 findings:
 
 - **Directory and file set are different kinds of knowledge.** The directory follows from one central rule (RetroArch's

@@ -1848,8 +1848,8 @@ class TestARuleSelectedCard:
         question came back with the same names and no roles at all, because the
         observed shape carried none. A save-syncing client that skips
         ``settings`` read the absence as ordinary progress and copied the
-        twelve bytes of settings the user had chosen on that device over the
-        other device's — the rule stopped protecting exactly when there was
+        settings file the user had chosen on that device over the other
+        device's — the rule stopped protecting exactly when there was
         something to protect. So the roles are asserted across both routes,
         not inside one.
         """

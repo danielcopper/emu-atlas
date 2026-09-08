@@ -103,10 +103,11 @@ class TestInvariants:
     def test_an_observed_set_is_decomposed_in_the_declarations_order(self):
         """Two honest orders, and the type holds each set to its own.
 
-        ``files`` comes back in the directory's order and the groups in the
-        card's, so the sequences differ by construction and only the names can
-        be held — which is the whole guarantee that matters here: every
-        observed file is in a group, once.
+        The groups follow the declaration's order and ``files`` follows the
+        observation's, so the sequences differ by construction and only the
+        names can be held: none lost, invented or doubled between the two.
+        That every observed savefile lands in a group is the resolver's doing
+        and is asserted where it happens, not here.
         """
         settings = FileGroup(dir="/saves", files=("g.smpc",), granularity="per-game-file", role="settings")
         battery = FileGroup(dir="/saves", files=("g.bkr",), granularity="per-game-file", role="battery")

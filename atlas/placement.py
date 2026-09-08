@@ -1053,9 +1053,12 @@ class FileSet:
     the names lying in ``dir`` — and that is enforced: every group under the
     first group's directory whose names are established holds exactly those
     names. A declared set is held to the card's order as well, which is the
-    order it states its parts in; an observed set is held to the names alone,
-    because its ``files`` is the directory's own order and its groups are the
-    declaration's. So a client that never reads ``groups`` sees no change when a
+    order it states its parts in. An observed set is held to the names alone,
+    because its two lists come out of different passes: the groups follow the
+    declaration's order, while ``files`` follows the observation's — sorted
+    basenames where a directory is globbed, the card's own candidate order where
+    the card's names are checked one by one. So a client that never reads
+    ``groups`` sees no change when a
     card splits one list into two by role, while a client that does gets the
     parts under the other directories too wherever the set is declared. Cards
     state the save's own state first, so the first group is the one a
@@ -1119,12 +1122,20 @@ class FileSet:
                 if group.dir == self.groups[0].dir and group.files is not None
                 for name in group.files
             )
-            # Two orders, both honest, and neither can be the other: a card
-            # states its parts in its own order, a directory listing comes back
-            # in the answer's. So the sequence is held where it is stated — the
-            # declaration — and the names alone where they were found. Either
-            # way no name may be missing, invented or doubled, which is what
-            # makes "every file is in a group" a property of the type.
+            # What this checks is agreement, not coverage: a set that carries
+            # groups may not lose, invent or double a name between them and
+            # ``files``. It says nothing about a set that carries none — the
+            # branch above is the whole condition — so "every file a savefile
+            # observation found is in a group" is the resolver's doing
+            # (``_observed_groups``), not this type's. A savestate answer builds
+            # an observed set with files and no groups and is legal here.
+            #
+            # The sequence is held only where it is stated. Both lists come out
+            # of their own pass: the groups follow the declaration's order,
+            # while ``files`` follows the observation's — sorted basenames where
+            # a directory is globbed, the card's own candidate order where the
+            # card's names are checked one by one. Neither is the order the
+            # directory happens to hold, and the two need not agree.
             observed = self.state == FILE_SET_OBSERVED
             ordered = "" if observed else ", in order"
             if (sorted(here) if observed else here) != (sorted(self.files) if observed else self.files):
