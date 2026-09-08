@@ -42,6 +42,11 @@ and a test fails when the committed file no longer matches them:
 python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md
 ```
 
+That method is about **save behaviour** and stays that way. The separate question "does this system run at all without
+firmware" has its own sibling document, `docs/research/system-firmware.md`: why neither the `.info` catalogue nor the
+core's options answers it alone, how `tests/test_system_firmware_tripwire.py` derives the open cases from the deployed
+cores, and what a verdict in `atlas/data/system_firmware.json` must cite.
+
 ## The generated contract reference
 
 `docs/contract-reference.md` is the per-question lookup table for what a serialized answer carries: its fields, their
