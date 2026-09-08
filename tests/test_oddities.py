@@ -382,6 +382,57 @@ class TestAnUnnamedGroupSpeaksOnlyForItsOwnDirectory:
             for g in _observed_groups(found, directory="/saves", rom_stem="slot", mode=two)
         ] == [(found, atlas.ROLE_UNKNOWN)]
 
+    # A named group and a nameless one in the same directory. The loader accepts
+    # it and no shipped card states it — all five modes with a nameless group
+    # state no named one — so the two orderings below are indistinguishable on
+    # the packaged cards, and this is the only place the order is held.
+    MIXED = SaveMode(
+        root="savefile_directory",
+        groups=(
+            SaveGroup(
+                subdir=None, files=("<rom_stem>.cfg",), granularity="per-game-file", role="settings"
+            ),
+            SaveGroup(
+                subdir=None, files=None, granularity="per-game-files", role="battery", unnamed="why"
+            ),
+        ),
+    )
+
+    def test_the_named_group_is_asked_before_the_directory_claim(self):
+        """Most specific first, and this is the shape where "first" means anything.
+
+        The card names one file and says the rest of the directory is battery
+        data. Asked in that order, the named file keeps ``settings`` and only
+        the remainder goes to the nameless group. Asked the other way round, the
+        nameless group swallows both and a file the card *declared* as settings
+        comes back as progress — the loss this whole branch exists to prevent,
+        rebuilt one layer in.
+        """
+        from atlas.installations import _observed_groups  # pyright: ignore[reportPrivateUsage]
+
+        groups = _observed_groups(
+            ("game.001", "game.cfg"), directory="/saves", rom_stem="game", mode=self.MIXED
+        )
+        assert [(g.files, g.granularity, g.role) for g in groups] == [
+            (("game.cfg",), "per-game-file", atlas.ROLE_SETTINGS),
+            (("game.001",), "per-game-files", atlas.ROLE_BATTERY),
+        ]
+
+    def test_the_directory_claim_is_not_made_when_nothing_is_left(self):
+        """A group exists because files are in it, so a claim over nothing is none.
+
+        With every found name taken by a named group there is nothing for the
+        nameless one to hold, and it states no group at all. The alternative is
+        not a harmless empty entry: ``FileGroup`` refuses ``files=()`` outright,
+        because an empty list would claim the directory holds nothing.
+        """
+        from atlas.installations import _observed_groups  # pyright: ignore[reportPrivateUsage]
+
+        groups = _observed_groups(
+            ("game.cfg",), directory="/saves", rom_stem="game", mode=self.MIXED
+        )
+        assert [(g.files, g.role) for g in groups] == [(("game.cfg",), atlas.ROLE_SETTINGS)]
+
 
 PRBOOM_ROM = "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad"
 VQ2_ROM = "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak"

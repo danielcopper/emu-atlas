@@ -3571,8 +3571,10 @@ def _unnamed_here(mode: SaveMode | None) -> SaveGroup | None:
     one does, the answer degrades to the honest value instead of picking.
     """
     if mode is None or mode.stated is not None:
-        # A groups-less mode has no directory of its own to claim, and reading
-        # `primary` there would reach past an empty tuple.
+        # A mode that states no separate save file declares no groups at all,
+        # so there is no claim over a directory to find. The walk below would
+        # answer the same by running over an empty tuple — this says it up
+        # front rather than leaving it to be inferred from that.
         return None
     here = [
         group
