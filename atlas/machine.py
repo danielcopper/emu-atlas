@@ -80,7 +80,7 @@ import sys
 import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Callable, Iterable, Literal, Mapping, Protocol
+from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol
 
 from . import lha, ps2_bios, squashfs, whdload
 
@@ -1066,9 +1066,17 @@ class RealMachine:
 
     @staticmethod
     def _probe(so_path: str) -> CoreInfo | None:
+        interpreter = core_probe_interpreter()
+        if interpreter is None:
+            # No interpreter to run the probe under, so nothing is launched at
+            # all. The alternative — spawning ``sys.executable`` and hoping —
+            # starts the *host* again wherever that executable is a frozen
+            # application, and ``capture_output`` would swallow the evidence.
+            # Unknown is the honest answer, and the caller already handles it.
+            return None
         try:
             proc = subprocess.run(
-                [sys.executable, "-m", "atlas._core_probe", so_path],
+                [interpreter.path, "-m", "atlas._core_probe", so_path],
                 capture_output=True,
                 timeout=_CORE_PROBE_TIMEOUT_SECONDS,
                 env=_probe_environment(),
@@ -1142,6 +1150,114 @@ def _probe_environment() -> dict[str, str] | None:
     inherited = env.get("PYTHONPATH")
     env["PYTHONPATH"] = f"{package_root}{os.pathsep}{inherited}" if inherited else package_root
     return env
+
+
+# The interpreter a host handed over, or None. Process-global because the
+# question is the process's: one running program, one answer to "is there an
+# interpreter here the core probe could run under".
+_registered_interpreter: str | None = None
+
+
+def _is_absolute_path_string(handed_over: object) -> bool:
+    """A non-empty ``str`` spelling an absolute path — everything else is not one.
+
+    Typed ``object`` on purpose: the annotation on the registration below is a
+    promise the caller makes, and this check is there for the caller who does
+    not keep it. A ``Path`` passes ``os.path.isabs`` and is still refused,
+    because what goes into the spawn is a string.
+    """
+    return isinstance(handed_over, str) and bool(handed_over) and os.path.isabs(handed_over)
+
+
+def register_core_probe_interpreter(path: str | None) -> None:
+    """Name the Python interpreter the core probe runs under — or ``None`` to forget it.
+
+    ``query_core`` answers what only the core binary can answer, by loading it
+    in a child process; that child is a Python interpreter running
+    ``atlas._core_probe``. A frozen host (PyInstaller, cx_Freeze, py2exe) has
+    no interpreter to offer as ``sys.executable`` — there that path is the
+    *application*, whose bootloader ignores ``-m atlas._core_probe`` and starts
+    the application a second time — so a host that knows where a real
+    interpreter lives says so here, and atlas launches that one instead. The
+    environment the child receives points it back at this package (see
+    :func:`_probe_environment`), so a foreign interpreter is not a poorer
+    answer: it is the same answer.
+
+    The path must be absolute. A bare name or a relative path would be resolved
+    through ``PATH`` by ``subprocess``, which is the guess about the machine
+    atlas refuses to make — the more so because a host doing this may be a
+    service running as root. Anything that is not ``None`` and not an absolute,
+    non-empty ``str`` is refused with :class:`TypeError` at the registration,
+    where the caller can still see what it handed over.
+
+    Whether the file exists is deliberately **not** checked: that is the
+    machine's business at probe time, and a path that does not run yields the
+    same honest *unknown* every other probe failure yields.
+
+    Registering ``None`` clears the registration and the running program
+    decides again. The last registration wins; there is one slot, not a chain.
+    """
+    global _registered_interpreter
+    if path is not None and not _is_absolute_path_string(path):
+        raise TypeError(
+            "a core probe interpreter must be an absolute path to an interpreter; "
+            f"{path!r} is not"
+        )
+    _registered_interpreter = path
+
+
+class CoreProbeInterpreter(NamedTuple):
+    """Which interpreter a core probe runs under here, and how it got here.
+
+    ``registered`` is the route, not a guess from the path: a host may hand
+    over the very interpreter that is running atlas, and then ``path`` equals
+    ``sys.executable`` while the answer still came from the host.
+    """
+
+    path: str
+    registered: bool
+
+
+def _running_python_interpreter() -> str | None:
+    """``sys.executable``, but only where the running program is plainly an interpreter.
+
+    Launching ``sys.executable -m atlas._core_probe`` is a probe only where
+    that executable *is* an interpreter. In a frozen build it is the
+    application: the bootloader ignores the module arguments and starts the
+    application again, so asking atlas where a save lives would restart the
+    host that asked — and ``capture_output`` would hide it.
+
+    So the test narrows on purpose. The two markers freezers set
+    (``sys.frozen``, ``sys._MEIPASS``) disqualify; an empty ``sys.executable``
+    disqualifies; and the basename is the belt for an embedded host that sets
+    neither marker. It is a rule of thumb, and every way it is wrong ends in a
+    refusal to probe rather than in launching a host: a PyPy or otherwise-named
+    interpreter loses probing here and hands over its own path through
+    :func:`register_core_probe_interpreter`. Do not widen this into a search —
+    a ``PATH``-resolved ``python3`` is an assumption about the machine, and
+    atlas makes none.
+    """
+    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+        return None
+    executable = sys.executable
+    if not executable or not os.path.basename(executable).startswith("python"):
+        return None
+    return executable
+
+
+def core_probe_interpreter() -> CoreProbeInterpreter | None:
+    """Which interpreter a core probe would run under here — ``None`` where none would.
+
+    ``None`` is the state in which ``query_core`` starts no process at all and
+    answers *unknown* for every core, which the resolver reports as
+    ``core-unqueryable``; this function is the diagnosis channel for a host
+    that sees that code everywhere. It says what a probe would run, not that
+    any core was probed.
+    """
+    if _registered_interpreter is not None:
+        return CoreProbeInterpreter(_registered_interpreter, True)
+    running = _running_python_interpreter()
+    return None if running is None else CoreProbeInterpreter(running, False)
 
 
 def _parse_core_options(raw: object) -> dict[str, CoreOption] | None:

@@ -2,15 +2,19 @@
 
 Run against the tarball ``build_release_bundle.py`` produced. Everything here
 exercises the *extracted bundle*: its launcher, its interpreter, its installed
-copy of the library. Four claims, each its own check:
+copy of the library. Five claims, each its own check:
 
 1. the launcher runs and the CLI answers (``--help``, then ``detect`` against
    an empty home returning the empty aggregate — exit 0, valid contract JSON);
 2. the bundled interpreter carries the zstd capability and the installed
    library uses it — the committed zstd fixture AppImage is read end to end;
-3. ``import atlas`` inside the bundle resolves to the bundle's site-packages,
+3. the bundle probes cores under its own interpreter, with nothing registered:
+   the shipped runtime is a plain CPython, so the derived stage answers and a
+   later tightening of that rule cannot silently take probing away from our own
+   release artifact;
+4. ``import atlas`` inside the bundle resolves to the bundle's site-packages,
    never to a checkout that happens to sit nearby;
-4. the full test suite — unit tests, machine-vector runner, CLI conformance —
+5. the full test suite — unit tests, machine-vector runner, CLI conformance —
    passes under the bundle's interpreter against its installed library
    (pytest is installed into the scratch copy only; the shipped tarball is
    already written and stays untouched).
@@ -85,6 +89,19 @@ def _check_zstd_capability(python: Path) -> None:
     print("ok: zstd capability is present and the installed library uses it")
 
 
+def _check_core_probe_interpreter(python: Path) -> None:
+    probe = (
+        "import atlas\n"
+        "chosen = atlas.core_probe_interpreter()\n"
+        "assert chosen is not None, 'the bundle names no interpreter to probe cores with'\n"
+        "assert chosen.registered is False, chosen\n"
+    )
+    result = _run([str(python), "-c", probe])
+    if result.returncode != 0:
+        _fail("the bundle probes cores under its own interpreter", result)
+    print("ok: the bundle's own interpreter probes cores, no registration needed")
+
+
 def _check_import_origin(python: Path, bundle: Path) -> None:
     probe = (
         "import atlas, sys\n"
@@ -122,7 +139,10 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--skip-suite",
         action="store_true",
-        help="skip the full-test-suite check (launcher, codec and import checks always run)",
+        help=(
+            "skip the full-test-suite check "
+            "(launcher, codec, probe-interpreter and import checks always run)"
+        ),
     )
     args = parser.parse_args(argv)
     tarball = _confined(args.tarball)
@@ -141,6 +161,7 @@ def main(argv: list[str]) -> int:
 
         _check_launcher(bundle, scratch)
         _check_zstd_capability(python)
+        _check_core_probe_interpreter(python)
         _check_import_origin(python, bundle)
         if args.skip_suite:
             print("skipped: full suite (--skip-suite)")
