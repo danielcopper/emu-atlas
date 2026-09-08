@@ -307,18 +307,11 @@ bundle and a `SHA256SUMS` manifest.
 
 ## Contributing
 
-```bash
-mise run setup      # editable install + dev deps into the local venv
-mise run test       # pytest (unit + vector runner)
-mise run validate   # vector shape validation
-basedpyright atlas tests scripts
-deno fmt --check
-```
-
 User-facing behavior changes need vectors, and vectors for old generations of an emulator's behavior are never deleted.
 [`CLAUDE.md`](CLAUDE.md) carries the ground rules — never guess, evidence levels are part of the work, upstream
-citations by `file:line` — and [`docs/research/core-audit.md`](docs/research/core-audit.md) pins the method for a rule
-card.
+citations by `file:line` — and its Commands block is the one list of gates to run before pushing, among them the gate
+that runs the suite on the oldest interpreter the package supports.
+[`docs/research/core-audit.md`](docs/research/core-audit.md) pins the method for a rule card.
 
 [![CI](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/danielcopper/emu-atlas/actions/workflows/ci.yml)
 [![Canary](https://github.com/danielcopper/emu-atlas/actions/workflows/canary.yml/badge.svg)](https://github.com/danielcopper/emu-atlas/actions/workflows/canary.yml)
