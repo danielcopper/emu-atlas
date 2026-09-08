@@ -21,10 +21,17 @@ reports today.
 
 **Reports, not refuses — and that distinction is the whole case.** It is tempting to write that RetroArch will not
 launch without a required file. It does not. At the pinned revision `a79435a`, `core_info_list_update_missing_firmware`
-has exactly one caller, `menu/menu_displaylist.c:880`, and that caller builds the core-information page's labels —
-`MISSING_OPTIONAL`, `MISSING_REQUIRED`, `PRESENT_OPTIONAL`, `PRESENT_REQUIRED` (`menu/menu_displaylist.c:882-887`).
-Nothing on that path stops a load. The setting that would block, `check_firmware_before_loading`, is **off in both
-configurations RetroDECK ships** — `rd_config/retroarch.cfg:65` and the live
+has **two** callers, and both build display rows:
+
+- `menu/menu_displaylist.c:880` — the menu's core-information page, which turns the result into the four labels
+  `MISSING_OPTIONAL`, `MISSING_REQUIRED`, `PRESENT_OPTIONAL`, `PRESENT_REQUIRED` (`:882-887`).
+- `ui/drivers/ui_qt.cpp:1238` — the Qt desktop UI's core-info panel, which appends the same information as rows through
+  `qt_core_info_append_row` (`:1250-1262`).
+
+Neither loads content, so neither can stop a load. (Both were found by a byte scan over every file in the checkout; an
+earlier pass here filtered to `*.c` and `*.h`, missed the `.cpp`, and reported one caller — which is why the count is
+stated with its method.) The setting that would block, `check_firmware_before_loading`, is **off in both configurations
+RetroDECK ships** — `rd_config/retroarch.cfg:65` and the live
 `~/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg:65` each read `"false"` — so on this machine nothing
 blocks at all.
 
@@ -33,10 +40,11 @@ the blocking setting is off, and Beetle PSX still stopped and named `scph5501.bi
 the frontend.** That is precisely the contradiction this table exists to record.
 
 One provenance note, because the repo's rule is to cite RetroArch at the pin: `check_firmware_before_loading` is **not**
-in the source at `a79435a` — a raw byte scan over all 10,832 files finds it nowhere. It is in the deployed build, whose
-binary carries the literal and reports version `1.22.2`, and in the two config files above. So the setting is a
-`[V-binary]` plus config reading of what is deployed, not a source citation, and the repo's RetroArch pin now predates a
-setting the shipped build has.
+in the source at `a79435a` — a raw byte scan finds it in none of the 10,832 paths `os.walk` yields outside `.git`
+(10,831 regular files and one symlink; `git ls-files` counts 10,834 tracked blobs, three of them symlinks). It is in the
+deployed build, whose binary carries the literal and reports version `1.22.2`, and in the two config files above. So the
+setting is a `[V-binary]` plus config reading of what is deployed, not a source citation, and the repo's RetroArch pin
+now predates a setting the shipped build has.
 
 **A slot is written three ways and read two.** `firmware<N>_opt` may say optional, may say required, or may be
 **absent** — and absent means required. The behaviour is in the source, not in a comment: `core_info.c:1584-1585`
@@ -48,12 +56,14 @@ says the same thing in words, at `00_example_libretro.info:47`:
 # Is firmware optional or not, if not defined RetroArch will assume it is required
 ```
 
-The line is documentation, not a load-bearing citation, and it is nearly gone: of the 292 `.info` files deployed,
-**two** still carry it — the template itself and `puzzlescript_libretro.info:45`. `atlas.core_info` ports the source
-rule, so an absent flag reads as required everywhere in atlas and `need` says `required`. One deployed core is written
-that way: `ecwolf`, whose single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117
-state `_opt` on every slot, exactly one states it on none, and none are mixed. The third shape is worth naming because
-reading an absent flag as optional is the mistake that would make a hard requirement look like no requirement at all.
+The line is documentation, not a load-bearing citation, and it is nearly gone: **two** files still carry it, the
+template itself and `puzzlescript_libretro.info:45`. Both are among the 291 matching `*_libretro.info`, the glob the
+catalogue walk uses and the one the measurement table below counts; a plain `*.info` matches 292, the extra being
+`open-source-notices.info`, which is not a core entry. `atlas.core_info` ports the source rule, so an absent flag reads
+as required everywhere in atlas and `need` says `required`. One deployed core is written that way: `ecwolf`, whose
+single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117 state `_opt` on every slot,
+exactly one states it on none, and none are mixed. The third shape is worth naming because reading an absent flag as
+optional is the mistake that would make a hard requirement look like no requirement at all.
 
 What the format cannot say is anything about the machine being emulated. It carries one boolean per file. There is no
 way to write "one of these three", and no way to write "this system does not start without one of them". An author who
@@ -124,10 +134,21 @@ versioned, and source-cited, in `atlas/data/system_firmware.json`.
 
 The discriminator is the **system**, not the core. `mgba`, `snes9x` and `gambatte` declare everything optional, and so
 does `swanstation` — but SwanStation says it about a machine observed refusing to start without a BIOS. Same
-declaration, and what could tell them apart is the system behind it, not the wording. (Whether those three are _right_
-is not this page's to say: `gambatte` sits under `Game Boy/Game Boy Color` and `mgba` under Game Boy Advance, and this
-table records both systems as `open`. Naming them here as correct would be the exact unmarked judgement the table
-refuses to make.)
+declaration, and what could tell them apart is the system behind it, not the wording.
+
+Whether those three are _right_ is not this page's to say, and the reason is worth spelling out, because their systems
+are not the ones a reader would guess. Each core's `systemname`, read from the deployed catalogue:
+
+| core       | `systemname`                               | this table                              |
+| ---------- | ------------------------------------------ | --------------------------------------- |
+| `gambatte` | `Game Boy/Game Boy Color`                  | recorded as `open`                      |
+| `mgba`     | `Game Boy/Game Boy Color/Game Boy Advance` | no entry — among the 36, with `vbam`    |
+| `snes9x`   | `Super Nintendo Entertainment System`      | no entry — among the 36, with 11 others |
+
+So exactly **one** of the three sits under a system this table records at all, and that one is `open`. `mgba`'s
+`systemname` is a third distinct string, not the `Game Boy Advance` entry — that entry is declared by `gpsp`, `tempgba`,
+`mednafen_gba` and `vba_next`, and `mgba` is not among them. Calling any of the three correct would be a verdict on a
+system this table either leaves open or says nothing about.
 
 Where one core of a system declares a file required and another declares every file optional, the machine is already
 carrying the answer, in the other core's entry. `tests/test_system_firmware_tripwire.py` recomputes those collisions

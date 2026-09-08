@@ -1275,15 +1275,18 @@ from `firmware<N>_opt` and so reproduces the declaration faithfully — which ov
 "nothing required" about a machine that will not boot.
 
 **RetroArch labels; it does not refuse.** At the pinned revision `a79435a`, `core_info_list_update_missing_firmware` has
-exactly one caller (`menu/menu_displaylist.c:880`) and it builds the core-information page's labels; the setting that
-would block a load, `check_firmware_before_loading`, reads `"false"` in both configurations RetroDECK ships. So the
-refusal that was observed is the **core's**, not the frontend's, which is the contradiction this table records.
+two callers — `menu/menu_displaylist.c:880` and `ui/drivers/ui_qt.cpp:1238` — and both build display rows rather than
+loading anything. The setting that would block a load, `check_firmware_before_loading`, reads `"false"` in both
+configurations RetroDECK ships; that is **not** a pinned-source fact, since the name appears nowhere in the source at
+`a79435a`, but a reading of the deployed 1.22.2 build and its two config files. So the refusal that was observed is the
+**core's**, not the frontend's, which is the contradiction this table records.
 
 The fact is about the **system**, not the core, which is why it cannot live on a rule card: mGBA, snes9x and gambatte
 declare everything optional and so does SwanStation, but SwanStation says it about a machine observed refusing to start.
-Whether the other three are right is not claimed here — two of them sit under systems this table records as `open`. Read
-by `atlas.system_firmware.load_system_firmware`. The method, the measurements and what the derivation cannot see are in
-[`docs/research/system-firmware.md`](../../docs/research/system-firmware.md).
+Whether those three are right is not claimed here: only gambatte's `systemname` (`Game Boy/Game Boy Color`) is recorded
+at all, as `open`. mGBA's is `Game Boy/Game Boy Color/Game Boy Advance`, a third distinct string with no entry, and
+snes9x's has none either. Read by `atlas.system_firmware.load_system_firmware`. The method, the measurements and what
+the derivation cannot see are in [`docs/research/system-firmware.md`](../../docs/research/system-firmware.md).
 
 Shape:
 

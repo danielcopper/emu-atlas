@@ -322,6 +322,49 @@ class TestTheStalenessCheckBites:
             "Demo System/lax"
         ]
 
+    def test_two_stale_exemptions_are_both_reported_and_sorted(self):
+        # Accumulation and ordering, which every single-entry case above leaves
+        # unproven: a function returning only the first stale exemption, or
+        # returning them in mapping order, passes all of them. Two systems,
+        # each with a stale core, recorded in reverse of the expected order.
+        recorded = {
+            "Zeta System": SystemFirmware(
+                system="Zeta System",
+                verdict="cannot-run-without-firmware",
+                evidence="[V]",
+                source="[V-live] watched it refuse",
+                alternatives=(CoreAlternative(core="zed", reason="[V-live] watched it run"),),
+            ),
+            "Alpha System": SystemFirmware(
+                system="Alpha System",
+                verdict="cannot-run-without-firmware",
+                evidence="[V]",
+                source="[V-live] watched it refuse",
+                alternatives=(CoreAlternative(core="aye", reason="[V-live] watched it run"),),
+            ),
+        }
+        catalogue = {"Zeta System": {"zed": False}, "Alpha System": {"aye": False}}
+        assert stale_exemptions(catalogue, recorded) == ["Alpha System/aye", "Zeta System/zed"]
+
+    def test_two_exemptions_on_one_system_report_independently(self):
+        # The other axis of accumulation: one entry carrying two exempted
+        # cores, one of them stale. A loop that stopped at the first match
+        # would report nothing here.
+        recorded = {
+            "Demo System": SystemFirmware(
+                system="Demo System",
+                verdict="cannot-run-without-firmware",
+                evidence="[V]",
+                source="[V-live] watched it refuse",
+                alternatives=(
+                    CoreAlternative(core="good", reason="[V-live] still all-optional"),
+                    CoreAlternative(core="gone", reason="[V-live] no longer all-optional"),
+                ),
+            )
+        }
+        catalogue = {"Demo System": {"good": True, "gone": False}}
+        assert stale_exemptions(catalogue, recorded) == ["Demo System/gone"]
+
     def test_an_entry_with_no_exemption_is_never_stale(self):
         recorded = {
             "Demo System": SystemFirmware(
