@@ -862,13 +862,17 @@ class TestCoreProbeAnswer:
 class TestCoreProbeMemory:
     """What the second question about the same ``.so`` costs.
 
-    An answer is remembered, and so is a core that hung without printing: it
-    hangs the same way next time, and that retry is the only empty answer that
-    costs the caller the full timeout — fifteen seconds on the path a consumer
-    takes at every game start. Every other empty answer is asked again, because
-    the host library that would not load is installable while the ``.so`` never
-    changes. The count of spawns is the claim; the answer alone cannot tell a
-    remembered *unknown* from a re-probed one.
+    An answer is remembered, and so is a probe that timed out without printing
+    a usable line: it hangs the same way next time, and that retry is the only
+    empty answer that costs the caller the full timeout — fifteen seconds on
+    the path a consumer takes at every game start. Every other empty answer is
+    asked again, because the host library that would not load is installable
+    while the ``.so`` never changes.
+
+    The count of spawns is the claim; the answer alone cannot tell a remembered
+    *unknown* from a re-probed one. And the memory belongs to the machine, not
+    to the process, which is why every test here asks one ``RealMachine``
+    twice.
     """
 
     BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
@@ -911,13 +915,35 @@ class TestCoreProbeMemory:
         assert machine.query_core(so) is None
         assert len(calls) == 2
 
+    def test_a_probe_no_interpreter_could_run_is_asked_again(self, tmp_path, monkeypatch):
+        # Nothing was launched, so nothing hung and nothing is remembered: a
+        # host that hands over an interpreter after the first question gets a
+        # real answer to the second. The stub would have answered all along.
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        interpreter = atlas.machine.core_probe_interpreter
+        monkeypatch.setattr(atlas.machine, "core_probe_interpreter", lambda: None)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        assert calls == []
+        monkeypatch.setattr(atlas.machine, "core_probe_interpreter", interpreter)
+        assert machine.query_core(so) == self.MGBA
+        assert len(calls) == 1
+
     def test_a_remembered_timeout_answers_for_its_own_so_only(self, tmp_path, monkeypatch):
+        # The second core is given the first one's mtime, and both are the same
+        # four bytes, so the path is the only part of the key left to tell them
+        # apart: drop it and the second core inherits the first one's hang.
         calls = _stub_probe(monkeypatch, raises=self._timeout())
         machine = RealMachine()
         other = tmp_path / "other"
         other.mkdir()
-        assert machine.query_core(_fake_core(tmp_path)) is None
-        assert machine.query_core(_fake_core(other)) is None
+        first, second = _fake_core(tmp_path), _fake_core(other)
+        stat_first = os.stat(first)
+        os.utime(second, ns=(stat_first.st_atime_ns, stat_first.st_mtime_ns))
+        assert os.stat(second).st_mtime_ns == stat_first.st_mtime_ns
+        assert os.stat(second).st_size == stat_first.st_size
+        assert machine.query_core(first) is None
+        assert machine.query_core(second) is None
         assert len(calls) == 2
 
     def test_a_rebuilt_so_at_the_same_path_is_probed_again(self, tmp_path, monkeypatch):

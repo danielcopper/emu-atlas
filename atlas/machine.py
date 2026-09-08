@@ -817,8 +817,13 @@ class RealMachine:
     interpreter to run it under could be named
     (:func:`core_probe_interpreter`), and memoizes per ``(path, mtime, size)``:
     a cached live read, not shipped data, invalidated the moment the ``.so``
-    changes. A core that hung without printing anything is remembered too, so a
-    hang costs its timeout once per ``.so`` rather than once per question.
+    changes. A probe that timed out without printing a usable line is
+    remembered too, so a hanging core costs its timeout once per machine rather
+    than once per question. That memory reaches exactly as far as this object
+    and no further, which is the part a consumer has to act on:
+    :func:`atlas.detect` builds a fresh machine whenever it is handed none, so
+    a caller that re-detects per question pays the timeout every time, while
+    one that keeps its installations, or passes its own machine, pays it once.
     Where no interpreter can be named nothing is launched at all and every core
     answers *unknown*. The child is pointed back at this package
     (:func:`_probe_environment`) and answers with whatever it printed before it
@@ -1064,12 +1069,14 @@ class RealMachine:
         if key in self._core_cache:
             return self._core_cache[key]
         info, timed_out = self._probe(so_path)
-        # An answer is memoized, and so is the absence of one where the core
-        # hung without printing: a core that hung once hangs again, and that
-        # retry is the only empty answer that costs the caller the whole
+        # An answer is memoized, and so is the absence of one after a timeout —
+        # whatever the hung core managed to print, no usable line came out of
+        # it, or info would be that answer. A core that hung once hangs again,
+        # and that retry is the only empty answer costing the caller the whole
         # _CORE_PROBE_TIMEOUT_SECONDS. Every other empty answer is asked again,
         # because it can be transient (missing host library installed later)
-        # even while the .so is unchanged.
+        # even while the .so is unchanged. The memory is this object's and goes
+        # no further: a caller that builds a machine per question re-probes.
         if info is not None or timed_out:
             self._core_cache[key] = info
         return info
@@ -1108,11 +1115,12 @@ class _ProbeResult(NamedTuple):
 
     Two facts, because ``query_core`` decides on both. What was read is the
     answer; how the run ended is what tells an empty answer that will stay
-    empty from one that may not. A core that hung answers nothing this time and
-    hangs the same way next time, so the caller remembers it and pays
-    ``_CORE_PROBE_TIMEOUT_SECONDS`` once per ``.so`` per process; every other
-    empty answer is asked again, because the host library that was missing can
-    be installed while the ``.so`` never changes.
+    empty from one that may not. A probe that timed out and printed no usable
+    line would hang the same way next time, so ``query_core`` remembers that
+    nothing and pays ``_CORE_PROBE_TIMEOUT_SECONDS`` once per ``.so`` for the
+    life of that :class:`RealMachine`; every other empty answer is asked again,
+    because the host library that was missing can be installed while the
+    ``.so`` never changes.
 
     The ending is carried here rather than folded into the answer because
     :func:`_parse_probe_output` reads bytes and nothing else — a timeout that
