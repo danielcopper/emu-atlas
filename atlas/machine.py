@@ -1163,33 +1163,44 @@ _registered_interpreter: str | None = None
 
 
 def _is_spawnable_interpreter_path(handed_over: object) -> bool:
-    """The one shape both stages accept: a non-empty absolute ``str`` with no NUL.
+    """The one shape both stages accept: an absolute ``str`` the OS can be handed.
 
     One rule, applied to the path a host registered and to the one derived from
     the running program alike, so neither stage can put into the spawn what the
-    other would have refused. Each of the three checks is about the spawn:
+    other would have refused. Each requirement is about the spawn:
 
     - a ``str``, because that is what goes into the argument vector — a
       ``Path`` passes :func:`os.path.isabs` and is still refused;
     - **absolute**, because ``subprocess`` resolves a bare name through
       ``PATH`` and a relative one against the process's working directory.
       Either is a lookup atlas performs nowhere, and a host reaching this seam
-      may be a service running as root;
-    - **no NUL byte**, because the spawn answers one with ``ValueError`` where
-      every other unusable path raises ``OSError``. ``_probe`` degrades an
-      ``OSError`` to *unknown*; a ``ValueError`` would escape ``query_core``
-      into the resolver instead.
+      may be a service running as root. The empty string is not absolute, so
+      it is refused here rather than by a check of its own;
+    - **something the operating system can actually be handed.** ``_probe``
+      degrades an ``OSError`` to *unknown*, so a path the spawn refuses with a
+      ``ValueError`` instead would escape ``query_core`` into the resolver.
+      The requirement is stated that way round rather than as a list of bad
+      spellings, because the list is not closed — but it takes two checks,
+      because the two known spellings fail at different layers: a lone
+      surrogate fails :func:`os.fsencode`, the same encoding ``subprocess``
+      performs, while a NUL byte encodes cleanly and ``subprocess`` rejects it
+      itself. A surrogate-escaped byte (``\\udcff``) is neither of those: it is
+      what a real filesystem hands back for a name that is not valid text, it
+      encodes, and it degrades like any other path that does not run.
 
     Typed ``object`` on purpose: the annotation on the registration below is a
     promise the caller makes, and this check is there for the caller who does
     not keep it.
     """
-    return (
-        isinstance(handed_over, str)
-        and bool(handed_over)
-        and os.path.isabs(handed_over)
-        and "\x00" not in handed_over
-    )
+    if not isinstance(handed_over, str) or not os.path.isabs(handed_over):
+        return False
+    if "\x00" in handed_over:
+        return False
+    try:
+        os.fsencode(handed_over)
+    except ValueError:
+        return False
+    return True
 
 
 def register_core_probe_interpreter(path: str | None) -> None:
@@ -1206,19 +1217,20 @@ def register_core_probe_interpreter(path: str | None) -> None:
     :func:`_probe_environment`), so a foreign interpreter is not a poorer
     answer: it is the same answer.
 
-    The path must be absolute, and it must be a string carrying no NUL byte —
-    :func:`_is_spawnable_interpreter_path` carries the reasoning for all three
-    checks, and the derived stage applies the same rule. Anything that is not
-    ``None`` and does not pass it is refused with :class:`TypeError` here at
-    the registration, where the caller can still see what it handed over.
+    The path must be absolute, and it must be one the operating system can
+    actually be handed — :func:`_is_spawnable_interpreter_path` carries the
+    reasoning for every requirement, and the derived stage applies the same
+    rule. Anything that is not ``None`` and does not pass it is refused with
+    :class:`TypeError` here at the registration, where the caller can still see
+    what it handed over.
 
     Whether the file exists is deliberately **not** checked: that is the
     machine's business at probe time, and a path that does not run yields the
     same honest *unknown* every other probe failure yields. That promise is
-    why a NUL byte is refused rather than accepted: it is the one input the
-    spawn answers with something other than an ``OSError``, so accepting it
-    would hide a caller's malformed value behind a degradation code instead of
-    naming it here.
+    what the shape rule protects: a path the operating system cannot be handed
+    at all makes the spawn raise a ``ValueError``, which would escape rather
+    than degrade. Such a path is named here, where the caller can still see it,
+    instead of turning into a statement about the machine.
 
     Registering ``None`` clears the registration and the running program
     decides again. The last registration wins; there is one slot, not a chain.
@@ -1226,8 +1238,8 @@ def register_core_probe_interpreter(path: str | None) -> None:
     global _registered_interpreter
     if path is not None and not _is_spawnable_interpreter_path(path):
         raise TypeError(
-            "a core probe interpreter must be an absolute path with no NUL byte; "
-            f"{path!r} is not"
+            "a core probe interpreter must be an absolute path the operating system "
+            f"can be handed; {path!r} is not"
         )
     _registered_interpreter = path
 
@@ -1263,9 +1275,9 @@ def _running_python_interpreter() -> str | None:
     one rule. Do not take the check out of either of them.
 
     So the test narrows on purpose. The two markers freezers set
-    (``sys.frozen``, ``sys._MEIPASS``) disqualify; anything ``sys.executable``
-    cannot spell as an absolute path disqualifies; and the basename is the belt
-    for an embedded host that sets neither marker. It is a rule of thumb, and
+    (``sys.frozen``, ``sys._MEIPASS``) disqualify; a ``sys.executable`` the
+    shape rule refuses disqualifies; and the basename is the belt for an
+    embedded host that sets neither marker. It is a rule of thumb, and
     the two directions it can be wrong in are not symmetrical: every way it is
     too narrow costs a probe and nothing else — a PyPy or otherwise-named
     interpreter loses probing here and hands over its own path through
@@ -1293,9 +1305,14 @@ def core_probe_interpreter() -> CoreProbeInterpreter | None:
     ``core-unqueryable``; this function is the diagnosis channel for a host
     that sees that code everywhere. It says what a probe would run, not that
     any core was probed.
+
+    The slot is read once into a local. Read twice, a registration cleared
+    between the two reads would build an answer whose ``path`` is missing while
+    ``registered`` still says ``True``.
     """
-    if _registered_interpreter is not None:
-        return CoreProbeInterpreter(_registered_interpreter, True)
+    registered = _registered_interpreter
+    if registered is not None:
+        return CoreProbeInterpreter(registered, True)
     running = _running_python_interpreter()
     return None if running is None else CoreProbeInterpreter(running, False)
 

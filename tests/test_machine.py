@@ -18,7 +18,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from types import SimpleNamespace
+from types import FunctionType, SimpleNamespace
 
 import pytest
 
@@ -943,6 +943,45 @@ def _no_interpreter_registered():
     register_core_probe_interpreter(None)
 
 
+class _SlotClearedMidRead(dict[str, object]):
+    """A globals mapping that answers one name once and then ``None``.
+
+    The interleaving a concurrent ``register_core_probe_interpreter(None)``
+    would produce, modelled without threads — a thread-based version of this
+    would be timing-dependent and would prove nothing on a green run.
+    Replacing the function's globals is what makes a second read observable at
+    all: CPython consults ``__getitem__`` for a ``LOAD_GLOBAL`` only when the
+    mapping is not an exact ``dict``. Callers assert ``reads``, because if that
+    ever stopped holding the mapping would go unconsulted and the test would
+    pass without modelling anything.
+    """
+
+    def __init__(self, source, name, first_value):
+        super().__init__(source)
+        self._name = name
+        self._first_value = first_value
+        self.reads = 0
+
+    def __getitem__(self, key):
+        if key != self._name:
+            return super().__getitem__(key)
+        self.reads += 1
+        return self._first_value if self.reads == 1 else None
+
+
+def _call_with_the_slot_cleared_mid_read(function, name, first_value):
+    """Call ``function`` with ``name`` answering ``first_value`` once, then ``None``."""
+    mapping = _SlotClearedMidRead(function.__globals__, name, first_value)
+    racing = FunctionType(
+        function.__code__,
+        mapping,
+        function.__name__,
+        function.__defaults__,
+        function.__closure__,
+    )
+    return racing(), mapping.reads
+
+
 def _model_a_frozen_host(monkeypatch):
     """Make the running program look like what a freezer leaves behind.
 
@@ -1017,13 +1056,14 @@ class TestChoosingTheCoreProbeInterpreter:
         monkeypatch.setattr(sys, "executable", executable)
         assert core_probe_interpreter() is None, f"would be resolved against {resolved_against}"
 
-    def test_an_executable_with_a_nul_byte_names_no_interpreter(self, monkeypatch):
-        # The one shape the spawn answers with ValueError rather than the
-        # OSError _probe degrades to unknown. Both stages refuse it, so neither
-        # can put it into the argument vector.
+    @pytest.mark.parametrize("unspawnable", ["/usr/bin/python3\x00evil", "/usr/bin/python3\ud800"])
+    def test_an_executable_the_os_cannot_take_names_no_interpreter(self, monkeypatch, unspawnable):
+        # Two spellings the spawn answers with a ValueError instead of the
+        # OSError _probe degrades to unknown. Both stages apply the one rule,
+        # so neither can put either of them into the argument vector.
         monkeypatch.delattr(sys, "frozen", raising=False)
         monkeypatch.delattr(sys, "_MEIPASS", raising=False)
-        monkeypatch.setattr(sys, "executable", "/usr/bin/python3\x00evil")
+        monkeypatch.setattr(sys, "executable", unspawnable)
         assert core_probe_interpreter() is None
 
     def test_an_executable_not_named_python_names_no_interpreter(self, monkeypatch):
@@ -1055,6 +1095,16 @@ class TestChoosingTheCoreProbeInterpreter:
         register_core_probe_interpreter("/usr/bin/python3.11")
         assert core_probe_interpreter() == CoreProbeInterpreter("/usr/bin/python3.11", True)
 
+    def test_the_slot_is_read_once_so_a_clearing_cannot_halve_the_answer(self):
+        # A registration cleared between two reads of the slot would build an
+        # answer whose path is missing while registered still says True. The
+        # read is bound to a local, so the second read does not exist.
+        answer, reads = _call_with_the_slot_cleared_mid_read(
+            core_probe_interpreter, "_registered_interpreter", "/usr/bin/python3"
+        )
+        assert reads >= 1, "the globals mapping was never consulted — the model is inert"
+        assert answer == CoreProbeInterpreter("/usr/bin/python3", True)
+
 
 @pytest.mark.usefixtures("_no_interpreter_registered")
 class TestRegisteringACoreProbeInterpreter:
@@ -1071,19 +1121,37 @@ class TestRegisteringACoreProbeInterpreter:
 
     @pytest.mark.parametrize("relative", ["python3", "bin/python3", "./python3", "../python3"])
     def test_a_relative_path_is_refused(self, relative):
-        # subprocess resolves a bare name ("python3") through PATH and anything
-        # with a separator against the process's working directory. Two
-        # lookups, both machine guesses this seam exists to avoid.
+        # subprocess resolves a bare name ("python3") through PATH and a
+        # relative one against the process's working directory. Two lookups,
+        # both machine guesses this seam exists to avoid.
         with pytest.raises(TypeError, match="absolute path"):
             register_core_probe_interpreter(relative)
 
     def test_a_path_with_a_nul_byte_is_refused(self):
-        # subprocess raises ValueError on an embedded NUL, not the OSError
-        # _probe degrades to unknown, so this one input would otherwise escape
-        # query_core into the resolver. Refused here, where the caller can see
-        # what it handed over, rather than hidden behind a degradation code.
-        with pytest.raises(TypeError, match="NUL"):
+        # A NUL encodes cleanly and subprocess rejects it itself, with a
+        # ValueError rather than the OSError _probe degrades to unknown — so it
+        # would escape query_core into the resolver. Refused here, where the
+        # caller can see what it handed over.
+        with pytest.raises(TypeError, match="absolute path"):
             register_core_probe_interpreter("/usr/bin/python3\x00evil")
+
+    @pytest.mark.parametrize("surrogate", ["\ud800", "\udc00"])
+    def test_a_lone_surrogate_is_refused(self, surrogate):
+        # The other spelling the operating system cannot be handed, and it
+        # fails one layer earlier: os.fsencode — the encoding subprocess itself
+        # performs — raises UnicodeEncodeError, which is a ValueError too.
+        with pytest.raises(TypeError, match="absolute path"):
+            register_core_probe_interpreter(f"/usr/bin/python3{surrogate}")
+
+    def test_a_surrogate_escaped_byte_still_reaches_the_spawn(self, tmp_path):
+        # The counter-case that keeps the rule from over-reaching: \udcff is how
+        # Python spells a filesystem byte that is not valid text, it encodes,
+        # and a real machine can hand such a name back. It must be accepted and
+        # degrade like any other path that does not run — not be refused.
+        path = str(tmp_path / "python3\udcff")
+        register_core_probe_interpreter(path)
+        assert core_probe_interpreter() == CoreProbeInterpreter(path, True)
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
 
     def test_a_registered_path_that_does_not_run_answers_unknown(self, tmp_path):
         # The docstring's promise, against a real spawn rather than a stub: the

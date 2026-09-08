@@ -279,6 +279,34 @@ class TestTheRuntimeCanNameItsProvider:
         assert squashfs.zstd_provider() is None
 
 
+class TestTheRegistrationIsReadOnce:
+    """A registration cleared mid-resolution must not name a provider whose codec is gone.
+
+    The resolution answers the provider's identity and the codec object
+    together. Reading the slot more than once could pair a name with a codec
+    a concurrent ``register_zstd_provider(None)`` had already cleared, and the
+    read would then fail on ``None`` rather than decompress.
+    """
+
+    def test_a_registration_cleared_while_it_is_being_named_still_yields_its_codec(self):
+        # The clearing happens inside __name__, which is the one read that sits
+        # between the other two — no threads, so nothing here is
+        # timing-dependent. Reaching the codec is the pass: with the slot read
+        # more than once this raised AttributeError on a NoneType instead.
+        class _ClearsWhileBeingNamed:
+            @property
+            def __name__(self) -> str:
+                squashfs.register_zstd_provider(None)
+                return _VENDORED
+
+            def decompress(self, data: bytes) -> bytes:
+                raise _ProviderReached(_VENDORED)
+
+        squashfs.register_zstd_provider(_ClearsWhileBeingNamed())
+        with pytest.raises(_ProviderReached, match=_VENDORED):
+            squashfs.read_appimage_entry(ZSTD_IMAGE, CATALOGUE_ENTRY)
+
+
 class TestTheSeamMapsEveryOutcome:
     """RealMachine.read_appimage_text — one status per distinct failure, never collapsed."""
 

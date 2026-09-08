@@ -263,12 +263,12 @@ class Machine(Protocol):
   `sys.frozen`, no `sys._MEIPASS`, a file name starting with `python` — else none, and then nothing is launched and
   every core answers _unknown_. In a frozen host `sys.executable` is the application, whose bootloader would ignore the
   module arguments and start the host a second time; atlas never searches for an interpreter instead, because a
-  `PATH`-resolved `python3` is an assumption about the machine. Both stages apply one shape rule — absolute, a string,
-  no NUL byte — so neither can hand the spawn what the other would refuse, and `PYTHONEXECUTABLE` makes the derived case
-  real rather than theoretical. The middle test's two error directions are not symmetrical: every way it is too narrow
-  costs a probe, while the name check is what keeps the too-wide direction rare, since a host that embeds an
-  interpreter, sets neither marker and is itself named `python…` passes it. `core_probe_interpreter()` states which of
-  the three stages answered.
+  `PATH`-resolved `python3` is an assumption about the machine. Both stages apply one shape rule — an absolute string
+  the operating system can actually be handed — so neither can hand the spawn what the other would refuse, and
+  `PYTHONEXECUTABLE` makes the derived case real rather than theoretical. The middle test's two error directions are not
+  symmetrical: every way it is too narrow costs a probe, while the name check is what keeps the too-wide direction rare,
+  since a host that embeds an interpreter, sets neither marker and is itself named `python…` passes it.
+  `core_probe_interpreter()` states which of the three stages answered.
 - In production the seam is the real filesystem plus a core prober where an interpreter was named. In tests and
   conformance vectors it is a **fixture machine**: files (including unreadable and invalid-text ones), explicit empty
   directories, symlinks, inaccessible paths, and core answers as plain data describing a whole machine. A file's read

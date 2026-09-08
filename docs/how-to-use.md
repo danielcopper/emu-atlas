@@ -159,10 +159,10 @@ So atlas checks before it launches, and it never searches. The interpreter is de
    make it a bare name or a relative path), and a file name starting with `python`;
 3. otherwise none, and then **no process is started at all**: `query_core` answers _unknown_ for every core, and the
    answers that would have used it say so. A placement carries `core-unqueryable` and may keep a `<library_name>` hole.
-   A core with a rule card also carries `core-generation-unestablished`, because which generation is installed was never
-   established: its recorded deviation from the standard layout is not applied, and where the card records a file set,
-   that is not applied either, so the answer names no files. A host deciding whether to register is deciding exactly
-   this.
+   Packaged per-core knowledge is lost with it, because which build is installed was never established, and that loss is
+   stated as `core-generation-unestablished`: a core whose recorded deviation from the standard layout atlas carries
+   does not get that deviation applied, and a core whose recorded save files atlas carries does not get those either, so
+   the answer names no files. A host deciding whether to register is deciding exactly this.
 
 A frozen host hands over a real interpreter before the first atlas call:
 
@@ -173,16 +173,19 @@ atlas.register_core_probe_interpreter("/usr/bin/python3")
 ```
 
 The child is pointed back at this copy of atlas through `PYTHONPATH`, so a foreign interpreter is not a poorer answer —
-it loads the same core and returns the same name, version and options. The path must be absolute and must carry no NUL
-byte. Absolute, because the spawn resolves a bare name through `PATH` and anything with a separator in it against the
-process's working directory — two lookups, both guesses about the machine atlas does not make anywhere. No NUL, because
-that is the one input the spawn answers with a `ValueError` instead of the `OSError` every other unusable path raises,
-and that exception would escape the question rather than degrade it. The same rule applies to the derived stage, so
-neither stage can put into the spawn what the other would refuse. Anything else, `None` apart, is refused with
-`TypeError` at the registration, where the caller can still see what it handed over. Whether the file exists is
-deliberately not checked — that is the machine's business at probe time, and a path that does not run yields the same
-_unknown_ every other probe failure yields. There is one slot: the last registration wins, and
-`atlas.register_core_probe_interpreter(None)` clears it.
+it loads the same core and returns the same name, version and options. The path must be absolute, and it must be one the
+operating system can actually be handed. Absolute, because the spawn resolves a bare name through `PATH` and a relative
+one against the process's working directory — two lookups, both guesses about the machine atlas does not make anywhere.
+Handed to the operating system, because a path it cannot take makes the spawn raise a `ValueError` where an unusable
+path raises `OSError`, and only the second degrades to _unknown_; the first would escape the question. Two spellings are
+known to do that, failing at different layers: a lone surrogate cannot be encoded at all, and a NUL byte encodes cleanly
+and is rejected by the spawn itself. A surrogate-escaped byte such as `\udcff` is neither — that is how Python spells a
+filesystem byte that is not valid text, a real machine can hand such a name back, and it is accepted and degrades like
+any other path that does not run. The same rule applies to the derived stage, so neither stage can put into the spawn
+what the other would refuse. Anything else, `None` apart, is refused with `TypeError` at the registration, where the
+caller can still see what it handed over. Whether the file exists is deliberately not checked — that is the machine's
+business at probe time, and a path that does not run yields the same _unknown_ every other probe failure yields. There
+is one slot: the last registration wins, and `atlas.register_core_probe_interpreter(None)` clears it.
 
 `atlas.core_probe_interpreter()` says which interpreter a probe would run under and by which route — or `None` where
 none would, which is the diagnosis when every core comes back unqueryable. Otherwise the result is an
