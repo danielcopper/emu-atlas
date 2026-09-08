@@ -1,4 +1,4 @@
-"""Tests for atlas.detect — marker ordering, identity overlap, coexistence, own machine."""
+"""Tests for atlas.detect — marker ordering, identity overlap, coexistence, broken-installation health, own machine."""
 
 from __future__ import annotations
 
@@ -175,7 +175,7 @@ class TestTheMachineDetectBuildsForItself:
         """Every core probe hangs; returns the spawn list."""
         spawns: list[list[str]] = []
 
-        def fake_run(argv, **kwargs):
+        def fake_run(argv, **_kwargs):
             spawns.append(argv)
             raise subprocess.TimeoutExpired(cmd=argv, timeout=15)
 
