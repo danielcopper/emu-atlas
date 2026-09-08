@@ -871,8 +871,9 @@ class TestCoreProbeMemory:
 
     The count of spawns is the claim; the answer alone cannot tell a remembered
     *unknown* from a re-probed one. And the memory belongs to the machine, not
-    to the process, which is why every test here asks one ``RealMachine``
-    twice.
+    to the process, so each test here asks one ``RealMachine`` twice — except
+    the last, which asks a second machine the same question and holds it to
+    paying the timeout all over again.
     """
 
     BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
@@ -968,6 +969,20 @@ class TestCoreProbeMemory:
         os.utime(so, ns=(before.st_atime_ns, before.st_mtime_ns))
         assert os.stat(so).st_mtime_ns == before.st_mtime_ns
         assert machine.query_core(so) is None
+        assert len(calls) == 2
+
+    def test_a_second_machine_pays_the_timeout_all_over_again(self, tmp_path, monkeypatch):
+        # The scope the class docstring hands to consumers: the memory is this
+        # object's, not the process's. detect() builds a fresh machine whenever
+        # it is handed none, so a caller that re-detects for every question is
+        # the second machine here — it hangs for the full timeout again.
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        so = _fake_core(tmp_path)
+        first = RealMachine()
+        assert first.query_core(so) is None
+        assert first.query_core(so) is None
+        assert len(calls) == 1
+        assert RealMachine().query_core(so) is None
         assert len(calls) == 2
 
 
