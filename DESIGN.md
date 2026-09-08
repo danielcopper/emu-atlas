@@ -288,6 +288,14 @@ findings:
   and for existing saves atlas can **observe** the set (literal, glob-escaped, with RetroArch's own bookkeeping files
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
+- **What was found does not cost the answer what is known about it.** The found set outranks the declared one — that is
+  the ground rule and it stays — but the declaration is still in scope, so an observed set carries the roles it states
+  for the same names. Both halves matter: without the first, the same question answers with roles while the save
+  directory is empty and without them once the game has run, which is how a consumer's "never sync a settings file" rule
+  stopped protecting exactly when there was something to protect; without the second, a file the declaration does not
+  name still looks like a file with no role, and the trap survives one step narrower. So every observed file is in a
+  group, and one whose kind nothing established says so in a word (`role: unknown`) rather than by an empty field.
+  Absence is never a value — that is the same rule `granularity` and `checked` already obey.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
@@ -320,8 +328,12 @@ has nothing to name. `root_kind` is closed around its own question for the same 
 answer can state something the savefile answer cannot: RetroArch names the files itself, so `<stem>.state`, the numbered
 slots and the auto slot are known rather than per-core behaviour — the file set is still an observation, because which
 slots were ever written is not on disk, but it is observed through a pattern that matches savestates and nothing else.
-Whether a core can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it
-(capability, never a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
+That observation is the one atlas does not decompose, and neither is a declared state set: a group states a granularity
+and a role, both of them words about the data a core writes as its save, so on this answer they have the same empty
+domain the field above has. `groups` is permanently empty here rather than filled with two words nothing could establish
+— a standalone savestate card states the names its emulator writes and has nothing to say beside them. Whether a core
+can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it (capability, never
+a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
 
 Every answer carries provenance: which config file produced each governing value, which default applied, which override
 won. Where a shipped reference config is readable on the machine (RetroDECK's Flatpak deployment; a distro's

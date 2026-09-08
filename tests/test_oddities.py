@@ -702,6 +702,31 @@ class TestFlycastResolution:
         assert p.file_set.files == ("vmu_save_A1.bin", "vmu_save_A2.bin")
         assert p.file_set.complete is False
 
+    def test_a_card_observed_card_keeps_the_group_that_named_it(self):
+        # A candidate the card knows only as an observation name is still that
+        # group's data: the slot-2 VMU is a memory card of the same grouping as
+        # the slot-1 card declared beside it, and confirming a declaration is
+        # not a reason to stop stating what it says.
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": "v",
+                "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "f",
+            }
+        )
+        assert p.file_set.state == "observed"
+        assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            (
+                ("vmu_save_A1.bin", "vmu_save_A2.bin"),
+                GRANULARITY_SHARED_CARD,
+                atlas.ROLE_MEMORY_CARD,
+            ),
+            (("dc_nvmem.bin",), GRANULARITY_SHARED_CARD, atlas.ROLE_BATTERY),
+        ]
+
     def test_per_game_mode_switches_root_and_granularity(self):
         p = _flycast_query(
             {
@@ -1800,21 +1825,77 @@ class TestARuleSelectedCard:
         assert int_reading.value == "enabled"
         assert int_reading.options_file == OPTIONS_CFG
 
+    WRITTEN = {
+        f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bkr": "backup",
+        f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bcr": "backup",
+        f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.smpc": "smpc",
+    }
+
     def test_the_observed_trio_outranks_the_declaration(self):
-        p = _saturn_query(
-            {
-                **self.FILES,
-                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bkr": "backup",
-                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.bcr": "backup",
-                f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.smpc": "smpc",
-            }
-        )
+        p = _saturn_query({**self.FILES, **self.WRITTEN})
         assert p.file_set.state == "observed"
         assert p.file_set.files == (
             f"{SATURN_STEM}.bcr",
             f"{SATURN_STEM}.bkr",
             f"{SATURN_STEM}.smpc",
         )
+
+    def test_the_observed_trio_keeps_the_roles_the_declaration_states(self):
+        """The regression: one question, two routes, and they must agree.
+
+        While the directory was empty the answer said which of the three files
+        is the console's settings; the moment the game had run once the same
+        question came back with the same names and no roles at all, because the
+        observed shape carried none. A save-syncing client that skips
+        ``settings`` read the absence as ordinary progress and copied the
+        twelve bytes of settings the user had chosen on that device over the
+        other device's — the rule stopped protecting exactly when there was
+        something to protect. So the roles are asserted across both routes,
+        not inside one.
+        """
+        declared = _saturn_query(self.FILES)
+        observed = _saturn_query({**self.FILES, **self.WRITTEN})
+
+        def by_name(p):
+            return {name: g.role for g in p.file_set.groups for name in g.files or ()}
+
+        assert declared.file_set.state == "declared"
+        assert observed.file_set.state == "observed"
+        assert by_name(observed) == by_name(declared)
+        assert by_name(observed)[f"{SATURN_STEM}.smpc"] == atlas.ROLE_SETTINGS
+
+    def test_a_file_the_card_does_not_name_is_grouped_as_unknown(self):
+        """A leftover is stated as *nothing is known about it*, never left out.
+
+        A ``.srm`` from some other core sits beside the card's own files. If
+        only the declared names were grouped, that file would look exactly like
+        a file with no role — which is the reading that lost data — so it gets
+        a group of its own and the one role no declaration may state.
+        """
+        stray = f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.srm"
+        p = _saturn_query({**self.FILES, **self.WRITTEN, stray: "from another core"})
+        assert p.file_set.files == (
+            f"{SATURN_STEM}.bcr",
+            f"{SATURN_STEM}.bkr",
+            f"{SATURN_STEM}.smpc",
+            f"{SATURN_STEM}.srm",
+        )
+        assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            ((f"{SATURN_STEM}.bkr",), "per-game-file", atlas.ROLE_BATTERY),
+            ((f"{SATURN_STEM}.bcr",), "per-game-file", atlas.ROLE_BATTERY),
+            ((f"{SATURN_STEM}.smpc",), "per-game-file", atlas.ROLE_SETTINGS),
+            ((f"{SATURN_STEM}.srm",), "per-game-file", atlas.ROLE_UNKNOWN),
+        ]
+
+    def test_every_observed_file_is_in_exactly_one_group(self):
+        # The property the trap needed broken: a caller walking groups sees
+        # every name the flat list has, once — so "not in a group" is never a
+        # state it has to interpret.
+        stray = f"/mnt/sd/retrodeck/saves/saturn/{SATURN_STEM}.srm"
+        p = _saturn_query({**self.FILES, **self.WRITTEN, stray: "from another core"})
+        grouped = [name for g in p.file_set.groups for name in g.files or ()]
+        assert sorted(grouped) == sorted(p.file_set.files)
+        assert len(grouped) == len(set(grouped))
 
     def test_a_stored_value_outside_the_registration_falls_to_the_default(self):
         # RetroArch's option manager keeps the core default when a persisted
@@ -2645,6 +2726,44 @@ class TestRetiredOptionsLoad:
         )
         with pytest.raises(ValueError, match="reads no options"):
             load_oddities(text)
+
+
+class TestACardMayNotDeclareTheResolversRole:
+    """``unknown`` is a role the resolver states, never one a card declares.
+
+    It says *no declaration names this file*, which is the one thing a
+    declaration cannot say about a file it is naming: the answer would carry
+    the word as though a read had produced it, and a client cannot tell the two
+    apart. So the vocabulary a card is validated against is every role but that
+    one, and the loader is where the difference is enforced.
+    """
+
+    def _card(self, role: str) -> str:
+        return json.dumps(
+            {
+                "schema": 1,
+                "cores": {
+                    "x": {
+                        "identifiers": {"library_name": ["X"]},
+                        "saves": {
+                            "modes": {"always": _mode("per-game-file", files=["a.srm"], role=role)},
+                            "anchors": {"a.srm": {"literal": "a.srm"}},
+                        },
+                    }
+                },
+            }
+        )
+
+    def test_the_unknown_role_is_refused(self):
+        with pytest.raises(ValueError, match="role must be one of"):
+            load_oddities(self._card(atlas.ROLE_UNKNOWN))
+
+    def test_every_other_role_still_loads(self):
+        # The gate must subtract exactly one value, not narrow the vocabulary.
+        for role in atlas.ROLES:
+            if role == atlas.ROLE_UNKNOWN:
+                continue
+            assert load_oddities(self._card(role))[0].modes["always"].primary.role == role
 
 
 class TestStrictLoaders:

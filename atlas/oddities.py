@@ -35,6 +35,7 @@ from .placement import (
     GRANULARITIES,
     GRANULARITY_NONE,
     GRANULARITY_PER_GAME_FILE,
+    ROLE_UNKNOWN,
     ROLES,
     ROOT_CONTENT_DIRECTORY,
     ROOT_KINDS,
@@ -61,7 +62,11 @@ MODE_ALWAYS = "always"
 # looks right would be stated as fact.
 _KNOWN_MODE_ROOTS = set(ROOT_KINDS)
 _KNOWN_GRANULARITIES = set(GRANULARITIES)
-_KNOWN_ROLES = set(ROLES)
+# Every role but one: ROLE_UNKNOWN is what the *resolver* states about a file no
+# declaration names, so a card declaring it would be a card saying it does not
+# know what it is about to state — and the answer would carry that as though a
+# read had established it.
+_KNOWN_ROLES = set(ROLES) - {ROLE_UNKNOWN}
 # A declared file name is a template in the placement's own hole grammar. Only
 # these tokens exist: one the resolver fills, one the caller does. A token
 # outside the set would travel into a stated filename and be read as literal

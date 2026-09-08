@@ -1007,6 +1007,61 @@ class TestRetroDeckSavefileLocation:
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("Paper Mario (USA).srm",)
 
+    def test_an_observation_no_declaration_covers_states_the_role_as_unknown(self):
+        """Nothing declares this core's files, so the answer says exactly that.
+
+        The file is real and its role is not known, and those are two different
+        facts. Left ungrouped they read as one — a client filtering on ``role``
+        would take the file for ordinary progress, which is the reading that
+        cost a consumer a settings file. The grouping is what a walk over
+        ``groups`` can rely on; the word is what the walk finds there.
+        """
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "true"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip": "",
+                "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+            }
+        )
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip"))
+        assert [(g.dir, g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            (
+                "/mnt/sd/retrodeck/saves/n64",
+                ("Paper Mario (USA).srm",),
+                atlas.GRANULARITY_PER_GAME_FILE,
+                atlas.ROLE_UNKNOWN,
+            )
+        ]
+
+    def test_several_files_no_declaration_covers_are_one_unknown_group(self):
+        # The granularity is read off the names the observation matched: they
+        # carry the content's own stem, so they are this game's files, and
+        # there are several of them in a directory other games share.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                "/mnt/sd/retrodeck/roms/gb/Tetris (World).zip": "",
+                "/mnt/sd/retrodeck/saves/Tetris (World).srm": "s",
+                "/mnt/sd/retrodeck/saves/Tetris (World).rtc": "r",
+            }
+        )
+        p = placed(rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/gb/Tetris (World).zip"))
+        assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
+            (
+                ("Tetris (World).rtc", "Tetris (World).srm"),
+                atlas.GRANULARITY_PER_GAME_FILES,
+                atlas.ROLE_UNKNOWN,
+            )
+        ]
+
     def test_no_files_is_unknown_not_guessed(self):
         rd = _retrodeck(
             {

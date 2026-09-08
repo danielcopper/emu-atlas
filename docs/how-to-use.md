@@ -726,7 +726,7 @@ for g in placement.file_set.groups:
     g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
     g.files        # ('default.cfg',)            — basenames within it, or None (see below)
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'per-game-directory' | 'shared-card' | 'shared-file'
-    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings'
+    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings' | 'notes' | 'unknown'
 ```
 
 `per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
@@ -754,6 +754,22 @@ lifting deliberately — into a library's per-game notes, say — rather than co
 `shared-card` or `shared-file` group between machines without thinking: those files belong to every game at once, so
 restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
+
+**`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
+read says what kind of data it is: no rule card covers this core, or the file is not one the card names. It is a value
+rather than a missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a
+console's settings file — twelve bytes the user had chosen on that device — over the other device's, because while the
+directory was still empty the declared answer had named the roles and the observed one that replaced it named none. So
+the line above keeps `unknown` groups, and that is a decision you should make deliberately rather than inherit:
+
+```python
+mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
+unsure  = [g for g in mine if g.role == atlas.ROLE_UNKNOWN]   # yours to decide about, not to assume
+```
+
+Copying an `unknown` group is the same bet as copying a file no answer described at all — the difference is that you can
+now see you are making it. A one-way backup takes them; a two-way sync that overwrites the other device's copy has
+something to think about. What you must not do is read the word as `battery`.
 
 **`high-score` is in that set, and it is the one role whose merge is different.** An arcade machine keeps one score
 table for everyone who ever played it, so it is not one player's progress the way a battery save is. When two devices
@@ -821,11 +837,20 @@ FinalBurn Neo's shared mode adds a card every game shares beside the per-game sa
 'shared-card')` says so where a single word used to hide it. A client that wants one word reads
 `values[0]`.
 
-**Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
-observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no
-files_. Where it is populated, `files` is still exactly the names lying in `dir`: every group under the first group's
-directory, in order. So a card that splits one list into two by role moves no name out of `files`; the groups under
-_other_ directories are the part you only see here.
+**Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
+set has no files to decompose, the standard rule states one list in one directory, and a savestate answer is never
+decomposed at all — a savestate card states names, and neither of a group's two words is a thing anyone can say about a
+state file. Empty means _not decomposed_, never _no files_. What changed is the observation: a savefile answer that
+found files has a group for every one of them. Where `groups` is populated, `files` is still exactly the names lying in
+`dir`: every group under the first group's directory, and for a declared set in the card's own order. So a card that
+splits one list into two by role moves no name out of `files`; the groups under _other_ directories are the part you
+only see here.
+
+**An observation's groups are what was found, in the answer's order.** A declared set lists the parts a card states,
+including the ones no file has been written for yet, in the order the card states them; an observed set lists only what
+is there, and its `files` comes back in the directory's own order while the groups follow the declaration's. So compare
+the two by name, never by position — and a part under _another_ root is in `groups` only where the set is declared,
+because an observation never looked there. The `file-set-spans-roots` caveat carries it either way.
 
 ### A file set can carry a hole
 

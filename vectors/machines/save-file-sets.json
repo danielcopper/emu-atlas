@@ -453,7 +453,16 @@
               "Chrono Trigger (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Chrono Trigger (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "caveats": [
             {
