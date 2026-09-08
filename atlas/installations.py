@@ -3558,8 +3558,9 @@ def _unnamed_here(mode: SaveMode | None) -> SaveGroup | None:
     """The group that states this directory's role and refuses its file names.
 
     Such a group is a claim about the directory, not about a list: ScummVM
-    names its slot files per engine from the launcher target, and a WHDLoad
-    save is a drawer whose contents the installer decides. The card still says
+    names its slot files per engine from the launcher target, and WHDLoad gives
+    a program its own drawer that the running game then fills under names of
+    its own. The card still says
     what lies there — that is why its ``file-names-unestablished`` caveat
     carries a ``role`` — so a file found there is that group's data, and the
     only thing missing was ever the name.
@@ -3617,11 +3618,11 @@ def _observed_groups(
 
     Both cards reach that observation the same narrow way, and for the same
     reason their groups are nameless at all. The glob is the content's own stem,
-    while a ScummVM slot file is named from the launcher's target and a WHDLoad
-    save from what the installer chose — neither of which atlas reads. So a slot
-    file arrives only where the target happens to equal the content's stem, and
-    a file in the drawer only where the installer's name does; otherwise nothing
-    matches and the answer stays declared.
+    while a ScummVM slot file is named from the launcher's target and a file in
+    a WHDLoad drawer by the game that wrote it — neither of which atlas reads.
+    So a slot file arrives only where the target happens to equal the content's
+    stem, and a file in the drawer only where the game's own name does;
+    otherwise nothing matches and the answer stays declared.
 
     What this does *not* produce is the card's other directories. Every pass
     above is about the answer's own directory, because that is the one the

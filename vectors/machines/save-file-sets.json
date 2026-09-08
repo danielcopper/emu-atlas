@@ -9665,7 +9665,7 @@
     },
     {
       "name": "a-whdload-drawer-keeps-its-role-once-a-file-in-it-carries-the-contents-name",
-      "rationale": "The vector above with one file written into the mounted drawer. The mode states the drawer and refuses its file names — WHDLoad's installer decides them — and the set becomes an observation only for a name the content's own stem matches, which is what the observation globs for. What was found is that group's data: the drawer's role and its per-game-directory grouping hold, rather than turning to 'unknown' beside a caveat that calls the same directory a battery.",
+      "rationale": "The vector above with one file written into the mounted drawer. The mode states the drawer and refuses its file names — WHDLoad gives the program its own drawer and the running game names what it writes there — and the set becomes an observation only for a name the content's own stem matches, which is what the observation globs for. What was found is that group's data: the drawer's role and its per-game-directory grouping hold, rather than turning to 'unknown' beside a caveat that calls the same directory a battery.",
       "input": {
         "home": "/home/deck",
         "files": {
