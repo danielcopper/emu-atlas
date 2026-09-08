@@ -44,13 +44,15 @@ Skipped where RetroDECK is not deployed, by the same path check that silences
 the rest of the machine-bound tier.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Iterable, Mapping
 
 import pytest
 
 from atlas.core_info import enumerate_firmware, parse_core_info
-from atlas.system_firmware import load_system_firmware
+from atlas.system_firmware import CoreAlternative, SystemFirmware, load_system_firmware
 
 # Where RetroDECK deploys the cores RetroArch loads, and the ``.info`` files it
 # reads their declarations from. The same root the rule-card audits probe.
@@ -59,6 +61,15 @@ DEPLOYED_CORES = Path(
     "/retroarch/rd_extras/cores"
 )
 INFO_SUFFIX = "_libretro.info"
+
+# Floors for the "did the walk really walk?" guard, not expectations. The
+# deployed tree holds 291 catalogue entries yielding 65 systems today, so both
+# numbers sit far below anything ordinary churn reaches; they exist to make a
+# structural collapse — the catalogue moving, the suffix changing, the walk
+# reading an empty tree — fail loudly instead of passing a bare non-empty
+# check. Raise them only against a measurement, never to track today's value.
+MINIMUM_INFO_FILES = 50
+MINIMUM_SYSTEMS = 20
 
 # What the derivation reads: each system against the cores declaring firmware
 # under it, and for each core whether every slot it declares is optional. A
@@ -159,6 +170,29 @@ def unrecorded_disagreements(catalogue: Catalogue, recorded: Iterable[str]) -> l
     return sorted(set(systems_whose_cores_disagree(catalogue)) - set(recorded))
 
 
+def stale_exemptions(
+    catalogue: Catalogue, recorded: Mapping[str, SystemFirmware]
+) -> list[str]:
+    """Exempted cores the catalogue no longer has declaring everything optional.
+
+    The other direction of the exemption field, and the only check that
+    consumes it today. An exemption matches nothing when the core's entry
+    changed, when the exemption names the wrong core, or when that system left
+    the catalogue — and one matching nothing excuses nothing while still
+    reading, to anyone scanning the table, as a core somebody cleared.
+
+    Factored out for the same reason :func:`unrecorded_disagreements` is: the
+    comparison lived inline in its test, so nothing could watch it go red
+    without a deployed catalogue to break.
+    """
+    return sorted(
+        f"{system}/{alternative.core}"
+        for system, entry in recorded.items()
+        for alternative in entry.alternatives
+        if catalogue.get(system, {}).get(alternative.core) is not True
+    )
+
+
 def _catalogue_or_skip() -> dict[str, dict[str, bool]]:
     if not DEPLOYED_CORES.is_dir():
         pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
@@ -219,6 +253,61 @@ class TestTheDerivationItself:
         ) == {"Demo System": (["quiet"], ["lax"])}
 
 
+class TestTheStalenessCheckBites:
+    """The exemption's own guard, over a catalogue written here.
+
+    Its comparison used to live inline in the machine-bound test, so nothing
+    could watch it go red without breaking a deployed catalogue — and a check
+    nobody has seen fail is a check nobody knows fires. These are the three
+    ways an exemption stops matching.
+    """
+
+    def _recorded(self, system: str, core: str) -> dict[str, SystemFirmware]:
+        return {
+            system: SystemFirmware(
+                system=system,
+                verdict="cannot-run-without-firmware",
+                evidence="[V]",
+                source="[V-live] watched it refuse",
+                alternatives=(CoreAlternative(core=core, reason="[V-live] watched it run"),),
+            )
+        }
+
+    def test_an_exemption_matching_an_all_optional_core_is_not_stale(self):
+        recorded = self._recorded("Demo System", "lax")
+        assert stale_exemptions({"Demo System": {"lax": True, "strict": False}}, recorded) == []
+
+    def test_an_exempted_core_that_now_declares_required_firmware_is_stale(self):
+        recorded = self._recorded("Demo System", "lax")
+        assert stale_exemptions({"Demo System": {"lax": False}}, recorded) == [
+            "Demo System/lax"
+        ]
+
+    def test_an_exemption_naming_a_core_the_catalogue_does_not_have_is_stale(self):
+        recorded = self._recorded("Demo System", "ghost")
+        assert stale_exemptions({"Demo System": {"lax": True}}, recorded) == [
+            "Demo System/ghost"
+        ]
+
+    def test_an_exemption_whose_system_left_the_catalogue_is_stale(self):
+        recorded = self._recorded("Demo System", "lax")
+        assert stale_exemptions({"Other System": {"lax": True}}, recorded) == [
+            "Demo System/lax"
+        ]
+
+    def test_an_entry_with_no_exemption_is_never_stale(self):
+        recorded = {
+            "Demo System": SystemFirmware(
+                system="Demo System",
+                verdict="open",
+                evidence="[O]",
+                source="[O] nobody looked",
+                alternatives=(),
+            )
+        }
+        assert stale_exemptions({}, recorded) == []
+
+
 class TestEveryDisagreementIsRecorded:
     """The tripwire: the deployed catalogue against the shipped table."""
 
@@ -236,12 +325,7 @@ class TestEveryDisagreementIsRecorded:
 
     def test_an_exempted_core_really_declares_everything_optional(self):
         catalogue = _catalogue_or_skip()
-        stale: list[str] = []
-        for system, entry in load_system_firmware().items():
-            cores = catalogue.get(system, {})
-            for alternative in entry.alternatives:
-                if cores.get(alternative.core) is not True:
-                    stale.append(f"{system}/{alternative.core}")
+        stale = stale_exemptions(catalogue, load_system_firmware())
         assert stale == [], (
             f"{stale} are recorded as cores whose all-optional declaration is correct because "
             "they supply an alternative, and the deployed catalogue no longer has them "
@@ -251,11 +335,19 @@ class TestEveryDisagreementIsRecorded:
         )
 
     def test_the_catalogue_is_really_read_where_cores_are_deployed(self):
-        # The all-skip guard the rest of this tier carries: a run that derived
-        # nothing must not read as a run that found nothing.
+        # The all-skip guard the rest of this tier carries, with a floor rather
+        # than a bare non-empty check: a walk that collapsed to a handful of
+        # entries would satisfy `assert catalogue` and derive over almost
+        # nothing, which is the failure this guard exists to make loud.
         catalogue = _catalogue_or_skip()
-        assert catalogue, (
-            f"cores are deployed at {DEPLOYED_CORES} and not one .info was read as declaring "
-            "firmware under a systemname — either the catalogue moved out of this directory or "
-            "this tripwire is silently deriving over nothing"
+        infos = list(DEPLOYED_CORES.glob(f"*{INFO_SUFFIX}"))
+        assert len(infos) >= MINIMUM_INFO_FILES, (
+            f"cores are deployed at {DEPLOYED_CORES} and it holds {len(infos)} catalogue entries "
+            f"— fewer than the {MINIMUM_INFO_FILES} floor, so this is not the cores tree the "
+            "derivation was written against and the walk is reading somewhere else"
+        )
+        assert len(catalogue) >= MINIMUM_SYSTEMS, (
+            f"{len(infos)} catalogue entries are deployed and only {len(catalogue)} systems came "
+            f"out of them, under the {MINIMUM_SYSTEMS} floor — either the declarations moved out "
+            "of these files or the walk is silently deriving over almost nothing"
         )

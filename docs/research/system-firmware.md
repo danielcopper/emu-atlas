@@ -43,32 +43,51 @@ knows a PlayStation needs one regional BIOS therefore has two moves, and both lo
 | mark every image required | Beetle PSX: `scph5500/5501/5502` required | demands all three, though one would do    |
 | mark every image optional | SwanStation: all five images optional     | demands none, though the system needs one |
 
-Read from the deployed catalogue on the reference machine, that is exactly what the PlayStation cores do:
+Read from the deployed catalogue on the reference machine, that is exactly what the PlayStation cores do. All **eight**
+entries that declare firmware under `systemname = "PlayStation"`, not a selection of them:
 
 ```
-swanstation      psxonpsp660.bin? scph5500.bin? scph5501.bin? scph5502.bin? ps1_rom.bin?
-pcsx_rearmed     scph5500.bin? scph5501.bin? scph5502.bin? psxonpsp660.bin?
-mednafen_psx     scph5500.bin! scph5501.bin! scph5502.bin! psxonpsp660.bin? ps1_rom.bin?
-mednafen_psx_hw  scph5500.bin! scph5501.bin! scph5502.bin! psxonpsp660.bin? ps1_rom.bin?
-duckstation      scph5500.bin! scph5501.bin! scph5502.bin!
+duckstation               scph5500.bin! scph5501.bin! scph5502.bin!                              (no .so deployed)
+mednafen_psx              scph5500.bin! scph5501.bin! scph5502.bin! psxonpsp660.bin? ps1_rom.bin?
+mednafen_psx_hw           scph5500.bin! scph5501.bin! scph5502.bin! psxonpsp660.bin? ps1_rom.bin?
+pcsx1                     scph5500.bin? scph5501.bin? scph5502.bin?                              (no .so deployed)
+pcsx_rearmed              scph5500.bin? scph5501.bin? scph5502.bin? psxonpsp660.bin?
+pcsx_rearmed_interpreter  scph5500.bin? scph5501.bin? scph5502.bin?                              (no .so deployed)
+pcsx_rearmed_neon         scph5500.bin? scph5501.bin? scph5502.bin?                              (no .so deployed)
+swanstation               psxonpsp660.bin? scph5500.bin? scph5501.bin? scph5502.bin? ps1_rom.bin?
 ```
 
-(`!` required, `?` optional.) One machine, one requirement, five entries that disagree about it.
+(`!` required, `?` optional.) One machine, one requirement, eight entries that disagree about it — three on the required
+side, five on the optional side. A ninth entry, `rustation`, carries the same `systemname` and declares no firmware at
+all, so it takes no part. Four of the eight have no binary deployed, which matters below.
 
 **The options reading** — the core's own registered options, read unfiltered off the shipped `.so`
-(`RealMachine.query_core`). It says **what the core can do**, which is a different question again, and it is often the
-half that settles the case. SwanStation registers three region BIOS _path_ slots and every value they offer is a file
-name:
+(`RealMachine.query_core`). It says **what the core can do**, which is a different question again. Every BIOS-related
+option the four loadable PlayStation cores register, listed in full rather than filtered, because a filtered list is how
+the first draft of this page came to claim something false:
 
 ```
-swanstation_BIOS_PathNTSCJ  default scph5500.bin  values scph5500.bin, psxonpsp660.bin, ps1_rom.bin
-swanstation_BIOS_PathNTSCU  default scph5501.bin  values scph5501.bin, psxonpsp660.bin, ps1_rom.bin
-swanstation_BIOS_PathPAL    default scph5502.bin  values scph5502.bin, psxonpsp660.bin, ps1_rom.bin
-pcsx_rearmed_bios           default auto          values auto, HLE
+swanstation_BIOS_PathNTSCJ      default scph5500.bin  values scph5500.bin, psxonpsp660.bin, ps1_rom.bin
+swanstation_BIOS_PathNTSCU      default scph5501.bin  values scph5501.bin, psxonpsp660.bin, ps1_rom.bin
+swanstation_BIOS_PathPAL        default scph5502.bin  values scph5502.bin, psxonpsp660.bin, ps1_rom.bin
+swanstation_BIOS_PatchFastBoot  default false         values true, false
+pcsx_rearmed_bios               default auto          values auto, HLE
+pcsx_rearmed_show_bios_bootlogo default disabled      values disabled, enabled
+beetle_psx_override_bios        default disabled      values disabled, psxonpsp, ps1_rom
+beetle_psx_skip_bios            default disabled      values disabled, enabled
+beetle_psx_hw_override_bios     default disabled      values disabled, psxonpsp, ps1_rom
+beetle_psx_hw_skip_bios         default disabled      values disabled, enabled
 ```
 
-There is no value in SwanStation's three that stands for "no file", so its all-optional declaration is an
-understatement. PCSX ReARMed's single option has one, which is why the same declaration from that core is not.
+SwanStation's three _path_ slots offer nothing but BIOS image file names, so on those three there is no way to say "run
+without one" — which is what makes its all-optional declaration an understatement. PCSX ReARMed's single `bios` option
+carries `HLE`, a value that is not a file at all.
+
+**What this reading does not settle, and a careful reader will ask.** Both Beetle cores register `skip_bios`
+(`disabled`/`enabled`), and their `override_bios` values are `disabled`, `psxonpsp` and `ps1_rom` — symbolic names, not
+file names, and `disabled` is not an image. What either switch does with no image present has not been observed here,
+and this page does not claim it. Nor is the reading complete: only four of the nine PlayStation entries have a binary
+deployed, so five were never read at all. The options reading is evidence, not a census.
 
 Neither reading answers "is this file needed" on its own. The catalogue is about the emulator's launch check; the
 options are about one core's capabilities. The fact a user actually wants — _this system does not run without firmware_
@@ -174,20 +193,29 @@ and nothing beyond it has been established.
 
 The one entry that is not `open` cites three device observations and one binary read: SwanStation never starting, Beetle
 PSX refusing at load and naming `scph5501.bin` on screen, PCSX ReARMed playing a game through with no BIOS present, and
-the option tables above.
+SwanStation's three path slots above. Its `source` also records what it does **not** establish — the two unobserved
+Beetle switches, and the four declaring entries whose binaries were never read — because a verdict that hides its own
+gaps is the kind a reader stops trusting the moment they find one.
 
 ## Exempting a core that is right
 
 A system that needs firmware can still have a core that runs without a file, because the core supplies its own
-substitute. Its catalogue entry declares everything optional and is _correct_ to, so it has to be nameable — otherwise
-the tripwire reads a right entry as an understatement. `cores_supplying_an_alternative` is that place, on a
-`cannot-run-without-firmware` entry only, and each core carries its own reason: a bare exemption excuses by assertion.
+substitute. Its catalogue entry declares everything optional and is _correct_ to, so it has to be nameable.
+`cores_supplying_an_alternative` is that place, on a `cannot-run-without-firmware` entry only, and each core carries its
+own reason: a bare exemption excuses by assertion.
 
-PCSX ReARMed is the case the field was written around, and its entry states its own limit. The core offers an `HLE`
-value where no other deployed PlayStation core offers anything but a choice between files, and it was observed playing a
-game through with no BIOS present. Which of its two values was in force during that run is not recorded, and nothing
-establishes what `auto` does when no image is present. The exemption rests on the observation that the core ran, not on
-a reading of what either value means.
+**What the field is for, precisely, because it is easy to overstate.** It is recorded for the cut that makes an answer
+read this table, where a system needing firmware must not be reported against a core that carries its own substitute. It
+is **not** what keeps the tripwire green. The derivation compares whole systems and never consults the field, so
+removing it fails no check and changes no verdict — measured by deleting it and re-running, not assumed. The one check
+that consumes it today is the staleness one below.
+
+PCSX ReARMed is the case the field was written around, and its entry states its own limits. The core registers a `bios`
+option carrying `HLE`, and it was observed playing a game through with no BIOS present. Which of its two values was in
+force during that run is not recorded, and nothing establishes what `auto` does when no image is present. It is also not
+claimed to be the only PlayStation core that can run without an image: the Beetle cores register an unobserved
+`skip_bios` switch, and four of the eight declaring entries have no binary deployed here, so their options were never
+read. The exemption rests on the one core that was watched running without firmware.
 
 The list is not a completeness claim. It holds the cores whose substitute has been established; a core absent from it is
 one nobody has looked at, never one judged to be understating. The tripwire checks the other direction — a named core

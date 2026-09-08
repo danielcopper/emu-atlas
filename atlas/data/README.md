@@ -1310,9 +1310,12 @@ Shape:
   `[V-script]`).
 - `cores_supplying_an_alternative` — the cores whose all-optional declaration is **correct** for a system that needs
   firmware, because the core itself supplies a substitute. PCSX ReARMed's HLE BIOS is the case the field was written
-  around; without it the tripwire would read a right entry as a mistake. On a `cannot-run-without-firmware` entry only,
-  and each core names its own reason rather than being a bare exemption. It is not a completeness claim: a core absent
-  from it is one nobody has looked at, never one judged to be understating.
+  around. It is recorded **for the cut that makes an answer read this table**, where a system needing firmware must not
+  be reported against a core carrying its own substitute; it is not what keeps the tripwire green, because the
+  derivation compares whole systems and never consults it. The one check that consumes it today is the staleness one
+  below. On a `cannot-run-without-firmware` entry only, and each core names its own reason rather than being a bare
+  exemption. It is not a completeness claim: a core absent from it is one nobody has looked at, never one judged to be
+  understating.
 - **`tests/test_system_firmware_tripwire.py` is what keeps the file honest.** It recomputes the catalogue disagreements
   from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
   fails when an exempted core has stopped declaring everything optional. It is a machine-bound test, so an ordinary CI

@@ -76,9 +76,19 @@ class CoreAlternative:
     A system that needs firmware can still have a core that runs without a
     file, because the core supplies its own substitute. That core's catalogue
     entry declares everything optional and is *correct* to, so it has to be
-    nameable — otherwise the tripwire reads a correct entry as an
-    understatement. ``reason`` carries the evidence rather than a bare
-    exemption: what the core offers, and what was seen.
+    nameable.
+
+    **What it is for, precisely.** It is recorded for the cut that makes an
+    answer read this table, where a system needing firmware must not be
+    reported against a core carrying its own substitute. It is *not* what keeps
+    the tripwire green: the derivation compares whole systems and never
+    consults this field, so removing it fails no check and changes no verdict —
+    measured, not assumed. The one check consuming it today is the staleness
+    one, which fails when a named core has stopped declaring everything
+    optional for that system.
+
+    ``reason`` carries the evidence rather than a bare exemption: what the core
+    offers, and what was seen.
     """
 
     core: str
@@ -104,8 +114,12 @@ class SystemFirmware:
 
 
 def _expect_str(value: Any, where: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{where}: expected a non-empty string, got {value!r}")
+    # Blank-not-just-empty, because every string this table holds is prose a
+    # person is meant to read. A reason written as `" "` passes a truthiness
+    # check and says exactly as much as `""` does, which is the shape a bare
+    # exemption would take once the empty one is refused.
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{where}: expected a non-blank string, got {value!r}")
     return value
 
 
@@ -155,8 +169,11 @@ def _system(name: str, entry: Any) -> SystemFirmware:
             f"{VERDICT_OPEN!r} is the one verdict that carries {EVIDENCE_OPEN!r}, and the one "
             "that may"
         )
-    alternatives_raw = entry.get("cores_supplying_an_alternative")
-    if alternatives_raw is not None and verdict != VERDICT_CANNOT_RUN_WITHOUT:
+    # Key presence, not value truthiness: `"cores_supplying_an_alternative":
+    # null` states the field on an entry that must not carry it, and reading it
+    # through `.get()` let exactly that through on any verdict.
+    states_alternatives = "cores_supplying_an_alternative" in entry
+    if states_alternatives and verdict != VERDICT_CANNOT_RUN_WITHOUT:
         raise ValueError(
             f"{where}: only a {VERDICT_CANNOT_RUN_WITHOUT!r} entry names cores supplying an "
             f"alternative — over {verdict!r} there is no understatement to excuse"
@@ -166,7 +183,11 @@ def _system(name: str, entry: Any) -> SystemFirmware:
         verdict=verdict,
         evidence=evidence,
         source=_expect_str(entry["source"], f"{where}: source"),
-        alternatives=() if alternatives_raw is None else _alternatives(alternatives_raw, where),
+        alternatives=(
+            _alternatives(entry["cores_supplying_an_alternative"], where)
+            if states_alternatives
+            else ()
+        ),
     )
 
 
