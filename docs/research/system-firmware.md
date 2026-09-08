@@ -15,33 +15,54 @@ false.
 ## The two readings, and why neither alone answers the question
 
 **The catalogue reading** — a core's `<core>.info`, enumerated the way RetroArch enumerates it
-(`atlas.core_info.enumerate_firmware`, a port of `core_info_resolve_firmware`). It says **what RetroArch will do**:
-which files it will look for, and which of them it will refuse to launch without. That is a real and useful fact, and it
-is what atlas reports today.
+(`atlas.core_info.enumerate_firmware`, a port of `core_info_resolve_firmware`). It says **what RetroArch reports**:
+which files it will look for, and which of them it labels required. That is a real and useful fact, and it is what atlas
+reports today.
+
+**Reports, not refuses — and that distinction is the whole case.** It is tempting to write that RetroArch will not
+launch without a required file. It does not. At the pinned revision `a79435a`, `core_info_list_update_missing_firmware`
+has exactly one caller, `menu/menu_displaylist.c:880`, and that caller builds the core-information page's labels —
+`MISSING_OPTIONAL`, `MISSING_REQUIRED`, `PRESENT_OPTIONAL`, `PRESENT_REQUIRED` (`menu/menu_displaylist.c:882-887`).
+Nothing on that path stops a load. The setting that would block, `check_firmware_before_loading`, is **off in both
+configurations RetroDECK ships** — `rd_config/retroarch.cfg:65` and the live
+`~/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg:65` each read `"false"` — so on this machine nothing
+blocks at all.
+
+That makes the observed refusal _stronger_ evidence, not weaker. The catalogue says optional, the frontend only labels,
+the blocking setting is off, and Beetle PSX still stopped and named `scph5501.bin` on screen. **The core refused, not
+the frontend.** That is precisely the contradiction this table exists to record.
+
+One provenance note, because the repo's rule is to cite RetroArch at the pin: `check_firmware_before_loading` is **not**
+in the source at `a79435a` — a raw byte scan over all 10,832 files finds it nowhere. It is in the deployed build, whose
+binary carries the literal and reports version `1.22.2`, and in the two config files above. So the setting is a
+`[V-binary]` plus config reading of what is deployed, not a source citation, and the repo's RetroArch pin now predates a
+setting the shipped build has.
 
 **A slot is written three ways and read two.** `firmware<N>_opt` may say optional, may say required, or may be
-**absent** — and absent means required. That is not an inference; RetroArch's own template says it in as many words, in
-the commented block every shipped `.info` is copied from:
+**absent** — and absent means required. The behaviour is in the source, not in a comment: `core_info.c:1584-1585`
+`calloc`s the slot array, so `optional` starts false, and `core_info.c:1603-1604` writes the flag **only** when
+`config_get_bool` succeeds, leaving that zero in place when the key is absent or unparseable. libretro's own template
+says the same thing in words, at `00_example_libretro.info:47`:
 
 ```
 # Is firmware optional or not, if not defined RetroArch will assume it is required
 ```
 
-(`puzzlescript_libretro.info:45` in the deployed catalogue.) `atlas.core_info` already ports the default — the flag goes
-through `config_get_bool`, and a value outside its vocabulary leaves the `false` the slot's `calloc` gave it — so an
-absent flag reads as required everywhere in atlas, and `need` says `required`. One deployed core is written that way:
-`ecwolf`, whose single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117 state `_opt`
-on every slot, exactly one states it on none, and none are mixed. The third shape is worth naming because reading an
-absent flag as optional is the mistake that would make a hard requirement look like no requirement at all.
+The line is documentation, not a load-bearing citation, and it is nearly gone: of the 292 `.info` files deployed,
+**two** still carry it — the template itself and `puzzlescript_libretro.info:45`. `atlas.core_info` ports the source
+rule, so an absent flag reads as required everywhere in atlas and `need` says `required`. One deployed core is written
+that way: `ecwolf`, whose single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117
+state `_opt` on every slot, exactly one states it on none, and none are mixed. The third shape is worth naming because
+reading an absent flag as optional is the mistake that would make a hard requirement look like no requirement at all.
 
 What the format cannot say is anything about the machine being emulated. It carries one boolean per file. There is no
 way to write "one of these three", and no way to write "this system does not start without one of them". An author who
 knows a PlayStation needs one regional BIOS therefore has two moves, and both lose the fact:
 
-| move                      | what the file says                        | what RetroArch then does                  |
-| ------------------------- | ----------------------------------------- | ----------------------------------------- |
-| mark every image required | Beetle PSX: `scph5500/5501/5502` required | demands all three, though one would do    |
-| mark every image optional | SwanStation: all five images optional     | demands none, though the system needs one |
+| move                      | what the file says                        | what RetroArch then reports                           |
+| ------------------------- | ----------------------------------------- | ----------------------------------------------------- |
+| mark every image required | Beetle PSX: `scph5500/5501/5502` required | all three as "Missing, Required", though one would do |
+| mark every image optional | SwanStation: all five images optional     | all five as "Missing, Optional", though one is needed |
 
 Read from the deployed catalogue on the reference machine, that is exactly what the PlayStation cores do. All **eight**
 entries that declare firmware under `systemname = "PlayStation"`, not a selection of them:
@@ -79,6 +100,11 @@ beetle_psx_hw_override_bios     default disabled      values disabled, psxonpsp,
 beetle_psx_hw_skip_bios         default disabled      values disabled, enabled
 ```
 
+`beetle_psx` and `beetle_psx_hw` there are **option namespaces, not core keys.** The cores that register them ship as
+`mednafen_psx_libretro.so` and `mednafen_psx_hw_libretro.so`, and a key in this repo is the `.so` short name rather than
+the display nickname — so those two are `mednafen_psx` and `mednafen_psx_hw` everywhere a core is named, including in
+the table's own entry.
+
 SwanStation's three _path_ slots offer nothing but BIOS image file names, so on those three there is no way to say "run
 without one" — which is what makes its all-optional declaration an understatement. PCSX ReARMed's single `bios` option
 carries `HLE`, a value that is not a file at all.
@@ -96,9 +122,12 @@ versioned, and source-cited, in `atlas/data/system_firmware.json`.
 
 ## The derivation, and what it cannot see
 
-The discriminator is the **system**, not the core. `mgba`, `snes9x` and `gambatte` declare everything optional and are
-simply right. `swanstation` declares everything optional about a machine that needs a BIOS. Same declaration; what tells
-them apart is the system behind it.
+The discriminator is the **system**, not the core. `mgba`, `snes9x` and `gambatte` declare everything optional, and so
+does `swanstation` — but SwanStation says it about a machine observed refusing to start without a BIOS. Same
+declaration, and what could tell them apart is the system behind it, not the wording. (Whether those three are _right_
+is not this page's to say: `gambatte` sits under `Game Boy/Game Boy Color` and `mgba` under Game Boy Advance, and this
+table records both systems as `open`. Naming them here as correct would be the exact unmarked judgement the table
+refuses to make.)
 
 Where one core of a system declares a file required and another declares every file optional, the machine is already
 carrying the answer, in the other core's entry. `tests/test_system_firmware_tripwire.py` recomputes those collisions
@@ -140,7 +169,7 @@ print("all-optional throughout:", sorted(s for s, c in catalogue.items() if all(
 `read_catalogue` drops the cores stating no `systemname`, so it accounts for 116 of the 118 declaring entries; the two
 it leaves out are `galaksija` and `skyemu`, which name no system between them.
 
-Three things about the derivation are worth stating rather than leaving to be discovered:
+Four things about the derivation are worth stating rather than leaving to be discovered:
 
 - **It groups by the raw `systemname`.** That is the unit the catalogue itself groups firmware by. Translating into
   atlas's ES-DE vocabulary is not free — `Game Boy/Game Boy Color` is one `systemname` over two catalogue systems — and
@@ -159,10 +188,22 @@ Three things about the derivation are worth stating rather than leaving to be di
   118 declaring entries here have a binary, and holding the derivation to those loses three of the seven disagreements.
 
 **And what it cannot see: a system where every core understates.** There is no disagreement to find, so the derivation
-is silent. Three systems are in exactly that position in the deployed catalogue — `3DO` (opera), `SNK Neo Geo CD`
-(neocd) and `PC-98` (np2kai), each declaring firmware and each declaring all of it optional, with no second core to
-contradict them. The tripwire is a **floor on what is recorded**, never a proof that the record is complete, and a green
-run must not be read as the second thing.
+is silent. **36** systems declare firmware with every declaring core saying all-optional, and the derivation says
+nothing about any of them.
+
+Three of those 36 are worth naming, and precisely what is claimed about them matters:
+
+- **[D]** `3DO` (opera), `SNK Neo Geo CD` (neocd) and `PC-98` (np2kai) are each the **only** core declaring firmware
+  under their `systemname`, so there is no second entry that _could_ contradict them. That is derived from the catalogue
+  and is checkable.
+- **[O]** Whether any of the three actually needs firmware to run is **unestablished**. Nothing here has observed one,
+  and this page does not say they understate.
+- The other 33 have not been examined either. Naming three is not a claim that the remaining 33 were checked and cleared
+  — **how many of the 36 understate is exactly what the derivation cannot say**, and no number here should be read as an
+  answer to it.
+
+The tripwire is a **floor on what is recorded**, never a proof that the record is complete, and a green run must not be
+read as the second thing.
 
 ## The canary tier
 
@@ -191,11 +232,12 @@ observation on a real machine, `[V-binary]` a read of the shipped core, `[V-scri
 or a source read can close it, which is why six of the seven shipped entries are `open`: the disagreement is derived,
 and nothing beyond it has been established.
 
-The one entry that is not `open` cites three device observations and one binary read: SwanStation never starting, Beetle
-PSX refusing at load and naming `scph5501.bin` on screen, PCSX ReARMed playing a game through with no BIOS present, and
-SwanStation's three path slots above. Its `source` also records what it does **not** establish — the two unobserved
-Beetle switches, and the four declaring entries whose binaries were never read — because a verdict that hides its own
-gaps is the kind a reader stops trusting the moment they find one.
+The one entry that is not `open` rests on three device observations and one binary read. The observations are
+SwanStation never starting, Beetle PSX refusing at load and naming `scph5501.bin` on screen, and PCSX ReARMed playing a
+game through with no BIOS present; the binary read is SwanStation's three path slots above, whose values are all image
+file names. Its `source` also records what it does **not** establish — the two unobserved Beetle switches, and the four
+declaring entries whose binaries were never read — because a verdict that hides its own gaps is the kind a reader stops
+trusting the moment they find one.
 
 ## Exempting a core that is right
 

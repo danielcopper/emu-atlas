@@ -30,6 +30,18 @@ one is usually ``open``: recording the system as open takes it out of this
 tripwire and puts it where a person can see it, without anyone claiming to know
 whether the system boots.
 
+**What closing it takes, concretely.** Add one entry to
+``atlas/data/system_firmware.json``, keyed by the ``systemname`` this failure
+names, verbatim. It carries three fields — ``verdict``
+(``cannot-run-without-firmware``, ``runs-without-firmware`` or ``open``),
+``evidence`` (``[V]``, ``[D]`` or ``[O]``, and the loader refuses any pairing
+but ``open``/``[O]`` and not-``open``/not-``[O]``), and ``source``, saying what
+that level read. For an ``open`` entry the source is the disagreement itself:
+which cores declare a required file and which declare everything optional. A
+stated verdict needs an observation or a source read, never the disagreement
+alone — a catalogue contradiction is what makes the question worth asking, not
+an answer to it.
+
 **What this cannot see.** The derivation finds a system only where its cores
 *disagree*. Where every core of a system understates, there is no disagreement
 to find and this file has nothing to say. Three systems are in exactly that
@@ -89,21 +101,28 @@ def _all_optional(text: str) -> bool | None:
 
     **A slot can be written three ways and read only two.** ``firmware<N>_opt``
     may say optional, may say required, or may be absent — and absent is
-    **required**, which is the reading a person guesses wrong. RetroArch's own
-    template says so in as many words, in the commented block every shipped
-    ``.info`` is copied from::
+    **required**, which is the reading a person guesses wrong.
 
-        # Is firmware optional or not, if not defined RetroArch will assume it
-        # is required
+    The rule is in RetroArch's source, not in a comment: ``core_info.c``
+    ``calloc``s the slot array at ``:1584-1585`` so ``optional`` starts false,
+    and ``:1603-1604`` writes the flag **only** when ``config_get_bool``
+    succeeds — an absent or unparseable value leaves that zero standing. Both
+    citations are at the pinned revision ``a79435a``.
+    :func:`atlas.core_info._slot_at` ports exactly that, so the third shape
+    needs no third branch here and lands on the required side of the derivation
+    by itself.
 
-    (``puzzlescript_libretro.info:45`` in the deployed catalogue.)
-    :func:`atlas.core_info._slot_at` already ports that default — the flag goes
-    through ``config_get_bool`` and a value outside its vocabulary leaves the
-    ``false`` the ``calloc`` gave the slot — so the third shape needs no third
-    branch here and lands on the required side of the derivation by itself.
-    It is stated rather than left to the port because reading an absent flag as
-    optional is what would let a system disappear from this tripwire silently.
-    One deployed core is written that way today (``ecwolf``), and
+    libretro's template says the same thing in words, on one line at
+    ``00_example_libretro.info:47``::
+
+        # Is firmware optional or not, if not defined RetroArch will assume it is required
+
+    That line is documentation rather than the citation, and it is nearly gone:
+    two of the 292 deployed ``.info`` files still carry it, the template and
+    ``puzzlescript_libretro.info:45``. The rule is stated here rather than left
+    to the port because reading an absent flag as optional is what would let a
+    system disappear from this tripwire silently. One deployed core is written
+    that way today (``ecwolf``), and
     :meth:`TestTheDerivationItself.test_a_slot_that_states_no_opt_reads_as_required`
     is what holds the reading.
     """

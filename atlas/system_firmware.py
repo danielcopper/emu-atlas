@@ -5,18 +5,30 @@ A libretro core declares firmware one file at a time, with a boolean per file
 way to say "this system does not start without one of them", so an author who
 knows a PlayStation needs one regional BIOS has two lossy moves and the
 deployed catalogue takes both: Beetle PSX marks the three region images
-required and RetroArch demands all three, SwanStation marks all five optional
-and RetroArch demands none. :mod:`atlas.firmware` reports ``need`` straight
-from ``firmwareN_opt``, which is faithful and — over an all-optional
-PlayStation — reads as "nothing required" about a machine that will not boot.
+required and RetroArch labels all three "Missing, Required", SwanStation marks
+all five optional and RetroArch labels none of them required.
+:mod:`atlas.firmware` reports ``need`` straight from ``firmwareN_opt``, which is
+faithful and — over an all-optional PlayStation — reads as "nothing required"
+about a machine that will not boot.
+
+**RetroArch labels; it does not refuse.** At the pinned revision ``a79435a``
+``core_info_list_update_missing_firmware`` has one caller,
+``menu/menu_displaylist.c:880``, and it builds the core-information page's
+labels. The setting that would block a load,
+``check_firmware_before_loading``, is ``"false"`` in both configurations
+RetroDECK ships. That makes the observed refusal the **core's** rather than the
+frontend's, which is what gives this table its case:
+``docs/research/system-firmware.md`` carries the readings.
 
 The missing half is a fact about the **system**, not about the core, which is
 the whole reason it cannot live on a rule card. mGBA, snes9x and gambatte
-declare everything optional and are simply right; SwanStation declares
-everything optional about a machine that needs a BIOS. Same declaration, and
-what tells them apart is the system behind it. So this table is keyed by
-system, and its verdicts are the three a reader actually needs: the system does
-not run without firmware, it does, or nobody has established which.
+declare everything optional, and so does SwanStation — but SwanStation says it
+about a machine observed refusing to start. Same declaration, and what could
+tell them apart is the system behind it. (Whether those three are *right* is
+not this module's to say: two of them sit under systems this very table records
+as ``open``.) So the table is keyed by system, and its verdicts are the three a
+reader actually needs: the system does not run without firmware, it does, or
+nobody has established which.
 
 **Open is a value, not an absence.** A system whose cores disagree is a system
 someone should look at, and recording it as ``open`` is what makes it visible

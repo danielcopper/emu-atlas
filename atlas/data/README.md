@@ -1269,15 +1269,21 @@ whether a switch exists, how a legacy file is migrated. An emulator may have two
 The half a libretro `.info` cannot state. A core declares firmware one file at a time with `firmware<N>_opt`, a format
 with no way to say "one of these three" and no way to say "this system does not start without one of them". An author
 who knows a PlayStation needs one regional BIOS therefore has two lossy moves, and the deployed catalogue takes both:
-Beetle PSX marks the three region images required and RetroArch demands all three, SwanStation marks all five of its
-images optional and RetroArch demands none. `atlas.firmware` reports `need` straight from `firmware<N>_opt` and so
-reproduces both faithfully — which over an all-optional PlayStation reads as "nothing required" about a machine that
-will not boot.
+Beetle PSX marks the three region images required and RetroArch labels all three "Missing, Required", SwanStation marks
+all five of its images optional and RetroArch labels none of them required. `atlas.firmware` reports `need` straight
+from `firmware<N>_opt` and so reproduces the declaration faithfully — which over an all-optional PlayStation reads as
+"nothing required" about a machine that will not boot.
+
+**RetroArch labels; it does not refuse.** At the pinned revision `a79435a`, `core_info_list_update_missing_firmware` has
+exactly one caller (`menu/menu_displaylist.c:880`) and it builds the core-information page's labels; the setting that
+would block a load, `check_firmware_before_loading`, reads `"false"` in both configurations RetroDECK ships. So the
+refusal that was observed is the **core's**, not the frontend's, which is the contradiction this table records.
 
 The fact is about the **system**, not the core, which is why it cannot live on a rule card: mGBA, snes9x and gambatte
-declare everything optional and are simply right, while SwanStation declares everything optional about a machine that
-needs a BIOS. Read by `atlas.system_firmware.load_system_firmware`. The method, the measurements and what the derivation
-cannot see are in [`docs/research/system-firmware.md`](../../docs/research/system-firmware.md).
+declare everything optional and so does SwanStation, but SwanStation says it about a machine observed refusing to start.
+Whether the other three are right is not claimed here — two of them sit under systems this table records as `open`. Read
+by `atlas.system_firmware.load_system_firmware`. The method, the measurements and what the derivation cannot see are in
+[`docs/research/system-firmware.md`](../../docs/research/system-firmware.md).
 
 Shape:
 
