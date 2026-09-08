@@ -1326,8 +1326,12 @@ Shape:
   from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
   fails when an exempted core has stopped declaring everything optional. It is a machine-bound test, so an ordinary CI
   run skips it and the weekly canary is where a new disagreement surfaces. It finds a system only where cores
-  _disagree_: where every core of a system understates there is nothing to find, and `3DO`, `SNK Neo Geo CD` and `PC-98`
-  are in exactly that position today. A floor on what is recorded, not a proof that the record is complete.
+  _disagree_: where every core of a system understates there is nothing to find, which is the case for **36** systems
+  today. `3DO` (opera), `SNK Neo Geo CD` (neocd) and `PC-98` (np2kai) are each the only core declaring firmware under
+  their `systemname`, so nothing could contradict them — **[D]**, derived from the catalogue. Whether any of the three
+  needs firmware is **[O]**, and the other 33 were not examined, so naming three is no claim about the rest. How many of
+  the 36 understate is what the derivation cannot say. A floor on what is recorded, not a proof that the record is
+  complete.
 - No answer reads a verdict yet. The module is deliberately not exported from `atlas`, no field is added and no caveat
   is emitted; the table and its guard exist so the answer that reads them has something to read.
 

@@ -44,13 +44,21 @@ an answer to it.
 
 **What this cannot see.** The derivation finds a system only where its cores
 *disagree*. Where every core of a system understates, there is no disagreement
-to find and this file has nothing to say. Three systems are in exactly that
-position in the catalogue deployed here — ``3DO`` (opera), ``SNK Neo Geo CD``
-(neocd) and ``PC-98`` (np2kai), each declaring firmware and each declaring all
-of it optional, with no second core to contradict them. They are not recorded
-and this tripwire will never ask for them. It is a **floor on what is
-recorded**, not a proof that the record is complete, and a later reader must
-not take a green run for the second thing.
+to find and this file has nothing to say — which is the case for **36** systems
+in the catalogue deployed here, every declaring core of each saying
+all-optional.
+
+Three of those 36 are worth naming, and what is claimed about them is narrow.
+``3DO`` (opera), ``SNK Neo Geo CD`` (neocd) and ``PC-98`` (np2kai) are each the
+**only** core declaring firmware under their ``systemname``, so no second entry
+*could* contradict them — that much is derived from the catalogue and is
+checkable. Whether any of the three actually needs firmware is **unestablished**
+here, and the other 33 have not been examined either: naming three is not a
+claim that the remaining 33 were checked and cleared. How many of the 36
+understate is exactly what this derivation cannot say.
+
+It is a **floor on what is recorded**, not a proof that the record is complete,
+and a later reader must not take a green run for the second thing.
 
 Skipped where RetroDECK is not deployed, by the same path check that silences
 the rest of the machine-bound tier.

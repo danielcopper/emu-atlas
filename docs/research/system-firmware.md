@@ -232,12 +232,18 @@ observation on a real machine, `[V-binary]` a read of the shipped core, `[V-scri
 or a source read can close it, which is why six of the seven shipped entries are `open`: the disagreement is derived,
 and nothing beyond it has been established.
 
-The one entry that is not `open` rests on three device observations and one binary read. The observations are
-SwanStation never starting, Beetle PSX refusing at load and naming `scph5501.bin` on screen, and PCSX ReARMed playing a
-game through with no BIOS present; the binary read is SwanStation's three path slots above, whose values are all image
-file names. Its `source` also records what it does **not** establish — the two unobserved Beetle switches, and the four
-declaring entries whose binaries were never read — because a verdict that hides its own gaps is the kind a reader stops
-trusting the moment they find one.
+The one entry that is not `open` carries its evidence in two places, and they should not be added together:
+
+- **The verdict's own `source`** — one `[V-live]` mark over two device observations (SwanStation never starting, Beetle
+  PSX refusing at load and naming `scph5501.bin` on screen) and one `[V-binary]` mark over one core's options
+  (SwanStation's three path slots, whose values are all image file names).
+- **The exemption's `reason`**, which is not evidence for the verdict at all — one `[V-binary]` mark over
+  `pcsx_rearmed_bios` and one `[V-live]` mark over ReARMed playing a game through with no BIOS present.
+
+So the entry as a whole rests on three observations and two binary readings, across four evidence marks — but the
+verdict rests on the first bullet alone. The `source` also records what it does **not** establish: the two unobserved
+Beetle switches, and the four declaring entries whose binaries were never read. A verdict that hides its own gaps is the
+kind a reader stops trusting the moment they find one.
 
 ## Exempting a core that is right
 
