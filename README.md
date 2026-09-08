@@ -68,8 +68,8 @@ Four principles, fixed before any code.
   config parsing and override chains are all provable from data, failure states included.
 - **Placements are templates, not paths.** Where a concrete path cannot be known from configs alone, the answer carries
   named holes: `<content_dir>` when the layout keys on the ROM's own folder and no ROM was named, `<library_name>` when
-  the core would not load, `<save_id>` where the emulator keys the save off a serial or title id it reads from the ROM
-  itself — in file names (Flycast's per-game VMUs) and in directory segments alike (Cemu's per-title MLC subtree),
+  the core could not be queried, `<save_id>` where the emulator keys the save off a serial or title id it reads from the
+  ROM itself — in file names (Flycast's per-game VMUs) and in directory segments alike (Cemu's per-title MLC subtree),
   because a file set and a tree are templates too. Whoever can fill a hole fills it;
   [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of `save_id`, not a dependency.
 - **Every answer carries provenance.** Which config file said so, which default applied. Debugging a user's broken setup

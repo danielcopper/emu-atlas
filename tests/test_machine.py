@@ -18,7 +18,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from types import SimpleNamespace
+from types import FunctionType, SimpleNamespace
 
 import pytest
 
@@ -42,10 +42,13 @@ from atlas.machine import (
     ArchiveListResult,
     GlobResult,
     CoreInfo,
+    CoreProbeInterpreter,
     FixtureMachine,
     ReadResult,
     RealMachine,
     WhdloadSlaveResult,
+    core_probe_interpreter,
+    register_core_probe_interpreter,
 )
 
 
@@ -931,6 +934,294 @@ class TestCoreProbeEnvironment:
         )
         assert proc.returncode == 0, proc.stderr
         assert "VENDORED" in proc.stdout, f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
+
+
+@pytest.fixture
+def _no_interpreter_registered():
+    """The slot is process-global: no test here may hand a registration to the next."""
+    yield
+    register_core_probe_interpreter(None)
+
+
+class _SlotClearedMidRead(dict[str, object]):
+    """A globals mapping that answers one name once and then ``None``.
+
+    The interleaving a concurrent ``register_core_probe_interpreter(None)``
+    would produce, modelled without threads — a thread-based version of this
+    would be timing-dependent and would prove nothing on a green run.
+    Replacing the function's globals is what makes a second read observable at
+    all: CPython consults ``__getitem__`` for a ``LOAD_GLOBAL`` only when the
+    mapping is not an exact ``dict``. Callers assert ``reads``, because if that
+    ever stopped holding the mapping would go unconsulted and the test would
+    pass without modelling anything.
+    """
+
+    def __init__(self, source, name, first_value):
+        super().__init__(source)
+        self._name = name
+        self._first_value = first_value
+        self.reads = 0
+
+    def __getitem__(self, key):
+        if key != self._name:
+            return super().__getitem__(key)
+        self.reads += 1
+        return self._first_value if self.reads == 1 else None
+
+
+def _call_with_the_slot_cleared_mid_read(function, name, first_value):
+    """Call ``function`` with ``name`` answering ``first_value`` once, then ``None``."""
+    mapping = _SlotClearedMidRead(function.__globals__, name, first_value)
+    racing = FunctionType(
+        function.__code__,
+        mapping,
+        function.__name__,
+        function.__defaults__,
+        function.__closure__,
+    )
+    return racing(), mapping.reads
+
+
+def _model_a_frozen_host(monkeypatch):
+    """Make the running program look like what a freezer leaves behind.
+
+    A PyInstaller build carries both markers and an ``executable`` that is the
+    application, not an interpreter — the shape that turned every core question
+    into a second launch of the host.
+    """
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEIabc123", raising=False)
+    monkeypatch.setattr(sys, "executable", "/home/host/services/PluginLoader")
+
+
+@pytest.mark.usefixtures("_no_interpreter_registered")
+class TestChoosingTheCoreProbeInterpreter:
+    """Three stages: a host's registration, else a plainly-Python ``sys.executable``, else none.
+
+    The middle stage is deliberately narrow. ``sys.executable`` is only an
+    interpreter where the running program is one; in a frozen build it is the
+    application, and ``-m atlas._core_probe`` would be ignored by its
+    bootloader. The two directions the test can be wrong in are not
+    symmetrical: every way it is too narrow ends here, in no interpreter and so
+    in *unknown*, while the name check is what keeps the too-wide direction
+    rare — a host that embeds an interpreter, sets neither marker and is itself
+    named ``python…`` passes and does get launched.
+    """
+
+    def test_a_plain_interpreter_names_itself(self, monkeypatch):
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/usr/bin/python3.11", False)
+
+    def test_a_frozen_marker_names_no_interpreter(self, monkeypatch):
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        assert core_probe_interpreter() is None
+
+    def test_a_meipass_names_no_interpreter(self, monkeypatch):
+        # The extraction root disqualifies on its own. PyInstaller sets
+        # ``sys.frozen`` in both its modes, so this is not how PyInstaller is
+        # caught — it is the marker a freezer that sets only this one would be
+        # caught by, and the test proves the check does not lean on the other.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
+        monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEIabc123", raising=False)
+        assert core_probe_interpreter() is None
+
+    def test_an_empty_executable_names_no_interpreter(self, monkeypatch):
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "")
+        assert core_probe_interpreter() is None
+
+    @pytest.mark.parametrize(
+        "executable, resolved_against",
+        [
+            ("python3", "PATH"),
+            ("dir/python3", "the process's working directory"),
+        ],
+    )
+    def test_a_relative_executable_names_no_interpreter(
+        self, monkeypatch, executable, resolved_against
+    ):
+        # Not hypothetical and needing no frozen host: PYTHONEXECUTABLE=python3
+        # produces the first shape and PYTHONEXECUTABLE=dir/python3 the second.
+        # The spawn would resolve them two different ways, and the registration
+        # stage refuses both — so must this one, or the seam performs the very
+        # lookup it exists to avoid, on a host that may be running as root.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", executable)
+        assert core_probe_interpreter() is None, f"would be resolved against {resolved_against}"
+
+    @pytest.mark.parametrize("unspawnable", ["/usr/bin/python3\x00evil", "/usr/bin/python3\ud800"])
+    def test_an_executable_the_os_cannot_take_names_no_interpreter(self, monkeypatch, unspawnable):
+        # Two spellings the spawn answers with a ValueError instead of the
+        # OSError _probe degrades to unknown. Both stages apply the one rule,
+        # so neither can put either of them into the argument vector.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", unspawnable)
+        assert core_probe_interpreter() is None
+
+    def test_an_executable_not_named_python_names_no_interpreter(self, monkeypatch):
+        # The belt for an embedded host that sets neither marker: the loader
+        # that reported this defect is named exactly like this.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/home/host/services/PluginLoader")
+        assert core_probe_interpreter() is None
+
+    def test_a_registration_outranks_the_running_program(self, monkeypatch):
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
+        register_core_probe_interpreter("/host/python/bin/python3")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/host/python/bin/python3", True)
+
+    def test_a_registration_answers_where_the_host_is_frozen(self, monkeypatch):
+        _model_a_frozen_host(monkeypatch)
+        register_core_probe_interpreter("/usr/bin/python3")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/usr/bin/python3", True)
+
+    def test_the_route_is_read_from_the_slot_not_guessed_from_the_path(self, monkeypatch):
+        # A host may hand over the very interpreter that is running atlas. The
+        # path is then the derived one and the route is still registration.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
+        register_core_probe_interpreter("/usr/bin/python3.11")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/usr/bin/python3.11", True)
+
+    def test_the_slot_is_read_once_so_a_clearing_cannot_halve_the_answer(self):
+        # A registration cleared between two reads of the slot would build an
+        # answer whose path is missing while registered still says True. The
+        # read is bound to a local, so the second read does not exist.
+        answer, reads = _call_with_the_slot_cleared_mid_read(
+            core_probe_interpreter, "_registered_interpreter", "/usr/bin/python3"
+        )
+        assert reads >= 1, "the globals mapping was never consulted — the model is inert"
+        assert answer == CoreProbeInterpreter("/usr/bin/python3", True)
+
+
+@pytest.mark.usefixtures("_no_interpreter_registered")
+class TestRegisteringACoreProbeInterpreter:
+    """``register_core_probe_interpreter`` — refused where the caller can still see what it sent."""
+
+    @pytest.mark.parametrize("handed_over", [object(), 3, b"/usr/bin/python3", Path("/usr/bin")])
+    def test_a_non_string_is_refused(self, handed_over):
+        # Matched on the clause that is true for this case. A Path is absolute
+        # and subprocess would run it; what it is not is the str the seam
+        # stores and reports as CoreProbeInterpreter.path.
+        with pytest.raises(TypeError, match="spelled as a str"):
+            register_core_probe_interpreter(handed_over)  # pyright: ignore[reportArgumentType]
+
+    def test_an_empty_string_is_refused(self):
+        with pytest.raises(TypeError, match="absolute path"):
+            register_core_probe_interpreter("")
+
+    @pytest.mark.parametrize("relative", ["python3", "bin/python3", "./python3", "../python3"])
+    def test_a_relative_path_is_refused(self, relative):
+        # subprocess resolves a bare name ("python3") through PATH and a
+        # relative one against the process's working directory. Two lookups,
+        # both machine guesses this seam exists to avoid.
+        with pytest.raises(TypeError, match="absolute path"):
+            register_core_probe_interpreter(relative)
+
+    def test_a_path_with_a_nul_byte_is_refused(self):
+        # A NUL encodes cleanly and subprocess rejects it itself, with a
+        # ValueError rather than the OSError _probe degrades to unknown — so it
+        # would escape query_core into the resolver. Refused here, where the
+        # caller can see what it handed over.
+        with pytest.raises(TypeError, match="operating system can be handed"):
+            register_core_probe_interpreter("/usr/bin/python3\x00evil")
+
+    @pytest.mark.parametrize("surrogate", ["\ud800", "\udc00"])
+    def test_a_lone_surrogate_is_refused(self, surrogate):
+        # The other spelling the operating system cannot be handed, and it
+        # fails one layer earlier: os.fsencode — the encoding subprocess itself
+        # performs — raises UnicodeEncodeError, which is a ValueError too.
+        with pytest.raises(TypeError, match="operating system can be handed"):
+            register_core_probe_interpreter(f"/usr/bin/python3{surrogate}")
+
+    def test_a_surrogate_escaped_byte_still_reaches_the_spawn(self, tmp_path):
+        # The counter-case that keeps the rule from over-reaching: \udcff is how
+        # Python spells a filesystem byte that is not valid text, it encodes,
+        # and a real machine can hand such a name back. It must be accepted and
+        # degrade like any other path that does not run — not be refused.
+        path = str(tmp_path / "python3\udcff")
+        register_core_probe_interpreter(path)
+        assert core_probe_interpreter() == CoreProbeInterpreter(path, True)
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_a_registered_path_that_does_not_run_answers_unknown(self, tmp_path):
+        # The docstring's promise, against a real spawn rather than a stub: the
+        # path is well formed and there is nothing at it, so query_core
+        # degrades to unknown instead of raising.
+        register_core_probe_interpreter(str(tmp_path / "no-such-python3"))
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+    def test_a_refused_path_never_becomes_the_registration(self, monkeypatch):
+        _model_a_frozen_host(monkeypatch)
+        with pytest.raises(TypeError):
+            register_core_probe_interpreter("python3")
+        assert core_probe_interpreter() is None
+
+    def test_a_path_that_does_not_exist_is_accepted(self, monkeypatch):
+        # Existence is the machine's business at probe time: a path that does
+        # not run yields the same unknown every other probe failure yields.
+        _model_a_frozen_host(monkeypatch)
+        register_core_probe_interpreter("/nonexistent/python3")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/nonexistent/python3", True)
+
+    def test_registering_none_clears_the_slot(self, monkeypatch):
+        _model_a_frozen_host(monkeypatch)
+        register_core_probe_interpreter("/usr/bin/python3")
+        register_core_probe_interpreter(None)
+        assert core_probe_interpreter() is None
+
+    def test_the_last_registration_wins_and_a_second_call_is_harmless(self, monkeypatch):
+        _model_a_frozen_host(monkeypatch)
+        register_core_probe_interpreter("/usr/bin/python3")
+        register_core_probe_interpreter("/host/python/bin/python3")
+        assert core_probe_interpreter() == CoreProbeInterpreter("/host/python/bin/python3", True)
+
+
+@pytest.mark.usefixtures("_no_interpreter_registered")
+class TestAFrozenHostIsNeverLaunched:
+    """The regression guard for the defect: no interpreter means no process at all.
+
+    ``sys.executable`` in a frozen build is the application. Spawning it with
+    ``-m atlas._core_probe`` starts that application a second time — the
+    reported consumer restarted its whole plugin host on every save question —
+    and ``capture_output=True`` swallows every sign of it, so the failure
+    disguises itself as a cleanly degraded answer.
+    """
+
+    BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
+    MGBA = CoreInfo(library_name="mGBA", library_version="0.10.5", valid_extensions="gb|gba")
+
+    def test_a_frozen_host_spawns_nothing_and_answers_unknown(self, tmp_path, monkeypatch):
+        # The stub would answer with a full CoreInfo if it were ever reached,
+        # so both the None and the empty call list are the claim.
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        _model_a_frozen_host(monkeypatch)
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+        assert calls == []
+
+    def test_a_registered_interpreter_is_what_a_frozen_host_launches(self, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        _model_a_frozen_host(monkeypatch)
+        register_core_probe_interpreter("/usr/bin/python3")
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+        assert calls[0]["argv"][:3] == ["/usr/bin/python3", "-m", "atlas._core_probe"]
+
+    def test_a_plain_interpreter_still_launches_itself(self, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
+        assert calls[0]["argv"][0] == sys.executable
 
 
 class TestFixtureRealParity:

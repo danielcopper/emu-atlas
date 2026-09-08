@@ -135,6 +135,69 @@ codec degrades only EmuDeck's catalogue answer, and `emulator-catalogue-sealed` 
 wheel in the later wave that brings that consumer's EmuDeck surface. atlas itself neither ships nor imports the
 backport: the probe is discovery, not a dependency.
 
+### The core probe under a frozen host
+
+One read needs a second process. `library_name` — the value that names sort-by-core save directories and the override
+directory — lives only in the core binary, so atlas loads the core and asks it, in a child process, because cores crash.
+That child is a Python interpreter running `atlas._core_probe`, and atlas starts one only where it can name an
+interpreter to start.
+
+A **frozen** host is one whose program embeds the interpreter instead of being one. PyInstaller, cx_Freeze and py2exe
+all build such a program, in one of two shapes: a single self-extracting binary, or a directory holding a launcher
+beside the runtime it needs — the one-directory shape is PyInstaller's default, the only mode cx_Freeze has, and what
+py2exe produces unless told otherwise. The shape does not matter here; what matters is that in both of them
+`sys.executable` is that program and not an interpreter, so its bootloader ignores `-m atlas._core_probe <core>` and
+starts the program a second time. That is the shape of a plugin host whose loader is frozen while its vendored copy of
+atlas sits on disk beside it as plain files, and where such a host runs as a long-lived service, the second launch is a
+second copy of the whole service — started, in the worst case, by a question as innocent as where a save file lives.
+
+So atlas checks before it launches, and it never searches. The interpreter is decided in three stages:
+
+1. the absolute path a host registered;
+2. otherwise `sys.executable`, but only where the running program is plainly a Python interpreter — no `sys.frozen`, no
+   `sys._MEIPASS`, a `sys.executable` that passes the same shape rule a registered path does (`PYTHONEXECUTABLE` can
+   make it a bare name or a relative path), and a file name starting with `python`;
+3. otherwise none, and then **no process is started at all**: `query_core` answers _unknown_ for every core, and the
+   answers that would have used it say so. A placement carries `core-unqueryable` and may keep a `<library_name>` hole.
+   The packaged knowledge about a core's saves is lost with it, because which build is installed was never established,
+   and that loss is stated as `core-generation-unestablished`: a core whose recorded deviation from the standard layout
+   atlas carries does not get that deviation applied, and a core whose recorded save files atlas carries does not get
+   those either, so the answer names no files. A host deciding whether to register is deciding exactly this.
+
+A frozen host hands over a real interpreter before the first atlas call:
+
+```python
+import atlas
+
+atlas.register_core_probe_interpreter("/usr/bin/python3")
+```
+
+The child is pointed back at this copy of atlas through `PYTHONPATH`, so a foreign interpreter is not a poorer answer —
+it loads the same core and returns the same name, version and options. The path must be absolute, and it must be one the
+operating system can actually be handed. Absolute, because the spawn resolves a bare name through `PATH` and a relative
+one against the process's working directory — two lookups, both guesses about the machine atlas does not make anywhere.
+Handed to the operating system, because a path it cannot take makes the spawn raise a `ValueError` where an unusable
+path raises `OSError`, and only the second degrades to _unknown_; the first would escape the question. Two spellings are
+known to do that, failing at different layers: a lone surrogate cannot be encoded at all, and a NUL byte encodes cleanly
+and is rejected by the spawn itself. A surrogate-escaped byte such as `\udcff` is neither — that is how Python spells a
+filesystem byte that is not valid text, a real machine can hand such a name back, and it is accepted and degrades like
+any other path that does not run. The same rule applies to the derived stage, so neither stage can put into the spawn
+what the other would refuse. Anything else, `None` apart, is refused with `TypeError` at the registration, where the
+caller can still see what it handed over. Whether the file exists is deliberately not checked — that is the machine's
+business at probe time, and a path that does not run yields the same _unknown_ every other probe failure yields. There
+is one slot: the last registration wins, and `atlas.register_core_probe_interpreter(None)` clears it.
+
+`atlas.core_probe_interpreter()` says which interpreter a probe would run under and by which route — or `None` where
+none would, which is the diagnosis when every core comes back unqueryable. Otherwise the result is an
+`atlas.CoreProbeInterpreter`: `path` is the registered path or the derived one, and `registered` says which of the two
+it was.
+
+The second stage narrows honestly rather than cleverly. A PyPy build, or any interpreter whose file is named something
+else, fails the test and loses probing until it registers its own path. That is the trade taken on purpose, and the two
+directions it can be wrong in are not symmetrical: every way the test is too narrow costs a probe and nothing else,
+while the name check is what keeps the too-wide direction rare — a host that embeds an interpreter, sets neither marker
+and is itself named `python…` would pass the test and be launched. If that is your host, register a path.
+
 ## The standard query pattern
 
 Every query follows the same five steps:
@@ -161,10 +224,10 @@ Rules that hold for every answer:
   parse it). An answer without caveats is as good as atlas can make it; an answer with caveats is still an answer, just
   with stated limits.
 - **A hole is not an unknown.** `needs` lists holes _you_ fill: `content_dir` from the content at hand, `library_name`
-  when the core would not load, and `save_id` when the core names the save after the content's own id. Two more appear
-  only on a content-less question about a core whose card keys a directory on the content — `rom_stem` (prboom names its
-  save directory after the content's stem) and `content_dir_name` (the vitaquake2 family names it after the content's
-  directory); name the content and the resolver fills both itself. One hole no content can fill is `cwd`: a
+  when the core could not be queried, and `save_id` when the core names the save after the content's own id. Two more
+  appear only on a content-less question about a core whose card keys a directory on the content — `rom_stem` (prboom
+  names its save directory after the content's stem) and `content_dir_name` (the vitaquake2 family names it after the
+  content's directory); name the content and the resolver fills both itself. One hole no content can fill is `cwd`: a
   `working_directory`-rooted answer (DeSmuME 2015 writes relative to wherever RetroArch was started) is always the
   `<cwd>` template, and only the launcher knows that directory. And `region` is the hole a region-keyed standalone
   answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the disc's own region field, which
@@ -839,7 +902,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared             |
 | `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
 | `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
-| `core-unqueryable`                | the core would not load, `library_name` unknown — a `<library_name>` hole may remain                      |
+| `core-unqueryable`                | the core could not be queried, `library_name` unknown — a `<library_name>` hole may remain                |
 | `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
 | `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
 | `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |

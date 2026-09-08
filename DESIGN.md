@@ -257,13 +257,25 @@ class Machine(Protocol):
   normalization is not this: `normpath` eats the component in front of a `..` even when that component is a symlink, and
   the kernel does the opposite. The hop limit is the kernel's own: exactly 40 symlinks resolve, the 41st is `ELOOP`, and
   every resolver in atlas reads that one constant.
-- In production the seam is the real filesystem plus a real core prober. In tests and conformance vectors it is a
-  **fixture machine**: files (including unreadable and invalid-text ones), explicit empty directories, symlinks,
-  inaccessible paths, and core answers as plain data describing a whole machine. A file's read outcome and its identity
-  are independent, because on a real machine they come from two different reads — `{"status": "unreadable", "size": N}`
-  is the chmod-000 file, whose `stat` succeeds while its bytes do not. One code path, two data sources; parity tests run
-  the same cases against the fixture and a real filesystem tree, so everything the resolver does is vector-testable —
-  the failure states included.
+- Whether there is a core prober at all is a decision of its own, taken before any process starts. The prober is a child
+  Python interpreter, and the interpreter is named three ways in order: one a host registered
+  (`register_core_probe_interpreter`), else `sys.executable` where the running program is plainly an interpreter — no
+  `sys.frozen`, no `sys._MEIPASS`, a file name starting with `python` — else none, and then nothing is launched and
+  every core answers _unknown_. In a frozen host `sys.executable` is the application, whose bootloader would ignore the
+  module arguments and start the host a second time; atlas never searches for an interpreter instead, because a
+  `PATH`-resolved `python3` is an assumption about the machine. Both stages apply one shape rule — an absolute string
+  the operating system can actually be handed — so neither can hand the spawn what the other would refuse, and
+  `PYTHONEXECUTABLE` makes the derived case real rather than theoretical. The middle test's two error directions are not
+  symmetrical: every way it is too narrow costs a probe, while the name check is what keeps the too-wide direction rare,
+  since a host that embeds an interpreter, sets neither marker and is itself named `python…` passes it.
+  `core_probe_interpreter()` states which of the three stages answered.
+- In production the seam is the real filesystem plus a core prober where an interpreter was named. In tests and
+  conformance vectors it is a **fixture machine**: files (including unreadable and invalid-text ones), explicit empty
+  directories, symlinks, inaccessible paths, and core answers as plain data describing a whole machine. A file's read
+  outcome and its identity are independent, because on a real machine they come from two different reads —
+  `{"status": "unreadable", "size": N}` is the chmod-000 file, whose `stat` succeeds while its bytes do not. One code
+  path, two data sources; parity tests run the same cases against the fixture and a real filesystem tree, so everything
+  the resolver does is vector-testable — the failure states included.
 
 ## Placements
 
@@ -277,7 +289,7 @@ findings:
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
-  `library_name` when the core would not load, and `save_id` where a core names the save after the content's own
+  `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
   not locating a save). Every hole is filled from the **content**; a value the configs state is never one, because no
   caller could supply it — atlas resolves it the way the emulator does, or states the degradation that stopped it. A
@@ -581,5 +593,6 @@ visible in `system_source`, and marked as derived where the core spans systems.
 - Whether an archive's _contents_ can ever be compared member by member. The fifth `checked` value settled the
   whole-file question; going further needs a source that states which ROMs a correct set holds, and `System.dat` carries
   one md5 per name and no member list.
-- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only) — revisit with the
-  feature-detection extension (ROADMAP: card variants), which reworks the probe anyway.
+- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only vs. never launched, for want
+  of an interpreter to launch it under) — revisit with the feature-detection extension (ROADMAP: card variants), which
+  reworks the probe anyway. Tracked as issue #412.
