@@ -905,7 +905,7 @@ the parts that stay carry their own directory and files: as entries in `file_set
 always as one `file-set-spans-roots` caveat per part, whose `data` names the resolved `dir` and the `files`. Resolved
 means resolved: a part that stays "in the system directory" reports the content's own directory on a machine whose flag
 moved that root, the same way the answer's `root_kind` would. The flat `files` stays the answer's own directory, as it
-always was — walk `groups`, or take the caveats' data, and no part is missed on any state of the file set.
+always was — walk `groups` where the set is declared, take the caveats' data on any state, and no part is missed.
 
 **`root_kind` says which anchor won, and a card does not decide it alone.** A core whose card roots its saves in the
 system directory (Flycast's shared VMUs) is not automatically anchored at `system_directory`: RetroArch hands such a
