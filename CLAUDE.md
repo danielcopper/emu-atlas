@@ -64,10 +64,11 @@ python scripts/generate_contract_reference.py && deno fmt docs/contract-referenc
 ## Commands
 
 ```bash
-mise run setup      # editable install + dev deps into the local venv
-mise run test       # pytest (unit + vector runner)
-mise run validate   # vector shape validation
-deno fmt --check    # markdown formatting (CI-enforced)
+mise run setup       # editable install + dev deps into the local venv
+mise run test        # pytest (unit + vector runner)
+mise run validate    # vector shape validation
+mise run test-oldest # the same tests on the oldest supported interpreter, which mise run test does not cover
+deno fmt --check     # markdown formatting (CI-enforced)
 basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev extra, installed by mise run setup)
 ```
 
