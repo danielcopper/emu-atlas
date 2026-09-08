@@ -859,6 +859,133 @@ class TestCoreProbeAnswer:
         assert RealMachine().query_core(_fake_core(tmp_path)) is None
 
 
+class TestCoreProbeMemory:
+    """What the second question about the same ``.so`` costs.
+
+    An answer is remembered, and so is a probe that timed out without printing
+    a usable line: it hangs the same way next time, and that retry is the only
+    empty answer that costs the caller the full timeout — fifteen seconds on
+    the path a consumer takes at every game start. Every other empty answer is
+    asked again, because the host library that would not load is installable
+    while the ``.so`` never changes.
+
+    The count of spawns is the claim; the answer alone cannot tell a remembered
+    *unknown* from a re-probed one. And the memory belongs to the machine, not
+    to the process, so each test here asks one ``RealMachine`` twice — except
+    the last, which asks a second machine the same question and holds it to
+    paying the timeout all over again.
+    """
+
+    BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
+    MGBA = CoreInfo(library_name="mGBA", library_version="0.10.5", valid_extensions="gb|gba")
+
+    @staticmethod
+    def _timeout():
+        return subprocess.TimeoutExpired(cmd=["probe"], timeout=15)
+
+    def test_a_timeout_that_printed_nothing_is_probed_once(self, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        assert machine.query_core(so) is None
+        assert len(calls) == 1
+
+    def test_a_timeout_that_printed_a_usable_line_is_probed_once(self, tmp_path, monkeypatch):
+        expired = subprocess.TimeoutExpired(cmd=["probe"], timeout=15, output=self.BASE)
+        calls = _stub_probe(monkeypatch, raises=expired)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) == self.MGBA
+        assert machine.query_core(so) == self.MGBA
+        assert len(calls) == 1
+
+    def test_a_core_that_answered_is_probed_once(self, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) == self.MGBA
+        assert machine.query_core(so) == self.MGBA
+        assert len(calls) == 1
+
+    def test_an_empty_run_that_ended_on_its_own_is_probed_again(self, tmp_path, monkeypatch):
+        # The narrowing itself: only the hang is remembered. This core answered
+        # nothing without hanging, so the retry costs a spawn rather than the
+        # timeout — and the reason can be gone by the next question, with the
+        # missing host library installed and the .so untouched.
+        calls = _stub_probe(monkeypatch, stdout=b"", returncode=1)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        assert machine.query_core(so) is None
+        assert len(calls) == 2
+
+    def test_a_probe_no_interpreter_could_run_is_asked_again(self, tmp_path, monkeypatch):
+        # Nothing was launched, so nothing hung and nothing is remembered: a
+        # host that hands over an interpreter after the first question gets a
+        # real answer to the second. The stub would have answered all along.
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        interpreter = atlas.machine.core_probe_interpreter
+        monkeypatch.setattr(atlas.machine, "core_probe_interpreter", lambda: None)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        assert calls == []
+        monkeypatch.setattr(atlas.machine, "core_probe_interpreter", interpreter)
+        assert machine.query_core(so) == self.MGBA
+        assert len(calls) == 1
+
+    def test_a_remembered_timeout_answers_for_its_own_so_only(self, tmp_path, monkeypatch):
+        # The second core is given the first one's mtime, and both are the same
+        # four bytes, so the path is the only part of the key left to tell them
+        # apart: drop it and the second core inherits the first one's hang.
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        machine = RealMachine()
+        other = tmp_path / "other"
+        other.mkdir()
+        first, second = _fake_core(tmp_path), _fake_core(other)
+        stat_first = os.stat(first)
+        os.utime(second, ns=(stat_first.st_atime_ns, stat_first.st_mtime_ns))
+        assert os.stat(second).st_mtime_ns == stat_first.st_mtime_ns
+        assert os.stat(second).st_size == stat_first.st_size
+        assert machine.query_core(first) is None
+        assert machine.query_core(second) is None
+        assert len(calls) == 2
+
+    def test_a_rebuilt_so_at_the_same_path_is_probed_again(self, tmp_path, monkeypatch):
+        # A rebuild that lands the same size still moves the mtime, and the
+        # rebuilt core is a different core: it gets its own attempt.
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        os.utime(so, ns=(0, 0))
+        assert machine.query_core(so) is None
+        assert len(calls) == 2
+
+    def test_a_resized_so_at_the_same_mtime_is_probed_again(self, tmp_path, monkeypatch):
+        # The mtime is pinned back so the size is the only thing that moved —
+        # otherwise this would prove the mtime half a second time.
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.query_core(so) is None
+        before = os.stat(so)
+        with open(so, "ab") as f:
+            f.write(b"\x00")
+        os.utime(so, ns=(before.st_atime_ns, before.st_mtime_ns))
+        assert os.stat(so).st_mtime_ns == before.st_mtime_ns
+        assert machine.query_core(so) is None
+        assert len(calls) == 2
+
+    def test_a_second_machine_pays_the_timeout_all_over_again(self, tmp_path, monkeypatch):
+        # The scope the class docstring hands to consumers: the memory is this
+        # object's, not the process's. detect() builds a fresh machine whenever
+        # it is handed none, so a caller that re-detects for every question is
+        # the second machine here — it hangs for the full timeout again.
+        calls = _stub_probe(monkeypatch, raises=self._timeout())
+        so = _fake_core(tmp_path)
+        first = RealMachine()
+        assert first.query_core(so) is None
+        assert first.query_core(so) is None
+        assert len(calls) == 1
+        assert RealMachine().query_core(so) is None
+        assert len(calls) == 2
+
+
 class TestCoreProbeEnvironment:
     """The probe child must reach the atlas that spawned it.
 
