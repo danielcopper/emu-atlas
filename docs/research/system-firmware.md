@@ -19,7 +19,22 @@ false.
 which files it will look for, and which of them it will refuse to launch without. That is a real and useful fact, and it
 is what atlas reports today.
 
-What it cannot say is anything about the machine being emulated. The format carries one boolean per file. There is no
+**A slot is written three ways and read two.** `firmware<N>_opt` may say optional, may say required, or may be
+**absent** — and absent means required. That is not an inference; RetroArch's own template says it in as many words, in
+the commented block every shipped `.info` is copied from:
+
+```
+# Is firmware optional or not, if not defined RetroArch will assume it is required
+```
+
+(`puzzlescript_libretro.info:45` in the deployed catalogue.) `atlas.core_info` already ports the default — the flag goes
+through `config_get_bool`, and a value outside its vocabulary leaves the `false` the slot's `calloc` gave it — so an
+absent flag reads as required everywhere in atlas, and `need` says `required`. One deployed core is written that way:
+`ecwolf`, whose single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117 state `_opt`
+on every slot, exactly one states it on none, and none are mixed. The third shape is worth naming because reading an
+absent flag as optional is the mistake that would make a hard requirement look like no requirement at all.
+
+What the format cannot say is anything about the machine being emulated. It carries one boolean per file. There is no
 way to write "one of these three", and no way to write "this system does not start without one of them". An author who
 knows a PlayStation needs one regional BIOS therefore has two moves, and both lose the fact:
 
@@ -83,8 +98,16 @@ Measured against the deployed catalogue at the time of writing:
 
 The seven are PlayStation, Saturn, Sega Dreamcast, Neo Geo, Lynx, Game Boy Advance, and Game Boy/Game Boy Color.
 
-Every number above comes from the tripwire's own reading of the deployed `.info` files, never from a text scan, and it
-is dated: the canary deploys a newer RetroDECK every week, so recount rather than trusting the table.
+**Each number carries its counting rule, because two reasonable rules give two different answers.** "Declaring firmware"
+above means _the slots RetroArch's own enumeration returns_ — `atlas.core_info.enumerate_firmware` over the parsed file
+— which is 118. A line-loose text scan for `firmware_count = <non-zero>` returns **119**: the extra file is
+`00_example_libretro.info`, libretro's template, whose line 40 reads `# firmware_count = 7` behind a comment marker. It
+is not a core and declares nothing, and the RetroArch grammar the parser ports drops the line. Two files carry a
+commented `firmware_count` (`00_example`, `b2`); only the template's is non-zero, which is why the scan is off by
+exactly one. Counts here come from the parser, never from grep.
+
+Every number above comes from the tripwire's own reading of the deployed `.info` files, and it is dated: the canary
+deploys a newer RetroDECK every week, so recount rather than trusting the table.
 
 ```python
 from tests.test_system_firmware_tripwire import DEPLOYED_CORES, read_catalogue, systems_whose_cores_disagree
@@ -106,6 +129,11 @@ Three things about the derivation are worth stating rather than leaving to be di
 - **It skips a core stating no `systemname`.** An empty string names no system, and lumping such cores together would
   invent one and could manufacture a disagreement between two unrelated emulators. `atlas.firmware.system_decision`
   answers `_unknown` for the same input for the same reason.
+- **A core stating no `_opt` at all counts as declaring required firmware**, by RetroArch's default above, so it
+  contradicts an all-optional sibling instead of falling between the two readings. `ecwolf` is the one core written that
+  way today and it sits alone under its `systemname`, so nothing turns on it yet — but the day a core of that shape
+  appears beside an all-optional one, the tripwire fires rather than going quiet, and a test pins that rather than
+  leaving it to the port.
 - **It reads every deployed `.info`, with or without a `.so` beside it.** The two sets differ: 291 catalogue entries
   against 211 binaries on the reference machine. The declarations are what the derivation is about, so filtering to the
   cores this deployment happens to be able to load would make the evidence an accident of one installation — 96 of the

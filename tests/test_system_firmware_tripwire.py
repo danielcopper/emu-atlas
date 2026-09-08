@@ -11,6 +11,13 @@ decoration. This module recomputes those collisions from the deployed
 catalogue and fails when it finds a system ``atlas/data/system_firmware.json``
 does not record, with any verdict at all, ``open`` included.
 
+**A slot is written three ways and read two.** ``firmware<N>_opt`` may say
+optional, may say required, or may be absent — and absent means required, by
+RetroArch's own documented default. The derivation is binary because the
+enumeration already applies that default, not because the third shape does not
+exist; :func:`_all_optional` states the rule with its citation, and a test
+holds it. One deployed core is written that way today.
+
 **This is a canary-tier test, and that is the point of it.** If you arrived
 here from the weekly drift issue, the failure is not about your machine.
 ``.github/workflows/canary.yml`` deploys the *latest* RetroDECK from Flathub at
@@ -68,6 +75,26 @@ def _all_optional(text: str) -> bool | None:
     reaches — outside ``firmware_count``, spelled a way nothing composes — is
     not a declaration here either, and a file this catalogue states and the
     emulator ignores cannot create a disagreement that is not really there.
+
+    **A slot can be written three ways and read only two.** ``firmware<N>_opt``
+    may say optional, may say required, or may be absent — and absent is
+    **required**, which is the reading a person guesses wrong. RetroArch's own
+    template says so in as many words, in the commented block every shipped
+    ``.info`` is copied from::
+
+        # Is firmware optional or not, if not defined RetroArch will assume it
+        # is required
+
+    (``puzzlescript_libretro.info:45`` in the deployed catalogue.)
+    :func:`atlas.core_info._slot_at` already ports that default — the flag goes
+    through ``config_get_bool`` and a value outside its vocabulary leaves the
+    ``false`` the ``calloc`` gave the slot — so the third shape needs no third
+    branch here and lands on the required side of the derivation by itself.
+    It is stated rather than left to the port because reading an absent flag as
+    optional is what would let a system disappear from this tripwire silently.
+    One deployed core is written that way today (``ecwolf``), and
+    :meth:`TestTheDerivationItself.test_a_slot_that_states_no_opt_reads_as_required`
+    is what holds the reading.
     """
     slots = enumerate_firmware(parse_core_info(text)).slots
     return all(slot.optional for slot in slots) if slots else None
@@ -167,13 +194,29 @@ class TestTheDerivationItself:
         # derivation is stated over the same shape all the same, because a
         # core that declares nothing contradicts nothing.
         assert _all_optional('corename = "Demo"\n') is None
-        assert _all_optional('firmware_count = "1"\nfirmware0_path = "a.bin"\n') is False
-        assert (
-            _all_optional(
-                'firmware_count = "1"\nfirmware0_path = "a.bin"\nfirmware0_opt = "true"\n'
-            )
-            is True
+
+    def test_a_slot_that_states_no_opt_reads_as_required(self):
+        # The third shape, and the one a reader guesses wrong: `firmware<N>_opt`
+        # may say optional, may say required, or may be ABSENT — and absent is
+        # required, by RetroArch's own documented default (quoted in
+        # `_all_optional`, and live at puzzlescript_libretro.info:45). Reading
+        # it as optional would let a core that states a hard requirement pass
+        # for one that states none, and a system could then leave this tripwire
+        # with nobody noticing. `ecwolf` is written exactly this way today.
+        stated_optional = 'firmware_count = "1"\nfirmware0_path = "a.bin"\nfirmware0_opt = "true"\n'
+        stated_required = (
+            'firmware_count = "1"\nfirmware0_path = "a.bin"\nfirmware0_opt = "false"\n'
         )
+        no_flag = 'firmware_count = "1"\nfirmware0_path = "a.bin"\n'
+        assert _all_optional(stated_optional) is True
+        assert _all_optional(stated_required) is False
+        assert _all_optional(no_flag) is False
+        # And the consequence the derivation actually rests on: a core written
+        # the third way sits on the required side, so it contradicts an
+        # all-optional sibling instead of falling between the two.
+        assert systems_whose_cores_disagree(
+            {"Demo System": {"quiet": _all_optional(no_flag) is True, "lax": True}}
+        ) == {"Demo System": (["quiet"], ["lax"])}
 
 
 class TestEveryDisagreementIsRecorded:
