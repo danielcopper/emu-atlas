@@ -39,12 +39,38 @@ That makes the observed refusal _stronger_ evidence, not weaker. The catalogue s
 the blocking setting is off, and Beetle PSX still stopped and named `scph5501.bin` on screen. **The core refused, not
 the frontend.** That is precisely the contradiction this table exists to record.
 
-One provenance note, because the repo's rule is to cite RetroArch at the pin: `check_firmware_before_loading` is **not**
-in the source at `a79435a` — a raw byte scan finds it in none of the 10,832 paths `os.walk` yields outside `.git`
-(10,831 regular files and one symlink; `git ls-files` counts 10,834 tracked blobs, three of them symlinks). It is in the
-deployed build, whose binary carries the literal and reports version `1.22.2`, and in the two config files above. So the
-setting is a `[V-binary]` plus config reading of what is deployed, not a source citation, and the repo's RetroArch pin
-now predates a setting the shipped build has.
+One provenance note, because the repo's rule is to cite RetroArch at the pin. `check_firmware_before_loading` is **not**
+in the source at `a79435a`: a raw byte scan finds it in none of the 10,832 paths `os.walk` yields outside `.git` (10,831
+regular files plus one symlink; `git ls-files` counts 10,834 tracked blobs, three of them symlinks, the other two
+pointing at directories and so landing in the walk's directory list rather than its file list). It **is** in the
+deployed build, whose binary carries the literal.
+
+The dates run the opposite way to what a reader would guess, so they are worth stating outright:
+
+|                         |                      |
+| ----------------------- | -------------------- |
+| pinned source `a79435a` | committed 2026-07-23 |
+| deployed build `1.22.2` | built `Nov 20 2025`  |
+
+The **deployed** build is about eight months **older** than the pinned source. The setting is therefore missing from the
+_newer_ source and present in the _older_ build, which reads as **[D]** upstream having removed it — not as the pin
+lagging behind something new. Two readings support that: the settings framing the literal in the deployed binary's
+string table, `load_dummy_on_core_shutdown` and `builtin_mediaplayer_enable`, both still register at the pin
+(`configuration.c:1804` and `:1816`), and the five between them there are all core-info settings with no firmware one
+among them. The practical point is unchanged either way — the setting is a `[V-binary]` plus config reading of what is
+deployed, never a source citation.
+
+**A separate finding, pre-existing and first measured here:** this repo's RetroArch pin is _newer_ than the RetroArch
+running on the reference machine. Nothing in this cut caused it and nothing here depends on it, but it means a claim
+cited at the pin is not automatically a claim about the build this machine runs.
+
+What the setting does is the one behavioural claim in this section that needs no inference, because the deployed binary
+spells it out:
+
+> Some cores might need firmware or bios files. If this option is enabled, RetroArch will not allow to start the core if
+> any mandatory firmware items are missing.
+
+Enabled, it blocks. It is not enabled here.
 
 **A slot is written three ways and read two.** `firmware<N>_opt` may say optional, may say required, or may be
 **absent** — and absent means required. The behaviour is in the source, not in a comment: `core_info.c:1584-1585`
@@ -125,10 +151,10 @@ file names, and `disabled` is not an image. What either switch does with no imag
 and this page does not claim it. Nor is the reading complete: only four of the nine PlayStation entries have a binary
 deployed, so five were never read at all. The options reading is evidence, not a census.
 
-Neither reading answers "is this file needed" on its own. The catalogue is about the emulator's launch check; the
-options are about one core's capabilities. The fact a user actually wants — _this system does not run without firmware_
-— is written nowhere on the machine, which by the boundary rule in `CLAUDE.md` makes it world knowledge: marked,
-versioned, and source-cited, in `atlas/data/system_firmware.json`.
+Neither reading answers "is this file needed" on its own. The catalogue is about what the frontend reports; the options
+are about one core's capabilities. The fact a user actually wants — _this system does not run without firmware_ — is
+written nowhere on the machine, which by the boundary rule in `CLAUDE.md` makes it world knowledge: marked, versioned,
+and source-cited, in `atlas/data/system_firmware.json`.
 
 ## The derivation, and what it cannot see
 
@@ -262,9 +288,11 @@ The one entry that is not `open` carries its evidence in two places, and they sh
   `pcsx_rearmed_bios` and one `[V-live]` mark over ReARMed playing a game through with no BIOS present.
 
 So the entry as a whole rests on three observations and two binary readings, across four evidence marks — but the
-verdict rests on the first bullet alone. The `source` also records what it does **not** establish: the two unobserved
-Beetle switches, and the four declaring entries whose binaries were never read. A verdict that hides its own gaps is the
-kind a reader stops trusting the moment they find one.
+verdict rests on the first bullet alone: **the two observations together with the SwanStation options reading**, and on
+no reading of any switch. That is the one answer to "what does the verdict rest on", and the data file's own `source`
+closes with the same sentence rather than a narrower one. The `source` also records what it does **not** establish: the
+two unobserved Beetle switches, and the four declaring entries whose binaries were never read. A verdict that hides its
+own gaps is the kind a reader stops trusting the moment they find one.
 
 ## Exempting a core that is right
 
@@ -275,9 +303,14 @@ own reason: a bare exemption excuses by assertion.
 
 **What the field is for, precisely, because it is easy to overstate.** It is recorded for the cut that makes an answer
 read this table, where a system needing firmware must not be reported against a core that carries its own substitute. It
-is **not** what keeps the tripwire green. The derivation compares whole systems and never consults the field, so
-removing it fails no check and changes no verdict — measured by deleting it and re-running, not assumed. The one check
-that consumes it today is the staleness one below.
+is **not** what makes the derivation pass. The derivation compares whole systems and never consults the field, so
+removing it changes no verdict and only leaves the staleness check below with nothing to do.
+
+It is not unread, though. An earlier draft of this paragraph claimed removing it failed no check and called that
+measured; the measurement had run one test class rather than the suite. Deleting the field and running the **whole**
+suite fails `test_playstation_cannot_run_without_firmware_and_exempts_rearmed`, which pins the shipped entry's contents.
+So **two** checks read the field today — that unit test and the staleness one — and the disagreement derivation is
+neither of them.
 
 PCSX ReARMed is the case the field was written around, and its entry states its own limits. The core registers a `bios`
 option carrying `HLE`, and it was observed playing a game through with no BIOS present. Which of its two values was in

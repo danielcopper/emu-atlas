@@ -18,8 +18,11 @@ build display rows rather than loading anything. The setting that would block a
 load, ``check_firmware_before_loading``, is ``"false"`` in both configurations
 RetroDECK ships; it is **not** a fact about the pinned source, where the name
 does not appear at all, but a reading of the deployed 1.22.2 build and its two
-config files. That makes the observed refusal the **core's** rather than the
-frontend's, which is what gives this table its case:
+config files. The dates run the opposite way to the obvious guess — the pin was
+committed 2026-07-23 and the deployed build was built ``Nov 20 2025`` — so the
+setting is absent from the *newer* source and present in the *older* build,
+which reads as upstream having removed it. That makes the observed refusal the
+**core's** rather than the frontend's, which is what gives this table its case:
 ``docs/research/system-firmware.md`` carries the readings.
 
 The missing half is a fact about the **system**, not about the core, which is
@@ -96,12 +99,15 @@ class CoreAlternative:
 
     **What it is for, precisely.** It is recorded for the cut that makes an
     answer read this table, where a system needing firmware must not be
-    reported against a core carrying its own substitute. It is *not* what keeps
-    the tripwire green: the derivation compares whole systems and never
-    consults this field, so removing it fails no check and changes no verdict —
-    measured, not assumed. The one check consuming it today is the staleness
-    one, which fails when a named core has stopped declaring everything
-    optional for that system.
+    reported against a core carrying its own substitute. It is *not* what makes
+    the derivation pass: the derivation compares whole systems and never
+    consults this field, so removing it changes no verdict and only leaves the
+    staleness check with nothing to do. It is not unread, though: **two**
+    checks read it today — the staleness one, which fails when a named core has
+    stopped declaring everything optional for that system, and the unit test
+    pinning this shipped entry's contents. Measured by deleting the field and
+    running the whole suite; an earlier note here said "no check" on the
+    strength of one test class.
 
     ``reason`` carries the evidence rather than a bare exemption: what the core
     offers, and what was seen.

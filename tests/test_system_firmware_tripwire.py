@@ -126,7 +126,8 @@ def _all_optional(text: str) -> bool | None:
         # Is firmware optional or not, if not defined RetroArch will assume it is required
 
     That line is documentation rather than the citation, and it is nearly gone:
-    two of the 292 deployed ``.info`` files still carry it, the template and
+    two of the 291 files matching ``*_libretro.info`` still carry it — the
+    glob this walk uses; the template and
     ``puzzlescript_libretro.info:45``. The rule is stated here rather than left
     to the port because reading an absent flag as optional is what would let a
     system disappear from this tripwire silently. One deployed core is written
@@ -211,6 +212,12 @@ def stale_exemptions(
     Factored out for the same reason :func:`unrecorded_disagreements` is: the
     comparison lived inline in its test, so nothing could watch it go red
     without a deployed catalogue to break.
+
+    This is one of exactly **two** checks that read
+    ``cores_supplying_an_alternative`` today; the other is the unit test
+    pinning the shipped PlayStation entry's contents. The disagreement
+    derivation reads it nowhere, so deleting the field changes no verdict and
+    only leaves this function with nothing to compare.
     """
     return sorted(
         f"{system}/{alternative.core}"

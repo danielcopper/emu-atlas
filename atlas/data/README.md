@@ -1278,8 +1278,10 @@ from `firmware<N>_opt` and so reproduces the declaration faithfully — which ov
 two callers — `menu/menu_displaylist.c:880` and `ui/drivers/ui_qt.cpp:1238` — and both build display rows rather than
 loading anything. The setting that would block a load, `check_firmware_before_loading`, reads `"false"` in both
 configurations RetroDECK ships; that is **not** a pinned-source fact, since the name appears nowhere in the source at
-`a79435a`, but a reading of the deployed 1.22.2 build and its two config files. So the refusal that was observed is the
-**core's**, not the frontend's, which is the contradiction this table records.
+`a79435a`, but a reading of the deployed 1.22.2 build and its two config files. The dates run the opposite way to the
+obvious guess: the pin was committed 2026-07-23 and the deployed build was built `Nov 20 2025`, so the setting is
+missing from the _newer_ source and present in the _older_ build, which reads as **[D]** upstream having removed it. So
+the refusal that was observed is the **core's**, not the frontend's, which is the contradiction this table records.
 
 The fact is about the **system**, not the core, which is why it cannot live on a rule card: mGBA, snes9x and gambatte
 declare everything optional and so does SwanStation, but SwanStation says it about a machine observed refusing to start.
@@ -1320,11 +1322,11 @@ Shape:
 - `cores_supplying_an_alternative` — the cores whose all-optional declaration is **correct** for a system that needs
   firmware, because the core itself supplies a substitute. PCSX ReARMed's HLE BIOS is the case the field was written
   around. It is recorded **for the cut that makes an answer read this table**, where a system needing firmware must not
-  be reported against a core carrying its own substitute; it is not what keeps the tripwire green, because the
-  derivation compares whole systems and never consults it. The one check that consumes it today is the staleness one
-  below. On a `cannot-run-without-firmware` entry only, and each core names its own reason rather than being a bare
-  exemption. It is not a completeness claim: a core absent from it is one nobody has looked at, never one judged to be
-  understating.
+  be reported against a core carrying its own substitute. It is not what makes the derivation pass, which compares whole
+  systems and never consults it; **two** checks do read it today, the staleness one below and the unit test pinning this
+  entry's contents. On a `cannot-run-without-firmware` entry only, and each core names its own reason rather than being
+  a bare exemption. It is not a completeness claim: a core absent from it is one nobody has looked at, never one judged
+  to be understating.
 - **`tests/test_system_firmware_tripwire.py` is what keeps the file honest.** It recomputes the catalogue disagreements
   from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
   fails when an exempted core has stopped declaring everything optional. It is a machine-bound test, so an ordinary CI
