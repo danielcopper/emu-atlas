@@ -817,8 +817,10 @@ class RealMachine:
     interpreter to run it under could be named
     (:func:`core_probe_interpreter`), and memoizes per ``(path, mtime, size)``:
     a cached live read, not shipped data, invalidated the moment the ``.so``
-    changes. Where no interpreter can be named nothing is launched at all and
-    every core answers *unknown*. The child is pointed back at this package
+    changes. A core that hung without printing anything is remembered too, so a
+    hang costs its timeout once per ``.so`` rather than once per question.
+    Where no interpreter can be named nothing is launched at all and every core
+    answers *unknown*. The child is pointed back at this package
     (:func:`_probe_environment`) and answers with whatever it printed before it
     stopped (:func:`_parse_probe_output`).
     """
@@ -1061,15 +1063,19 @@ class RealMachine:
         key = (so_path, st.st_mtime_ns, st.st_size)
         if key in self._core_cache:
             return self._core_cache[key]
-        info = self._probe(so_path)
-        # Only successes are memoized: a failure can be transient (missing
-        # host library installed later) even while the .so is unchanged.
-        if info is not None:
+        info, timed_out = self._probe(so_path)
+        # An answer is memoized, and so is the absence of one where the core
+        # hung without printing: a core that hung once hangs again, and that
+        # retry is the only empty answer that costs the caller the whole
+        # _CORE_PROBE_TIMEOUT_SECONDS. Every other empty answer is asked again,
+        # because it can be transient (missing host library installed later)
+        # even while the .so is unchanged.
+        if info is not None or timed_out:
             self._core_cache[key] = info
         return info
 
     @staticmethod
-    def _probe(so_path: str) -> CoreInfo | None:
+    def _probe(so_path: str) -> _ProbeResult:
         interpreter = core_probe_interpreter()
         if interpreter is None:
             # No interpreter to run the probe under, so nothing is launched at
@@ -1077,7 +1083,9 @@ class RealMachine:
             # starts the *host* again wherever that executable is a frozen
             # application, and ``capture_output`` would swallow the evidence.
             # Unknown is the honest answer, and the caller already handles it.
-            return None
+            # Nothing ran, so nothing timed out: the next question asks again,
+            # and it is free — an interpreter may be registered by then.
+            return _ProbeResult(None, timed_out=False)
         try:
             proc = subprocess.run(
                 [interpreter.path, "-m", "atlas._core_probe", so_path],
@@ -1088,11 +1096,32 @@ class RealMachine:
         except subprocess.TimeoutExpired as expired:
             # A core that hangs in the option-capture phase printed its base
             # answer before it hung; the exception carries what was captured.
-            return _parse_probe_output(expired.stdout)
+            return _ProbeResult(_parse_probe_output(expired.stdout), timed_out=True)
         except OSError:
             # The probe never ran — nothing was read, nothing can be said.
-            return None
-        return _parse_probe_output(proc.stdout)
+            return _ProbeResult(None, timed_out=False)
+        return _ProbeResult(_parse_probe_output(proc.stdout), timed_out=False)
+
+
+class _ProbeResult(NamedTuple):
+    """What one probe read, and whether the process had to be killed to end it.
+
+    Two facts, because ``query_core`` decides on both. What was read is the
+    answer; how the run ended is what tells an empty answer that will stay
+    empty from one that may not. A core that hung answers nothing this time and
+    hangs the same way next time, so the caller remembers it and pays
+    ``_CORE_PROBE_TIMEOUT_SECONDS`` once per ``.so`` per process; every other
+    empty answer is asked again, because the host library that was missing can
+    be installed while the ``.so`` never changes.
+
+    The ending is carried here rather than folded into the answer because
+    :func:`_parse_probe_output` reads bytes and nothing else — a timeout that
+    printed a usable line still answers with it, and is remembered as the
+    success it is.
+    """
+
+    info: CoreInfo | None
+    timed_out: bool
 
 
 def _parse_probe_output(stdout: bytes | None) -> CoreInfo | None:
