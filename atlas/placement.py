@@ -1037,15 +1037,17 @@ class FileSet:
     :class:`FileGroup`. An *unknown* set has none, because it has no files;
     empty means *not decomposed*, never *no files*.
 
-    **An observed set is decomposed too, and every file it found is in a
-    group** — with the role the declaration knows for that name, and with
-    :data:`ROLE_UNKNOWN` where no declaration names it. The two routes to one
-    answer used to differ here: while the directory was empty the declared set
-    said which of the files were the console's settings, and the moment the game
-    had run once the same question came back with the names and no roles at all.
-    A client reading the absence as "ordinary progress" then synchronised a
-    settings file the user had chosen on that device. So the roles do not depend
-    on whether anything was found, and a file nothing names says so in a word.
+    **A savefile answer's observed set is decomposed too, and every file it
+    found is in one of its groups** — with the role the declaration knows for
+    that name, and with :data:`ROLE_UNKNOWN` where no declaration names it. The
+    two routes to one answer used to differ here: while the directory was empty
+    the declared set said which of the files were the console's settings, and
+    the moment the game had run once the same question came back with the names
+    and no roles at all. A client reading the absence as "ordinary progress"
+    then synchronised a settings file the user had chosen on that device. So the
+    roles do not depend on whether anything was found, and a file nothing names
+    says so in a word. The savestate question's observation is the one that is
+    not decomposed at all — see :class:`SavestatePlacement`.
 
     Where ``groups`` is populated, ``files`` stays exactly what it always was —
     the names lying in ``dir`` — and that is enforced: every group under the
@@ -1055,16 +1057,33 @@ class FileSet:
     because its ``files`` is the directory's own order and its groups are the
     declaration's. So a client that never reads ``groups`` sees no change when a
     card splits one list into two by role, while a client that does gets the
-    parts under the other directories too. Cards state the save's own state
-    first, so the first group is the one a save-syncing client would have taken
-    anyway.
+    parts under the other directories too wherever the set is declared. Cards
+    state the save's own state first, so the first group is the one a
+    save-syncing client would have taken anyway.
 
-    **``groups`` is the complete list of places, and ``files`` is one of them.**
-    A group whose names are not established carries ``files=None`` and still
-    appears here, so a single walk over ``groups`` reaches every directory the
-    card knows about — there is no second structure to correlate. A group with
-    ``None`` contributes nothing to ``files``, which is what keeps the flat list
-    exactly the set of names a caller can look for.
+    **Where a card decomposed a declared set, ``groups`` is the complete list of
+    places, and ``files`` is one of them.** A group whose names are not established carries
+    ``files=None`` and still appears here, so a single walk over ``groups``
+    reaches every directory the card knows about — there is no second structure
+    to correlate. A group with ``None`` contributes nothing to ``files``, which
+    is what keeps the flat list exactly the set of names a caller can look for.
+
+    **An observed set's groups describe the directory that was read, and only
+    it.** They are the found files sorted into what the declaration says they
+    are, so a card that also writes elsewhere has parts that no group of this
+    answer carries. Two kinds: the parts under another root, which
+    :data:`CAVEAT_FILE_SET_SPANS_ROOTS` names in either state, and the parts
+    under this answer's own root in another subdirectory, which are the ones to
+    know about. Kronos declares three groups over ``kronos/saturn`` and
+    ``kronos/stv`` and an observation of the first states one; MAME 2010
+    declares eight directories and an observation states one. Of the seven it
+    drops, the three whose names were never derivable still travel as
+    :data:`CAVEAT_FILE_NAMES_UNESTABLISHED`, which carries the directory; the
+    four that state files travel nowhere. Those directories are in the card, and
+    the same question states them as groups until this content's own name turns
+    up in the answer's directory and the set becomes an observation. This is a
+    known gap in what an observed answer states, never a claim that the other
+    directories hold nothing.
     """
 
     state: FileSetState
@@ -1081,8 +1100,9 @@ class FileSet:
     answer atlas can give today, which is not the same as having no opinion.
     """
     groups: tuple[FileGroup, ...] = ()
-    """Every place this save lives, decomposed by kind or owner — empty means not
-    decomposed, never no files.
+    """Where this save lives, decomposed by kind or owner: every place the card knows
+    on a declared answer, the one directory that was read on an observation — empty
+    means not decomposed, never no files.
     """
 
     def __post_init__(self) -> None:
@@ -1503,6 +1523,15 @@ class SavestatePlacement:
     ``<stem>.state.auto`` (``runloop.c:8185-8207``). Which of them exist is
     still an observation — the slot is a live setting and nothing on disk says
     how many were ever written — so the set is never ``complete``.
+
+    That set is the one atlas never decomposes: ``file_set.groups`` is empty on
+    every savestate answer, in every state. A group exists to say what a file is
+    and whose it is, and this question has already said both — the set is this
+    content's states, under names the paragraph above states rather than per-core
+    behaviour, so a role beside them would repeat the question. The observation
+    also picks up the ``.png`` thumbnail RetroArch writes beside a state with
+    ``savestate_thumbnail_enable`` on, and the one decomposition anyone could
+    build here would part each thumbnail from the state it belongs to.
 
     ``fallback_dir`` and ``physical_dir`` mean exactly what they do on a save
     placement: the root RetroArch silently reverts to when it cannot create the

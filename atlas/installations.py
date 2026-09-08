@@ -3572,6 +3572,16 @@ def _observed_groups(
     fact here: the observation matched the content's own stem, so these are this
     game's files rather than every game's, and one or several of them the way a
     card counts its own group's.
+
+    What this does *not* produce is the card's other directories. It walks
+    ``mode.here`` — the groups in the answer's own directory — because that is
+    the directory the observation read, so a mode with groups in sibling
+    subdirectories (``kronos/stv`` beside ``kronos/saturn``) states them while
+    the set is declared and not once it is observed. An unnamed part keeps its
+    ``file-names-unestablished`` caveat either way; a named one travels in
+    neither. The type's own docstring states that limit for callers, and closing
+    it is a decision about what an observed answer may carry, not a change to
+    this function's shape.
     """
     unclaimed = list(observed)
     groups: list[FileGroup] = []

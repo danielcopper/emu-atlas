@@ -293,9 +293,13 @@ findings:
   for the same names. Both halves matter: without the first, the same question answers with roles while the save
   directory is empty and without them once the game has run, which is how a consumer's "never sync a settings file" rule
   stopped protecting exactly when there was something to protect; without the second, a file the declaration does not
-  name still looks like a file with no role, and the trap survives one step narrower. So every observed file is in a
-  group, and one whose kind nothing established says so in a word (`role: unknown`) rather than by an empty field.
-  Absence is never a value — that is the same rule `granularity` and `checked` already obey.
+  name still looks like a file with no role, and the trap survives one step narrower. So every file a savefile
+  observation found is in one of its groups, and one whose kind nothing established says so in a word (`role: unknown`)
+  rather than by an empty field. Absence is never a value — that is the same rule `granularity` and `checked` already
+  obey. What such an answer does **not** state is the card's other directories: its groups decompose the one directory
+  that was read, so a card that also writes into a sibling subdirectory (`kronos/stv` beside `kronos/saturn`, seven of
+  MAME 2010's eight) has parts that only the declared answer states as groups, and only an unnamed part keeps its
+  `file-names-unestablished` caveat. The full map of places is a declared answer's guarantee, not an observation's.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
@@ -328,10 +332,11 @@ has nothing to name. `root_kind` is closed around its own question for the same 
 answer can state something the savefile answer cannot: RetroArch names the files itself, so `<stem>.state`, the numbered
 slots and the auto slot are known rather than per-core behaviour — the file set is still an observation, because which
 slots were ever written is not on disk, but it is observed through a pattern that matches savestates and nothing else.
-That observation is the one atlas does not decompose, and neither is a declared state set: a group states a granularity
-and a role, both of them words about the data a core writes as its save, so on this answer they have the same empty
-domain the field above has. `groups` is permanently empty here rather than filled with two words nothing could establish
-— a standalone savestate card states the names its emulator writes and has nothing to say beside them. Whether a core
+That set is also the one atlas never decomposes, in any state: `file_set.groups` is permanently empty on a savestate
+answer, and the reason is the sentence above rather than an empty domain. The question has already said what its files
+are — this content's states, under names the answer itself spells out — so a role beside them would repeat the question
+rather than add to it. The observation also picks up the `.png` thumbnail RetroArch writes beside a state with
+`savestate_thumbnail_enable` on, and any decomposition would have to part each thumbnail from its state. Whether a core
 can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it (capability, never
 a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
 

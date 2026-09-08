@@ -718,8 +718,10 @@ its dip switches in `mame/cfg/` beside an emulator-wide `default.cfg`, and hard-
 Handing that back as one flat list would tell you the names and hide which of them are the player's progress and which
 belong to every game at once.
 
-`groups` is that decomposition, and it is **the complete list of places** — `dir` and `files` are one of them, the
-first. Each entry carries its own resolved `dir`, its own `files`, and two fields that answer two different questions:
+`groups` is that decomposition. On a **declared** answer it is **the complete list of places** — `dir` and `files` are
+one of them, the first; on an observed one it is what was found in the directory that was read, which is not the same
+promise (see "an observation's groups" below). Each entry carries its own resolved `dir`, its own `files`, and two
+fields that answer two different questions:
 
 ```python
 for g in placement.file_set.groups:
@@ -734,9 +736,9 @@ packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title ML
 carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat, exactly as the
 file-name templates do it.
 
-One walk over `groups` reaches every directory the answer knows about. `placement.dir` and `placement.file_set.files`
-stay exactly what they always were — the first group's directory and the names in it — so a client that reads only those
-keeps working unchanged and gets the save's own state, which is the part cards state first.
+On a declared answer, one walk over `groups` reaches every directory the card knows about. `placement.dir` and
+`placement.file_set.files` stay exactly what they always were — the first group's directory and the names in it — so a
+client that reads only those keeps working unchanged and gets the save's own state, which is the part cards state first.
 
 **The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
 and `default.cfg` sit in one directory with the same role and differ only in whom they belong to. So neither field can
@@ -838,19 +840,32 @@ FinalBurn Neo's shared mode adds a card every game shares beside the per-game sa
 `values[0]`.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
-set has no files to decompose, the standard rule states one list in one directory, and a savestate answer is never
-decomposed at all — a savestate card states names, and neither of a group's two words is a thing anyone can say about a
-state file. Empty means _not decomposed_, never _no files_. What changed is the observation: a savefile answer that
-found files has a group for every one of them. Where `groups` is populated, `files` is still exactly the names lying in
-`dir`: every group under the first group's directory, and for a declared set in the card's own order. So a card that
-splits one list into two by role moves no name out of `files`; the groups under _other_ directories are the part you
-only see here.
+set has no files to decompose, the standard rule states one list in one directory, and a **savestate** answer is never
+decomposed in any state — that question has already said what its files are, this content's states under names the
+emulator itself chooses and the answer spells out (`<stem>.state`, the numbered slots, the auto slot), so a role beside
+them would only repeat the question; the set also picks up the `.png` thumbnail RetroArch writes beside a state, which
+any decomposition would part from the state it belongs to. Empty means _not decomposed_, never _no files_. What changed
+is the savefile observation: an answer that found files has a group for every one of them. Where `groups` is populated,
+`files` is still exactly the names lying in `dir`: every group under the first group's directory, and for a declared set
+in the card's own order. So a card that splits one list into two by role moves no name out of `files`.
 
-**An observation's groups are what was found, in the answer's order.** A declared set lists the parts a card states,
-including the ones no file has been written for yet, in the order the card states them; an observed set lists only what
-is there, and its `files` comes back in the directory's own order while the groups follow the declaration's. So compare
-the two by name, never by position — and a part under _another_ root is in `groups` only where the set is declared,
-because an observation never looked there. The `file-set-spans-roots` caveat carries it either way.
+**An observation's groups are what was found, in the answer's order — and they describe one directory.** A declared set
+lists the parts a card states, including the ones no file has been written for yet, in the order the card states them;
+an observed set lists only what is there, in the directory that was read, and its `files` comes back in that directory's
+own order while the groups follow the declaration's. So compare the two by name, never by position.
+
+**The parts a card keeps in another directory are in no group of an observed answer**, and there are two kinds. A part
+under _another_ root — Flycast's unmoved shared cards — is a group only where the set is declared, and the
+`file-set-spans-roots` caveat carries it in either state. A part under the _same_ root in another subdirectory is the
+one to know about: Kronos declares three groups across `kronos/saturn` and `kronos/stv`, and an observation of the first
+directory states one group; MAME 2010 declares eight directories, and an observation states one. Of the seven it drops,
+the three whose file names were never derivable still travel as `file-names-unestablished` caveats naming their
+directory — the other four are in the answer nowhere.
+
+So a backup tool that must reach every place a save lives cannot build its list from one observed answer's `groups`. The
+directories are in the card, and the same question states them as groups until this content's own name turns up in the
+answer's directory. Read the declared answer for the full map, walk the caveats beside an observation, and treat a short
+`groups` list as a gap in what this answer says about the other directories — never as a statement that they are empty.
 
 ### A file set can carry a hole
 
