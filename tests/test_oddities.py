@@ -383,9 +383,13 @@ class TestAnUnnamedGroupSpeaksOnlyForItsOwnDirectory:
         ] == [(found, atlas.ROLE_UNKNOWN)]
 
     # A named group and a nameless one in the same directory. The loader accepts
-    # it and no shipped card states it — all five modes with a nameless group
-    # state no named one — so the two orderings below are indistinguishable on
-    # the packaged cards, and this is the only place the order is held.
+    # it and no shipped card states it: seventeen modes carry a nameless group
+    # and twelve of those state named ones too, but always in another
+    # subdirectory — MAME 2010 alone has three nameless and six named, spread
+    # over eight directories. Only five modes put a nameless group in the
+    # answer's own directory, and all five state no named group at all. So the
+    # two orderings below are indistinguishable on the packaged cards, and this
+    # is the only place the order is held.
     MIXED = SaveMode(
         root="savefile_directory",
         groups=(

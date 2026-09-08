@@ -3611,14 +3611,17 @@ def _observed_groups(
     every other fact here: the observation matched the content's own stem, so
     these are this game's files rather than every game's, and one or several of
     them the way a card counts its own group's. The second pass keeps that value
-    for what it is for. ScummVM's slot files are the case that arrives: they
-    carry the content's own stem, so the observation sees them, and without this
-    pass they came back roleless beside a caveat naming their role — an answer
-    contradicting itself in one envelope. A WHDLoad drawer reaches the same
-    contradiction only through a file inside it that happens to carry the
-    content's name, since that is what the observation globs for; a save under
-    the name WHDLoad's own installer chose is not seen at all and the answer
-    stays declared.
+    for what it is for: without it, a file found in such a directory came back
+    roleless beside a caveat naming that directory's role, an answer
+    contradicting itself in one envelope.
+
+    Both cards reach that observation the same narrow way, and for the same
+    reason their groups are nameless at all. The glob is the content's own stem,
+    while a ScummVM slot file is named from the launcher's target and a WHDLoad
+    save from what the installer chose — neither of which atlas reads. So a slot
+    file arrives only where the target happens to equal the content's stem, and
+    a file in the drawer only where the installer's name does; otherwise nothing
+    matches and the answer stays declared.
 
     What this does *not* produce is the card's other directories. Every pass
     above is about the answer's own directory, because that is the one the
