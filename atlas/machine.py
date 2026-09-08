@@ -778,11 +778,12 @@ class Machine(Protocol):
     read; a caller that would otherwise report "nothing is there" must look at
     that before believing an empty ``matches``. ``readlink`` returns the link target
     when the path itself is a symlink, else ``None``. ``query_core`` returns
-    the core's self-reported info, or ``None`` when the core cannot be loaded —
-    the caller treats that as *unknown*, never as a guess. ``file_size`` and
-    ``file_digest`` answer for regular files only and return ``None`` whenever
-    the answer cannot be determined (missing, unreadable, not a regular file,
-    or an algorithm outside :data:`DIGEST_ALGORITHMS`).
+    the core's self-reported info, or ``None`` whenever that info cannot be
+    had — the core would not load, or nothing here could load it in the first
+    place; the caller treats either as *unknown*, never as a guess.
+    ``file_size`` and ``file_digest`` answer for regular files only and return
+    ``None`` whenever the answer cannot be determined (missing, unreadable, not
+    a regular file, or an algorithm outside :data:`DIGEST_ALGORITHMS`).
     """
 
     def read_text(self, path: str) -> ReadResult: ...
@@ -809,14 +810,17 @@ class Machine(Protocol):
 
 
 class RealMachine:
-    """The production machine: the real filesystem plus a real core prober.
+    """The production machine: the real filesystem, plus a core prober where one is possible.
 
-    ``query_core`` runs the probe in a subprocess (``atlas._core_probe``) so a
-    crashing core costs one answer, not the host process, and memoizes per
-    ``(path, mtime, size)`` — a cached live read, not shipped data: the cache
-    invalidates the moment the ``.so`` changes. The child is pointed back at
-    this package (:func:`_probe_environment`) and answers with whatever it
-    printed before it stopped (:func:`_parse_probe_output`).
+    ``query_core`` runs the probe in a subprocess (``atlas._core_probe``) — so
+    a crashing core costs one answer, not the host process — wherever an
+    interpreter to run it under could be named
+    (:func:`core_probe_interpreter`), and memoizes per ``(path, mtime, size)``:
+    a cached live read, not shipped data, invalidated the moment the ``.so``
+    changes. Where no interpreter can be named nothing is launched at all and
+    every core answers *unknown*. The child is pointed back at this package
+    (:func:`_probe_environment`) and answers with whatever it printed before it
+    stopped (:func:`_parse_probe_output`).
     """
 
     def __init__(self) -> None:
@@ -1158,15 +1162,34 @@ def _probe_environment() -> dict[str, str] | None:
 _registered_interpreter: str | None = None
 
 
-def _is_absolute_path_string(handed_over: object) -> bool:
-    """A non-empty ``str`` spelling an absolute path — everything else is not one.
+def _is_spawnable_interpreter_path(handed_over: object) -> bool:
+    """The one shape both stages accept: a non-empty absolute ``str`` with no NUL.
+
+    One rule, applied to the path a host registered and to the one derived from
+    the running program alike, so neither stage can put into the spawn what the
+    other would have refused. Each of the three checks is about the spawn:
+
+    - a ``str``, because that is what goes into the argument vector — a
+      ``Path`` passes :func:`os.path.isabs` and is still refused;
+    - **absolute**, because ``subprocess`` resolves a bare name through
+      ``PATH`` and a relative one against the process's working directory.
+      Either is a lookup atlas performs nowhere, and a host reaching this seam
+      may be a service running as root;
+    - **no NUL byte**, because the spawn answers one with ``ValueError`` where
+      every other unusable path raises ``OSError``. ``_probe`` degrades an
+      ``OSError`` to *unknown*; a ``ValueError`` would escape ``query_core``
+      into the resolver instead.
 
     Typed ``object`` on purpose: the annotation on the registration below is a
     promise the caller makes, and this check is there for the caller who does
-    not keep it. A ``Path`` passes ``os.path.isabs`` and is still refused,
-    because what goes into the spawn is a string.
+    not keep it.
     """
-    return isinstance(handed_over, str) and bool(handed_over) and os.path.isabs(handed_over)
+    return (
+        isinstance(handed_over, str)
+        and bool(handed_over)
+        and os.path.isabs(handed_over)
+        and "\x00" not in handed_over
+    )
 
 
 def register_core_probe_interpreter(path: str | None) -> None:
@@ -1183,24 +1206,27 @@ def register_core_probe_interpreter(path: str | None) -> None:
     :func:`_probe_environment`), so a foreign interpreter is not a poorer
     answer: it is the same answer.
 
-    The path must be absolute. A bare name or a relative path would be resolved
-    through ``PATH`` by ``subprocess``, which is the guess about the machine
-    atlas refuses to make — the more so because a host doing this may be a
-    service running as root. Anything that is not ``None`` and not an absolute,
-    non-empty ``str`` is refused with :class:`TypeError` at the registration,
-    where the caller can still see what it handed over.
+    The path must be absolute, and it must be a string carrying no NUL byte —
+    :func:`_is_spawnable_interpreter_path` carries the reasoning for all three
+    checks, and the derived stage applies the same rule. Anything that is not
+    ``None`` and does not pass it is refused with :class:`TypeError` here at
+    the registration, where the caller can still see what it handed over.
 
     Whether the file exists is deliberately **not** checked: that is the
     machine's business at probe time, and a path that does not run yields the
-    same honest *unknown* every other probe failure yields.
+    same honest *unknown* every other probe failure yields. That promise is
+    why a NUL byte is refused rather than accepted: it is the one input the
+    spawn answers with something other than an ``OSError``, so accepting it
+    would hide a caller's malformed value behind a degradation code instead of
+    naming it here.
 
     Registering ``None`` clears the registration and the running program
     decides again. The last registration wins; there is one slot, not a chain.
     """
     global _registered_interpreter
-    if path is not None and not _is_absolute_path_string(path):
+    if path is not None and not _is_spawnable_interpreter_path(path):
         raise TypeError(
-            "a core probe interpreter must be an absolute path to an interpreter; "
+            "a core probe interpreter must be an absolute path with no NUL byte; "
             f"{path!r} is not"
         )
     _registered_interpreter = path
@@ -1227,20 +1253,34 @@ def _running_python_interpreter() -> str | None:
     application again, so asking atlas where a save lives would restart the
     host that asked — and ``capture_output`` would hide it.
 
+    ``sys.executable`` also has to survive the same shape check the registered
+    path does (:func:`_is_spawnable_interpreter_path`), and that is not
+    theoretical: ``PYTHONEXECUTABLE=python3`` makes it a bare name, which the
+    spawn would resolve through ``PATH``, and ``PYTHONEXECUTABLE=dir/python3``
+    makes it relative, which the spawn would resolve against the working
+    directory. Refusing a lookup in one stage and performing it in the other
+    would be the same defect wearing a different hat, so both stages apply the
+    one rule. Do not take the check out of either of them.
+
     So the test narrows on purpose. The two markers freezers set
-    (``sys.frozen``, ``sys._MEIPASS``) disqualify; an empty ``sys.executable``
-    disqualifies; and the basename is the belt for an embedded host that sets
-    neither marker. It is a rule of thumb, and every way it is wrong ends in a
-    refusal to probe rather than in launching a host: a PyPy or otherwise-named
+    (``sys.frozen``, ``sys._MEIPASS``) disqualify; anything ``sys.executable``
+    cannot spell as an absolute path disqualifies; and the basename is the belt
+    for an embedded host that sets neither marker. It is a rule of thumb, and
+    the two directions it can be wrong in are not symmetrical: every way it is
+    too narrow costs a probe and nothing else — a PyPy or otherwise-named
     interpreter loses probing here and hands over its own path through
-    :func:`register_core_probe_interpreter`. Do not widen this into a search —
-    a ``PATH``-resolved ``python3`` is an assumption about the machine, and
-    atlas makes none.
+    :func:`register_core_probe_interpreter` — while the name check is what
+    keeps the too-wide direction rare, since a host that embeds an interpreter,
+    sets neither marker and is itself named ``python…`` would pass and be
+    launched. Do not widen this into a search — a ``PATH``-resolved ``python3``
+    is an assumption about the machine, and atlas makes none.
     """
     if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
         return None
     executable = sys.executable
-    if not executable or not os.path.basename(executable).startswith("python"):
+    if not _is_spawnable_interpreter_path(executable):
+        return None
+    if not os.path.basename(executable).startswith("python"):
         return None
     return executable
 

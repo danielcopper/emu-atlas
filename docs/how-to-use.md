@@ -142,20 +142,27 @@ directory — lives only in the core binary, so atlas loads the core and asks it
 That child is a Python interpreter running `atlas._core_probe`, and atlas starts one only where it can name an
 interpreter to start.
 
-A **frozen** host is one whose program is a single application binary with the interpreter embedded — PyInstaller,
-cx_Freeze and py2exe all build one. There `sys.executable` is that application and not an interpreter: the bootloader
-ignores `-m atlas._core_probe <core>` and starts the application a second time. That is the shape of a plugin host whose
-loader is frozen while its vendored copy of atlas sits on disk beside it as plain files, and where such a host runs as a
-long-lived service, the second launch is a second copy of the whole service — started, in the worst case, by a question
-as innocent as where a save file lives.
+A **frozen** host is one whose program embeds the interpreter instead of being one. PyInstaller, cx_Freeze and py2exe
+all build such a program, in one of two shapes: a single self-extracting binary, or a directory holding a launcher
+beside the runtime it needs — the one-directory shape is PyInstaller's default, the only mode cx_Freeze has, and what
+py2exe produces unless told otherwise. The shape does not matter here; what matters is that in both of them
+`sys.executable` is that program and not an interpreter, so its bootloader ignores `-m atlas._core_probe <core>` and
+starts the program a second time. That is the shape of a plugin host whose loader is frozen while its vendored copy of
+atlas sits on disk beside it as plain files, and where such a host runs as a long-lived service, the second launch is a
+second copy of the whole service — started, in the worst case, by a question as innocent as where a save file lives.
 
 So atlas checks before it launches, and it never searches. The interpreter is decided in three stages:
 
 1. the absolute path a host registered;
 2. otherwise `sys.executable`, but only where the running program is plainly a Python interpreter — no `sys.frozen`, no
-   `sys._MEIPASS`, and a non-empty `sys.executable` whose file name starts with `python`;
-3. otherwise none, and then **no process is started at all**: `query_core` answers _unknown_ and the placement carries
-   `core-unqueryable`, the same degradation a core that will not load produces.
+   `sys._MEIPASS`, a `sys.executable` that passes the same shape rule a registered path does (`PYTHONEXECUTABLE` can
+   make it a bare name or a relative path), and a file name starting with `python`;
+3. otherwise none, and then **no process is started at all**: `query_core` answers _unknown_ for every core, and the
+   answers that would have used it say so. A placement carries `core-unqueryable` and may keep a `<library_name>` hole.
+   A core with a rule card also carries `core-generation-unestablished`, because which generation is installed was never
+   established: its recorded deviation from the standard layout is not applied, and where the card records a file set,
+   that is not applied either, so the answer names no files. A host deciding whether to register is deciding exactly
+   this.
 
 A frozen host hands over a real interpreter before the first atlas call:
 
@@ -166,12 +173,16 @@ atlas.register_core_probe_interpreter("/usr/bin/python3")
 ```
 
 The child is pointed back at this copy of atlas through `PYTHONPATH`, so a foreign interpreter is not a poorer answer —
-it loads the same core and returns the same name, version and options. The path must be absolute: a bare name or a
-relative path would be resolved through `PATH` by the spawn, which is a guess about the machine atlas does not make
-anywhere. Anything else, `None` apart, is refused with `TypeError` at the registration, where the caller can still see
-what it handed over. Whether the file exists is deliberately not checked — that is the machine's business at probe time,
-and a path that does not run yields the same _unknown_ every other probe failure yields. There is one slot: the last
-registration wins, and `atlas.register_core_probe_interpreter(None)` clears it.
+it loads the same core and returns the same name, version and options. The path must be absolute and must carry no NUL
+byte. Absolute, because the spawn resolves a bare name through `PATH` and anything with a separator in it against the
+process's working directory — two lookups, both guesses about the machine atlas does not make anywhere. No NUL, because
+that is the one input the spawn answers with a `ValueError` instead of the `OSError` every other unusable path raises,
+and that exception would escape the question rather than degrade it. The same rule applies to the derived stage, so
+neither stage can put into the spawn what the other would refuse. Anything else, `None` apart, is refused with
+`TypeError` at the registration, where the caller can still see what it handed over. Whether the file exists is
+deliberately not checked — that is the machine's business at probe time, and a path that does not run yields the same
+_unknown_ every other probe failure yields. There is one slot: the last registration wins, and
+`atlas.register_core_probe_interpreter(None)` clears it.
 
 `atlas.core_probe_interpreter()` says which interpreter a probe would run under and by which route — or `None` where
 none would, which is the diagnosis when every core comes back unqueryable. Otherwise the result is an
@@ -179,8 +190,10 @@ none would, which is the diagnosis when every core comes back unqueryable. Other
 it was.
 
 The second stage narrows honestly rather than cleverly. A PyPy build, or any interpreter whose file is named something
-else, fails the test and loses probing until it registers its own path. That is the trade taken on purpose: every way
-the test is wrong ends in a refusal to probe, never in launching a host.
+else, fails the test and loses probing until it registers its own path. That is the trade taken on purpose, and the two
+directions it can be wrong in are not symmetrical: every way the test is too narrow costs a probe and nothing else,
+while the name check is what keeps the too-wide direction rare — a host that embeds an interpreter, sets neither marker
+and is itself named `python…` would pass the test and be launched. If that is your host, register a path.
 
 ## The standard query pattern
 

@@ -8,10 +8,11 @@ copy of the library. Five claims, each its own check:
    an empty home returning the empty aggregate — exit 0, valid contract JSON);
 2. the bundled interpreter carries the zstd capability and the installed
    library uses it — the committed zstd fixture AppImage is read end to end;
-3. the bundle probes cores under its own interpreter, with nothing registered:
-   the shipped runtime is a plain CPython, so the derived stage answers and a
-   later tightening of that rule cannot silently take probing away from our own
-   release artifact;
+3. the bundle would probe cores under its own interpreter with nothing
+   registered — ``core_probe_interpreter()`` is asked what it reports, and no
+   core is probed: the shipped runtime is a plain CPython, so the derived stage
+   must answer, and a later tightening of that rule cannot silently take
+   probing away from our own release artifact;
 4. ``import atlas`` inside the bundle resolves to the bundle's site-packages,
    never to a checkout that happens to sit nearby;
 5. the full test suite — unit tests, machine-vector runner, CLI conformance —
@@ -98,8 +99,8 @@ def _check_core_probe_interpreter(python: Path) -> None:
     )
     result = _run([str(python), "-c", probe])
     if result.returncode != 0:
-        _fail("the bundle probes cores under its own interpreter", result)
-    print("ok: the bundle's own interpreter probes cores, no registration needed")
+        _fail("the bundle names its own interpreter as the one a probe would run under", result)
+    print("ok: the bundle would probe under its own interpreter, no registration needed")
 
 
 def _check_import_origin(python: Path, bundle: Path) -> None:

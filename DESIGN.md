@@ -263,8 +263,12 @@ class Machine(Protocol):
   `sys.frozen`, no `sys._MEIPASS`, a file name starting with `python` — else none, and then nothing is launched and
   every core answers _unknown_. In a frozen host `sys.executable` is the application, whose bootloader would ignore the
   module arguments and start the host a second time; atlas never searches for an interpreter instead, because a
-  `PATH`-resolved `python3` is an assumption about the machine. Every way the middle test is wrong ends in a refusal to
-  probe, never in launching a host, and `core_probe_interpreter()` states which of the three answered.
+  `PATH`-resolved `python3` is an assumption about the machine. Both stages apply one shape rule — absolute, a string,
+  no NUL byte — so neither can hand the spawn what the other would refuse, and `PYTHONEXECUTABLE` makes the derived case
+  real rather than theoretical. The middle test's two error directions are not symmetrical: every way it is too narrow
+  costs a probe, while the name check is what keeps the too-wide direction rare, since a host that embeds an
+  interpreter, sets neither marker and is itself named `python…` passes it. `core_probe_interpreter()` states which of
+  the three stages answered.
 - In production the seam is the real filesystem plus a core prober where an interpreter was named. In tests and
   conformance vectors it is a **fixture machine**: files (including unreadable and invalid-text ones), explicit empty
   directories, symlinks, inaccessible paths, and core answers as plain data describing a whole machine. A file's read
@@ -589,5 +593,6 @@ visible in `system_source`, and marked as derived where the core spans systems.
 - Whether an archive's _contents_ can ever be compared member by member. The fifth `checked` value settled the
   whole-file question; going further needs a source that states which ROMs a correct set holds, and `System.dat` carries
   one md5 per name and no member list.
-- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only) — revisit with the
-  feature-detection extension (ROADMAP: card variants), which reworks the probe anyway.
+- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only vs. never launched, for want
+  of an interpreter to launch it under) — revisit with the feature-detection extension (ROADMAP: card variants), which
+  reworks the probe anyway. Tracked as issue #412.

@@ -962,8 +962,11 @@ class TestChoosingTheCoreProbeInterpreter:
     The middle stage is deliberately narrow. ``sys.executable`` is only an
     interpreter where the running program is one; in a frozen build it is the
     application, and ``-m atlas._core_probe`` would be ignored by its
-    bootloader. Every way the narrowness is wrong ends here — in no interpreter,
-    and so in *unknown* — never in launching a host.
+    bootloader. The two directions the test can be wrong in are not
+    symmetrical: every way it is too narrow ends here, in no interpreter and so
+    in *unknown*, while the name check is what keeps the too-wide direction
+    rare — a host that embeds an interpreter, sets neither marker and is itself
+    named ``python…`` passes and does get launched.
     """
 
     def test_a_plain_interpreter_names_itself(self, monkeypatch):
@@ -979,8 +982,10 @@ class TestChoosingTheCoreProbeInterpreter:
         assert core_probe_interpreter() is None
 
     def test_a_meipass_names_no_interpreter(self, monkeypatch):
-        # cx_Freeze and py2exe set ``sys.frozen``; PyInstaller's onefile mode
-        # is recognised by its extraction root even where the other is absent.
+        # The extraction root disqualifies on its own. PyInstaller sets
+        # ``sys.frozen`` in both its modes, so this is not how PyInstaller is
+        # caught — it is the marker a freezer that sets only this one would be
+        # caught by, and the test proves the check does not lean on the other.
         monkeypatch.delattr(sys, "frozen", raising=False)
         monkeypatch.setattr(sys, "executable", "/usr/bin/python3.11")
         monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEIabc123", raising=False)
@@ -992,9 +997,38 @@ class TestChoosingTheCoreProbeInterpreter:
         monkeypatch.setattr(sys, "executable", "")
         assert core_probe_interpreter() is None
 
+    @pytest.mark.parametrize(
+        "executable, resolved_against",
+        [
+            ("python3", "PATH"),
+            ("dir/python3", "the process's working directory"),
+        ],
+    )
+    def test_a_relative_executable_names_no_interpreter(
+        self, monkeypatch, executable, resolved_against
+    ):
+        # Not hypothetical and needing no frozen host: PYTHONEXECUTABLE=python3
+        # produces the first shape and PYTHONEXECUTABLE=dir/python3 the second.
+        # The spawn would resolve them two different ways, and the registration
+        # stage refuses both — so must this one, or the seam performs the very
+        # lookup it exists to avoid, on a host that may be running as root.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", executable)
+        assert core_probe_interpreter() is None, f"would be resolved against {resolved_against}"
+
+    def test_an_executable_with_a_nul_byte_names_no_interpreter(self, monkeypatch):
+        # The one shape the spawn answers with ValueError rather than the
+        # OSError _probe degrades to unknown. Both stages refuse it, so neither
+        # can put it into the argument vector.
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+        monkeypatch.setattr(sys, "executable", "/usr/bin/python3\x00evil")
+        assert core_probe_interpreter() is None
+
     def test_an_executable_not_named_python_names_no_interpreter(self, monkeypatch):
         # The belt for an embedded host that sets neither marker: the loader
-        # that reported this defect is spelled exactly like this.
+        # that reported this defect is named exactly like this.
         monkeypatch.delattr(sys, "frozen", raising=False)
         monkeypatch.delattr(sys, "_MEIPASS", raising=False)
         monkeypatch.setattr(sys, "executable", "/home/host/services/PluginLoader")
@@ -1037,10 +1071,26 @@ class TestRegisteringACoreProbeInterpreter:
 
     @pytest.mark.parametrize("relative", ["python3", "bin/python3", "./python3", "../python3"])
     def test_a_relative_path_is_refused(self, relative):
-        # A bare name or a relative path would be resolved through PATH by
-        # subprocess — the machine guess this seam exists to avoid.
+        # subprocess resolves a bare name ("python3") through PATH and anything
+        # with a separator against the process's working directory. Two
+        # lookups, both machine guesses this seam exists to avoid.
         with pytest.raises(TypeError, match="absolute path"):
             register_core_probe_interpreter(relative)
+
+    def test_a_path_with_a_nul_byte_is_refused(self):
+        # subprocess raises ValueError on an embedded NUL, not the OSError
+        # _probe degrades to unknown, so this one input would otherwise escape
+        # query_core into the resolver. Refused here, where the caller can see
+        # what it handed over, rather than hidden behind a degradation code.
+        with pytest.raises(TypeError, match="NUL"):
+            register_core_probe_interpreter("/usr/bin/python3\x00evil")
+
+    def test_a_registered_path_that_does_not_run_answers_unknown(self, tmp_path):
+        # The docstring's promise, against a real spawn rather than a stub: the
+        # path is well formed and there is nothing at it, so query_core
+        # degrades to unknown instead of raising.
+        register_core_probe_interpreter(str(tmp_path / "no-such-python3"))
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
 
     def test_a_refused_path_never_becomes_the_registration(self, monkeypatch):
         _model_a_frozen_host(monkeypatch)
