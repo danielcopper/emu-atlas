@@ -100,9 +100,11 @@ that the scheme "doesn't scale". MAME's memory cards are the same shape for a di
 index chosen in the emulator's own interface.
 
 Such a group **is** a `FileGroup` in the answer, with `files=None` — the directory, the granularity and the role are all
-stated, and only the list is refused. That is what lets one walk over `file_set.groups` reach every place a save lives.
-The answer also names the directory in a `file-names-unestablished` caveat, with this text as `data["citation"]` and the
-group's `role` beside it; that caveat is the sentence a person reads and the citation behind it, not the only carrier.
+stated, and only the list is refused. That is what lets one walk over a **declared** answer's `file_set.groups` reach
+every place a save lives; an observed answer decomposes the directory it read and no other, and this group is one only a
+declared answer carries. The answer also names the directory in a `file-names-unestablished` caveat, with this text as
+`data["citation"]` and the group's `role` beside it; that caveat is the sentence a person reads and the citation behind
+it, not the only carrier.
 
 The alternative would have been silence, and silence there is the expensive kind: a client that never learns the
 directory exists loses the player's progress on every machine with a hard disk. The loader refuses `unnamed` together

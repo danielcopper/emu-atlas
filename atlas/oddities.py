@@ -206,8 +206,9 @@ class SaveGroup:
     anything atlas reads** — MAME's differencing images for CHD hard disks take
     the disk image's own name out of the machine's ROM table inside the binary.
     Such a group reaches the answer as a :class:`~atlas.placement.FileGroup`
-    with ``files=None``, so one walk over ``groups`` covers every place the
-    save lives, and the ``file-names-unestablished`` caveat rides beside it
+    with ``files=None``, so one walk over a declared answer's ``groups`` covers
+    every place the save lives — an observation decomposes the directory it read
+    and no other — and the ``file-names-unestablished`` caveat rides beside it
     with this text as the citation — the sentence a person reads and the
     reason behind it. Silence would be worse than either: a backup that skips
     the directory loses the player's progress on every machine with a hard

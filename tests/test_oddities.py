@@ -248,10 +248,12 @@ class TestADirectoryWhoseNamesAreNotEstablished:
     FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, SAVES_KEEP: ""}
 
     def test_it_is_a_group_like_any_other_place_the_save_lives(self):
-        # The point of the shape: one walk over `groups` reaches every directory
-        # the card knows about. Before, this one was reachable only by scanning
-        # the caveats, which is a second structure to correlate and the kind of
-        # thing a client silently skips.
+        # The point of the shape: one walk over a declared answer's `groups`
+        # reaches every directory the card knows about. Before, this one was
+        # reachable only by scanning the caveats, which is a second structure to
+        # correlate and the kind of thing a client silently skips. The answer
+        # under test is declared — an unnamed group is a claim about the card,
+        # so no observation carries one.
         p = _mame_query(self.FILES)
         unnamed = [g for g in p.file_set.groups if g.files is None]
         assert len(unnamed) == 1

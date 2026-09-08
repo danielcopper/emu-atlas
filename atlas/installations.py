@@ -3502,8 +3502,10 @@ def _declared_groups(
 
     **Every group the card knows about**, including the ones whose file names
     follow from nothing atlas reads — those carry ``files=None``. That is what
-    makes one walk over ``groups`` reach every place a save lives, rather than a
-    walk plus a scan of the caveats for the directories the walk left out. The
+    makes one walk over a declared answer's ``groups`` reach every place a save
+    lives, rather than a walk plus a scan of the caveats for the directories the
+    walk left out; the observed decomposition beside this one covers the
+    directory it read and no other (:func:`_observed_groups`). The
     caveat still travels, because it carries the citation and the sentence a
     person reads; it is no longer the only carrier.
 

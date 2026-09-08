@@ -968,7 +968,10 @@ class FileGroup:
     blind there instead of silently skipping the player's progress. The reason
     travels beside the answer as ``file-names-unestablished``, which carries the
     citation; the group is where the directory itself belongs, so that one walk
-    over ``groups`` reaches every place a save lives.
+    over a declared answer's ``groups`` reaches every place a save lives. Only a
+    declared answer has such a group at all: ``files=None`` says a name was
+    never derivable, which is a statement about the card and not about what a
+    listing found.
     """
 
     dir: str
