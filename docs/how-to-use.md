@@ -159,10 +159,10 @@ So atlas checks before it launches, and it never searches. The interpreter is de
    make it a bare name or a relative path), and a file name starting with `python`;
 3. otherwise none, and then **no process is started at all**: `query_core` answers _unknown_ for every core, and the
    answers that would have used it say so. A placement carries `core-unqueryable` and may keep a `<library_name>` hole.
-   Packaged per-core knowledge is lost with it, because which build is installed was never established, and that loss is
-   stated as `core-generation-unestablished`: a core whose recorded deviation from the standard layout atlas carries
-   does not get that deviation applied, and a core whose recorded save files atlas carries does not get those either, so
-   the answer names no files. A host deciding whether to register is deciding exactly this.
+   The packaged knowledge about a core's saves is lost with it, because which build is installed was never established,
+   and that loss is stated as `core-generation-unestablished`: a core whose recorded deviation from the standard layout
+   atlas carries does not get that deviation applied, and a core whose recorded save files atlas carries does not get
+   those either, so the answer names no files. A host deciding whether to register is deciding exactly this.
 
 A frozen host hands over a real interpreter before the first atlas call:
 

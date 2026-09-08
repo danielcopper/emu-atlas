@@ -1169,8 +1169,10 @@ def _is_spawnable_interpreter_path(handed_over: object) -> bool:
     the running program alike, so neither stage can put into the spawn what the
     other would have refused. Each requirement is about the spawn:
 
-    - a ``str``, because that is what goes into the argument vector — a
-      ``Path`` passes :func:`os.path.isabs` and is still refused;
+    - a ``str``, because that is what this seam stores and reports back:
+      ``CoreProbeInterpreter.path`` is a ``str``. A ``Path`` is refused for
+      that reason and no other — it passes :func:`os.path.isabs`, and
+      ``subprocess`` would run it perfectly well;
     - **absolute**, because ``subprocess`` resolves a bare name through
       ``PATH`` and a relative one against the process's working directory.
       Either is a lookup atlas performs nowhere, and a host reaching this seam
@@ -1238,8 +1240,8 @@ def register_core_probe_interpreter(path: str | None) -> None:
     global _registered_interpreter
     if path is not None and not _is_spawnable_interpreter_path(path):
         raise TypeError(
-            "a core probe interpreter must be an absolute path the operating system "
-            f"can be handed; {path!r} is not"
+            "a core probe interpreter must be an absolute path, spelled as a str the "
+            f"operating system can be handed; {path!r} is not"
         )
     _registered_interpreter = path
 

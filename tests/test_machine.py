@@ -1112,7 +1112,10 @@ class TestRegisteringACoreProbeInterpreter:
 
     @pytest.mark.parametrize("handed_over", [object(), 3, b"/usr/bin/python3", Path("/usr/bin")])
     def test_a_non_string_is_refused(self, handed_over):
-        with pytest.raises(TypeError, match="absolute path"):
+        # Matched on the clause that is true for this case. A Path is absolute
+        # and subprocess would run it; what it is not is the str the seam
+        # stores and reports as CoreProbeInterpreter.path.
+        with pytest.raises(TypeError, match="spelled as a str"):
             register_core_probe_interpreter(handed_over)  # pyright: ignore[reportArgumentType]
 
     def test_an_empty_string_is_refused(self):
@@ -1132,7 +1135,7 @@ class TestRegisteringACoreProbeInterpreter:
         # ValueError rather than the OSError _probe degrades to unknown — so it
         # would escape query_core into the resolver. Refused here, where the
         # caller can see what it handed over.
-        with pytest.raises(TypeError, match="absolute path"):
+        with pytest.raises(TypeError, match="operating system can be handed"):
             register_core_probe_interpreter("/usr/bin/python3\x00evil")
 
     @pytest.mark.parametrize("surrogate", ["\ud800", "\udc00"])
@@ -1140,7 +1143,7 @@ class TestRegisteringACoreProbeInterpreter:
         # The other spelling the operating system cannot be handed, and it
         # fails one layer earlier: os.fsencode — the encoding subprocess itself
         # performs — raises UnicodeEncodeError, which is a ValueError too.
-        with pytest.raises(TypeError, match="absolute path"):
+        with pytest.raises(TypeError, match="operating system can be handed"):
             register_core_probe_interpreter(f"/usr/bin/python3{surrogate}")
 
     def test_a_surrogate_escaped_byte_still_reaches_the_spawn(self, tmp_path):
