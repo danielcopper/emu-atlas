@@ -247,6 +247,15 @@ Rules that hold for every answer:
   `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed
   set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
   `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
+- **Handles are live, and worth keeping.** Every query re-reads its sources — that is what makes asking twice a drift
+  check. The one read remembered rather than repeated is the core probe: what a core reports about itself is read once
+  per machine object, keyed on the `.so`'s path, mtime and size, and a probe that hung without printing a usable line is
+  remembered the same way. A rebuilt or replaced core changes that key and is read again, so nothing stale outlives the
+  file it came from. What it does cost is a decision about lifetime: that memory lives on the machine behind the
+  handles, and `atlas.detect` builds a fresh machine whenever it is handed none, so a caller that re-detects for every
+  question pays every probe again — including the fifteen seconds atlas waits out a core that hangs. Keep the
+  installations one `detect` returned and they share its machine; pass your own `machine` to `detect` and the lifetime
+  is yours.
 - **Pass `home` explicitly.** The caller knows which user it serves. A backend running as root must pass the target
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
@@ -2718,7 +2727,10 @@ for req in ident.requirements:
 
 ### Flow 5 — "Did the layout drift since the last sync?"
 
-Handles are live — every query re-reads its sources. So drift detection is: ask again, compare.
+Handles are live — every query re-reads its sources. So drift detection is: ask again, compare. The one remembered read
+does not blunt it: a core's own report is kept per machine object and keyed on the `.so`'s path, mtime and size, so a
+core that was rebuilt or replaced is read again — what that memory costs a caller who re-detects is under
+[the standard query pattern](#the-standard-query-pattern).
 
 ```python
 placement = entry.savefile_location(content_path=rom.file_path)
