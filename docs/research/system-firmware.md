@@ -59,7 +59,13 @@ lagging behind something new.
 **Comparing version strings will not show this.** The pinned source declares `PACKAGE_VERSION "1.22.2"`
 (`a79435a:version.all:9`), which is exactly what the deployed build reports. A maintainer checking the offset the
 obvious way sees 1.22.2 on both sides and gets a false all-clear, at precisely the check this note exists to warn about.
-The dates are the only thing that separates them, and eight months is enough to matter.
+
+Why both carry it is worth a clause, because "the pin declares 1.22.2" is easy to misread as "the pin **is** release
+1.22.2". It is not: `a79435a` is the `master` tip as fetched (it is what `refs/heads/master` and
+`refs/remotes/origin/master` point at here), not a release tag. And `version.all` is hand-maintained — its own header
+lists the files to edit "when changing the version" — so a development branch keeps the last released number until a
+release bumps it. **[D]** A revision eight months past the build therefore still declares the build's version, and the
+dates are the only thing that separates the two. Eight months is enough to matter.
 
 Two readings support the removal: the settings framing the literal in the deployed binary's string table,
 `load_dummy_on_core_shutdown` and `builtin_mediaplayer_enable`, both still register at the pin (`configuration.c:1804`
@@ -302,15 +308,16 @@ The one entry that is not `open` carries its evidence in two places, and they sh
 - **The exemption's `reason`**, which is not evidence for the verdict at all — one `[V-binary]` mark over
   `pcsx_rearmed_bios` and one `[V-live]` mark over ReARMed playing a game through with no BIOS present.
 
-So the entry as a whole rests on three observations and two binary readings. Those five pieces are introduced under six
-evidence marks — `[V-live]`, `[V-binary]`, `[D]` and `[O]` in the verdict's `source`, `[V-binary]` and `[V-live]` in the
-exemption — and the `source` names two of them a second time when it summarises, so counting mark _occurrences_ in the
-file gives eight rather than six. The verdict rests on the first bullet alone: **the two observations together with the
-SwanStation options reading**, and on no reading of any switch. That is the one answer to "what does the verdict rest
-on", and the data file's own `source` closes with the same sentence rather than a narrower one. The `source` also
-records what it does **not** establish: the two unobserved Beetle switches, and the four declaring entries whose
-binaries were never read. A verdict that hides its own gaps is the kind a reader stops trusting the moment they find
-one.
+So the entry as a whole rests on three observations and two binary readings. Those five pieces sit under **four**
+`[V-…]` marks: `[V-live]` and `[V-binary]` in the verdict's `source`, and one of each in the exemption. The entry
+carries **six** marks in all, because the `source` also has a `[D]` over the catalogue derivation and an `[O]` over what
+it declines to claim — neither of which introduces one of the five. And counting mark _occurrences_ in the file gives
+**eight**, because the `source` names two of its marks again when it summarises. The verdict rests on the first bullet
+alone: **the two observations together with the SwanStation options reading**, and on no reading of any switch. That is
+the one answer to "what does the verdict rest on", and the data file's own `source` closes with the same sentence rather
+than a narrower one. The `source` also records what it does **not** establish: the two unobserved Beetle switches, and
+the four declaring entries whose binaries were never read. A verdict that hides its own gaps is the kind a reader stops
+trusting the moment they find one.
 
 ## Exempting a core that is right
 
