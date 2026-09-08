@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.14.0](https://github.com/danielcopper/emu-atlas/compare/v0.13.0...v0.14.0) (2026-09-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **machine:** a host that is not a plain Python interpreter no longer probes cores unless it names one with `atlas.register_core_probe_interpreter()`. Where nothing is named, `query_core` answers unknown for every core and the placement carries `core-unqueryable`, and a core whose recorded behaviour atlas carries loses it with `core-generation-unestablished`: a core with a rule card does not get its recorded deviation from the standard layout, and a core whose recorded save files atlas carries does not get those, so the answer names no files for it. This is the intended consequence of never launching a program that is not an interpreter, and it reaches two shapes: a frozen host, where the previous behaviour was to start the host again, and any host whose `sys.executable` is relative, which `PYTHONEXECUTABLE` alone can cause. Registering a path the operating system cannot take now raises `TypeError` at the registration rather than escaping from the first core question.
+
+### Features
+
+* **machine:** name the core probe's interpreter, or do not probe ([#413](https://github.com/danielcopper/emu-atlas/issues/413)) ([91813b3](https://github.com/danielcopper/emu-atlas/commit/91813b332a914b096e95420dff7eb21212a2822d)), closes [#411](https://github.com/danielcopper/emu-atlas/issues/411)
+
+
+### Bug Fixes
+
+* **machine:** remember a core probe that timed out ([#417](https://github.com/danielcopper/emu-atlas/issues/417)) ([ad49a3f](https://github.com/danielcopper/emu-atlas/commit/ad49a3f2488e3d65afdec5a4c179d32708b15e2f)), closes [#415](https://github.com/danielcopper/emu-atlas/issues/415)
+
 ## [0.13.0](https://github.com/danielcopper/emu-atlas/compare/v0.12.0...v0.13.0) (2026-09-07)
 
 
