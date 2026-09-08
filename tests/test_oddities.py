@@ -702,7 +702,7 @@ class TestFlycastResolution:
         assert p.file_set.files == ("vmu_save_A1.bin", "vmu_save_A2.bin")
         assert p.file_set.complete is False
 
-    def test_a_card_observed_card_keeps_the_group_that_named_it(self):
+    def test_an_observed_card_keeps_the_group_that_named_it(self):
         # A candidate the card knows only as an observation name is still that
         # group's data: the slot-2 VMU is a memory card of the same grouping as
         # the slot-1 card declared beside it, and confirming a declaration is
