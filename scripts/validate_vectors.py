@@ -170,6 +170,7 @@ FIRMWARE_CORE_FIELDS = {
     "label",
     "declaration",
     "requirements_met",
+    "system_firmware",
     "requirements",
     "refused",
     "caveats",
@@ -225,6 +226,16 @@ FIRMWARE_ALTERNATIVE_OPTION_FIELDS = FIRMWARE_REQUIREMENT_FIELDS | {"regions"}
 KNOWN_FIRMWARE_REGIONS = {"ntsc-u", "ntsc-j", "pal"}
 KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "packaged"}
 KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
+# What is recorded about the SYSTEM behind a core, and therefore world
+# knowledge rather than a reading of the fixture. `null` is the fifth state
+# beside these four, and it means nothing is recorded — never "nothing is
+# needed".
+KNOWN_SYSTEM_FIRMWARE_STATES = {
+    "cannot-run-without-firmware",
+    "core-supplies-an-alternative",
+    "runs-without-firmware",
+    "open",
+}
 UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
 IDENTITY_FIELDS = {"md5", "sha1", "size", "kind"}
@@ -388,6 +399,7 @@ KNOWN_CAVEAT_CODES = {
     "system-assignment-derived",
     "core-without-systemname",
     "system-assignment-may-hide-cores",
+    "system-firmware-world-knowledge",
     "core-info-unreadable",
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",
@@ -1965,6 +1977,31 @@ def _group_verdict(options: list[Any]) -> Any:
     return None
 
 
+def _system_image_in_place(core: Any) -> bool | None:
+    """Does the core have the image its SYSTEM cannot start without? Three-valued.
+
+    ``True`` wherever the question does not arise, so only a core the table
+    says needs an image and does not excuse can narrow a verdict. There the
+    declared images are a disjunction — one usable image is what the system
+    asks for — so ``True`` on any satisfied image, ``False`` only when every
+    one of them is demonstrably not, and ``None`` in between: an undetermined
+    image might be the one that would serve, and a refused declaration is one
+    atlas would not follow to a destination, so neither settles the absence.
+    """
+    if core["system_firmware"] != "cannot-run-without-firmware":
+        return True
+    images = [
+        option
+        for requirement in core["requirements"]
+        for option in requirement.get("alternatives", [requirement])
+    ]
+    if any(image["satisfied"] is True for image in images):
+        return True
+    if images and not core["refused"] and all(image["satisfied"] is False for image in images):
+        return False
+    return None
+
+
 def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
     """``requirements_met`` is derived, never asserted: recompute and compare."""
     requirements = core["requirements"]
@@ -1972,14 +2009,19 @@ def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
     plain = [r for r in requirements if "alternatives" not in r]
     groups = [r["alternatives"] for r in requirements if "alternatives" in r]
     required = [r for r in plain if r["need"] == "required"]
+    system_image = _system_image_in_place(core)
     if core["declaration"] != "read":
         expected = None
-    elif any(r["satisfied"] is False for r in required) or any(
-        _group_verdict(options) is False for options in groups
+    elif (
+        any(r["satisfied"] is False for r in required)
+        or any(_group_verdict(options) is False for options in groups)
+        or system_image is False
     ):
         expected = False
-    elif any(r["satisfied"] is None for r in required) or any(
-        _group_verdict(options) is None for options in groups
+    elif (
+        any(r["satisfied"] is None for r in required)
+        or any(_group_verdict(options) is None for options in groups)
+        or system_image is None
     ):
         expected = None
     elif any(r["need"] == "required" for r in refused):
@@ -2003,6 +2045,19 @@ def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bo
     met = core["requirements_met"]
     if met is not None and not isinstance(met, bool):
         fail(f"{name}: firmware core requirements_met must be true, false, or null")
+    state = core["system_firmware"]
+    if state is not None and state not in KNOWN_SYSTEM_FIRMWARE_STATES:
+        fail(
+            f"{name}: firmware core system_firmware must be null or one of "
+            f"{sorted(KNOWN_SYSTEM_FIRMWARE_STATES)}, got {state!r}"
+        )
+    if state is not None and not core["requirements"]:
+        # The state is read off the systems the requirements carry, so a core
+        # with no requirement has no system on this answer to state one about.
+        fail(
+            f"{name}: firmware core system_firmware is stated about the systems this core's "
+            "requirements name, and this core names none"
+        )
     _validate_core_refusals(name, core)
     _validate_core_verdict(name, core, met)
     _validate_caveats(name, core["caveats"])

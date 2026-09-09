@@ -11,10 +11,12 @@ but never wrong.
 
 from __future__ import annotations
 
+import ast
 import functools
 import hashlib
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 from typing import Mapping
 from xml.etree import ElementTree as ET
@@ -23,6 +25,13 @@ import pytest
 
 from atlas.firmware import (
     CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
+    CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
+    CORE_SYSTEM_FIRMWARE_STATES,
+    SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+    SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
+    SYSTEM_FIRMWARE_OPEN,
+    SYSTEM_FIRMWARE_RUNS_WITHOUT,
+    system_firmware_system,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
     CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
@@ -114,7 +123,26 @@ from atlas.machine import (
     WhdloadSlaveResult,
 )
 from atlas.placement import CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR, CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
+from atlas.system_firmware import (
+    EVIDENCE_DERIVED,
+    EVIDENCE_LEVELS,
+    EVIDENCE_OPEN,
+    EVIDENCE_VERIFIED,
+    EVIDENCE_WORD_DERIVED,
+    EVIDENCE_WORD_OPEN,
+    EVIDENCE_WORD_VERIFIED,
+    EVIDENCE_WORDS,
+    STATED_EVIDENCE_WORDS,
+    SYSTEM_FIRMWARE_VERDICTS,
+    VERDICT_CANNOT_RUN_WITHOUT,
+    VERDICT_OPEN,
+    VERDICT_RUNS_WITHOUT,
+    SystemFirmware,
+    load_system_firmware,
+)
 from atlas.systems import known_systems
+
+import atlas.firmware
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -336,11 +364,27 @@ def _machine(files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: objec
     return FixtureMachine(tree, **kwargs)  # type: ignore[arg-type]
 
 
-def _context(machine: FixtureMachine, *, root: str | None = BIOS_DIR, core_dir: str | None = INFO_DIR):
+@functools.cache
+def _shipped_system_firmware() -> Mapping[str, SystemFirmware]:
+    """The packaged table, parsed once for the whole suite."""
+    return load_system_firmware()
+
+
+def _context(
+    machine: FixtureMachine,
+    *,
+    root: str | None = BIOS_DIR,
+    core_dir: str | None = INFO_DIR,
+    system_firmware: Mapping[str, SystemFirmware] | None = None,
+):
+    # `system_firmware` defaults to the shipped table, the way `hashes` would
+    # if it had a default: a test names one only to ask what an answer does
+    # with a verdict the shipped table does not carry.
     return FirmwareContext(
         root=root,
         cores=read_core_declarations(machine, INFO_DIR, core_dir=core_dir).cores,
         hashes=load_hashes(TABLE),
+        system_firmware=_shipped_system_firmware() if system_firmware is None else system_firmware,
     )
 
 
@@ -2044,6 +2088,22 @@ class TestSystemAssignmentIsVisible:
     while the core covers one system. The ``.info`` states when it does not.
     """
 
+    # What this class is about, named so the tests can assert over it. These
+    # are the codes the two assignment readers emit —
+    # `system_assignment_caveats` (derived, and no systemname at all) and
+    # `catalogue_vocabulary_caveats` (atlas's own spelling for a system no
+    # ES-DE build declares) — plus the may-hide statement a system query adds.
+    # Derived from those functions rather than guessed at.
+    ASSIGNMENT_CODES = (
+        CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
+        CAVEAT_CORE_WITHOUT_SYSTEMNAME,
+        CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
+        CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
+    )
+
+    def _assignment_codes(self, core: CoreFirmware) -> list[str]:
+        return [c.code for c in core.caveats if c.code in self.ASSIGNMENT_CODES]
+
     def test_a_multi_system_core_falling_back_states_it(self):
         machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
                             f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
@@ -2066,7 +2126,12 @@ class TestSystemAssignmentIsVisible:
         # of its files lack a per-file rule.
         machine = _machine()
         core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
-        assert core.caveats == ()
+        assert self._assignment_codes(core) == []
+        # The whole list is still accounted for, so nothing else can creep in
+        # unnoticed: what this PlayStation core does carry is the statement
+        # that its system's firmware requirement is world knowledge, which is
+        # a different subject from how its files were filed.
+        assert [c.code for c in core.caveats] == [CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE]
 
     def test_a_core_without_a_systemname_is_its_own_case(self):
         machine = _machine({f"{INFO_DIR}/skyemu_libretro.info": SKYEMU_INFO,
@@ -2164,7 +2229,8 @@ class TestSystemAssignmentIsVisible:
         machine = _machine({f"{INFO_DIR}/agree_libretro.info": info,
                             f"{INFO_DIR}/agree_libretro.so": {"status": "invalid-text"}})
         core = firmware_for_core(machine, _context(machine), core_so="agree_libretro.so").cores[0]
-        assert core.caveats == ()
+        assert self._assignment_codes(core) == []
+        assert [c.code for c in core.caveats] == [CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE]
 
     def test_a_system_query_names_the_cores_a_derived_slug_may_hide(self):
         # Without a catalogue the selection is keyed on the cores' own
@@ -2225,6 +2291,567 @@ class TestSystemAssignmentIsVisible:
         # The core's own system still comes from systemname, never from
         # database — the two disagree here, and systemname wins.
         assert core.system == "gba"
+
+
+# Three PlayStation cores over one machine with no BIOS in place. Their
+# declarations differ in exactly one way that matters — Beetle PSX marks its
+# region image required, the other two mark everything optional — and only one
+# of the three all-optional readings is correct.
+BEETLE_PSX_SO = "mednafen_psx_libretro.so"
+SWANSTATION_SO = "swanstation_libretro.so"
+REARMED_SO = "pcsx_rearmed_libretro.so"
+
+# SwanStation's shape: every image optional, said about a machine observed
+# refusing to start.
+SWANSTATION_INFO = """
+systemname = "PlayStation"
+firmware_count = 2
+firmware0_desc = "scph5501.bin (PS1 US BIOS)"
+firmware0_path = "scph5501.bin"
+firmware0_opt = "true"
+firmware1_desc = "psxonpsp660.bin (PSP PS1 BIOS)"
+firmware1_path = "psxonpsp660.bin"
+firmware1_opt = "true"
+"""
+
+# The identical declaration from the one core the table excuses: PCSX ReARMed
+# carries its own HLE BIOS, so all-optional is what it should say.
+REARMED_INFO = SWANSTATION_INFO
+
+# An all-optional core of a system the table records as open — nobody has
+# established whether a Saturn starts with no firmware present.
+SATURN_INFO = """
+systemname = "Saturn"
+firmware_count = 1
+firmware0_desc = "sega_101.bin"
+firmware0_path = "sega_101.bin"
+firmware0_opt = "true"
+"""
+
+# An all-optional core of a system the table records nothing about at all.
+UNRECORDED_SYSTEM_INFO = """
+systemname = "Sharp X68000"
+firmware_count = 1
+firmware0_desc = "iplrom.dat"
+firmware0_path = "iplrom.dat"
+firmware0_opt = "true"
+"""
+
+
+class TestTheSystemBehindTheCoreReachesTheAnswer:
+    """A ``.info`` cannot say "this machine does not start without one of these".
+
+    So a core that knows its system needs a BIOS has two lossy moves, and the
+    deployed catalogue takes both: Beetle PSX marks its region image required,
+    SwanStation marks every image optional. Read on its own, SwanStation's
+    declaration says nothing is missing over a PlayStation that will not boot.
+
+    The missing half is packaged world knowledge about the SYSTEM
+    (``atlas/data/system_firmware.json``), and these tests hold the two things
+    it must do and the one thing it must not: ``system_firmware`` states what
+    is recorded, ``requirements_met`` stops being green where the system
+    cannot run — and every ``need`` stays exactly what the core declared.
+    """
+
+    def _psx_machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
+        return _machine(
+            {
+                f"{INFO_DIR}/{SWANSTATION_SO[: -len('.so')]}.info": SWANSTATION_INFO,
+                f"{INFO_DIR}/{SWANSTATION_SO}": {"status": "invalid-text"},
+                f"{INFO_DIR}/{REARMED_SO[: -len('.so')]}.info": REARMED_INFO,
+                f"{INFO_DIR}/{REARMED_SO}": {"status": "invalid-text"},
+                **(bios or {}),
+            }
+        )
+
+    def _core(self, machine: FixtureMachine, core_so: str, *, verify: bool = False) -> CoreFirmware:
+        return firmware_for_core(machine, _context(machine), core_so=core_so, verify=verify).cores[0]
+
+    def _marks(self, core: CoreFirmware) -> tuple[Caveat, ...]:
+        return tuple(c for c in core.caveats if c.code == CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE)
+
+    # --- the three PlayStation cores, one machine, no BIOS in place ---------
+
+    def test_the_core_that_understates_its_system_is_no_longer_green(self):
+        # The defect this whole thing exists for: five (here two) optional
+        # images, nothing unmet, and a machine that will not boot.
+        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is False
+        assert core.unmet == ()
+
+    def test_the_core_supplying_its_own_alternative_stays_green(self):
+        # The identical declaration, and the table records why it is right.
+        core = self._core(self._psx_machine(), REARMED_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+        assert core.requirements_met is True
+
+    def test_the_core_that_was_already_right_answers_as_it_did(self):
+        # Beetle PSX declares its region image required, so it was already
+        # false — the point is that the reading did not move it.
+        core = self._core(self._psx_machine(), BEETLE_PSX_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is False
+        assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
+
+    def test_nothing_read_off_the_machine_is_overwritten(self):
+        # The declaration is the emulator's statement, reproduced. SwanStation
+        # says optional and keeps saying optional; the verdict beside it is
+        # atlas's own and is a different field.
+        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        assert [r.need for r in _plain_requirements(core)] == ["optional", "optional"]
+
+    # --- an open system, and a system nobody recorded ------------------------
+
+    def test_an_open_system_is_stated_and_moves_nothing(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/kronos_libretro.info": SATURN_INFO,
+                f"{INFO_DIR}/kronos_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "kronos_libretro.so")
+        assert core.system_firmware == SYSTEM_FIRMWARE_OPEN
+        # All-optional, nothing required, nothing unmet — exactly the answer
+        # the declaration alone gives, because nobody has established more.
+        assert core.requirements_met is True
+
+    def test_a_system_nobody_recorded_states_nothing_at_all(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/px68k_libretro.info": UNRECORDED_SYSTEM_INFO,
+                f"{INFO_DIR}/px68k_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "px68k_libretro.so")
+        assert core.system_firmware is None
+        assert self._marks(core) == ()
+
+    def test_the_unrecorded_system_is_not_the_answer_nothing_is_needed(self):
+        # The misreading this field exists to prevent, held as a comparison:
+        # `None` and `runs-without-firmware` are different words, and only the
+        # second is a claim that the system starts with no image present.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/px68k_libretro.info": UNRECORDED_SYSTEM_INFO,
+                f"{INFO_DIR}/px68k_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "px68k_libretro.so")
+        assert core.system_firmware is None
+        assert core.system_firmware != SYSTEM_FIRMWARE_RUNS_WITHOUT
+        assert SYSTEM_FIRMWARE_RUNS_WITHOUT in CORE_SYSTEM_FIRMWARE_STATES
+
+    # --- the interactions with the tri-state that was already there ----------
+
+    def test_one_image_in_place_is_what_the_system_asked_for(self):
+        # The requirement is a disjunction: the system needs an image, not all
+        # of them. One verified image is the whole demand met.
+        machine = self._psx_machine(
+            bios={f"{BIOS_DIR}/scph5501.bin": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8}}
+        )
+        core = self._core(machine, SWANSTATION_SO, verify=True)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is True
+
+    def test_an_image_nobody_judged_leaves_the_answer_unsaid(self):
+        # Present but unverified: the file might be the one that would serve,
+        # so `false` would claim atlas knows the core will not run. It does
+        # not, and `None` is the honest word.
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/scph5501.bin": "whatever"})
+        core = self._core(machine, SWANSTATION_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is None
+
+    def test_a_refused_declaration_leaves_the_answer_unsaid(self):
+        # A declaration atlas would not follow is an image it never looked
+        # for, so the absence of every OTHER image establishes nothing about
+        # whether this core has one.
+        info = (
+            'systemname = "PlayStation"\n'
+            "firmware_count = 2\n"
+            'firmware0_path = "scph5501.bin"\n'
+            'firmware0_opt = "true"\n'
+            'firmware1_path = "../outside.bin"\n'
+            'firmware1_opt = "true"\n'
+        )
+        machine = _machine(
+            {
+                f"{INFO_DIR}/refuser_libretro.info": info,
+                f"{INFO_DIR}/refuser_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "refuser_libretro.so")
+        assert [r.declared for r in core.refused] == ["../outside.bin"]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is None
+
+    def test_a_declaration_that_was_not_read_states_neither(self):
+        # No declaration, no requirements, no system on this answer — so the
+        # state is `None` for the reason it always means: nothing is recorded
+        # about a system nobody established.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/{SWANSTATION_SO[: -len('.so')]}.info": {"status": "unreadable"},
+                f"{INFO_DIR}/{SWANSTATION_SO}": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, SWANSTATION_SO)
+        assert core.declaration == DECLARATION_UNREADABLE
+        assert core.system_firmware is None
+        assert core.requirements_met is None
+
+    def test_the_reading_never_turns_an_answer_green(self):
+        # The one-way rule: over every core this machine has, an answer that
+        # is true with the system-level reading was true without it. Held
+        # mechanically, because "it only narrows" is the kind of claim a
+        # future branch quietly breaks.
+        #
+        # The machine is chosen so the rule has something to break: the
+        # optional image is in place and the required one is not, so Beetle
+        # PSX has the image its SYSTEM needs while a file it declares required
+        # is missing. Anything that let the first fact answer for the core
+        # would turn a false into a true right here.
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
+        answer = firmware_inventory(machine, _context(machine))
+        assert [core.core_so for core in answer.cores] == [BEETLE_PSX_SO, REARMED_SO, SWANSTATION_SO]
+        for core in answer.cores:
+            unaided = replace(core, system_firmware=None)
+            assert core.requirements_met is not True or unaided.requirements_met is True
+        # And the state the machine is actually in, so the guard above cannot
+        # go vacuous by every core answering the same thing.
+        met = {core.core_so: core.requirements_met for core in answer.cores}
+        assert met == {BEETLE_PSX_SO: False, REARMED_SO: True, SWANSTATION_SO: True}
+
+    def test_one_image_of_the_set_is_what_the_system_asked_for(self):
+        # The disjunction over a whole machine rather than one core: the
+        # PlayStation needs an image, psxonpsp660.bin is one, and SwanStation
+        # is green over it even though the region image beside it is missing.
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
+        core = self._core(machine, SWANSTATION_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert [(r.file_name, r.satisfied) for r in _plain_requirements(core)] == [
+            ("psxonpsp660.bin", True),
+            ("scph5501.bin", False),
+        ]
+        assert core.requirements_met is True
+
+    # --- the mark that says where the second source came from ---------------
+
+    def test_the_mark_carries_the_system_and_the_evidence_level(self):
+        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        (mark,) = self._marks(core)
+        assert mark.data == {"system": "psx", "evidence": EVIDENCE_WORD_VERIFIED}
+
+    def test_the_mark_publishes_a_word_and_not_the_bracket_notation(self):
+        # `[V]` is how this repository's research pages write an evidence
+        # level; the contract is the public surface and spells it. The two
+        # spellings are one scale, joined by a map that is total over the
+        # markers, so nothing can reach a client unspelled.
+        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        (mark,) = self._marks(core)
+        assert mark.data["evidence"] == "verified"
+        assert mark.data["evidence"] not in EVIDENCE_LEVELS
+        assert dict(EVIDENCE_WORDS).keys() == set(EVIDENCE_LEVELS)
+
+    def test_a_derived_verdict_publishes_the_derived_word(self):
+        # The word no shipped entry produces — every stated verdict in the
+        # packaged table is verified today — so this is what reaches it, and
+        # what the corpus exemption list points at.
+        machine = self._demo_machine()
+        context = _context(
+            machine,
+            system_firmware=self._recorded(VERDICT_CANNOT_RUN_WITHOUT, EVIDENCE_DERIVED),
+        )
+        core = firmware_for_core(machine, context, core_so="demo_libretro.so").cores[0]
+        (mark,) = self._marks(core)
+        assert mark.data["evidence"] == EVIDENCE_WORD_DERIVED
+
+    def test_the_mark_stays_off_an_open_verdict(self):
+        # The mark is a degradation with a code a client acts on, not a
+        # general provenance note. An open entry's whole content is that
+        # nobody established the answer, which is exactly what the field value
+        # `open` on this same core already says — so a mark here would restate
+        # the field, and a note that adds nothing devalues the ones that do.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/kronos_libretro.info": SATURN_INFO,
+                f"{INFO_DIR}/kronos_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "kronos_libretro.so")
+        assert core.system_firmware == SYSTEM_FIRMWARE_OPEN
+        assert self._marks(core) == ()
+
+    def test_the_open_evidence_level_can_never_reach_the_mark(self):
+        # The two halves that make that a guarantee rather than a habit: the
+        # loader ties an open verdict to the open evidence level and refuses
+        # every other pairing, and the mark rides no open verdict — so the
+        # published vocabulary is the two words a stated verdict can rest on.
+        with pytest.raises(ValueError, match="disagree"):
+            self._recorded(VERDICT_CANNOT_RUN_WITHOUT, EVIDENCE_OPEN, checked=True)
+        assert EVIDENCE_WORD_OPEN not in STATED_EVIDENCE_WORDS
+        assert set(STATED_EVIDENCE_WORDS) == {EVIDENCE_WORD_VERIFIED, EVIDENCE_WORD_DERIVED}
+
+    def test_a_core_reaching_two_open_systems_is_open_and_unmarked(self):
+        # mGBA declares Game Boy boot ROMs beside its GBA BIOS, so two
+        # recorded systems answer for it. Both are open in the shipped table,
+        # so there is no strongest to pick here — the state is open whatever
+        # order they come in, and neither contributes a mark. The precedence
+        # between differing verdicts is held next door, over a table written
+        # in the test.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "mgba_libretro.so")
+        assert {r.system for r in _plain_requirements(core)} >= {"gb", "gba"}
+        assert core.system_firmware == SYSTEM_FIRMWARE_OPEN
+        assert self._marks(core) == ()
+
+    def test_a_core_reaching_two_stated_systems_marks_each(self):
+        # Accumulation, which one mark per core would pass: mGBA's two
+        # recorded systems, both stated by a table written here, each carrying
+        # its own system and its own evidence level.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        recorded = {
+            "Game Boy/Game Boy Color": SystemFirmware(
+                system="Game Boy/Game Boy Color",
+                verdict=VERDICT_RUNS_WITHOUT,
+                evidence=EVIDENCE_DERIVED,
+                source="a fixture",
+                alternatives=(),
+            ),
+            "Game Boy Advance": SystemFirmware(
+                system="Game Boy Advance",
+                verdict=VERDICT_CANNOT_RUN_WITHOUT,
+                evidence=EVIDENCE_VERIFIED,
+                source="a fixture",
+                alternatives=(),
+            ),
+        }
+        context = _context(machine, system_firmware=recorded)
+        core = firmware_for_core(machine, context, core_so="mgba_libretro.so").cores[0]
+        assert [(m.data["system"], m.data["evidence"]) for m in self._marks(core)] == [
+            ("gb", EVIDENCE_WORD_DERIVED),
+            ("gba", EVIDENCE_WORD_VERIFIED),
+        ]
+        # And the state is the strongest of the two, not the first seen.
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+
+    def test_an_exemption_names_one_core_and_not_its_system(self):
+        # The exemption is per core, so the other cores of an excused
+        # system are untouched by it.
+        machine = self._psx_machine()
+        states = {
+            core.core_so: core.system_firmware
+            for core in firmware_inventory(machine, _context(machine)).cores
+        }
+        assert states == {
+            BEETLE_PSX_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+            REARMED_SO: SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
+            SWANSTATION_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+        }
+
+    def _demo_machine(self) -> FixtureMachine:
+        return _machine(
+            {
+                f"{INFO_DIR}/demo_libretro.info": (
+                    'systemname = "Demo System"\n'
+                    "firmware_count = 1\n"
+                    'firmware0_path = "demo.bin"\n'
+                    'firmware0_opt = "true"\n'
+                ),
+                f"{INFO_DIR}/demo_libretro.so": {"status": "invalid-text"},
+            }
+        )
+
+    def _recorded(
+        self, verdict: str, evidence: str, *, checked: bool = False
+    ) -> dict[str, SystemFirmware]:
+        """One system's entry. *checked* routes it through the loader's refusals."""
+        entry = {"verdict": verdict, "evidence": evidence, "source": "a fixture"}
+        if checked:
+            return load_system_firmware(
+                json.dumps({"schema": 1, "spec": "a spec", "systems": {"Demo System": entry}})
+            )
+        return {
+            "Demo System": SystemFirmware(
+                system="Demo System",
+                verdict=verdict,
+                evidence=evidence,
+                source="a fixture",
+                alternatives=(),
+            )
+        }
+
+    def test_every_recorded_verdict_has_a_word_in_the_answer(self):
+        # Totality, mechanized rather than asserted in prose: a verdict the
+        # table can carry and this answer has no state for would otherwise
+        # become `None`, which reads as "nothing is recorded about this
+        # system" — the one misreading the field exists to prevent. The
+        # derivation refuses instead, and this is what keeps the two
+        # vocabularies in step.
+        machine = self._demo_machine()
+        for verdict in SYSTEM_FIRMWARE_VERDICTS:
+            evidence = EVIDENCE_OPEN if verdict == VERDICT_OPEN else EVIDENCE_VERIFIED
+            context = _context(machine, system_firmware=self._recorded(verdict, evidence))
+            core = firmware_for_core(machine, context, core_so="demo_libretro.so").cores[0]
+            assert core.system_firmware in CORE_SYSTEM_FIRMWARE_STATES, verdict
+
+    def test_a_verdict_the_answer_has_no_word_for_is_refused(self):
+        # The other half: the refusal is real, so the totality above is a
+        # guarantee rather than a coincidence of today's vocabulary.
+        machine = self._demo_machine()
+        context = _context(
+            machine,
+            system_firmware=self._recorded("something-nobody-taught-the-answer", EVIDENCE_VERIFIED),
+        )
+        with pytest.raises(ValueError, match="no answer state for the recorded verdict"):
+            firmware_for_core(machine, context, core_so="demo_libretro.so")
+
+    def test_every_firmware_answer_goes_through_the_one_seam(self):
+        # The claim `_stating_system_firmware` makes about itself — that it is
+        # the ONE place world knowledge enters a firmware answer — held
+        # against the module's own source rather than against a reading of it.
+        # A new answer site that forgot the seam would answer `null` for every
+        # core, which is indistinguishable from "nothing is recorded".
+        tree = ast.parse(Path(atlas.firmware.__file__).read_text(encoding="utf-8"))
+        stated = []
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and getattr(node.func, "id", None) == "FirmwareAnswer"):
+                continue
+            cores = next((kw.value for kw in node.keywords if kw.arg == "cores"), None)
+            through_seam = (
+                isinstance(cores, ast.Call)
+                and getattr(cores.func, "id", None) == "_stating_system_firmware"
+            )
+            no_cores = isinstance(cores, ast.Tuple) and not cores.elts
+            stated.append((node.lineno, through_seam or no_cores))
+        assert stated, "no FirmwareAnswer construction site was found — this scan reads nothing"
+        assert [line for line, ok in stated if not ok] == []
+
+    def test_the_cores_own_caveat_list_is_not_touched(self):
+        # The mark is appended; nothing already on the core is rewritten.
+        # `stated_once` is the answer-level rule and says of itself that a
+        # core's own list belongs to that entry — deduplicating it here made
+        # a core's caveats depend on whether the table happened to know its
+        # system, which is a fact about a table and not about that core.
+        info = (
+            'systemname = "PlayStation"\n'
+            "firmware_count = 3\n"
+            'firmware0_path = "scph5501.bin"\n'
+            'firmware0_opt = "true"\n'
+            'firmware1_path = "../outside.bin"\n'
+            'firmware1_opt = "true"\n'
+            'firmware2_path = "../outside.bin"\n'
+            'firmware2_opt = "true"\n'
+        )
+        machine = _machine(
+            {
+                f"{INFO_DIR}/dup_libretro.info": info,
+                f"{INFO_DIR}/dup_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "dup_libretro.so")
+        # Two identical refusals, because the .info really does declare the
+        # same escaping path twice, and the mark after them.
+        assert [c.code for c in core.caveats] == [
+            CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
+            CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
+            CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
+        ]
+
+    def test_a_cores_caveats_do_not_depend_on_what_the_table_knows(self):
+        # The same declaration under a system the table records nothing about
+        # must answer the same list, minus only the mark. That equality is
+        # what the deduplication broke.
+        def _codes(systemname: str) -> list[str]:
+            # A real declaration beside the two refusals, so the core has a
+            # system on the answer and the table has something to say about
+            # it — without that the seam never reaches this core at all and
+            # the comparison would prove nothing.
+            info = (
+                f'systemname = "{systemname}"\n'
+                "firmware_count = 3\n"
+                'firmware0_path = "scph5501.bin"\n'
+                'firmware0_opt = "true"\n'
+                'firmware1_path = "../outside.bin"\n'
+                'firmware1_opt = "true"\n'
+                'firmware2_path = "../outside.bin"\n'
+                'firmware2_opt = "true"\n'
+            )
+            machine = _machine(
+                {
+                    f"{INFO_DIR}/dup_libretro.info": info,
+                    f"{INFO_DIR}/dup_libretro.so": {"status": "invalid-text"},
+                }
+            )
+            core = self._core(machine, "dup_libretro.so")
+            return [c.code for c in core.caveats if c.code != CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE]
+
+        assert _codes("PlayStation") == _codes("Sharp X68000")
+        assert _codes("PlayStation") == [CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT] * 2
+
+    def test_two_table_keys_on_one_system_state_one_mark_per_reading(self):
+        # The case the deduplication was really for, kept and scoped to the
+        # marks: two keys landing on one system id. Same level, one mark;
+        # different levels, one each, because they are different readings.
+        machine = self._psx_machine()
+        same = {
+            "Sony - PlayStation": SystemFirmware(
+                system="Sony - PlayStation",
+                verdict=VERDICT_CANNOT_RUN_WITHOUT,
+                evidence=EVIDENCE_VERIFIED,
+                source="a fixture",
+                alternatives=(),
+            ),
+            "PlayStation": SystemFirmware(
+                system="PlayStation",
+                verdict=VERDICT_CANNOT_RUN_WITHOUT,
+                evidence=EVIDENCE_VERIFIED,
+                source="a fixture",
+                alternatives=(),
+            ),
+        }
+        core = firmware_for_core(
+            machine, _context(machine, system_firmware=same), core_so=SWANSTATION_SO
+        ).cores[0]
+        assert [m.data["evidence"] for m in self._marks(core)] == [EVIDENCE_WORD_VERIFIED]
+
+        differing = dict(same)
+        differing["PlayStation"] = SystemFirmware(
+            system="PlayStation",
+            verdict=VERDICT_CANNOT_RUN_WITHOUT,
+            evidence=EVIDENCE_DERIVED,
+            source="a fixture",
+            alternatives=(),
+        )
+        core = firmware_for_core(
+            machine, _context(machine, system_firmware=differing), core_so=SWANSTATION_SO
+        ).cores[0]
+        assert [m.data["evidence"] for m in self._marks(core)] == [
+            EVIDENCE_WORD_VERIFIED,
+            EVIDENCE_WORD_DERIVED,
+        ]
+
+    def test_the_table_key_is_joined_by_the_system_an_answer_speaks(self):
+        # The table is keyed by libretro `systemname` and an answer speaks
+        # atlas's own ids, so the join is the systemname map. Both PlayStation
+        # spellings the deployed catalogue uses land on the same id, and the
+        # entry therefore reaches a core declaring either.
+        assert system_firmware_system("PlayStation") == "psx"
+        assert system_firmware_system("Sony - PlayStation") == "psx"
+        # A systemname nothing maps still answers a word, and nothing is
+        # recorded under it.
+        assert system_firmware_system("Some New Machine") == "some-new-machine"
 
 
 class TestPerSystemAnswer:

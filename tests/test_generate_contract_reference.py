@@ -783,6 +783,7 @@ class TestTheDataRegistryReading:
                 "FILES_ESTABLISHED_FOR_TOKENS"
             ),
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
+            ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
             # Built by splat from REFUSAL_CODES, so no literal tuple in the
             # source holds these members — the AST reading alone called this
             # one "an unnamed tuple" until the exported names were read too.

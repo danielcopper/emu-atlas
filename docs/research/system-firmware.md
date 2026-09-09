@@ -240,8 +240,9 @@ it leaves out are `galaksija` and `skyemu`, which name no system between them.
 Four things about the derivation are worth stating rather than leaving to be discovered:
 
 - **It groups by the raw `systemname`.** That is the unit the catalogue itself groups firmware by. Translating into
-  atlas's ES-DE vocabulary is not free — `Game Boy/Game Boy Color` is one `systemname` over two catalogue systems — and
-  it is a decision for the cut that makes an answer carry this table, not for the cut that records it.
+  atlas's ES-DE vocabulary is not free — `Game Boy/Game Boy Color` is one `systemname` over two catalogue systems — so
+  the translation happens where the answer reads the table rather than here; see
+  [What the answer carries](#what-the-answer-carries).
 - **It skips a core stating no `systemname`.** An empty string names no system, and lumping such cores together would
   invent one and could manufacture a disagreement between two unrelated emulators. `atlas.firmware.system_decision`
   answers `_unknown` for the same input for the same reason.
@@ -326,14 +327,14 @@ substitute. Its catalogue entry declares everything optional and is _correct_ to
 `cores_supplying_an_alternative` is that place, on a `cannot-run-without-firmware` entry only, and each core carries its
 own reason: a bare exemption excuses by assertion.
 
-**What the field is for, precisely, because it is easy to overstate.** It is recorded for the cut that makes an answer
-read this table, where a system needing firmware must not be reported against a core that carries its own substitute. It
-is **not** what makes the derivation pass. The derivation compares whole systems and never consults the field, so
-removing it changes no verdict and only leaves the staleness check below with nothing to do.
+**What the field is for, precisely, because it is easy to overstate.** It is what keeps a system's requirement off a
+core that carries its own substitute: the answer reads it, and a core named here is reported
+`core-supplies-an-alternative` where its unexcused siblings are reported `cannot-run-without-firmware`. It is **not**
+what makes the derivation pass. The derivation compares whole systems and never consults the field, so removing it
+changes no verdict there and only leaves the staleness check below with nothing to do.
 
-It is not unread, though. Deleting the field and running the **whole** suite — not one test class — fails
-`test_playstation_cannot_run_without_firmware_and_exempts_rearmed`, which pins the shipped entry's contents. So **two**
-checks read the field today, that unit test and the staleness one, and the disagreement derivation is neither of them.
+Cores are named the way the catalogue names them — the `.info` stem without `_libretro` — which is what the answer joins
+on, so a standalone emulator has no spelling here and can never be excused.
 
 PCSX ReARMed is the case the field was written around, and its entry states its own limits. The core registers a `bios`
 option carrying `HLE`, and it was observed playing a game through with no BIOS present. Which of its two values was in
@@ -347,8 +348,40 @@ one nobody has looked at, never one judged to be understating. The tripwire chec
 must still be declaring everything optional for that system in the deployed catalogue, or the exemption is stale and
 excusing nothing.
 
+## What the answer carries
+
+`atlas.firmware` reads this table in one place — `_stating_system_firmware`, the single seam where world knowledge
+enters a firmware answer — and states what it says on every core of that answer:
+
+- **`system_firmware`** is the per-core field. Four stated values: `cannot-run-without-firmware` (the system needs an
+  image and this core needs one of the ones it declares), `core-supplies-an-alternative` (it needs one and this core
+  carries its own substitute), `runs-without-firmware` (somebody established that it starts with none present) and
+  `open`. `null` is the fifth state and it means **nothing is recorded about this system** — never that nothing is
+  needed. A core whose system could not be established answers `null` for the same reason: nothing is recorded about a
+  system nobody named.
+- **`requirements_met`** stops being green where a system needs an image, the core is not excused, and every image it
+  declares is demonstrably not in place. One image being usable is what the system asks for, so any satisfied image
+  keeps the answer it had; an image nobody judged, or a declaration atlas refused to follow, leaves `null` rather than
+  `false`, because neither establishes that the core has nothing. The reading only ever narrows the field — it makes
+  nothing true that was not true before.
+- **`system-firmware-world-knowledge`** rides on the core where the table **states** something, carrying the system and
+  the evidence level — spelled `verified` or `derived`, because the contract is the public surface and the bracket forms
+  above are this repository's own notation — and nothing else. The verdict is the field's job; this is the mark that
+  says the second source is a packaged table rather than a reading of the machine. It stays off an `open` system: an
+  open entry's whole content is that nobody established the answer, which is exactly what the field value `open` on that
+  same core already says, so a mark there would restate the field rather than degrade the answer. `open` means the same
+  thing as a verdict and as an evidence level, and because of this it never reaches a client as an evidence level.
+
+**What does not move is the declaration.** Every `need` on a requirement is still `firmware<N>_opt` inverted, so
+SwanStation's images still read `optional`: nothing read off the machine is overwritten. The requirement list is the
+emulator's statement; the verdict beside it is atlas's.
+
+The keys here are `systemname` strings and an answer speaks atlas's system ids, so the join is the systemname map
+(`atlas.firmware.system_firmware_system`). A key naming several machines therefore reaches the one id that map rules for
+it — `Game Boy/Game Boy Color` reaches `gb` — and not its siblings. That is narrower than the entry rather than wider,
+which is the safe direction: widening would state a recorded verdict about a machine nobody recorded it for.
+
 ## Scope
 
-This document and the table describe knowledge only. No answer carries a verdict today: `need` still comes straight from
-`firmware<N>_opt`, no field is added, no caveat is emitted, and no requirement is grouped. Making an answer carry it is
-separate work, and it needed the table to exist first.
+This document and the table describe knowledge about **systems**, and nothing else. No `need` is rewritten, no
+requirement is grouped, and which image serves which console region is a separate question.

@@ -2,9 +2,11 @@
 
 Two halves. The shipped table loads and says what it is meant to say, and every
 way of writing a claim this table must not carry is refused rather than
-accepted and half-understood. The refusals matter more than usual here: nothing
-in atlas reads a verdict yet, so a malformed entry would sit in the package
-until the cut that makes an answer carry it, and be found by a client.
+accepted and half-understood. The refusals matter because a firmware answer now
+reads these verdicts: a malformed entry that loaded and was half-understood
+would reach a client as a claim about whether their machine starts. What the
+answer does with a verdict is held next door, in
+``tests/test_firmware.py::TestTheSystemBehindTheCoreReachesTheAnswer``.
 """
 
 from __future__ import annotations
@@ -47,9 +49,9 @@ class TestTheShippedTable:
     def test_playstation_cannot_run_without_firmware_and_exempts_rearmed(self):
         # The one system with observations behind it, and the one exemption: a
         # core whose all-optional declaration is correct because it supplies a
-        # substitute. The exemption is recorded for the cut that makes an
-        # answer read this table; today the only check consuming it is the
-        # staleness one in the tripwire.
+        # substitute. The answer reads the exemption — PCSX ReARMed is the
+        # core it keeps green over a machine with no PlayStation BIOS — and
+        # the tripwire's staleness check reads it from the other direction.
         entry = load_system_firmware()["PlayStation"]
         assert entry.verdict == VERDICT_CANNOT_RUN_WITHOUT
         assert entry.evidence == EVIDENCE_VERIFIED
