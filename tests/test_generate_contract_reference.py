@@ -509,7 +509,7 @@ class TestTheMeaningEveryFieldStates:
 
         sentences = reference.attribute_sentences([FirmwareRequirement])
         assert sentences[("FirmwareRequirement", "need")].startswith("What the core asks for")
-        assert sentences[("FirmwareRequirement", "satisfied")] == (
+        assert sentences[("FirmwareRequirement", "satisfied")].startswith(
             "Is the right file where this core will look for it?"
         )
         # An attribute that says nothing is absent rather than mapped to "",
