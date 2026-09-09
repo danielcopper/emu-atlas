@@ -1264,6 +1264,82 @@ What a file _means_ for a question stays with the card and the code that reads i
 whether a switch exists, how a legacy file is migrated. An emulator may have two: Dolphin keeps its save settings in
 `Dolphin.ini` and its graphics settings in `GFX.ini`, and the cards name one each.
 
+## `system_firmware.json` — which systems cannot run without firmware
+
+The half a libretro `.info` cannot state. A core declares firmware one file at a time with `firmware<N>_opt`, a format
+with no way to say "one of these three" and no way to say "this system does not start without one of them". An author
+who knows a PlayStation needs one regional BIOS therefore has two lossy moves, and the deployed catalogue takes both:
+Beetle PSX marks the three region images required and RetroArch labels all three "Missing, Required", SwanStation marks
+all five of its images optional and RetroArch labels none of them required. `atlas.firmware` reports `need` straight
+from `firmware<N>_opt` and so reproduces the declaration faithfully — which over an all-optional PlayStation reads as
+"nothing required" about a machine that will not boot.
+
+**RetroArch labels; it does not refuse.** At the pinned revision `a79435a`, `core_info_list_update_missing_firmware` has
+two callers — `menu/menu_displaylist.c:880` and `ui/drivers/ui_qt.cpp:1238` — and both build display rows rather than
+loading anything. The setting that would block a load, `check_firmware_before_loading`, reads `"false"` in both
+configurations RetroDECK ships; that is **not** a pinned-source fact, since the name appears nowhere in the source at
+`a79435a`, but a reading of the deployed 1.22.2 build and its two config files. The dates run the opposite way to the
+obvious guess: the pin was committed 2026-07-23 and the deployed build was built `Nov 20 2025`, so the setting is
+missing from the _newer_ source and present in the _older_ build, which reads as **[D]** upstream having removed it. So
+the refusal that was observed is the **core's**, not the frontend's, which is the contradiction this table records.
+
+The fact is about the **system**, not the core, which is why it cannot live on a rule card: mGBA, snes9x and gambatte
+declare everything optional and so does SwanStation, but SwanStation says it about a machine observed refusing to start.
+Whether those three are right is not claimed here: only gambatte's `systemname` (`Game Boy/Game Boy Color`) is recorded
+at all, as `open`. mGBA's is `Game Boy/Game Boy Color/Game Boy Advance`, a third distinct string with no entry, and
+snes9x's has none either. Read by `atlas.system_firmware.load_system_firmware`. The method, the measurements and what
+the derivation cannot see are in [`docs/research/system-firmware.md`](../../docs/research/system-firmware.md).
+
+Shape:
+
+```json
+{
+  "schema": 1,
+  "spec": "...",
+  "systems": {
+    "PlayStation": {
+      "verdict": "cannot-run-without-firmware",
+      "evidence": "[V]",
+      "source": "[V-live] ... [V-binary] ...",
+      "cores_supplying_an_alternative": { "pcsx_rearmed": "[V-binary] ... [V-live] ..." }
+    },
+    "Saturn": { "verdict": "open", "evidence": "[O]", "source": "[D] ... [O] ..." }
+  }
+}
+```
+
+- Keys are libretro `systemname` strings **verbatim**, not atlas system ids. That is the unit the `.info` catalogue
+  groups firmware by and therefore the unit the derivation produces; translating is not free (`Game Boy/Game Boy Color`
+  is one `systemname` over two catalogue systems) and it is a decision for the cut that makes an answer carry this
+  table.
+- `verdict` — `cannot-run-without-firmware`, `runs-without-firmware`, or `open`. **`open` is a value, not an absence**:
+  it is how a system whose cores contradict each other becomes visible without anyone claiming to know whether it boots.
+  Six of the seven shipped entries are open, and that is the honest state.
+- `evidence` — the repo's own level (`[V]` / `[D]` / `[O]`), tied to the verdict by the loader: `open` carries `[O]` and
+  nothing else may, because a verdict that states something cannot rest on an open question and an open question cannot
+  claim a verified reading. The `source` prose uses the finer markers the other tables use (`[V-live]`, `[V-binary]`,
+  `[V-script]`).
+- `cores_supplying_an_alternative` — the cores whose all-optional declaration is **correct** for a system that needs
+  firmware, because the core itself supplies a substitute. PCSX ReARMed's HLE BIOS is the case the field was written
+  around. It is recorded **for the cut that makes an answer read this table**, where a system needing firmware must not
+  be reported against a core carrying its own substitute. It is not what makes the derivation pass, which compares whole
+  systems and never consults it; **two** checks do read it today, the staleness one below and the unit test pinning this
+  entry's contents. On a `cannot-run-without-firmware` entry only, and each core names its own reason rather than being
+  a bare exemption. It is not a completeness claim: a core absent from it is one nobody has looked at, never one judged
+  to be understating.
+- **`tests/test_system_firmware_tripwire.py` is what keeps the file honest.** It recomputes the catalogue disagreements
+  from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
+  fails when an exempted core has stopped declaring everything optional. It is a machine-bound test, so an ordinary CI
+  run skips it and the weekly canary is where a new disagreement surfaces. It finds a system only where cores
+  _disagree_: where every core of a system understates there is nothing to find, which is the case for **36** systems
+  today. `3DO` (opera), `SNK Neo Geo CD` (neocd) and `PC-98` (np2kai) are each the only core declaring firmware under
+  their `systemname`, so nothing could contradict them — **[D]**, derived from the catalogue. Whether any of the three
+  needs firmware is **[O]**, and the other 33 were not examined, so naming three is no claim about the rest. How many of
+  the 36 understate is what the derivation cannot say. A floor on what is recorded, not a proof that the record is
+  complete.
+- No answer reads a verdict yet. The module is deliberately not exported from `atlas`, no field is added and no caveat
+  is emitted; the table and its guard exist so the answer that reads them has something to read.
+
 ## `duckstation_bios.json` — what a PlayStation BIOS _is_, by content
 
 The other half of the emulator that names no file. DuckStation identifies a BIOS by hashing it against a table compiled
