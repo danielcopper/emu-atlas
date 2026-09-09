@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/danielcopper/emu-atlas/compare/v0.14.0...v0.15.0) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** every core in a serialized firmware answer carries a new `system_firmware` field, and `requirements_met` is now false for a core whose system cannot run without a firmware image when none of the images that core declares is in place. A consumer that renders `requirements_met` sees a core turn from green to red without any file on the machine changing. `null` in the new field means nothing is recorded about that system, never that nothing is needed.
+* **saves:** an observed save file set carries `file_set.groups` where it carried none, so a client that reads an empty group list as "not decomposed, walk the directory yourself" must read it as that only where the list really is empty. `ROLES` gains the value `unknown`, so a client that branches exhaustively on the role vocabulary sees one more value; a card may not declare it and only an observation produces it. Where a card states a directory's role without naming its files — ScummVM's save directory and the four PUAE WHDLoad modes — the group carries that declared role rather than none. 38 expected file sets in the conformance corpus move, none of them in anything but `file_set.groups`, and two vectors are added. The completeness of `groups` is now a declared answer's guarantee: an observed answer's groups describe the one directory that was read, and a client walking them for a card with parts in several subdirectories must not treat that walk as covering every place a save lives.
+
+### Features
+
+* **firmware:** a system's own requirement reaches the answer ([#425](https://github.com/danielcopper/emu-atlas/issues/425)) ([bc06af4](https://github.com/danielcopper/emu-atlas/commit/bc06af4a03994bd525f951ba4785fb7ec68de0ee)), closes [#424](https://github.com/danielcopper/emu-atlas/issues/424)
+* **firmware:** record which systems cannot run without firmware ([#422](https://github.com/danielcopper/emu-atlas/issues/422)) ([ef92f6c](https://github.com/danielcopper/emu-atlas/commit/ef92f6ceb921db1d0443433cfee7822d4292e75a)), closes [#420](https://github.com/danielcopper/emu-atlas/issues/420)
+* **saves:** an observed file set states the roles the declaration knows ([#421](https://github.com/danielcopper/emu-atlas/issues/421)) ([2e6a0be](https://github.com/danielcopper/emu-atlas/commit/2e6a0be6d15204e779ed36190fc2a3336ea34680)), closes [#419](https://github.com/danielcopper/emu-atlas/issues/419)
+
 ## [0.14.0](https://github.com/danielcopper/emu-atlas/compare/v0.13.0...v0.14.0) (2026-09-08)
 
 
