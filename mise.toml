@@ -19,6 +19,13 @@ run = "python -m pytest tests -q"
 description = "Check every vector file's shape"
 run = "python scripts/validate_vectors.py"
 
+[tasks.complexity]
+description = "Report every function whose cognitive complexity is over Sonar's limit (15)"
+# The same number Sonar's S3776 reports on the pull request, measured before
+# the push so a split is still cheap. The Sonar gate stays as it is. Which
+# directories a bare run walks is the script's own default.
+run = "python scripts/cognitive_complexity.py"
+
 [tasks.test-oldest]
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # Pre-push and pre-release, not part of `test`: this one needs its own venv and, the

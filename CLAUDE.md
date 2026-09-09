@@ -75,7 +75,13 @@ mise run validate    # vector shape validation
 mise run test-oldest # the same tests on the oldest supported interpreter, which mise run test does not cover
 deno fmt --check     # markdown formatting (CI-enforced)
 basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev extra, installed by mise run setup)
+mise run complexity  # cognitive complexity per function, over 15 fails; runs locally, red on main until #280, not a CI gate
 ```
+
+`mise run complexity` moves the first complexity measurement to before the push; the Sonar gate on the pull request is
+unchanged and still decides. Its number is Sonar's S3776 number, but its scope is wider: `tests/` is `sonar.tests` in
+`sonar-project.properties` and Sonar has never reported an S3776 finding under `tests/` here, while the local gate
+measures them — so a clean Sonar page does not mean a green gate.
 
 ## Pitfalls
 
