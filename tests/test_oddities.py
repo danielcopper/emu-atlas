@@ -2941,8 +2941,9 @@ class TestACardMayNotDeclareTheResolversRole:
         )
 
     def test_the_unknown_role_is_refused(self):
+        text = self._card(atlas.ROLE_UNKNOWN)
         with pytest.raises(ValueError, match="role must be one of"):
-            load_oddities(self._card(atlas.ROLE_UNKNOWN))
+            load_oddities(text)
 
     def test_every_other_role_still_loads(self):
         # The gate must subtract exactly one value, not narrow the vocabulary.
