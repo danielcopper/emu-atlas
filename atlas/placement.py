@@ -62,6 +62,7 @@ from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Sequence, TypeAlias, TypeVar
 
 from .retroarch_cfg import CFG_LAYER_KINDS, RetroArchCfg
+from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
 
 # Root kinds — where the placement's directory is anchored. The closed
@@ -1444,8 +1445,8 @@ UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
 REASON_KEY_UNREAD = "key-unread"
 EMULATOR_CONFIG_UNREADABLE_REASONS = (*REFUSAL_CODES, REASON_KEY_UNREAD)
 
-# The four ``(code, key)`` pairs whose value became an enumeration in this
-# round, and the vocabulary each comes from. Checked at construction, the way
+# The ``(code, key)`` pairs whose value is an enumeration, and the vocabulary
+# each comes from. Checked at construction, the way
 # :class:`CfgSource` checks its kind and the card loader checks its tokens —
 # because being closed by convention is not being closed: a typo in a resolver
 # no fixture reaches would otherwise ship through the type check, the tests and
@@ -1463,6 +1464,12 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
             FILES_ESTABLISHED_FOR_TOKENS
         ),
         (CAVEAT_INVALID_SAVE_DIRECTORY, "layer"): CFG_LAYER_KINDS,
+        # The world-knowledge mark carries two keys and only one of them is
+        # closed: the evidence level, as the contract spells it rather than in
+        # the bracket notation the research pages use. The system it is about
+        # is a system id — open by construction, because atlas publishes its
+        # own spelling wherever no catalogue declares one.
+        (CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, "evidence"): STATED_EVIDENCE_WORDS,
         (UNRESOLVED_EMULATOR_CONFIG_UNREADABLE, "reason"): EMULATOR_CONFIG_UNREADABLE_REASONS,
     }
 )

@@ -7466,6 +7466,7 @@
               "label": null,
               "declaration": "read",
               "requirements_met": true,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -7626,6 +7627,7 @@
               "label": null,
               "declaration": "read",
               "requirements_met": true,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -8172,6 +8174,7 @@
               "label": null,
               "declaration": "absent",
               "requirements_met": null,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -8264,6 +8267,7 @@
               "label": "Ruffle (Standalone)",
               "declaration": "unsupported",
               "requirements_met": null,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -8342,6 +8346,7 @@
               "label": null,
               "declaration": "read",
               "requirements_met": null,
+              "system_firmware": "core-supplies-an-alternative",
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
@@ -8366,7 +8371,15 @@
                 }
               ],
               "refused": [],
-              "caveats": []
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
             }
           ],
           "unclaimed": [],
@@ -8477,6 +8490,7 @@
               "label": null,
               "declaration": "read",
               "requirements_met": null,
+              "system_firmware": "core-supplies-an-alternative",
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
@@ -8501,7 +8515,15 @@
                 }
               ],
               "refused": [],
-              "caveats": []
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
             }
           ],
           "unclaimed": [],
@@ -9964,6 +9986,7 @@
               "label": "Mupen64Plus-Next",
               "declaration": "read",
               "requirements_met": true,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -11273,6 +11296,7 @@
               "label": "Gambatte",
               "declaration": "absent",
               "requirements_met": null,
+              "system_firmware": null,
               "requirements": [],
               "refused": [],
               "caveats": [

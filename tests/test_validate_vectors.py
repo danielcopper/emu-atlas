@@ -160,6 +160,7 @@ def _core(**overrides) -> Vector:
         "label": None,
         "declaration": "read",
         "requirements_met": False,
+        "system_firmware": None,
         "requirements": [_requirement()],
         "refused": [],
         "caveats": [],

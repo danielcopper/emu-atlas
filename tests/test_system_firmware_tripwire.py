@@ -144,9 +144,11 @@ def read_catalogue(directory: Path) -> dict[str, dict[str, bool]]:
     """Every deployed ``.info`` that declares firmware, grouped by its ``systemname``.
 
     Grouped by the raw ``systemname`` rather than by an atlas system id: that
-    is the unit the catalogue itself groups firmware by, and translating would
-    decide a question this cut deliberately leaves open (one ``systemname``
-    covers two catalogue systems for ``Game Boy/Game Boy Color``).
+    is the unit the catalogue itself groups firmware by, and it is the unit
+    ``atlas/data/system_firmware.json`` is keyed on. The translation into
+    atlas's own ids happens where an answer reads that table
+    (:func:`atlas.firmware.system_firmware_system`) rather than here, so this
+    derivation and the file it checks speak one vocabulary.
 
     A core stating **no** ``systemname`` is left out. An empty string names no
     system, so lumping such cores together would invent one and could
@@ -204,21 +206,22 @@ def stale_exemptions(
 ) -> list[str]:
     """Exempted cores the catalogue no longer has declaring everything optional.
 
-    The other direction of the exemption field, and the only check that
-    consumes it today. An exemption matches nothing when the core's entry
-    changed, when the exemption names the wrong core, or when that system left
-    the catalogue — and one matching nothing excuses nothing while still
-    reading, to anyone scanning the table, as a core somebody cleared.
+    The other direction of the exemption field. An exemption matches nothing
+    when the core's entry changed, when the exemption names the wrong core, or
+    when that system left the catalogue — and one matching nothing excuses
+    nothing while still reading, to anyone scanning the table, as a core
+    somebody cleared.
 
     Factored out for the same reason :func:`unrecorded_disagreements` is: the
     comparison lived inline in its test, so nothing could watch it go red
     without a deployed catalogue to break.
 
-    This is one of exactly **two** checks that read
-    ``cores_supplying_an_alternative`` today; the other is the unit test
-    pinning the shipped PlayStation entry's contents. The disagreement
-    derivation reads it nowhere, so deleting the field changes no verdict and
-    only leaves this function with nothing to compare.
+    The forward direction is the resolver's:
+    :func:`atlas.firmware._system_firmware_state` reads the same field to
+    report an exempted core ``core-supplies-an-alternative`` rather than
+    ``cannot-run-without-firmware``. The disagreement derivation reads it
+    nowhere, so deleting the field changes no verdict *there* and only leaves
+    this function with nothing to compare.
     """
     return sorted(
         f"{system}/{alternative.core}"

@@ -45,17 +45,25 @@ that, and the tripwire beside this loader
 recomputes the disagreements from the deployed catalogue and fails when it
 finds one this table does not carry.
 
-**Nothing here reaches an answer yet.** No question serializes a verdict, no
-caveat carries one, and this module is deliberately not exported from
-:mod:`atlas` — a client sees exactly what it saw before. The table and its
-guard come first because the answer that reads them needs them to exist.
+**How this reaches an answer.** :mod:`atlas.firmware` reads the table in one
+place (``_stating_system_firmware``) and puts what it says on every core of a
+firmware answer as ``system_firmware``, joining these ``systemname`` keys to
+the system ids an answer speaks through
+:func:`atlas.firmware.system_firmware_system`. A core whose system cannot run
+without an image, and which the entry does not excuse, stops reporting
+``requirements_met`` true while none of its declared images is in place — and
+:data:`CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE` rides beside every **stated**
+verdict so the second source is marked rather than implied. What does **not**
+move is the declaration: every ``need`` on a requirement stays the value the
+core's own ``.info`` carries.
 """
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from ._data import packaged_text
 
@@ -82,10 +90,61 @@ SYSTEM_FIRMWARE_VERDICTS = (
 # The repo's own evidence levels (CLAUDE.md): verified, derived, open. The
 # finer markers the ``source`` prose uses — ``[V-live]``, ``[V-binary]``,
 # ``[V-script]`` — say how a reading was made and all sit under ``[V]``.
+#
+# These bracket forms are **this repository's documentation notation**, not
+# contract vocabulary: they are what a research page and a ``source`` string
+# spell, and they stay inside the package.
 EVIDENCE_VERIFIED = "[V]"
 EVIDENCE_DERIVED = "[D]"
 EVIDENCE_OPEN = "[O]"
 EVIDENCE_LEVELS = (EVIDENCE_VERIFIED, EVIDENCE_DERIVED, EVIDENCE_OPEN)
+
+# The same three levels as the **contract** publishes them. A client renders
+# this value, and ``verified`` is readable where ``[V]`` is not; every other
+# closed value the contract carries is a lowercase word, and this one is no
+# exception. Keeping two spellings is the price of that boundary, and the map
+# below is what makes it a boundary rather than a second source of truth: it
+# is total over :data:`EVIDENCE_LEVELS`, so no marker can reach a client
+# unspelled.
+EVIDENCE_WORD_VERIFIED = "verified"
+EVIDENCE_WORD_DERIVED = "derived"
+EVIDENCE_WORD_OPEN = "open"
+EVIDENCE_WORDS: "Mapping[str, str]" = MappingProxyType(
+    {
+        EVIDENCE_VERIFIED: EVIDENCE_WORD_VERIFIED,
+        EVIDENCE_DERIVED: EVIDENCE_WORD_DERIVED,
+        EVIDENCE_OPEN: EVIDENCE_WORD_OPEN,
+    }
+)
+
+# The two words a *stated* verdict can rest on, and therefore the two the mark
+# below can carry. ``open`` is missing on purpose rather than by oversight:
+# the mark rides only an established verdict, and :func:`_system` refuses an
+# established verdict that cites :data:`EVIDENCE_OPEN` — so ``[O]`` cannot
+# reach the mark, and publishing it as a value a client may see would document
+# a branch nothing can take.
+STATED_EVIDENCE_WORDS = (EVIDENCE_WORD_VERIFIED, EVIDENCE_WORD_DERIVED)
+
+# The mark an answer carries where this table makes an **established**
+# statement: the system it spoke about, and the evidence level that statement
+# rests on. Nothing else — the verdict is a field of the answer's own
+# (:attr:`atlas.firmware.CoreFirmware.system_firmware`), and one fact stated
+# twice is one fact that can disagree with itself.
+#
+# It rides ``cannot-run-without-firmware`` (both of the core-level shapes that
+# verdict produces) and ``runs-without-firmware``, and it deliberately does
+# **not** ride ``open``. A caveat here is a degradation with a stable code
+# that a client acts on, not a general provenance note; ``open`` is not a
+# degradation but the field's own value, and the field is serialized on every
+# core, so the world knowledge is already marked where a reader meets it. A
+# note that adds nothing to the field it sits beside devalues the notes that
+# do carry something to act on.
+#
+# It lives here rather than beside the firmware caveat codes because it is
+# about this table: the code exists so that a verdict drawn from packaged
+# world knowledge is *marked* as that rather than implied, which is the
+# repository's first rule applied to the one field that started crossing it.
+CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE = "system-firmware-world-knowledge"
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,16 +156,20 @@ class CoreAlternative:
     entry declares everything optional and is *correct* to, so it has to be
     nameable.
 
-    **What it is for, precisely.** It is recorded for the cut that makes an
-    answer read this table, where a system needing firmware must not be
-    reported against a core carrying its own substitute. It is *not* what makes
-    the derivation pass: the derivation compares whole systems and never
-    consults this field, so removing it changes no verdict and only leaves the
-    staleness check with nothing to do. It is not unread, though: **two**
-    checks read it today — the staleness one, which fails when a named core has
-    stopped declaring everything optional for that system, and the unit test
-    pinning this shipped entry's contents. Measured by deleting the field and
-    running the whole suite.
+    **What it is for, precisely.** It is what keeps a system's requirement off
+    a core that carries its own substitute: the answer reads it, and a core
+    named here answers
+    :data:`~atlas.firmware.SYSTEM_FIRMWARE_CORE_ALTERNATIVE` where its
+    unexcused siblings answer
+    :data:`~atlas.firmware.SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT`. It is *not*
+    what makes the tripwire's derivation pass: that derivation compares whole
+    systems and never consults this field, so removing it changes no verdict
+    there and only leaves the staleness check with nothing to compare.
+
+    Cores are named the way the catalogue names them — the ``.info`` stem
+    without ``_libretro`` — which is what
+    :func:`atlas.firmware._core_alternative_key` joins on, so a standalone
+    emulator has no spelling here and can never be excused.
 
     ``reason`` carries the evidence rather than a bare exemption: what the core
     offers, and what was seen.
@@ -225,8 +288,12 @@ def load_system_firmware(text: str | None = None) -> dict[str, SystemFirmware]:
     ``.info`` catalogue groups firmware by and therefore what the tripwire's
     derivation produces. They are deliberately not atlas's own system ids: one
     ``systemname`` can cover two catalogue systems (``Game Boy/Game Boy
-    Color``), so the translation is a decision, and it belongs to the cut that
-    makes an answer carry this table.
+    Color``). The answer that reads this table makes that translation at its
+    own edge (:func:`atlas.firmware.system_firmware_system`), and it makes it
+    through the map an answer's requirements already came through, so a key
+    naming several machines reaches the one id that map rules for it and not
+    its siblings — narrower than the entry rather than wider, because widening
+    would state a verdict about a machine nobody recorded it for.
     """
     if text is None:
         text = packaged_text("system_firmware.json")

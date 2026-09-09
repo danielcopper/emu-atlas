@@ -592,6 +592,19 @@ visible in `system_source`, and marked as derived where the core spans systems.
   whose identity could not be established makes it `null`. `satisfied` per requirement and `requirements_met` per core
   are both in the contract for one reason: a consumer deriving them from `need` and `present` gets the mismatch case
   wrong, which is exactly how a verified-broken BIOS reads as all-clear.
+- **The requirement list is the emulator's statement; the verdict beside it is atlas's, and it reads world knowledge.**
+  Every `need` is `firmware<N>_opt` inverted and stays whatever the core declared — nothing read off the machine is
+  overwritten. But the format has no way to say "this machine does not start without one of these", so a core that knows
+  its system needs a BIOS can only mark every image optional, and the faithful reading of that declaration reports
+  nothing missing over a system that will not boot. The missing half is about the **system**, is written nowhere on the
+  machine, and is therefore packaged, versioned and source-cited like every other piece of world knowledge
+  (`atlas/data/system_firmware.json`). `system_firmware` states it per core — four values plus `null`, which means
+  nothing is recorded about that system and never that nothing is needed — and `requirements_met` folds it in: a system
+  that cannot run without an image, a core the table does not excuse, and no declared image in place is `false`. The
+  `system-firmware-world-knowledge` caveat marks the cores where the table stated something, carrying the system and the
+  evidence level (`verified` or `derived`) and nothing else, because a derived field that starts crossing the
+  read/world-knowledge line silently is the same defect one layer up. It stays off an `open` system, whose whole content
+  is already the field value beside it.
 - **A requirement list is a conjunction, and alternatives say so as data.** Where an emulator reads exactly one of
   several files per launch — DuckStation's per-region BIOS keys, switched on the console region the running disc sets —
   the entry is a `FirmwareAlternatives` group, its options full requirements each carrying the `regions` whose launch

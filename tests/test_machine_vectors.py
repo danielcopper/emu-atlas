@@ -403,6 +403,13 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
         # CfgSource kind this slug is; what no fixture machine builds is the
         # caveat carrying it.
         "content-dir-override",
+        # No shipped system_firmware.json entry rests on a derived reading —
+        # the one stated verdict is verified — so no fixture machine can
+        # produce this word from the packaged table. It is reachable, and
+        # tests/test_firmware.py::TestTheSystemBehindTheCoreReachesTheAnswer
+        # ::test_a_derived_verdict_publishes_the_derived_word reaches it, by
+        # answering over a table written in the test.
+        "derived",
     }
 
     _GUIDE = (_REPO_ROOT / "docs" / "how-to-use.md").read_text(encoding="utf-8")
@@ -415,6 +422,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
             atlas.FILES_ESTABLISHED_FOR_TOKENS
         ),
         ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
+        ("system-firmware-world-knowledge", "evidence"): atlas.STATED_EVIDENCE_WORDS,
     }
 
     def _values_in_corpus(self) -> dict[tuple[str, str], set[str]]:

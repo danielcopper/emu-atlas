@@ -2271,6 +2271,7 @@ answer.root                        # the live system_directory (None + caveat on
 for core in answer.cores:
     core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
     core.requirements_met          # True | False | None — THE field to render (see below)
+    core.system_firmware           # what is RECORDED about this core's system — world knowledge (see below)
     for entry in core.requirements:
         if isinstance(entry, atlas.FirmwareAlternatives):   # one launch needs exactly ONE option — see below
             reqs = entry.options   # each option carries req.regions, the console regions it serves
@@ -2290,6 +2291,61 @@ for core in answer.cores:
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
 ```
+
+### Two fields, two owners — `requirements` and `requirements_met`
+
+`requirements` is what the **emulator itself declared**, reproduced. Every entry and every `need` on it is the value
+that core's own `.info` carries, read live off the machine and never overwritten — a core that marks a file it cannot
+start without `optional` still reads `optional` here.
+
+`requirements_met` is **atlas's own verdict** about that declaration, and it draws on **world knowledge** as well as on
+what was read from the machine. The world knowledge is a packaged, source-cited table of which systems do not start
+without a firmware image (`atlas/data/system_firmware.json`, and [the readings behind it](research/system-firmware.md)),
+because that is the half a `.info` has no way to state: the format says "optional" or "required" per file and cannot say
+"this machine does not start without one of these". So a core that knows its system needs a BIOS can only mark every
+image optional, and read on the declaration alone that says nothing is missing over a machine that will not boot.
+
+`core.system_firmware` is what the table says about this core's system, and it is on the answer so the verdict is never
+a black box:
+
+| value                          | what it says                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| `cannot-run-without-firmware`  | the system needs an image, and this core needs one of the ones it declares              |
+| `core-supplies-an-alternative` | it needs one, and this core carries its own substitute — its all-optional list is right |
+| `runs-without-firmware`        | somebody established that the system starts with no image present                       |
+| `open`                         | nobody has established which                                                            |
+| `null`                         | **nothing is recorded about this system** — never "nothing is needed"                   |
+
+Read that last row twice: `null` is the state of a system nobody has looked at, and a client rendering it as an
+all-clear reports something nobody checked. It is also the answer for a core whose system could not be established at
+all — one whose declaration was never read has no system on this answer to state anything about.
+
+What the reading does to `requirements_met`: over `cannot-run-without-firmware` the declared images are a
+**disjunction** — the system needs one of them, not all — so any image that is usable keeps the answer the declaration
+alone gave, and only every image being demonstrably absent or wrong makes it `False`. An image nobody judged, or a
+declaration atlas refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading
+only ever narrows the field, never widens it — nothing becomes `True` that was not `True` before.
+
+The set that disjunction asks over is **every image the core declares**, not the ones filed under the system that needs
+one. Those coincide exactly while such a core covers a single system, which every core reaching that state does today —
+37 core blocks in the vector corpus and 3 emulators on the reference installation, each declaring for one system. A
+multi-system core would pull them apart: mGBA declares Game Boy boot ROMs beside its GBA BIOS, so an established usable
+Game Boy dump would answer for a Game Boy Advance that needs a BIOS. (A dump merely sitting there would not: unverified
+it leaves the verdict `None`, and wrong bytes make it `False`.) None does today, and that is a floor on what has been
+looked at rather than a proof that none can appear. Scoping the set by system means deciding which image serves which
+machine — a second decision not taken here, related to issue #375.
+
+Where the table states something — `cannot-run-without-firmware` in either shape, or `runs-without-firmware` — the core
+carries a `system-firmware-world-knowledge` caveat with `system` and `evidence`, the latter being `verified` or
+`derived`. It carries provenance and nothing else: the verdict is the field's job, and one fact stated twice is one fact
+that can disagree with itself. Its purpose is the boundary atlas draws everywhere — what is on the running machine is
+read, and what is written nowhere on it is marked as world knowledge rather than implied.
+
+It does **not** ride an `open` system, and that is the one place the two vocabularies here touch: `open` is both a
+`system_firmware` value and an evidence level, and it means the same thing in both — nobody has established the answer.
+An open entry therefore has nothing to add beyond the field value already on the core, so no caveat rides it, and `open`
+never appears as an `evidence` value. A caveat in atlas is a degradation a client acts on, not a general provenance
+note, and one that restates the field beside it would only devalue the ones that carry something to do.
 
 A core's `requirements` list is a conjunction — every entry is needed — and one entry may be a `FirmwareAlternatives`
 group, and then what is needed is exactly one of its options: the console region decides which, and each option's
@@ -2428,8 +2484,9 @@ you ask for verification, and the `firmware-identity-not-comparable` caveat that
 `table_version`, the version of the curated list that made the call. **Never render `not-comparable` as a failure**: it
 is a withheld verdict, `satisfied` is `None`, and an exact hit on such a file still answers `verified`. Render
 `requirements_met` as your traffic light: `True` only when everything required is there and nothing established
-contradicts it, `False` when something is missing or has wrong bytes, `None` when it could not be established — never
-coerce `None` to green.
+contradicts it, `False` when something is missing or has wrong bytes — or when the core's system cannot start without an
+image and none of the ones it declares is in place — and `None` when it could not be established. Never coerce `None` to
+green.
 
 ### Some of it is the distribution's, not the user's — `supplied_by`
 
