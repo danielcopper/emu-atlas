@@ -1719,7 +1719,9 @@ def corpus_header(reference: Reference) -> list[str]:
             "not a vector exercises them), and the **attribute docstrings** on the answer types (what a field "
             "_means_). An attribute an answer type "
             "declares and no serialized answer carries is listed under "
-            "[attributes no answer carries](#attributes-no-answer-carries) rather than described."
+            "[attributes no answer carries](#attributes-no-answer-carries) rather than described. "
+            "[The guide](how-to-use.md) explains the answers at length, field by field; "
+            "this page is the lookup table beside it."
         ),
         *paragraph(
             f"**Corpus:** {reference.total_vectors} vectors in {len(reference.per_file)} files carry "
