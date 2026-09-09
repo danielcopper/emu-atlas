@@ -1638,12 +1638,13 @@ class SuppliedBy:
 
     @property
     def label(self) -> str:
-        """The name ``distribution`` writes for itself — to show, never to match.
+        """The name ``distribution`` writes for itself — to show, never to match. A
+        consumer renders it beside "provided by" and branches on the ``distribution``
+        identifier instead.
 
         Derived rather than stored, because it is a fact about the identifier
         and not about this file: the pair cannot drift apart if there is only
-        one of it (:mod:`atlas.distribution_labels`). A consumer renders this
-        beside "provided by" and keeps branching on ``distribution``.
+        one of it (:mod:`atlas.distribution_labels`).
         """
         return distribution_label(self.distribution)
 
@@ -1823,10 +1824,12 @@ class FirmwareRequirement:
 
     @property
     def present(self) -> bool | None:
-        """Is anything at the destination? ``None`` when atlas could not look.
+        """Is anything at the destination? ``None`` when atlas could not look. A
+        projection of :attr:`found`, so it says only that *something* is there: a
+        directory sitting where the core opens a file is ``present`` too, and ``found``
+        is the field that keeps the kinds apart.
 
-        Derived from :attr:`found`, and deliberately three-valued: "could not
-        look" is not "not there".
+        Deliberately three-valued: "could not look" is not "not there".
         """
         if self.found == KIND_INACCESSIBLE:
             return None
@@ -1834,7 +1837,11 @@ class FirmwareRequirement:
 
     @property
     def satisfied(self) -> bool | None:
-        """Is the right file where this core will look for it?
+        """Is the right file where this core will look for it? No value reads like a
+        two-valued check. ``False`` includes a file that is *there* with the wrong bytes.
+        ``None`` means atlas did not establish it, an unverified query being the ordinary
+        case. ``True`` over a file the packaged table does not cover says only that it is
+        in place under the right name.
 
         ``True`` only when a file is there and atlas *established* that it is
         the right one — or, for a declaration the core opens as a folder, when
@@ -2325,10 +2332,13 @@ class CoreFirmware:
 
     @property
     def requirements_met(self) -> bool | None:
-        """Are all *required* files in place and right? ``None`` when atlas cannot say.
-        Atlas's own verdict rather than a reproduction of what the emulator declared:
-        where :attr:`requirements` is that declaration, this weighs it against what is on
-        disk *and* against world knowledge about the system (:attr:`system_firmware`).
+        """Are all *required* files in place and right? ``None`` when atlas cannot say —
+        atlas's verdict on the :attr:`requirements` declaration, weighed against disk
+        *and* world knowledge about the system (:attr:`system_firmware`). Not a presence
+        signal: with ``hash_checked`` false a required file of known identity answers
+        ``None`` though the image is in place; read :attr:`~FirmwareRequirement.present`
+        for presence. A ``False`` is always demonstrated; a ``True`` need not be, over a
+        required file the packaged table does not cover.
 
         That second source is what lets this field be right where the
         declaration alone cannot be: a ``.info`` has no way to say "this
@@ -2343,14 +2353,10 @@ class CoreFirmware:
         ``None`` when the declaration could not be read, when a required file
         could not be judged — including one that was simply never verified — or
         when a required declaration was refused for leaving the firmware root.
-        ``True`` is never reached out of ignorance, and never with a required
-        file whose bytes are known to be wrong. The system-level reading only
-        ever narrows this: it can turn a ``True`` into ``False`` or ``None``,
-        and it makes nothing true that was not true before.
-
-        Note what follows for ``verify=False``: a core whose required files have
-        known identities answers ``None``, not ``True``. Presence alone is not
-        the question this field asks.
+        ``True`` is never reached with a required file whose bytes are known to
+        be wrong. The system-level reading only ever narrows this: it can turn a
+        ``True`` into ``False`` or ``None``, and it makes nothing true that was
+        not true before.
 
         An alternatives group folds in through its own three-valued
         :attr:`FirmwareAlternatives.satisfied`: ``False`` blocks (no region
