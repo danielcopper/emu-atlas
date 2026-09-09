@@ -75,120 +75,126 @@ class TestTheShippedTable:
 
 class TestTheLoaderRefuses:
     def test_an_unsupported_schema(self):
+        document = json.dumps({"schema": 99, "systems": {"Demo": _SOUND}})
         with pytest.raises(ValueError, match="unsupported schema"):
-            load_system_firmware(json.dumps({"schema": 99, "systems": {"Demo": _SOUND}}))
+            load_system_firmware(document)
 
     def test_a_document_that_is_not_an_object(self):
+        document = json.dumps([{"schema": 1}])
         with pytest.raises(ValueError, match="unsupported schema"):
-            load_system_firmware(json.dumps([{"schema": 1}]))
+            load_system_firmware(document)
 
     def test_an_empty_systems_block(self):
+        document = json.dumps({"schema": 1, "spec": "a spec", "systems": {}})
         with pytest.raises(ValueError, match="non-empty object"):
-            load_system_firmware(json.dumps({"schema": 1, "spec": "a spec", "systems": {}}))
+            load_system_firmware(document)
 
     def test_a_malformed_entry(self):
+        table = _table({"verdict": VERDICT_OPEN})
         with pytest.raises(ValueError, match="verdict, evidence and source"):
-            load_system_firmware(_table({"verdict": VERDICT_OPEN}))
+            load_system_firmware(table)
 
     def test_an_entry_that_is_not_an_object(self):
+        table = _table("cannot run")
         with pytest.raises(ValueError, match="verdict, evidence and source"):
-            load_system_firmware(_table("cannot run"))
+            load_system_firmware(table)
 
     def test_an_unknown_key(self):
+        table = _table({**_SOUND, "confidence": "high"})
         with pytest.raises(ValueError, match="unknown key"):
-            load_system_firmware(_table({**_SOUND, "confidence": "high"}))
+            load_system_firmware(table)
 
     def test_an_unknown_verdict(self):
+        table = _table({**_SOUND, "verdict": "probably", "evidence": EVIDENCE_DERIVED})
         with pytest.raises(ValueError, match="verdict must be one of"):
-            load_system_firmware(
-                _table({**_SOUND, "verdict": "probably", "evidence": EVIDENCE_DERIVED})
-            )
+            load_system_firmware(table)
 
     def test_an_unknown_evidence_level(self):
+        table = _table({**_SOUND, "evidence": "[X]"})
         with pytest.raises(ValueError, match="evidence must be one of"):
-            load_system_firmware(_table({**_SOUND, "evidence": "[X]"}))
+            load_system_firmware(table)
 
     def test_an_empty_source(self):
+        table = _table({**_SOUND, "source": ""})
         with pytest.raises(ValueError, match="source: expected a non-blank string"):
-            load_system_firmware(_table({**_SOUND, "source": ""}))
+            load_system_firmware(table)
 
     def test_a_whitespace_only_source(self):
         # A citation of one space says exactly what an empty one says, and
         # would slip past a truthiness check.
+        table = _table({**_SOUND, "source": "   "})
         with pytest.raises(ValueError, match="source: expected a non-blank string"):
-            load_system_firmware(_table({**_SOUND, "source": "   "}))
+            load_system_firmware(table)
 
     def test_a_stated_verdict_resting_on_an_open_level(self):
         # A verdict that says something cannot cite an open question as its
         # evidence — that is the shape of a claim nobody checked.
+        table = _table({**_SOUND, "verdict": VERDICT_RUNS_WITHOUT, "evidence": EVIDENCE_OPEN})
         with pytest.raises(ValueError, match="disagree"):
-            load_system_firmware(
-                _table({**_SOUND, "verdict": VERDICT_RUNS_WITHOUT, "evidence": EVIDENCE_OPEN})
-            )
+            load_system_firmware(table)
 
     def test_an_open_verdict_claiming_a_verified_level(self):
+        table = _table({**_SOUND, "evidence": EVIDENCE_VERIFIED})
         with pytest.raises(ValueError, match="disagree"):
-            load_system_firmware(_table({**_SOUND, "evidence": EVIDENCE_VERIFIED}))
+            load_system_firmware(table)
 
     def test_an_exemption_on_a_system_that_does_not_need_firmware(self):
         # There is no understatement to excuse where nothing is understated,
         # so an exemption here would be a sentence about nothing.
+        table = _table({**_SOUND, "cores_supplying_an_alternative": {"demo": "it has HLE"}})
         with pytest.raises(ValueError, match="only a 'cannot-run-without-firmware' entry"):
-            load_system_firmware(
-                _table({**_SOUND, "cores_supplying_an_alternative": {"demo": "it has HLE"}})
-            )
+            load_system_firmware(table)
 
     def test_an_empty_exemption_block(self):
+        table = _table(
+            {
+                "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                "evidence": EVIDENCE_VERIFIED,
+                "source": "[V-live] watched it refuse",
+                "cores_supplying_an_alternative": {},
+            }
+        )
         with pytest.raises(ValueError, match="non-empty object"):
-            load_system_firmware(
-                _table(
-                    {
-                        "verdict": VERDICT_CANNOT_RUN_WITHOUT,
-                        "evidence": EVIDENCE_VERIFIED,
-                        "source": "[V-live] watched it refuse",
-                        "cores_supplying_an_alternative": {},
-                    }
-                )
-            )
+            load_system_firmware(table)
 
     @pytest.mark.parametrize("reason", ["", "   ", "\n\t "])
     def test_an_exemption_without_a_reason(self, reason):
         # A bare exemption is the thing this field exists to prevent: the
         # reason is the evidence, and a name on its own excuses by assertion.
         # Blank counts as bare — a reason of one space is not a reason.
+        table = _table(
+            {
+                "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                "evidence": EVIDENCE_VERIFIED,
+                "source": "[V-live] watched it refuse",
+                "cores_supplying_an_alternative": {"demo": reason},
+            }
+        )
         with pytest.raises(ValueError, match="reason: expected a non-blank string"):
-            load_system_firmware(
-                _table(
-                    {
-                        "verdict": VERDICT_CANNOT_RUN_WITHOUT,
-                        "evidence": EVIDENCE_VERIFIED,
-                        "source": "[V-live] watched it refuse",
-                        "cores_supplying_an_alternative": {"demo": reason},
-                    }
-                )
-            )
+            load_system_firmware(table)
 
     def test_an_exemption_field_stated_as_null_on_an_open_entry(self):
         # Key presence, not value truthiness: a `null` here states the field on
         # an entry that must not carry it, and reading it through `.get()` let
         # exactly that through on every verdict.
+        table = _table({**_SOUND, "cores_supplying_an_alternative": None})
         with pytest.raises(ValueError, match="only a 'cannot-run-without-firmware' entry"):
-            load_system_firmware(_table({**_SOUND, "cores_supplying_an_alternative": None}))
+            load_system_firmware(table)
 
     def test_an_exemption_field_stated_as_null_on_a_needs_firmware_entry(self):
+        table = _table(
+            {
+                "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                "evidence": EVIDENCE_VERIFIED,
+                "source": "[V-live] watched it refuse",
+                "cores_supplying_an_alternative": None,
+            }
+        )
         with pytest.raises(ValueError, match="non-empty object"):
-            load_system_firmware(
-                _table(
-                    {
-                        "verdict": VERDICT_CANNOT_RUN_WITHOUT,
-                        "evidence": EVIDENCE_VERIFIED,
-                        "source": "[V-live] watched it refuse",
-                        "cores_supplying_an_alternative": None,
-                    }
-                )
-            )
+            load_system_firmware(table)
 
     @pytest.mark.parametrize("system", ["", "   "])
     def test_a_blank_system_key(self, system):
+        table = _table(_SOUND, system=system)
         with pytest.raises(ValueError, match="system key: expected a non-blank string"):
-            load_system_firmware(_table(_SOUND, system=system))
+            load_system_firmware(table)
