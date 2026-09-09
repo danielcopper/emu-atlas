@@ -93,6 +93,40 @@ class TestInvariants:
         with pytest.raises(ValueError):
             FileSet("declared", ("something-else",), "card", groups=(unnamed, named))
 
+    def test_an_unknown_set_is_never_decomposed(self):
+        # It has no files, so there is nothing to decompose — the one state
+        # where a group could only be an invention.
+        group = FileGroup(dir="/saves", files=("a.srm",), granularity="per-game-file", role="battery")
+        with pytest.raises(ValueError, match="no files to decompose"):
+            FileSet("unknown", (), "nothing stated", groups=(group,))
+
+    def test_an_observed_set_is_decomposed_in_the_declarations_order(self):
+        """Two honest orders, and the type holds each set to its own.
+
+        The groups follow the declaration's order and ``files`` follows the
+        observation's, so the sequences differ by construction and only the
+        names can be held: none lost, invented or doubled between the two.
+        That every observed savefile lands in a group is the resolver's doing
+        and is asserted where it happens, not here.
+        """
+        settings = FileGroup(dir="/saves", files=("g.smpc",), granularity="per-game-file", role="settings")
+        battery = FileGroup(dir="/saves", files=("g.bkr",), granularity="per-game-file", role="battery")
+        file_set = FileSet("observed", ("g.bkr", "g.smpc"), "seen", groups=(settings, battery))
+        assert [g.role for g in file_set.groups] == ["settings", "battery"]
+
+    def test_an_observed_set_may_not_lose_or_invent_a_name(self):
+        battery = FileGroup(dir="/saves", files=("g.bkr",), granularity="per-game-file", role="battery")
+        with pytest.raises(ValueError, match="whose names are established"):
+            FileSet("observed", ("g.bkr", "g.smpc"), "seen", groups=(battery,))
+
+    def test_a_declared_set_is_still_held_to_the_cards_order(self):
+        # The relaxation is the observed state's alone: a card states its parts
+        # in an order, and that order is the answer.
+        first = FileGroup(dir="/saves", files=("g.bkr",), granularity="per-game-file", role="battery")
+        second = FileGroup(dir="/saves", files=("g.smpc",), granularity="per-game-file", role="settings")
+        with pytest.raises(ValueError, match="in order"):
+            FileSet("declared", ("g.smpc", "g.bkr"), "card", groups=(first, second))
+
     def test_root_kind_vocabulary_is_closed(self):
         with pytest.raises(ValueError):
             SavefilePlacement(

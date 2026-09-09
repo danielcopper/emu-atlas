@@ -718,15 +718,18 @@ its dip switches in `mame/cfg/` beside an emulator-wide `default.cfg`, and hard-
 Handing that back as one flat list would tell you the names and hide which of them are the player's progress and which
 belong to every game at once.
 
-`groups` is that decomposition, and it is **the complete list of places** — `dir` and `files` are one of them, the
-first. Each entry carries its own resolved `dir`, its own `files`, and two fields that answer two different questions:
+`groups` is that decomposition. Where a **card** decomposed a declared answer it is **the complete list of places** —
+`dir` and `files` are one of them, the first. It is empty where nothing decomposed the answer, which the standard rule
+never does; and on an observed answer it is what was found in the directory that was read, which is not the same promise
+(see "an observation's groups" below). Each entry carries its own resolved `dir`, its own `files`, and two fields that
+answer two different questions:
 
 ```python
 for g in placement.file_set.groups:
     g.dir          # '/…/saves/arcade/mame/cfg'  — resolved, this group's own directory
     g.files        # ('default.cfg',)            — basenames within it, or None (see below)
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'per-game-directory' | 'shared-card' | 'shared-file'
-    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings'
+    g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings' | 'notes' | 'unknown'
 ```
 
 `per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
@@ -734,9 +737,10 @@ packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title ML
 carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat, exactly as the
 file-name templates do it.
 
-One walk over `groups` reaches every directory the answer knows about. `placement.dir` and `placement.file_set.files`
-stay exactly what they always were — the first group's directory and the names in it — so a client that reads only those
-keeps working unchanged and gets the save's own state, which is the part cards state first.
+Where a card decomposed the answer, one walk over `groups` reaches every directory that card knows about.
+`placement.dir` and `placement.file_set.files` stay exactly what they always were — the first group's directory and the
+names in it — so a client that reads only those keeps working unchanged and gets the save's own state, which is the part
+cards state first.
 
 **The two fields are separate because they are different facts**, and MAME is the case that proves it: `<machine>.cfg`
 and `default.cfg` sit in one directory with the same role and differ only in whom they belong to. So neither field can
@@ -754,6 +758,27 @@ lifting deliberately — into a library's per-game notes, say — rather than co
 `shared-card` or `shared-file` group between machines without thinking: those files belong to every game at once, so
 restoring one game's copy overwrites every other game's state in them. A tool making a _complete_ backup takes them all;
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
+
+**`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
+read says what kind of data it is. Two ways to get there: no rule card covers this core, or the card covers it and names
+neither this file nor its directory's contents. A third exists in the resolver and you will not meet it today — two of
+the card's groups speaking for the same directory without naming files, so no one role follows — because no shipped card
+states two; it is a guard against a card that one day might, not a case to write code for. What it does _not_ mean is
+that a name was unavailable: a card that states a directory's role and refuses its file names — ScummVM's slot files, a
+WHDLoad drawer — has said what lies there, and what is found there carries that role. It is a value rather than a
+missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a settings file the
+user had chosen on that device over the other device's, because while the directory was still empty the declared answer
+had named the roles and the observed one that replaced it named none. So the line above keeps `unknown` groups, and that
+is a decision you should make deliberately rather than inherit:
+
+```python
+mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
+unsure  = [g for g in mine if g.role == atlas.ROLE_UNKNOWN]   # yours to decide about, not to assume
+```
+
+Copying an `unknown` group is the same bet as copying a file no answer described at all — the difference is that you can
+now see you are making it. A one-way backup takes them; a two-way sync that overwrites the other device's copy has
+something to think about. What you must not do is read the word as `battery`.
 
 **`high-score` is in that set, and it is the one role whose merge is different.** An arcade machine keeps one score
 table for everyone who ever played it, so it is not one player's progress the way a battery save is. When two devices
@@ -821,11 +846,34 @@ FinalBurn Neo's shared mode adds a card every game shares beside the per-game sa
 'shared-card')` says so where a single word used to hide it. A client that wants one word reads
 `values[0]`.
 
-**Reading nothing of this keeps today's answer.** `groups` is empty unless a rule card decomposed the answer — every
-observation, every unknown and every standard-rule declaration has none, and empty means _not decomposed_, never _no
-files_. Where it is populated, `files` is still exactly the names lying in `dir`: every group under the first group's
-directory, in order. So a card that splits one list into two by role moves no name out of `files`; the groups under
-_other_ directories are the part you only see here.
+**Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
+set has no files to decompose, the standard rule states one list in one directory, and a **savestate** answer is never
+decomposed in any state — that question has already said what its files are, this content's states under names the
+emulator itself chooses and the answer spells out (`<stem>.state`, the numbered slots, the auto slot), so a role beside
+them would only repeat the question; the set also picks up the `.png` thumbnail RetroArch writes beside a state, which
+any decomposition would part from the state it belongs to. Empty means _not decomposed_, never _no files_. What changed
+is the savefile observation: an answer that found files has a group for every one of them. Where `groups` is populated,
+`files` is still exactly the names lying in `dir`: every group under the first group's directory, and for a declared set
+in the card's own order. So a card that splits one list into two by role moves no name out of `files`.
+
+**An observation's groups are what was found, and they describe one directory.** A declared set lists the parts a card
+states, including the ones no file has been written for yet, in the order the card states them; an observed set lists
+only what is there, in the directory that was read. Its two lists come out of different passes — the groups follow the
+declaration's order, `files` follows the observation's (sorted basenames where atlas globs a directory, the card's own
+candidate order where it checks the card's names one by one) — so compare them by name, never by position.
+
+**The parts a card keeps in another directory are in no group of an observed answer**, and there are two kinds. A part
+under _another_ root — Flycast's unmoved shared cards — is a group only where the set is declared, and the
+`file-set-spans-roots` caveat carries it in either state. A part under the _same_ root in another subdirectory is the
+one to know about: Kronos declares three groups across `kronos/saturn` and `kronos/stv`, and an observation of the first
+directory states one group; MAME 2010 declares eight directories, and an observation states one. Of the seven it drops,
+the three whose file names were never derivable still travel as `file-names-unestablished` caveats naming their
+directory — the other four are in the answer nowhere.
+
+So a backup tool that must reach every place a save lives cannot build its list from one observed answer's `groups`. The
+directories are in the card, and the same question states them as groups until this content's own name turns up in the
+answer's directory. Read the declared answer for the full map, walk the caveats beside an observation, and treat a short
+`groups` list as a gap in what this answer says about the other directories — never as a statement that they are empty.
 
 ### A file set can carry a hole
 
@@ -880,7 +928,7 @@ the parts that stay carry their own directory and files: as entries in `file_set
 always as one `file-set-spans-roots` caveat per part, whose `data` names the resolved `dir` and the `files`. Resolved
 means resolved: a part that stays "in the system directory" reports the content's own directory on a machine whose flag
 moved that root, the same way the answer's `root_kind` would. The flat `files` stays the answer's own directory, as it
-always was — walk `groups`, or take the caveats' data, and no part is missed on any state of the file set.
+always was — walk `groups` where the set is declared, take the caveats' data on any state, and no part is missed.
 
 **`root_kind` says which anchor won, and a card does not decide it alone.** A core whose card roots its saves in the
 system directory (Flycast's shared VMUs) is not automatically anchored at `system_directory`: RetroArch hands such a

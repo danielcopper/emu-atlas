@@ -86,6 +86,16 @@ def _file_set(**overrides) -> Vector:
     return {"state": "unknown", "files": [], "complete": False, "groups": [], **overrides}
 
 
+def _group(**overrides) -> Vector:
+    return {
+        "dir": SAVES,
+        "files": ["a.srm"],
+        "granularity": "per-game-file",
+        "role": "battery",
+        **overrides,
+    }
+
+
 def _placement(**overrides) -> Vector:
     return {
         "dir": SAVES,
@@ -651,6 +661,17 @@ PLACEMENT_CASES = [
          "an unknown file_set carries no files", id="file-set-unknown-with-files"),
     case(_base_placement(file_set=_file_set(complete=True)),
          "an unknown file_set carries no files", id="file-set-unknown-complete"),
+    case(_base_placement(file_set=_file_set(groups=[_group()])),
+         "an unknown file_set has no files to decompose", id="file-set-unknown-with-groups"),
+    case(_base_placement(file_set=_file_set(state="observed", files=["a.srm", "a.smpc"],
+                                            groups=[_group()])),
+         "whose names are established", id="file-set-observed-group-loses-a-name"),
+    case(_base_placement(file_set=_file_set(state="declared", files=["b.srm", "a.srm"],
+                                            groups=[_group(), _group(files=["b.srm"])])),
+         "whose names are established, in order", id="file-set-declared-groups-out-of-order"),
+    case(_base_placement(file_set=_file_set(state="observed", files=["a.srm"],
+                                            groups=[_group(role="unaudited")])),
+         "file group role must be one of", id="file-group-role"),
     case(_base_placement(granularity={**_granularity(), "stray": 1}),
          "granularity must be exactly the fields", id="granularity-stray-field"),
     case(_base_placement(granularity=_granularity(value="nope")),
@@ -1503,6 +1524,11 @@ class TestTheVocabularyIsOneVocabulary:
         branches on these strings, and one more of them is a thing it has never
         seen — so the list is written out here and a change to it has to be
         made twice, on purpose.
+
+        The last value is the resolver's own and no card may declare it (see
+        tests/test_oddities.py::TestACardMayNotDeclareTheResolversRole): every
+        other value in the tuple is a statement a read produced, and ``unknown``
+        is the statement that no read produced one.
         """
         assert atlas.ROLES == (
             "battery",
@@ -1511,6 +1537,7 @@ class TestTheVocabularyIsOneVocabulary:
             "high-score",
             "settings",
             "notes",
+            "unknown",
         )
 
     def test_the_role_constants_are_the_role_tuple(self):

@@ -43,7 +43,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gba",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -94,7 +103,16 @@
               "Final Fantasy VII (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u",
+                "files": [
+                  "Final Fantasy VII (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -270,7 +288,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gba/mGBA",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": []
@@ -480,7 +507,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -645,7 +681,18 @@
               "Sega Rally Championship (USA).smpc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/user/saves",
+                "files": [
+                  "Sega Rally Championship (USA).bcr",
+                  "Sega Rally Championship (USA).bkr",
+                  "Sega Rally Championship (USA).smpc"
+                ],
+                "granularity": "per-game-files",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -768,7 +815,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/user/links/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -939,7 +995,24 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -1354,7 +1427,24 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -1595,7 +1685,24 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -1704,7 +1811,24 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -2468,7 +2592,16 @@
               "Mcd001.ps2"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -2708,7 +2841,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/ra-saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -4064,7 +4206,16 @@
               "vmu_save_A1.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "caveats": [
             {
@@ -4409,7 +4560,32 @@
               "Sega Rally Championship (USA).smpc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/saturn",
+                "files": [
+                  "Sega Rally Championship (USA).bkr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/saturn",
+                "files": [
+                  "Sega Rally Championship (USA).bcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/saturn",
+                "files": [
+                  "Sega Rally Championship (USA).smpc"
+                ],
+                "granularity": "per-game-file",
+                "role": "settings"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -5210,7 +5386,16 @@
               "vmu_save_A1.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "caveats": [
             {
@@ -5536,7 +5721,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gba",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": []
@@ -5589,7 +5783,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": []
@@ -5640,7 +5843,18 @@
               "Game.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/psx",
+                "files": [
+                  "Game.bin",
+                  "Game.png",
+                  "Game.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -5747,7 +5961,16 @@
               "Game.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx",
+                "files": [
+                  "Game.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -5853,7 +6076,16 @@
               "My.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/roms",
+                "files": [
+                  "My.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -5909,7 +6141,18 @@
               "Game.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/psx",
+                "files": [
+                  "Game.bin",
+                  "Game.png",
+                  "Game.srm"
+                ],
+                "granularity": "per-game-files",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -6628,7 +6871,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/mnt/sd/retrodeck/saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "granularity": null,
               "caveats": [
@@ -6661,7 +6913,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/home/deck/ra-saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "granularity": null,
               "caveats": [
@@ -6826,7 +7087,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/home/deck/ra-saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "granularity": null,
               "caveats": [
@@ -6932,7 +7202,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/mnt/sd/retrodeck/saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "granularity": null,
               "caveats": [
@@ -6966,7 +7245,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "granularity": null,
               "caveats": [
@@ -7645,7 +7933,16 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -7726,7 +8023,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "granularity": null,
           "caveats": [
@@ -8488,7 +8794,16 @@
               "vmu_save_A1.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "caveats": [
             {
@@ -11529,7 +11844,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "caveats": [
             {
@@ -11592,7 +11916,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "caveats": [
             {
@@ -11662,7 +11995,16 @@
               "Tetris (World).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/home/deck/Emulation/saves/retroarch/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "unknown"
+              }
+            ]
           },
           "caveats": [
             {
@@ -11737,7 +12079,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/mnt/sd/retrodeck/saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "caveats": [
                 {
@@ -11770,7 +12121,16 @@
                   "Tetris (World).srm"
                 ],
                 "complete": false,
-                "groups": []
+                "groups": [
+                  {
+                    "dir": "/home/deck/.config/retroarch/saves",
+                    "files": [
+                      "Tetris (World).srm"
+                    ],
+                    "granularity": "per-game-file",
+                    "role": "unknown"
+                  }
+                ]
               },
               "caveats": [
                 {
@@ -12252,7 +12612,24 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -12407,7 +12784,25 @@
               "dc_nvmem.bin"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_A1.bin",
+                  "vmu_save_A2.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "dc_nvmem.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "battery"
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -12899,7 +13294,16 @@
               "Mcd001.ps2"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
           },
           "caveats": [
             {

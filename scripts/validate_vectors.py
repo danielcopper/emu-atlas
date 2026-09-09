@@ -319,7 +319,7 @@ KNOWN_GRANULARITIES = {
     "per-game-files",
     "per-game-directory",
 }
-KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes"}
+KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes", "unknown"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
 KNOWN_CAVEAT_CODES = {
@@ -1251,8 +1251,8 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
     groups = file_set["groups"]
     if not isinstance(groups, list):
         fail(f"{name}: file_set.groups must be a list")
-    if groups and file_set["state"] != "declared":
-        fail(f"{name}: only a declared file_set is decomposed into groups")
+    if groups and file_set["state"] == "unknown":
+        fail(f"{name}: an unknown file_set has no files to decompose into groups")
     for group in groups:
         _validate_one_file_group(name, group)
     if groups:
@@ -1262,10 +1262,21 @@ def _validate_file_groups(name: str, file_set: Any) -> None:
             if g["dir"] == groups[0]["dir"] and g["files"] is not None
             for f in g["files"]
         ]
-        if here != file_set["files"]:
+        # The sequence is held only where it is stated. A card states its parts
+        # in its own order; an observation's two lists come out of different
+        # passes — the groups follow the declaration, while `files` follows the
+        # observation (sorted basenames from a globbed directory, the card's own
+        # candidate order where its names are checked one by one) — so only the
+        # names are held there. Neither may lose, invent or double a name, and
+        # neither says anything about a set that carries no groups at all.
+        observed = file_set["state"] == "observed"
+        ordered = "" if observed else ", in order"
+        if (sorted(here) if observed else here) != (
+            sorted(file_set["files"]) if observed else file_set["files"]
+        ):
             fail(
                 f"{name}: file_set.files must be every group in the answer's own directory whose "
-                f"names are established, in order — got {file_set['files']}, groups say {here}"
+                f"names are established{ordered} — got {file_set['files']}, groups say {here}"
             )
 
 

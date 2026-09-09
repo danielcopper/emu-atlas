@@ -37,12 +37,16 @@ respelled here, so a card cannot select a value the contract cannot carry — an
 | ------------- | ----- | ------------------------------------------------------------------------------------- |
 | `root`        | mode  | `savefile_directory`, `system_directory`, `content_directory`, `working_directory`    |
 | `granularity` | group | `shared-card`, `shared-file`, `per-game-file`, `per-game-files`, `per-game-directory` |
-| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`                       |
+| `role`        | group | `battery`, `memory-card`, `disk-diff`, `high-score`, `settings`, `notes`              |
 | `complete`    | group | a JSON boolean, `true` or `false` — never a string, never coerced                     |
 
 `granularity` and `role` reach the caller as contract values, so a misspelling would be stated as this machine's actual
 grouping or would send a save sync past real save data; `complete` is a claim about the save, and `bool("false")` is
 `True` in Python, so a quoted boolean fails the load instead of silently asserting completeness.
+
+The `role` column is one value short of the contract's own `ROLES`, and deliberately: `unknown` is what the **resolver**
+states about an observed file no declaration names, so a card declaring it would be a card claiming not to know what it
+is in the middle of stating it — the load fails on that spelling.
 
 `working_directory` is the root that is a property of the launch rather than of the machine: DeSmuME 2015 composes its
 save path from a variable its build never fills, so the file lands relative to wherever the launching process was
@@ -96,9 +100,11 @@ that the scheme "doesn't scale". MAME's memory cards are the same shape for a di
 index chosen in the emulator's own interface.
 
 Such a group **is** a `FileGroup` in the answer, with `files=None` — the directory, the granularity and the role are all
-stated, and only the list is refused. That is what lets one walk over `file_set.groups` reach every place a save lives.
-The answer also names the directory in a `file-names-unestablished` caveat, with this text as `data["citation"]` and the
-group's `role` beside it; that caveat is the sentence a person reads and the citation behind it, not the only carrier.
+stated, and only the list is refused. That is what lets one walk over a **declared** answer's `file_set.groups` reach
+every place a save lives; an observed answer decomposes the directory it read and no other, and this group is one only a
+declared answer carries. The answer also names the directory in a `file-names-unestablished` caveat, with this text as
+`data["citation"]` and the group's `role` beside it; that caveat is the sentence a person reads and the citation behind
+it, not the only carrier.
 
 The alternative would have been silence, and silence there is the expensive kind: a client that never learns the
 directory exists loses the player's progress on every machine with a hard disk. The loader refuses `unnamed` together

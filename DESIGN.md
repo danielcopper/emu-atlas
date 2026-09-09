@@ -279,7 +279,7 @@ class Machine(Protocol):
 
 ## Placements
 
-A placement answers "where does this emulator, configured as it is, keep this save?". Its shape follows four research
+A placement answers "where does this emulator, configured as it is, keep this save?". Its shape follows five research
 findings:
 
 - **Directory and file set are different kinds of knowledge.** The directory follows from one central rule (RetroArch's
@@ -288,6 +288,21 @@ findings:
   and for existing saves atlas can **observe** the set (literal, glob-escaped, with RetroArch's own bookkeeping files
   filtered on source citation). _Observed_ is a snapshot of matching files, never a completeness claim; `complete` is a
   separate assertion only a source-verified rule card can make.
+- **What was found does not cost the answer what is known about it.** The found set outranks the declared one — that is
+  the ground rule and it stays — but the declaration is still in scope, so an observed set carries the roles it states
+  for the same names. Both halves matter: without the first, the same question answers with roles while the save
+  directory is empty and without them once the game has run, which is how a consumer's "never sync a settings file" rule
+  stopped protecting exactly when there was something to protect; without the second, a file the declaration does not
+  name still looks like a file with no role, and the trap survives one step narrower. So every file a savefile
+  observation found is in one of its groups: under the role the declaration states for its name, or — where the card
+  states a directory's role and refuses its file names, as it does for ScummVM's slot files and WHDLoad's drawer — under
+  that directory's role, and only a file no group of that directory covers says so in a word (`role: unknown`). Absence
+  is never a value, and neither is a missing _name_ a missing kind — that is the same rule `granularity` and `checked`
+  already obey. What such an answer does **not** state is the card's other directories: its groups decompose the one
+  directory that was read, so a card that also writes into a sibling subdirectory (`kronos/stv` beside `kronos/saturn`,
+  seven of MAME 2010's eight) has parts that only the declared answer states as groups, and only an unnamed part keeps
+  its `file-names-unestablished` caveat. The full map of places is the guarantee of a declared answer a card decomposed
+  — the standard rule states one list in one directory and no groups at all — never an observation's.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is
@@ -320,8 +335,13 @@ has nothing to name. `root_kind` is closed around its own question for the same 
 answer can state something the savefile answer cannot: RetroArch names the files itself, so `<stem>.state`, the numbered
 slots and the auto slot are known rather than per-core behaviour — the file set is still an observation, because which
 slots were ever written is not on disk, but it is observed through a pattern that matches savestates and nothing else.
-Whether a core can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it
-(capability, never a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
+That set is also the one atlas never decomposes, in any state: `file_set.groups` is permanently empty on a savestate
+answer, and the reason is the sentence above rather than an empty domain. The question has already said what its files
+are — this content's states, under names the answer itself spells out — so a role beside them would repeat the question
+rather than add to it. The observation also picks up the `.png` thumbnail RetroArch writes beside a state with
+`savestate_thumbnail_enable` on, and any decomposition would have to part each thumbnail from its state. Whether a core
+can be serialized at all _is_ per-core, and it is read live from the `.info` the core ships beside it (capability, never
+a path) and stated as a caveat with both of the ways RetroArch lets that declaration be overridden.
 
 Every answer carries provenance: which config file produced each governing value, which default applied, which override
 won. Where a shipped reference config is readable on the machine (RetroDECK's Flatpak deployment; a distro's
