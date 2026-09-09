@@ -1134,10 +1134,11 @@ class FileSet:
         says nothing about a set that carries none — the ``if self.groups`` at
         the one call site is the whole condition — so "every file a savefile
         observation found is in a group" is the resolver's doing
-        (``_observed_groups``), not this type's. That guard is this method's
-        precondition as well: the answer's own directory is ``groups[0].dir``.
-        A savestate answer builds an observed set with files and no groups and
-        is legal here.
+        (``_observed_groups``), not this type's. The guard is also what keeps
+        that silence true: reached on an empty tuple this check would not raise
+        on ``groups[0]``, which the comprehension never evaluates, but would
+        refuse the set for groups that name nothing. A savestate answer builds
+        an observed set with files and no groups and is legal in a ``FileSet``.
 
         The sequence is held only where it is stated. Both lists come out of
         their own pass: the groups follow the declaration's order, while
