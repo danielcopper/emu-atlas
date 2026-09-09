@@ -1124,33 +1124,41 @@ class FileSet:
         if self.groups and self.state == FILE_SET_UNKNOWN:
             raise ValueError("FileSet: an unknown set has no files to decompose into groups")
         if self.groups:
-            here = tuple(
-                name
-                for group in self.groups
-                if group.dir == self.groups[0].dir and group.files is not None
-                for name in group.files
+            self._check_group_agreement()
+
+    def _check_group_agreement(self) -> None:
+        """Hold ``files`` to the groups stating names in the answer's own directory.
+
+        What this checks is agreement, not coverage: a set that carries groups
+        may not lose, invent or double a name between them and ``files``. It
+        says nothing about a set that carries none — the ``if self.groups`` at
+        the one call site is the whole condition — so "every file a savefile
+        observation found is in a group" is the resolver's doing
+        (``_observed_groups``), not this type's. That guard is this method's
+        precondition as well: the answer's own directory is ``groups[0].dir``.
+        A savestate answer builds an observed set with files and no groups and
+        is legal here.
+
+        The sequence is held only where it is stated. Both lists come out of
+        their own pass: the groups follow the declaration's order, while
+        ``files`` follows the observation's — sorted basenames where a directory
+        is globbed, the card's own candidate order where the card's names are
+        checked one by one. Neither is the order the directory happens to hold,
+        and the two need not agree.
+        """
+        here = tuple(
+            name
+            for group in self.groups
+            if group.dir == self.groups[0].dir and group.files is not None
+            for name in group.files
+        )
+        observed = self.state == FILE_SET_OBSERVED
+        ordered = "" if observed else ", in order"
+        if (sorted(here) if observed else here) != (sorted(self.files) if observed else self.files):
+            raise ValueError(
+                "FileSet: files must be every group in the answer's own directory whose names "
+                f"are established{ordered} — got {self.files}, groups say {here}"
             )
-            # What this checks is agreement, not coverage: a set that carries
-            # groups may not lose, invent or double a name between them and
-            # ``files``. It says nothing about a set that carries none — the
-            # branch above is the whole condition — so "every file a savefile
-            # observation found is in a group" is the resolver's doing
-            # (``_observed_groups``), not this type's. A savestate answer builds
-            # an observed set with files and no groups and is legal here.
-            #
-            # The sequence is held only where it is stated. Both lists come out
-            # of their own pass: the groups follow the declaration's order,
-            # while ``files`` follows the observation's — sorted basenames where
-            # a directory is globbed, the card's own candidate order where the
-            # card's names are checked one by one. Neither is the order the
-            # directory happens to hold, and the two need not agree.
-            observed = self.state == FILE_SET_OBSERVED
-            ordered = "" if observed else ", in order"
-            if (sorted(here) if observed else here) != (sorted(self.files) if observed else self.files):
-                raise ValueError(
-                    "FileSet: files must be every group in the answer's own directory whose names "
-                    f"are established{ordered} — got {self.files}, groups say {here}"
-                )
 
 
 @dataclass(frozen=True, slots=True)
