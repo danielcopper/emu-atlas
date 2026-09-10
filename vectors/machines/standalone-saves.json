@@ -4050,6 +4050,220 @@
       }
     },
     {
+      "name": "rpcs3-a-user-home-whose-own-stat-fails-is-stated-not-dropped",
+      "rationale": "12345678 is a name the walk of dev_hdd0/home handed back and whose own stat failed: nothing about it was learned, not even whether it is a directory. It cannot be a group, and it cannot be the emulator's own skip either — the walk that would reach it stats every entry and drops the ones whose fstatat fails (unix_dir::read, File.cpp:2091-2105 at build 7c6b3dcd), so the emulator's verdict rests on a stat that is not known to fail where atlas's did. It is stated as unestablished beside the account that did list, and the listing stays complete: an inaccessible entry below a listable root is not an unlistable root.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
+          "/mnt/sd/hdd0/home/00000001/localusername": "User"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/hdd0/home/00000001"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        },
+        "inaccessible": [
+          "/mnt/sd/hdd0/home/12345678"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "unestablished": [
+                  "12345678"
+                ]
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": []
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-an-unstatable-name-check-user-rejects-is-the-emulators-own-skip",
+      "rationale": "notauser is a name the walk of dev_hdd0/home handed back and whose own stat failed, so nothing about it was learned — but one test still decides it without a stat. check_user reads nothing but the name (system_utils.cpp:59-69 at build 7c6b3dcd, applied at user_account.cpp:49-54), and it rejects this one, so the emulator passes the entry over whichever way its own walk went: the walk's fstatat failing too, or succeeding on something that is no directory (dropped at user_account.cpp:43-46, before the name is read), or succeeding on a directory the name then rejects. Every road ends in the emulator's own skip, so the entry is stated under skipped and not as one atlas could not decide — which is what separates it from 12345678 in the vector beside this one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
+          "/mnt/sd/hdd0/home/00000001/localusername": "User"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/hdd0/home/00000001"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        },
+        "inaccessible": [
+          "/mnt/sd/hdd0/home/notauser"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "dir": "/mnt/sd/hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "RPCS3",
+                "reason": "active-user-unrecorded",
+                "users": [
+                  "00000001"
+                ],
+                "skipped": [
+                  "notauser"
+                ]
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "core": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/hdd0/savedata/vmc",
+                "files": []
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "/mnt/sd/hdd0/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "retrodeck-vita3k-saves-under-the-preference-path-it-names",
       "rationale": "One configuration key carries Vita3K's whole tree: pref-path in config.yml, with everything the emulator keeps hanging off it as ux0/… . Saves are per user then per title — init_savedata_app_path composes <pref-path>/ux0/user/<user>/savedata/<title id> (io.cpp:136-143 at commit cb1f592c) — and the per-title names stay refused because they are the games' own. The file is YAML, read with the scalar reader that names what it skips; the five lists config.yml carries are not this key. Each user directory holds a user.xml that loads, which is the file get_users_list loads before listing a user (user_management.cpp:89 at cb1f592c) — without it the directory is one the emulator passes over.",
       "input": {
@@ -5073,7 +5287,7 @@
     },
     {
       "name": "vita3k-a-leading-period-stem-keeps-the-period-and-cuts-at-the-later-one",
-      "rationale": "An id-less user.xml keys the user by the directory name's stem (get_users_list, user_management.cpp:97 at cb1f592c), and std::filesystem::path::stem cuts at the rightmost period unless that period is the name's first character, spelled the way libstdc++ cuts (_M_find_extension, fs_path.cc:1866-1891 at gcc 14.2.0): .hidden.bak stems to .hidden, its leading period kept. With user-id .hidden recorded that directory answers to the recorded id, so the headline composes from the identity — ux0/user/.hidden/savedata, a tree the first save creates — while the group stays the directory found.",
+      "rationale": "An id-less user.xml keys the user by the directory name's stem (get_users_list, user_management.cpp:97 at cb1f592c), and that stem is boost::filesystem's path::stem — fs is boost (util/fs.h:20,30). atlas mirrors stem_v4, which cuts at the rightmost period unless that period leads the name (path.cpp:836-846): .hidden.bak stems to .hidden, its leading period kept, and it stems the same under stem_v3 (:824-834) because the cut falls at the later period. With user-id .hidden recorded that directory answers to the recorded id, so the headline composes from the identity — ux0/user/.hidden/savedata, a tree the first save creates — while the group stays the directory found.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5170,7 +5384,7 @@
     },
     {
       "name": "vita3k-a-name-of-two-leading-periods-stems-to-a-single-period",
-      "rationale": "..bak is neither . nor .., so the stem rule applies to it: the extension starts at the rightmost period, position 1, and the stem is the single period before it (libstdc++ _M_find_extension, fs_path.cc:1883-1887 at gcc 14.2.0). With user-id ..bak recorded, the directory of that name answers to id \".\" instead, so it is not the recorded user and the caveat says so — a reader that skipped the whole leading run of periods would have keyed it ..bak and headlined its tree as the recorded user's.",
+      "rationale": "..bak is neither . nor .., so the stem rule applies to it: the cut falls at the rightmost period, position 1, and the stem is the single period before it — the same answer under both of boost's stems (path.cpp:824-834, :836-846), because the period cut at does not lead the name. With user-id ..bak recorded, the directory of that name answers to id \".\" instead, so it is not the recorded user and the caveat says so — a reader that skipped the whole leading run of periods would have keyed it ..bak and headlined its tree as the recorded user's.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5458,6 +5672,108 @@
               {
                 "key": "user-id",
                 "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-user-root-entry-whose-own-stat-fails-is-stated-not-dropped",
+      "rationale": "01 is a name the walk of ux0/user handed back and whose own stat failed. Vita3K reaches such an entry as a boost::filesystem::directory_entry, whose is_directory answers from the kind readdir handed the walk and stats only where that kind is absent (directory.hpp:544-547, directory.cpp:413-450 at the bundled Boost 1.89, which the build uses when no system Boost 1.81 or newer is found, and which 1.81 reads alike) — so the entry passes the directory test and stands or falls on its user.xml like any other, is skipped, or throws out of the listing, by a d_type atlas does not read. Not established, stated as that beside the user that did list, and no group names its savedata.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"00\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        },
+        "inaccessible": [
+          "/mnt/sd/vita/ux0/user/01"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "no-user-preselected",
+                "users": [
+                  "00"
+                ],
+                "unestablished": [
+                  "01"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               },
               {
