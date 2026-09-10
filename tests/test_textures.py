@@ -592,7 +592,7 @@ class TestAStandaloneEmulatorAnswersFromItsOwnXdgTree:
             c for c in placement.caveats if c.code == atlas.CAVEAT_EMULATOR_CONFIG_UNREAD
         )
         assert dict(caveat.data) == {
-            "emulator": "DOLPHIN",
+            "token": "DOLPHIN",
             "config": f"{RD_APP}/config/dolphin-emu/GFX.ini",
         }
 

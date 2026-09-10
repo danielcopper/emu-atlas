@@ -402,7 +402,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "DOLPHIN",
+              "token": "DOLPHIN",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
             }
           }
@@ -552,7 +552,7 @@
             {
               "code": "save-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
                 "layout": "UDATA/<title id>"
               }
@@ -649,7 +649,7 @@
             {
               "code": "save-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
                 "layout": "UDATA/<title id>"
               }
@@ -5706,7 +5706,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "VITA3K",
+              "token": "VITA3K",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
             }
           }
@@ -6486,7 +6486,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "DUCKSTATION",
+              "token": "DUCKSTATION",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini",
               "path": "/var/tmp/memcards"
             }
@@ -6528,7 +6528,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "PCSX2",
+              "token": "PCSX2",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini",
               "path": "/var/tmp/memcards"
             }
@@ -6570,7 +6570,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "XEMU",
+              "token": "XEMU",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml",
               "path": "/var/tmp/xbox_hdd.qcow2",
               "paths": [
@@ -6662,7 +6662,7 @@
             {
               "code": "save-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "<cwd>/images/xbox_hdd.qcow2",
                 "layout": "UDATA/<title id>"
               }
@@ -9747,7 +9747,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "RPCS3",
+              "token": "RPCS3",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
               "reason": "key-unread",
               "key": "/dev_hdd0/"
