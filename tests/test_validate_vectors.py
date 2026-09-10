@@ -1262,32 +1262,37 @@ class TestTheFileLevelRules:
             self._validate(path)
 
     def test_a_foreign_family_is_refused(self, tmp_path):
+        path = self._file(tmp_path, family="other")
         with pytest.raises(VectorError, match="family must be"):
-            self._validate(self._file(tmp_path, family="other"))
+            self._validate(path)
 
     def test_another_schema_is_refused(self, tmp_path):
         # The number is the contract's generation: a port built to schema 2
         # models no unlistable directory, so the corpus is not the same
         # promise and says so instead of failing one vector at a time.
+        path = self._file(tmp_path, schema=2)
         with pytest.raises(VectorError, match="schema must be"):
-            self._validate(self._file(tmp_path, schema=2))
+            self._validate(path)
 
     def test_a_nameless_vector_is_refused(self, tmp_path):
         nameless = {**_vector(), "name": ""}
+        path = self._file(tmp_path, vectors=[nameless])
         with pytest.raises(VectorError, match="missing or empty name"):
-            self._validate(self._file(tmp_path, vectors=[nameless]))
+            self._validate(path)
 
     def test_a_duplicate_name_is_refused(self, tmp_path):
         twin = {**_vector(), "input": {"home": HOME, "files": {"/other": ""}}}
+        path = self._file(tmp_path, vectors=[_vector(), twin])
         with pytest.raises(VectorError, match="duplicate name"):
-            self._validate(self._file(tmp_path, vectors=[_vector(), twin]))
+            self._validate(path)
 
     def test_a_duplicate_input_is_refused(self, tmp_path):
         # Same machine, same question, two expectations: one of them would
         # never be the answer, and nothing would say which.
         twin = {**_vector(), "name": "other"}
+        path = self._file(tmp_path, vectors=[_vector(), twin])
         with pytest.raises(VectorError, match="duplicate canonical input"):
-            self._validate(self._file(tmp_path, vectors=[_vector(), twin]))
+            self._validate(path)
 
     def test_a_duplicate_input_across_files_is_refused(self, tmp_path):
         seen = {}
@@ -1651,6 +1656,67 @@ class TestTheVocabularyIsOneVocabulary:
 
         packaged = {kind: record.label for kind, record in load_distribution_labels().items()}
         assert validate_vectors.KNOWN_DISTRIBUTION_LABELS == packaged
+
+
+class TestTheExpectationTablesAgree:
+    """The tables an expected block is checked against, held to each other.
+
+    They used to be one long function, and the rule below was a habit inside it:
+    whoever added a question wrote the allow-list entry, the pairing ``if`` and
+    the dispatch ``if``, and nothing but care kept the three in step. Tables can
+    be edited one at a time, so the habit is stated here — all three legs of it,
+    because a guard holding two of them would read as though it held all three.
+
+    The directions fail differently. A question in the allow-list with no
+    pairing accepts an expectation beside a machine that never asked for it, and
+    the corpus would carry an answer to an unasked question and call it
+    verified. A question with no dispatch entry fails more quietly still: its
+    block is never looked at, so anything at all passes for it. A pairing naming
+    a query no input may carry can never fire, which reads as a rule and
+    enforces nothing.
+    """
+
+    def _paired_expectations(self) -> set[str]:
+        return {expectation for expectation, _ in validate_vectors._EXPECTATION_PAIRINGS}  # pyright: ignore[reportPrivateUsage]
+
+    def _paired_queries(self) -> set[str]:
+        return {query for _, query in validate_vectors._EXPECTATION_PAIRINGS}  # pyright: ignore[reportPrivateUsage]
+
+    def _dispatched(self) -> set[str]:
+        # The table itself, not a second copy of it: the checks are built per
+        # vector, so the smallest vector that can be built reads their keys off.
+        checks = validate_vectors._block_checks({"installations": []}, {})  # pyright: ignore[reportPrivateUsage]
+        return {check.key for check in checks}
+
+    def _optional_expectations(self) -> set[str]:
+        # 'installations' is what a vector always states, not a question it
+        # asks, so it is the one key no query pairs with.
+        return validate_vectors._EXPECTED_KEYS - {"installations"}  # pyright: ignore[reportPrivateUsage]
+
+    def test_every_paired_expectation_is_a_key_a_vector_may_state(self):
+        assert sorted(self._paired_expectations() - self._optional_expectations()) == []
+
+    def test_every_optional_key_a_vector_may_state_carries_a_pairing(self):
+        assert sorted(self._optional_expectations() - self._paired_expectations()) == []
+
+    def test_every_optional_key_a_vector_may_state_is_dispatched(self):
+        # Equality, not a subset either way: a key with no check is a block
+        # nothing reads, and a check with no key is one nothing can reach.
+        assert sorted(self._optional_expectations() ^ self._dispatched()) == []
+
+    def test_every_query_the_input_vocabulary_names_carries_a_pairing(self):
+        queries = {key for key in validate_vectors.INPUT_FIELDS_OPTIONAL if key.endswith("_query")}
+        assert sorted(queries - self._paired_queries()) == []
+
+    def test_every_paired_query_is_one_an_input_may_carry(self):
+        assert sorted(self._paired_queries() - validate_vectors.INPUT_FIELDS_OPTIONAL) == []
+
+    def test_no_two_pairings_name_the_same_question(self):
+        # A set comparison above would be blind to a repeat, and a repeated
+        # expectation is two rules about one key with nothing saying which won.
+        pairings = validate_vectors._EXPECTATION_PAIRINGS  # pyright: ignore[reportPrivateUsage]
+        assert len(self._paired_expectations()) == len(pairings)
+        assert len(self._paired_queries()) == len(pairings)
 
 
 class TestACodesNameIsItsString:

@@ -116,12 +116,14 @@ class TestTheLoaderRefusesWhatItCannotPlace:
             load_arrangement_evidence(text)
 
     def test_a_record_without_a_note_is_rejected(self):
+        text = _record(label="X", verified=None)
         with pytest.raises(ValueError, match="note"):
-            load_arrangement_evidence(_record(label="X", verified=None))
+            load_arrangement_evidence(text)
 
     def test_a_verified_record_loads_with_its_pin(self):
         record = load_arrangement_evidence(_record(label="X", note="n", verified=VERIFIED_RECORD))["x"]
-        assert record.verified is not None and record.verified.version == "0.10.9b"
+        assert record.verified is not None
+        assert record.verified.version == "0.10.9b"
 
     def test_an_undated_verification_is_allowed(self):
         text = _record(label="X", note="n", verified={"version": "1.0", "reference": "r"})
@@ -137,7 +139,7 @@ VERIFIED_KINDS = (atlas.EmuDeck.kind, atlas.RetroDeck.kind)
 class TestWhatTheCaveatSays:
     @pytest.mark.parametrize("kind", VERIFIED_KINDS)
     def test_a_verified_arrangement_states_nothing(self, kind):
-        assert arrangement_caveats(kind) == ()
+        assert arrangement_caveats(kind) == []
 
     def test_an_unverified_arrangement_states_one_caveat(self):
         assert [c.code for c in arrangement_caveats("bare_retroarch_flatpak")] == [
@@ -171,7 +173,7 @@ class TestTheVersionTripwire:
 
     @pytest.mark.parametrize("kind", VERIFIED_KINDS)
     def test_the_pinned_version_states_nothing(self, kind):
-        assert arrangement_caveats(kind, observed_version=_pin(kind)) == ()
+        assert arrangement_caveats(kind, observed_version=_pin(kind)) == []
 
     @pytest.mark.parametrize("kind", VERIFIED_KINDS)
     def test_another_version_states_the_drift(self, kind):
@@ -192,11 +194,11 @@ class TestTheVersionTripwire:
     def test_a_machine_that_states_no_version_stays_silent(self, kind):
         # Not "no drift" — no drift ESTABLISHED. Claiming a comparison nobody
         # could make is the one thing atlas never does.
-        assert arrangement_caveats(kind) == ()
+        assert arrangement_caveats(kind) == []
 
     @pytest.mark.parametrize("kind", VERIFIED_KINDS)
     def test_an_empty_version_names_no_version_either(self, kind):
-        assert arrangement_caveats(kind, observed_version="") == ()
+        assert arrangement_caveats(kind, observed_version="") == []
 
     def test_an_unverified_arrangement_has_no_pin_to_drift_from(self):
         # Whatever version an unobserved arrangement states, the missing

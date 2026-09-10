@@ -4041,7 +4041,7 @@ def _why_unread(unread: tuple[str, ...], raw_count: str) -> str:
     return "; ".join(clauses)
 
 
-def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
+def _unread_declaration_caveats(core: CoreDeclarations) -> list[Caveat]:
     """State the firmware a core's ``.info`` declares outside its own enumeration.
 
     RetroArch reads firmware through the ``firmware_count`` slots it composes
@@ -4054,8 +4054,8 @@ def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     its file lists.
     """
     if not core.unread:
-        return ()
-    return (
+        return []
+    return [
         Caveat(
             CAVEAT_FIRMWARE_DECLARATION_UNREAD,
             f"{core.core_so} declares {', '.join(core.unread)}, which RetroArch does not take: "
@@ -4066,8 +4066,8 @@ def _unread_declaration_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
                 "declared": core.unread,
                 "firmware_count": core.firmware_count,
             },
-        ),
-    )
+        )
+    ]
 
 
 def _core_caveats(core: CoreDeclarations, refusals: tuple[Caveat, ...]) -> tuple[Caveat, ...]:

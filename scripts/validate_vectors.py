@@ -15,7 +15,8 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, NoReturn
+from collections.abc import Callable
+from typing import Any, NamedTuple, NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -2490,141 +2491,184 @@ def _validate_aggregate(name: str, aggregate: Any, query: dict[str, Any], instal
         )
 
 
+# Every key an expected block may carry. 'installations' is the one that is
+# always there — a vector states what the machine has even when it asks
+# nothing — and the rest are the optional expectations below.
+_EXPECTED_KEYS = {
+    "installations",
+    "savefile_location",
+    "aggregate",
+    "catalogue",
+    "systems",
+    "launchable",
+    "rom_location",
+    "entry_savefile_location",
+    "savestate_location",
+    "entry_savestate_location",
+    "screenshot_location",
+    "texture_pack_location",
+    "entry_texture_pack_location",
+    "soft_patch_candidates",
+    "mod_location",
+    "entry_mod_location",
+    "firmware",
+    "identification",
+    "systems_for_platform",
+    "platform_ids",
+}
+# Each optional expectation and the query that asks for it: a vector states
+# both or neither, because an expectation nobody asked for and a question with
+# no expectation are the same defect seen from two sides.
+_EXPECTATION_PAIRINGS = (
+    ("aggregate", "aggregate_query"),
+    ("catalogue", "catalogue_query"),
+    ("systems", "systems_query"),
+    ("systems_for_platform", "platform_systems_query"),
+    ("platform_ids", "platform_ids_query"),
+    ("launchable", "launchable_query"),
+    ("rom_location", "rom_location_query"),
+    ("savefile_location", "savefile_query"),
+    ("entry_savefile_location", "entry_savefile_query"),
+    ("savestate_location", "savestate_query"),
+    ("screenshot_location", "screenshot_query"),
+    ("entry_savestate_location", "entry_savestate_query"),
+    ("texture_pack_location", "texture_query"),
+    ("entry_texture_pack_location", "entry_texture_query"),
+    ("mod_location", "mod_query"),
+    ("entry_mod_location", "entry_mod_query"),
+    ("soft_patch_candidates", "soft_patch_query"),
+    ("firmware", "firmware_query"),
+    ("identification", "identify_query"),
+)
+# The expectations that need something to have been detected. Two optional
+# keys stand outside it. 'aggregate' is deliberately outside: asking every
+# installation on a machine that has none is a question with a truthful empty
+# answer, not a question nobody can answer, and one vector states exactly that.
+# 'rom_location' is outside too, and no vector uses the latitude — nothing on
+# record says whether that is meant, so it stands as it is rather than being
+# tightened on a guess.
+_RESOLVER_EXPECTATIONS = {
+    "savefile_location",
+    "savestate_location",
+    "entry_savefile_location",
+    "entry_savestate_location",
+    "screenshot_location",
+    "texture_pack_location",
+    "entry_texture_pack_location",
+    "soft_patch_candidates",
+    "mod_location",
+    "entry_mod_location",
+    "catalogue",
+    "systems",
+    "launchable",
+    "firmware",
+    "identification",
+    "systems_for_platform",
+    "platform_ids",
+}
+
+
+def _pairing_complaint(name: str, expectation: str, query: str) -> str:
+    """How a broken pairing reads. The savefile wording is the older one, kept."""
+    if expectation == "savefile_location":
+        return f"{name}: a {query} and a {expectation} expectation must appear together"
+    return f"{name}: {query} and {expectation} expectation must appear together"
+
+
+def _validate_expected_pairings(name: str, keys: set[str], inp: dict[str, Any]) -> None:
+    """Every expectation travels with the query that asks for it, and vice versa."""
+    for expectation, query in _EXPECTATION_PAIRINGS:
+        if (expectation in keys) != (query in inp):
+            fail(_pairing_complaint(name, expectation, query))
+
+
+class _BlockCheck(NamedTuple):
+    """One expectation block and the check that reads it.
+
+    The check takes the vector's name and the block, and nothing else. Where a
+    validator wants more — the label it complains under when two questions
+    share it, the query the answer is held against, the installations the
+    aggregate fans out over — the table binds it below, so what is handed over
+    is checked where it is written rather than swallowed at the call.
+    """
+
+    key: str
+    validate: Callable[[str, Any], None]
+
+
+def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_BlockCheck, ...]:
+    """The dispatch table: every optional expectation, in the order they are read.
+
+    Built per vector because two of the checks are bound to that vector's own
+    input. The bindings are lazy — each runs only if its block is there, which
+    is why the two queries can be read directly rather than defensively.
+    """
+    return (
+        _BlockCheck("savefile_location", _validate_savefile_outcome),
+        _BlockCheck(
+            "aggregate",
+            lambda name, block: _validate_aggregate(
+                name, block, inp["aggregate_query"], expected["installations"]
+            ),
+        ),
+        _BlockCheck("catalogue", _validate_catalogue),
+        _BlockCheck("rom_location", _validate_rom_location),
+        _BlockCheck("systems", _validate_systems),
+        _BlockCheck("systems_for_platform", _validate_platform_systems),
+        _BlockCheck("platform_ids", _validate_platform_ids),
+        _BlockCheck("launchable", _validate_launchable),
+        _BlockCheck("savestate_location", _validate_savestate_outcome),
+        _BlockCheck("screenshot_location", _validate_screenshot_outcome),
+        _BlockCheck(
+            "entry_savefile_location",
+            lambda name, block: _validate_savefile_outcome(name, block, "entry_savefile_location"),
+        ),
+        _BlockCheck(
+            "entry_savestate_location",
+            lambda name, block: _validate_savestate_outcome(name, block, "entry_savestate_location"),
+        ),
+        _BlockCheck("texture_pack_location", _validate_texture_outcome),
+        _BlockCheck(
+            "entry_texture_pack_location",
+            lambda name, block: _validate_texture_outcome(
+                name, block, "entry_texture_pack_location"
+            ),
+        ),
+        _BlockCheck("mod_location", _validate_mod_outcome),
+        _BlockCheck(
+            "entry_mod_location",
+            lambda name, block: _validate_mod_outcome(name, block, "entry_mod_location"),
+        ),
+        _BlockCheck("soft_patch_candidates", _validate_soft_patch_outcome),
+        _BlockCheck("firmware", _validate_firmware),
+        _BlockCheck(
+            "identification",
+            lambda name, block: _validate_identification(name, block, inp["identify_query"]),
+        ),
+    )
+
+
+def _validate_expected_blocks(name: str, expected: dict[str, Any], inp: dict[str, Any]) -> None:
+    """Each expectation the vector states, checked by the validator that reads it."""
+    for check in _block_checks(expected, inp):
+        if check.key in expected:
+            check.validate(name, expected[check.key])
+
+
 def _validate_expected(name: str, expected: Any, inp: dict[str, Any]) -> None:
     if not isinstance(expected, dict):
         fail(f"{name}: expected must be an object")
     keys = set(expected)
-    allowed = {
-        "installations",
-        "savefile_location",
-        "aggregate",
-        "catalogue",
-        "systems",
-        "launchable",
-        "rom_location",
-        "entry_savefile_location",
-        "savestate_location",
-        "entry_savestate_location",
-        "screenshot_location",
-        "texture_pack_location",
-        "entry_texture_pack_location",
-        "soft_patch_candidates",
-        "mod_location",
-        "entry_mod_location",
-        "firmware",
-        "identification",
-        "systems_for_platform",
-        "platform_ids",
-    }
-    if "installations" not in keys or not keys <= allowed:
-        fail(f"{name}: expected keys must be 'installations' plus optional {sorted(allowed - {'installations'})}")
-    if ("aggregate" in keys) != ("aggregate_query" in inp):
-        fail(f"{name}: aggregate_query and aggregate expectation must appear together")
-    if ("catalogue" in keys) != ("catalogue_query" in inp):
-        fail(f"{name}: catalogue_query and catalogue expectation must appear together")
-    if ("systems" in keys) != ("systems_query" in inp):
-        fail(f"{name}: systems_query and systems expectation must appear together")
-    if ("systems_for_platform" in keys) != ("platform_systems_query" in inp):
-        fail(f"{name}: platform_systems_query and systems_for_platform expectation must appear together")
-    if ("platform_ids" in keys) != ("platform_ids_query" in inp):
-        fail(f"{name}: platform_ids_query and platform_ids expectation must appear together")
-    if ("launchable" in keys) != ("launchable_query" in inp):
-        fail(f"{name}: launchable_query and launchable expectation must appear together")
-    if ("rom_location" in keys) != ("rom_location_query" in inp):
-        fail(f"{name}: rom_location_query and rom_location expectation must appear together")
-    if ("savefile_location" in keys) != ("savefile_query" in inp):
-        fail(f"{name}: a savefile_query and a savefile_location expectation must appear together")
-    if ("entry_savefile_location" in keys) != ("entry_savefile_query" in inp):
-        fail(f"{name}: entry_savefile_query and entry_savefile_location expectation must appear together")
-    if ("savestate_location" in keys) != ("savestate_query" in inp):
-        fail(f"{name}: savestate_query and savestate_location expectation must appear together")
-    if ("screenshot_location" in keys) != ("screenshot_query" in inp):
-        fail(f"{name}: screenshot_query and screenshot_location expectation must appear together")
-    if ("entry_savestate_location" in keys) != ("entry_savestate_query" in inp):
-        fail(f"{name}: entry_savestate_query and entry_savestate_location expectation must appear together")
-    if ("texture_pack_location" in keys) != ("texture_query" in inp):
-        fail(f"{name}: texture_query and texture_pack_location expectation must appear together")
-    if ("entry_texture_pack_location" in keys) != ("entry_texture_query" in inp):
+    if "installations" not in keys or not keys <= _EXPECTED_KEYS:
         fail(
-            f"{name}: entry_texture_query and entry_texture_pack_location expectation must appear together"
+            f"{name}: expected keys must be 'installations' plus optional "
+            f"{sorted(_EXPECTED_KEYS - {'installations'})}"
         )
-    if ("mod_location" in keys) != ("mod_query" in inp):
-        fail(f"{name}: mod_query and mod_location expectation must appear together")
-    if ("entry_mod_location" in keys) != ("entry_mod_query" in inp):
-        fail(f"{name}: entry_mod_query and entry_mod_location expectation must appear together")
-    if ("soft_patch_candidates" in keys) != ("soft_patch_query" in inp):
-        fail(f"{name}: soft_patch_query and soft_patch_candidates expectation must appear together")
-    if ("firmware" in keys) != ("firmware_query" in inp):
-        fail(f"{name}: firmware_query and firmware expectation must appear together")
-    if ("identification" in keys) != ("identify_query" in inp):
-        fail(f"{name}: identify_query and identification expectation must appear together")
+    _validate_expected_pairings(name, keys, inp)
     _validate_installations(name, expected["installations"])
-    # 'aggregate' is deliberately not in this set: asking every installation on
-    # a machine that has none is a question with a truthful empty answer, not a
-    # question nobody can answer.
-    if (
-        keys
-        & {
-            "savefile_location",
-            "savestate_location",
-            "entry_savefile_location",
-            "entry_savestate_location",
-            "screenshot_location",
-            "texture_pack_location",
-            "entry_texture_pack_location",
-            "soft_patch_candidates",
-            "mod_location",
-            "entry_mod_location",
-            "catalogue",
-            "systems",
-            "launchable",
-            "firmware",
-            "identification",
-            "systems_for_platform",
-            "platform_ids",
-        }
-    ) and not expected["installations"]:
+    if (keys & _RESOLVER_EXPECTATIONS) and not expected["installations"]:
         fail(f"{name}: a resolver expectation needs a detected installation to answer it")
-    if "savefile_location" in keys:
-        _validate_savefile_outcome(name, expected["savefile_location"])
-    if "aggregate" in keys:
-        _validate_aggregate(name, expected["aggregate"], inp["aggregate_query"], expected["installations"])
-    if "catalogue" in keys:
-        _validate_catalogue(name, expected["catalogue"])
-    if "rom_location" in keys:
-        _validate_rom_location(name, expected["rom_location"])
-    if "systems" in keys:
-        _validate_systems(name, expected["systems"])
-    if "systems_for_platform" in keys:
-        _validate_platform_systems(name, expected["systems_for_platform"])
-    if "platform_ids" in keys:
-        _validate_platform_ids(name, expected["platform_ids"])
-    if "launchable" in keys:
-        _validate_launchable(name, expected["launchable"])
-    if "savestate_location" in keys:
-        _validate_savestate_outcome(name, expected["savestate_location"])
-    if "screenshot_location" in keys:
-        _validate_screenshot_outcome(name, expected["screenshot_location"])
-    if "entry_savefile_location" in keys:
-        _validate_savefile_outcome(name, expected["entry_savefile_location"], "entry_savefile_location")
-    if "entry_savestate_location" in keys:
-        _validate_savestate_outcome(name, expected["entry_savestate_location"], "entry_savestate_location")
-    if "texture_pack_location" in keys:
-        _validate_texture_outcome(name, expected["texture_pack_location"])
-    if "entry_texture_pack_location" in keys:
-        _validate_texture_outcome(
-            name, expected["entry_texture_pack_location"], "entry_texture_pack_location"
-        )
-    if "mod_location" in keys:
-        _validate_mod_outcome(name, expected["mod_location"])
-    if "entry_mod_location" in keys:
-        _validate_mod_outcome(name, expected["entry_mod_location"], "entry_mod_location")
-    if "soft_patch_candidates" in keys:
-        _validate_soft_patch_outcome(name, expected["soft_patch_candidates"])
-    if "firmware" in keys:
-        _validate_firmware(name, expected["firmware"])
-    if "identification" in keys:
-        _validate_identification(name, expected["identification"], inp["identify_query"])
+    _validate_expected_blocks(name, expected, inp)
 
 
 def validate_machines_vector(vector: dict[str, Any]) -> None:
