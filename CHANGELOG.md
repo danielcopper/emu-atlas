@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.17.0](https://github.com/danielcopper/emu-atlas/compare/v0.16.0...v0.17.0) (2026-09-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **contract:** caveat data spells a card token as token, never as emulator ([#450](https://github.com/danielcopper/emu-atlas/issues/450))
+* **contract:** every emulator entry carries the identity its launch command spells ([#447](https://github.com/danielcopper/emu-atlas/issues/447))
+
+### Features
+
+* **contract:** every emulator entry carries the identity its launch command spells ([#447](https://github.com/danielcopper/emu-atlas/issues/447)) ([311e705](https://github.com/danielcopper/emu-atlas/commit/311e7056d28c478b6190b2710d6fa3e8faf8b10e)), closes [#444](https://github.com/danielcopper/emu-atlas/issues/444)
+* **saves:** an observed answer names the same-root directories it did not read ([#442](https://github.com/danielcopper/emu-atlas/issues/442)) ([8952e95](https://github.com/danielcopper/emu-atlas/commit/8952e958fec75dc78b7d3dc9fdc0a07d7f4684dc))
+
+
+### Documentation
+
+* **firmware:** the inventory lists installed cores only ([#443](https://github.com/danielcopper/emu-atlas/issues/443)) ([d919126](https://github.com/danielcopper/emu-atlas/commit/d9191267dae35d714cf1cb5245e9bf85b536b279))
+
+
+### Code Refactoring
+
+* **contract:** caveat data spells a card token as token, never as emulator ([#450](https://github.com/danielcopper/emu-atlas/issues/450)) ([f139b51](https://github.com/danielcopper/emu-atlas/commit/f139b5101823c6eab9639448d7407e51e271c862)), closes [#448](https://github.com/danielcopper/emu-atlas/issues/448)
+
 ## [0.16.0](https://github.com/danielcopper/emu-atlas/compare/v0.15.1...v0.16.0) (2026-09-10)
 
 
