@@ -298,11 +298,16 @@ findings:
   states a directory's role and refuses its file names, as it does for ScummVM's slot files and WHDLoad's drawer — under
   that directory's role, and only a file no group of that directory covers says so in a word (`role: unknown`). Absence
   is never a value, and neither is a missing _name_ a missing kind — that is the same rule `granularity` and `checked`
-  already obey. What such an answer does **not** state is the card's other directories: its groups decompose the one
+  already obey. What such an answer's **groups** do not state is the card's other directories: they decompose the one
   directory that was read, so a card that also writes into a sibling subdirectory (`kronos/stv` beside `kronos/saturn`,
-  seven of MAME 2010's eight) has parts that only the declared answer states as groups, and only an unnamed part keeps
-  its `file-names-unestablished` caveat. The full map of places is the guarantee of a declared answer a card decomposed
-  — the standard rule states one list in one directory and no groups at all — never an observation's.
+  seven of MAME 2010's eight) has parts no group of that answer carries. Each of those parts is stated as a caveat
+  instead, and which one is decided by where it lies: a directory under the same root is `file-set-directories-unread`,
+  one caveat per directory and only on an observation; a part under another root is `file-set-spans-roots`, in either
+  state. A directory whose file names follow from nothing atlas reads keeps its `file-names-unestablished` beside
+  whichever of those two names it, because "the names are not derivable" and "nothing read this directory" are different
+  facts about the same place. So the full map of places in **one structure** is the guarantee of a declared answer a
+  card decomposed — the standard rule states one list in one directory and no groups at all — and never an
+  observation's, where the walk is the groups plus the caveats.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is

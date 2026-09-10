@@ -438,6 +438,265 @@ class TestAnUnnamedGroupSpeaksOnlyForItsOwnDirectory:
         assert [(g.files, g.role) for g in groups] == [(("game.cfg",), atlas.ROLE_SETTINGS)]
 
 
+KRONOS_STEM = "Panzer Dragoon (Europe)"
+KRONOS_ROM = f"/mnt/sd/retrodeck/roms/saturn/{KRONOS_STEM}.cue"
+# The shared CFG sorts by the content's directory, so the card's own subtree
+# nests under `saturn/` — the same path the declared answer's groups carry.
+KRONOS_SAVES = "/mnt/sd/retrodeck/saves/saturn"
+# What the deployed core registers, so a fixture core answers the way the
+# shipped binary does. The default lives here rather than in the card: the card
+# records one only for a core that registers none, and this one registers its
+# own. TestTheModeKeysAreTheDeployedCoresOwn measures the mode keys against the
+# binaries; TestADefaultIsRecordedOnlyWhereTheCoreStatesNone measures that the
+# card records no default this core already states.
+KRONOS_REGISTERED = {
+    "kronos_use_beetle_saves": {"default": "disabled", "values": ["disabled", "enabled"]}
+}
+KRONOS_CORE = {"library_name": "Kronos", "options": KRONOS_REGISTERED}
+
+
+def _kronos_query(files):
+    rd = _retrodeck(files, cores={f"{DEPLOY}/kronos_libretro.so": KRONOS_CORE})
+    return placed(rd.savefile_location(content_path=KRONOS_ROM, core_so="kronos_libretro.so"))
+
+
+def _unread(placement) -> list[str]:
+    """The directories an observed answer says it did not read, in the order stated."""
+    return [
+        _text(c, "dir")
+        for c in placement.caveats
+        if c.code == atlas.CAVEAT_FILE_SET_DIRECTORIES_UNREAD
+    ]
+
+
+def _unestablished(placement) -> list[str]:
+    return [
+        _text(c, "dir")
+        for c in placement.caveats
+        if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED
+    ]
+
+
+class TestTheDirectoriesAnObservationDidNotRead:
+    """Kronos: the card knows two places and an observation reads one of them.
+
+    Which two depends on the mode — ``kronos/saturn`` beside ``kronos/stv``
+    while the Beetle spelling is off, the save root itself beside
+    ``kronos/stv`` once it is on — and either way the observation reads one.
+    Both of its modes drop ``kronos/stv``, and both stv groups *state* their
+    files — so they are neither unnamed nor cross-root, and before this caveat
+    nothing in an observed answer named that directory at all. What the answer
+    gains is the place, not its contents: the observation still read one
+    directory, and the groups still say so.
+    """
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, KRONOS_ROM: "", SAVES_KEEP: ""}
+
+    def test_the_saturn_observation_names_the_stv_directory(self):
+        p = _kronos_query({**self.FILES, f"{KRONOS_SAVES}/kronos/saturn/{KRONOS_STEM}.ram": "r"})
+        assert p.dir == f"{KRONOS_SAVES}/kronos/saturn"
+        assert p.file_set.state == "observed"
+        assert [g.dir for g in p.file_set.groups] == [f"{KRONOS_SAVES}/kronos/saturn"]
+        assert _unread(p) == [f"{KRONOS_SAVES}/kronos/stv"]
+        # The carrier this closes: no other caveat names that directory, because
+        # the stv groups declare their files and are not unnamed.
+        assert _unestablished(p) == []
+
+    def test_the_root_mode_names_it_too(self):
+        # With the Beetle spelling enabled the answer's own directory is the
+        # save root itself, and the stv subtree stays exactly where it was.
+        p = _kronos_query(
+            {
+                **self.FILES,
+                OPTIONS_CFG: 'kronos_use_beetle_saves = "enabled"\n',
+                f"{KRONOS_SAVES}/{KRONOS_STEM}.bkr": "r",
+            }
+        )
+        assert p.dir == KRONOS_SAVES
+        assert p.file_set.state == "observed"
+        assert _unread(p) == [f"{KRONOS_SAVES}/kronos/stv"]
+
+    def test_one_caveat_per_directory_not_per_group(self):
+        card = lookup_card(so_basename="kronos_libretro.so", library_name=None)
+        assert card is not None
+        stv = [g for g in card.modes["disabled"].groups if g.subdir == "kronos/stv"]
+        assert len(stv) == 2
+        p = _kronos_query({**self.FILES, f"{KRONOS_SAVES}/kronos/saturn/{KRONOS_STEM}.ram": "r"})
+        assert _unread(p) == [f"{KRONOS_SAVES}/kronos/stv"]
+
+    def test_the_declared_answer_carries_none(self):
+        # Nothing dropped out: a declared answer reaches every directory the
+        # card knows as a group, which is what makes the caveat redundant there.
+        p = _kronos_query(self.FILES)
+        assert p.file_set.state == "declared"
+        assert {g.dir for g in p.file_set.groups} == {
+            f"{KRONOS_SAVES}/kronos/saturn",
+            f"{KRONOS_SAVES}/kronos/stv",
+        }
+        assert _unread(p) == []
+
+
+class TestTheDroppedDirectoriesAreTheDeclaredAnswersOwn:
+    """MAME 2010 declares eight directories, and an observation of one keeps one.
+
+    The seven it drops are named here in the card's own order, and three of them
+    are named twice on purpose: ``file-names-unestablished`` says the file names
+    do not follow from anything atlas reads, this one says the directory was not
+    read. Those are different facts about the same place, and a client that acts
+    on one is not acting on the other.
+    """
+
+    FILES = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, MAME_ROM: "", SAVES_KEEP: ""}
+    FOUND = {f"{MAME2010_NVRAM}/dkong.nv": "nv"}
+
+    def test_the_seven_are_the_declared_groups_minus_the_one_that_was_read(self):
+        declared = _mame2010_query(self.FILES)
+        assert declared.file_set.state == "declared"
+        observed = _mame2010_query({**self.FILES, **self.FOUND})
+        assert observed.file_set.state == "observed"
+        assert [g.dir for g in observed.file_set.groups] == [MAME2010_NVRAM]
+        elsewhere = [
+            d for d in dict.fromkeys(g.dir for g in declared.file_set.groups) if d != MAME2010_NVRAM
+        ]
+        assert len(elsewhere) == 7
+        assert _unread(observed) == elsewhere
+        # And the declared answer states none of them, because it carries a
+        # group for every one of the eight directories — the same rule
+        # test_the_declared_answer_carries_none holds for kronos.
+        assert _unread(declared) == []
+
+    def test_the_three_that_already_travelled_still_do(self):
+        observed = _mame2010_query({**self.FILES, **self.FOUND})
+        also = _unestablished(observed)
+        assert len(also) == 3
+        assert set(also) < set(_unread(observed))
+
+    def test_the_four_silent_directories_are_named_now(self):
+        observed = _mame2010_query({**self.FILES, **self.FOUND})
+        silent = set(_unread(observed)) - set(_unestablished(observed))
+        assert {d.rsplit("/", 1)[-1] for d in silent} == {"cfg", "comment", "hi", "ini"}
+
+    def test_the_caveat_states_the_core_and_the_mode(self):
+        observed = _mame2010_query({**self.FILES, **self.FOUND})
+        caveat = next(
+            c for c in observed.caveats if c.code == atlas.CAVEAT_FILE_SET_DIRECTORIES_UNREAD
+        )
+        assert caveat.data["core"] == "mame2010"
+        assert caveat.data["mode"] == MODE_ALWAYS
+        assert set(caveat.data) == {"core", "mode", "dir"}
+        assert caveat.message
+
+    def test_a_card_whose_groups_share_one_directory_states_nothing(self):
+        # Flycast's 'disabled' mode keeps both its groups under `dc/`, so an
+        # observation there leaves no directory of the card's behind.
+        card = lookup_card(so_basename="flycast_libretro.so", library_name=None)
+        assert card is not None
+        disabled = card.modes["disabled"]
+        assert len({g.subdir for g in disabled.groups if g.root is None}) == 1
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                ROM: "",
+                SAVES_KEEP: "",
+                OPTIONS_CFG: 'reicast_per_content_vmus = "disabled"\n',
+                "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": {"status": "invalid-text"},
+            }
+        )
+        assert p.dir == "/mnt/sd/retrodeck/bios/dc"
+        assert p.file_set.state == "observed"
+        assert _unread(p) == []
+
+
+class TestTheUnreadDirectoriesAgreeWithEveryCard:
+    """The claim over all shipped cards, derived rather than enumerated by hand.
+
+    On an observed set the caveats name exactly the directories the declared
+    decomposition states and the answer's own directory is not, in the card's
+    order and once each — measured against the resolver's own builders over
+    every mode of every card, so a card added later is held to it too.
+    """
+
+    BASE = "/saves"
+    STEM = "Game"
+    CONTENT_DIR = "baseq2"
+
+    def _modes(self):
+        for card in load_oddities():
+            for name, mode in card.modes.items():
+                if mode.stated is None:
+                    yield card, name, mode
+
+    def _directory(self, mode) -> str:
+        from atlas.installations import _fill_subdir  # pyright: ignore[reportPrivateUsage]
+
+        filled, _ = _fill_subdir(
+            mode.subdir or "", rom_stem=self.STEM, content_dir_name=self.CONTENT_DIR
+        )
+        return "/".join([self.BASE, *[s for s in filled.split("/") if s]])
+
+    def test_the_caveats_are_the_declared_dirs_the_observation_left(self):
+        from atlas.installations import (
+            _declared_groups,  # pyright: ignore[reportPrivateUsage] - the two builders are the claim
+            _unread_directory_caveats,  # pyright: ignore[reportPrivateUsage]
+        )
+
+        observed = atlas.FileSet("observed", ("found",), "a set in the observed state")
+        measured = 0
+        for card, name, mode in self._modes():
+            directory = self._directory(mode)
+            declared = _declared_groups(
+                mode,
+                directory=directory,
+                rom_stem=self.STEM,
+                content_dir_name=self.CONTENT_DIR,
+            )
+            elsewhere = [d for d in dict.fromkeys(g.dir for g in declared) if d != directory]
+            caveats = _unread_directory_caveats(
+                card,
+                mode,
+                observed,
+                mode_value=name,
+                directory=directory,
+                rom_stem=self.STEM,
+                content_dir_name=self.CONTENT_DIR,
+            )
+            assert [_text(c, "dir") for c in caveats] == elsewhere, f"{card.key}/{name}"
+            measured += 1
+        assert measured > 0
+
+    def test_a_set_that_is_not_an_observation_states_nothing(self):
+        from atlas.installations import (
+            _unread_directory_caveats,  # pyright: ignore[reportPrivateUsage] - the rule under test
+        )
+
+        spans = [
+            (card, name, mode)
+            for card, name, mode in self._modes()
+            if len({g.subdir or "" for g in mode.groups if g.root is None}) > 1
+        ]
+        # The modes this caveat exists for at all — measured, not assumed: with
+        # none of them the two assertions below would pass on an empty walk.
+        assert len(spans) == 15
+        for other in (
+            atlas.FileSet("declared", ("declared.sav",), "a set in the declared state"),
+            atlas.FileSet("unknown", (), "a set in the unknown state"),
+        ):
+            for card, name, mode in spans:
+                assert (
+                    _unread_directory_caveats(
+                        card,
+                        mode,
+                        other,
+                        mode_value=name,
+                        directory=self._directory(mode),
+                        rom_stem=self.STEM,
+                        content_dir_name=self.CONTENT_DIR,
+                    )
+                    == ()
+                )
+
+
 PRBOOM_ROM = "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad"
 VQ2_ROM = "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak"
 
@@ -628,6 +887,19 @@ class TestACardRootedInTheContentsOwnTree:
         )
         assert p.file_set.state == "observed"
         assert p.file_set.files == ("libretro.cfg",)
+
+    def test_the_observation_names_the_savegames_tree_it_did_not_read(self):
+        # This route builds its own observed set, so the directories the
+        # observation drops have to be named here as well as on the standard
+        # rule's route — the savegames tree is the card's other place.
+        p = self._boom3_query(
+            {**self.FILES, "/mnt/sd/retrodeck/roms/doom3/base/libretro.cfg": "cfg"}
+        )
+        assert p.file_set.state == "observed"
+        assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/retrodeck/roms/doom3/base"]
+        assert _unread(p) == ["/mnt/sd/retrodeck/roms/doom3/base/savegames"]
+        # And it keeps its own caveat: the names there follow from nothing.
+        assert _unestablished(p) == ["/mnt/sd/retrodeck/roms/doom3/base/savegames"]
 
     def test_vitaquake3_states_one_settings_file(self):
         rd = _retrodeck(

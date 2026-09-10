@@ -185,6 +185,7 @@ from .placement import (
     CAVEAT_OPTION_ENTRY_RETIRED,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FILE_SET_ACROSS_SYSTEMS,
+    CAVEAT_FILE_SET_DIRECTORIES_UNREAD,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
     CAVEAT_EMULATOR_READ_UNESTABLISHED,
     CAVEAT_FEATURE_SWITCH_ABSENT,
@@ -2884,6 +2885,68 @@ def _unnamed_tree_caveats(
     return tuple(caveats)
 
 
+def _unread_directory_caveats(
+    card: CoreCard,
+    mode: SaveMode,
+    file_set: FileSet,
+    *,
+    mode_value: str,
+    directory: str,
+    rom_stem: str | None,
+    content_dir_name: str | None,
+) -> tuple[Caveat, ...]:
+    """The mode's other directories under this root, once an observation replaced them.
+
+    An observed set's groups are what was found in the one directory the
+    observation read (:func:`_observed_groups`), so a mode whose parts lie in
+    sibling subdirectories loses them exactly when a file turns up: Kronos
+    declares ``kronos/saturn`` beside ``kronos/stv``, and a single ``.ram`` in
+    the first states one group; MAME 2010 declares eight trees, and a single
+    ``.nv`` in its ``nvram`` states one. Some of those directories had a carrier
+    already — the ones whose names were never derivable keep their
+    ``file-names-unestablished`` caveat — and the ones that *state* their files
+    had none at all. That silence is what this closes.
+
+    One caveat per directory, in the card's group order, each resolved the way
+    :func:`_declared_groups` resolves it, so a caveat's ``dir`` is the same
+    string the declared answer's group for that directory carries. Only for an
+    observed set: a declared answer already reaches every one of them as a
+    group, and an unknown one states nothing to have left out. Cross-root parts
+    are not this caveat's business — ``file-set-spans-roots`` carries those in
+    either state.
+    """
+    if file_set.state != FILE_SET_OBSERVED:
+        return ()
+    base = _base_of(directory, mode.subdir)
+
+    def resolved(subdir: str | None) -> str:
+        filled, _ = _fill_subdir(
+            subdir or "", rom_stem=rom_stem or None, content_dir_name=content_dir_name
+        )
+        return os.path.join(base, *[segment for segment in filled.split("/") if segment])
+
+    suffix = f" in mode {mode_value!r}" if mode_value else ""
+    seen = {resolved(mode.subdir)}
+    caveats = []
+    for group in mode.groups:
+        if group.root is not None:
+            continue
+        where = resolved(group.subdir)
+        if where in seen:
+            continue
+        seen.add(where)
+        caveats.append(
+            Caveat(
+                CAVEAT_FILE_SET_DIRECTORIES_UNREAD,
+                f"core {card.key!r}{suffix} also keeps save data under {where}: this "
+                f"observation read {directory} alone, so nothing here says what {where} "
+                "holds; while the file set is declared the same question states it as a group",
+                {"core": card.key, "mode": mode_value, "dir": where},
+            )
+        )
+    return tuple(caveats)
+
+
 @dataclass(frozen=True, slots=True)
 class _SystemRoot:
     """The directory RetroArch hands a core that asks for the system directory.
@@ -3227,6 +3290,20 @@ def _card_root_placement(
         observable=observable,
         excluded=excluded,
     )
+    # After the file set, because whether the card's other directories dropped
+    # out of the answer is a fact about the set's state.
+    if granularity is not None:
+        all_caveats.extend(
+            _unread_directory_caveats(
+                card,
+                mode,
+                file_set,
+                mode_value=granularity.mode or "",
+                directory=directory,
+                rom_stem=content.rom_stem,
+                content_dir_name=content.dir_name,
+            )
+        )
     physical_dir = None
     if observable:
         physical_dir, link_caveats = _link_view(machine, directory)
@@ -3627,12 +3704,13 @@ def _observed_groups(
     What this does *not* produce is the card's other directories. Every pass
     above is about the answer's own directory, because that is the one the
     observation read, so a mode with groups in sibling subdirectories
-    (``kronos/stv`` beside ``kronos/saturn``) states them while the set is
-    declared and not once it is observed. Those keep their
-    ``file-names-unestablished`` caveat where they are unnamed and travel
-    nowhere where they state files. The type's own docstring states that limit
-    for callers, and closing it is a decision about what an observed answer may
-    carry, not a change to this function's shape.
+    (``kronos/stv`` beside ``kronos/saturn``) states them as groups while the
+    set is declared and not once it is observed. They reach the caller as
+    caveats instead: :func:`_unread_directory_caveats` names every one of them
+    on an observed answer, and a directory whose names were never derivable
+    keeps its ``file-names-unestablished`` beside that. The promise here stays
+    the narrow one — these groups are what was found, where it was found — and
+    the type's own docstring states it for callers.
     """
     unclaimed = list(observed)
     groups: list[FileGroup] = []
@@ -4248,6 +4326,17 @@ def _standard_placement(
             _unnamed_tree_caveats(
                 card,
                 mode,
+                directory=final_dir,
+                rom_stem=content.rom_stem,
+                content_dir_name=content.dir_name,
+            )
+        )
+        all_caveats.extend(
+            _unread_directory_caveats(
+                card,
+                mode,
+                file_set,
+                mode_value=granularity.mode or "",
                 directory=final_dir,
                 rom_stem=content.rom_stem,
                 content_dir_name=content.dir_name,

@@ -2001,6 +2001,119 @@
       }
     },
     {
+      "name": "an-arcade-observation-names-the-directories-it-did-not-read",
+      "rationale": "The same MAME 2000 machine with the battery file written: the set is an observation now, and its groups describe the one directory that was read. The two the card also keeps — the score tables and the machine settings — are in no group any more, and each is named by its own file-set-directories-unread caveat with the directory the declared answer states for it. This is the pair that shows what an observation costs and what carries it: the declared answer above reaches all three trees through groups alone, this one through groups plus caveats, and neither ever says the other directories are empty.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME 2000\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2000_libretro.so %ROM%</command>\n    <command label=\"MAME 2010\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame2010_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/mnt/sd/retrodeck/saves/mame2000/nvram/dkong.nv": "nv"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/mame2000/nvram"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2000_libretro.so": {
+            "library_name": "MAME 2000",
+            "library_version": "0.37b5 2ec60f6"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2010_libretro.so": {
+            "library_name": "MAME 2010",
+            "library_version": "0.139 c5b413b"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "label": "MAME 2000",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/mame2000/nvram",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "dkong.nv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame2000/nvram",
+                "files": [
+                  "dkong.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame2000",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "mame2000",
+                "mode": "always",
+                "files": [
+                  "dkong.nv"
+                ],
+                "files_established_for": "driver-named-content",
+                "citation": "libretro/fileio.c:763 at libretro/mame2000-libretro 2ec60f6"
+              }
+            },
+            {
+              "code": "file-set-directories-unread",
+              "data": {
+                "core": "mame2000",
+                "mode": "always",
+                "dir": "/mnt/sd/retrodeck/saves/mame2000/hi"
+              }
+            },
+            {
+              "code": "file-set-directories-unread",
+              "data": {
+                "core": "mame2000",
+                "mode": "always",
+                "dir": "/mnt/sd/retrodeck/saves/mame2000/cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "an-arcade-build-states-two-directories-it-cannot-list",
       "rationale": "MAME 2010 keeps its whole tree below <save_dir>/mame2010, and the answer states every part: the named nvram/hi/cfg files, the memcard and diff trees whose names atlas cannot derive, and — since issue #142 — the debugger's per-machine notes (<basename>.cmt, the new notes role), the mame.ini the glue itself generates, and the ctrlr directory of user-provided controller profiles, stated without names because MAME only reads them. input and image stay out of scope by that issue's decision.",
       "input": {

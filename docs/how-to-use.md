@@ -862,18 +862,24 @@ only what is there, in the directory that was read. Its two lists come out of di
 declaration's order, `files` follows the observation's (sorted basenames where atlas globs a directory, the card's own
 candidate order where it checks the card's names one by one) — so compare them by name, never by position.
 
-**The parts a card keeps in another directory are in no group of an observed answer**, and there are two kinds. A part
-under _another_ root — Flycast's unmoved shared cards — is a group only where the set is declared, and the
-`file-set-spans-roots` caveat carries it in either state. A part under the _same_ root in another subdirectory is the
-one to know about: Kronos declares three groups across `kronos/saturn` and `kronos/stv`, and an observation of the first
-directory states one group; MAME 2010 declares eight directories, and an observation states one. Of the seven it drops,
-the three whose file names were never derivable still travel as `file-names-unestablished` caveats naming their
-directory — the other four are in the answer nowhere.
+**The parts a card keeps in another directory are in no group of an observed answer, and each one is a caveat instead.**
+Two carriers, chosen by where the part lies. A part under _another_ root — Flycast's unmoved shared cards — is a group
+only where the set is declared, and `file-set-spans-roots` carries it in either state. A part under the _same_ root in
+another subdirectory is `file-set-directories-unread`, one caveat per directory and only on an observation: Kronos
+declares three groups across `kronos/saturn` and `kronos/stv`, and an observation of the first states one group and
+names `kronos/stv`; MAME 2010 declares eight directories, and an observation states one and names seven. A third code
+rides along wherever the file names follow from nothing atlas reads: `file-names-unestablished` names a directory
+whether or not the observation read it — the directory that _was_ read, for ScummVM's slot files and WHDLoad's drawer,
+and three of MAME 2010's seven beside their `file-set-directories-unread`. Two codes on one directory are two facts
+about it: that the names are not derivable, and that nothing read it.
 
-So a backup tool that must reach every place a save lives cannot build its list from one observed answer's `groups`. The
-directories are in the card, and the same question states them as groups until this content's own name turns up in the
-answer's directory. Read the declared answer for the full map, walk the caveats beside an observation, and treat a short
-`groups` list as a gap in what this answer says about the other directories — never as a statement that they are empty.
+So a backup tool that must reach every place a save lives walks the groups _and_ the caveats. The declared answer is
+still the full map in one structure — every directory the card knows is a group there, including the ones no file has
+been written for yet. On an observation, `groups` is what was found in the directory that was read, every other
+directory the card knows _under that root_ is named in a `file-set-directories-unread` caveat with its resolved path in
+`data["dir"]`, and the parts under another root are the `file-set-spans-roots` caveats, which carry their file names
+too. A short `groups` list is never a statement that the other directories are empty; the caveats say what it is
+instead, which is that they were not looked at.
 
 ### A file set can carry a hole
 
@@ -963,6 +969,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope token, below       |
 | `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared             |
 | `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
+| `file-set-directories-unread`     | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"          |
 | `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
 | `core-unqueryable`                | the core could not be queried, `library_name` unknown — a `<library_name>` hole may remain                |
 | `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
