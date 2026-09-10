@@ -1111,11 +1111,11 @@ in `message`, and what it embedded is a key of its own (named in the third colum
     lifted out of the sentence.
 
 Four keys ride the eleven per-user reasons independently of which one it is, so read them by presence rather than by
-reason: `users` is always there and names the trees this answer points at — where none was found it holds the single
-tree the emulator starts with, which is a compiled default and not a directory seen on this machine; `configured_user`
-is there whenever the configuration records a user id, including on reasons whose name does not mention one; `skipped`
-names directories the emulator's own listing passes over, and `unestablished` those whose deciding file could not be
-read.
+reason: `users` is always there and names the users whose trees the per-user groups point at — where none was found it
+holds the single user the emulator starts with, a compiled default rather than one seen on this machine, and where the
+listing came back short the answer's own `dir` names that user's tree whatever `users` holds; `configured_user` is there
+whenever the configuration records a user id, including on reasons whose name does not mention one; `skipped` names
+directories the emulator's own listing passes over, and `unestablished` those whose deciding file could not be read.
 
 `emulator-config-unreadable.reason` — set where the read got somewhere and still could not answer. Six values are the
 scalar reader's own refusals — `second-document`, `anchor-or-alias`, `tag`, `substitution-cycle`,
@@ -1327,19 +1327,21 @@ out why. Vita3K _does_ record the user it opened, as `user-id` in that same `con
 record when the id is among the users it listed itself and either the command line names an app to run — which is how
 both frontends start a game — or `user-auto-connect` is on; that list comes from the directories under `ux0/user` whose
 `user.xml` loads, keyed by the file's `id` attribute or the directory name's stem, and atlas reads each `user.xml` the
-same way, so the check is the emulator's own rather than a guess from directory names. So where that listing holds the
-recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** — composed from the
-identity, which the first save creates where no directory of that name exists yet. **Every user Vita3K itself would list
-is a group of its own** — a directory without a `user.xml`, or with one that does not parse, is no user the emulator
-opens and is stated under `skipped` instead — with the recorded id beside them as a `user-id` reading and as
-`configured_user` in the `core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded
-user's tree is the one named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as
-that user — the player picks); the recorded user has no tree here at all; whether it is set up could not be read (a
-`user.xml` atlas could not read, stated under `unestablished`); no user the emulator would list was found at all (the
-directories found are all skipped, and `users` names the stand-in); whether the emulator would list a user account here
-was not established (at least one directory found is one atlas could not decide and none is listed, whatever else was
-skipped); or the tree could not be listed and the answer claims nothing new. A plain launch of the emulator without
-`user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a frontend makes.
+same way, so the check is the emulator's own rather than a guess from directory names. So where that listing completed
+and holds the recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** —
+composed from the identity, which the first save creates where no directory of that name exists yet. **Every user Vita3K
+itself would list is a group of its own** — a directory without a `user.xml`, or with one that does not parse, is no
+user the emulator opens and is stated under `skipped` instead — with the recorded id beside them as a `user-id` reading
+and as `configured_user` in the `core-mode-unestablished` caveat, whose `reason` says which case this machine is: the
+recorded user's tree is the one named; the recorded user is not set up here (its directory exists, but no `user.xml`
+lists it as that user — the player picks); the recorded user has no tree here at all; whether it is set up could not be
+read (a `user.xml` atlas could not read, stated under `unestablished`); no user the emulator would list was found at all
+(the directories found are all skipped, and `users` names the stand-in); whether the emulator would list a user account
+here was not established (at least one directory found is one atlas could not decide and none is listed, whatever else
+was skipped); or the tree could not be listed, in which case `dir` names the stand-in tree whatever the short listing
+handed back, the directories it did reach stay groups of their own, and a `save-dir-unlistable` caveat states the
+listing as short. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is recorded
+— the headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the

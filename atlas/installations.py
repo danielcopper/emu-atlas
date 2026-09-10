@@ -9198,8 +9198,9 @@ class _PerUserSaves:
     localusername file, Vita3K by a user.xml that loads.
 
     ``user_root`` is the directory holding the user directories,
-    ``first_user`` the one the emulator starts with — used only where nothing
-    could be listed, never as a claim that it is the one running.
+    ``first_user`` the one the emulator starts with — the tree the answer
+    names where the listing found no user and where it came back short, never
+    as a claim that it is the one running.
 
     ``skipped`` and ``unestablished`` are directories the listing reached and
     the answer does not state as a user: the ones the emulator's own selection
@@ -9222,7 +9223,10 @@ class _PerUserSaves:
     launch reopens exactly that user then — and the caller resolves it
     together with the sentence that explains it, so the two cannot drift.
     RPCS3 never sets it: no file records its user, so its headline stays the
-    first tree found.
+    first tree found. Vita3K withholds it where the listing came back short,
+    because a user a failed listing handed back is not a user found here —
+    and the assembly names the stand-in tree on a short listing whatever this
+    field holds, so the two cannot disagree there either.
     """
 
     user_root: str
@@ -9261,9 +9265,12 @@ def _per_user_state(
     failed listing never reached. That is the defect this round fixed for
     DuckStation's BIOS directory, so it does not get to live on here.
 
-    ``users`` names the trees this answer points at, which is what it has
-    always named — where none were found, the compiled default stands in and
-    the sentence says so in as many words.
+    ``users`` names the users whose trees the per-user groups point at, which
+    is what it has always named — where none were found, the compiled default
+    stands in and the sentence says so in as many words. Where a short listing
+    handed users back they are stated here all the same, and the tree the
+    answer *names* is the compiled default beside them, which is what this
+    sentence says.
     """
     if listing.status != GLOB_COMPLETE:
         sentence = (
@@ -9280,9 +9287,9 @@ def _per_user_state(
     data: dict[str, DataValue] = {
         "core": card.token,
         "reason": reason,
-        # The trees this answer points at, as the list they are — where none
-        # was found, the one the emulator starts with, which is the tree the
-        # groups name too.
+        # The users whose trees the per-user groups point at, as the list they
+        # are — where none was found, the one the emulator starts with, which
+        # is the tree the answer names too.
         "users": users or (shape.first_user,),
     }
     # The recorded user is a reading of the configuration, not of the tree, so
@@ -9362,6 +9369,12 @@ def _per_user_savedata_placement(
     ``extra_groups`` are places beside the per-user trees that belong to the
     same save — RPCS3's virtual memory cards — and they follow the user groups
     so the headline never lands on them.
+
+    Which tree the answer names is decided in three steps: a listing that came
+    back short names ``shape.first_user``'s tree whatever it handed back, an
+    established headline names its user's tree, and otherwise the first group
+    is the headline. The first step is what keeps ``dir`` and the sentence
+    beside it saying the same thing, and it holds for both emulators here.
     """
     groups = tuple(
         FileGroup(
@@ -9375,7 +9388,21 @@ def _per_user_savedata_placement(
         # is what the caveat below has to say in so many words.
         for user in (users or (shape.first_user,))
     ) + extra_groups
-    if shape.headline_user is not None:
+    if listing.status != GLOB_COMPLETE:
+        # A listing that came back short establishes no user, so no user it
+        # handed back may take the headline either: the trees it did reach
+        # stay as groups, because they were seen, while the answer names the
+        # tree the emulator starts with — which is what the sentence beside
+        # it says in as many words. Two things reach a short listing that
+        # still carries matches, and the first is not a hypothetical:
+        # :func:`_per_user_listing` globs TWICE, once per pattern, and a real
+        # machine reads the directory once per call, so a root that loses its
+        # read permission between the two merges into matches and an
+        # unreadable place at once. The second is the seam itself — ``Machine``
+        # is a protocol and :class:`~atlas.machine.GlobResult` permits
+        # incomplete with matches outright.
+        directory = os.path.join(shape.user_root, shape.first_user, "savedata")
+    elif shape.headline_user is not None:
         # The caller resolved this identity against the emulator's own user
         # listing. The join composes the tree that identity writes — usually a
         # group's own tree, but a user.xml answering to another id names a
@@ -9409,8 +9436,8 @@ def _per_user_savedata_placement(
             Caveat(
                 CAVEAT_SAVE_DIR_UNLISTABLE,
                 f"{shape.user_root} could not be listed, so which user directories are under "
-                "it is unknown — the tree below is what the compiled default names, not what "
-                "was found",
+                "it is unknown — the tree this answer names is what the compiled default "
+                "names, not one this listing established",
                 {"path": shape.user_root, "core": card.token},
             )
         )
@@ -9959,7 +9986,10 @@ def _vita3k_survey_tail(survey: _PerUserSurvey) -> str:
 
     Where a user is listed the headline is the first listed tree; where none
     is, it is the compiled stand-in — and the ending has to say which, because
-    "the tree named stays the first found" is false of a stand-in.
+    "the tree named stays the first found" is false of a stand-in. These
+    endings reach a message only where the listing completed: a short one is
+    answered by :func:`_per_user_state`'s own sentence, and the tree it names
+    is the stand-in whatever was listed.
     """
     if survey.listed:
         return (
@@ -10130,21 +10160,14 @@ def _vita3k_user(
         # defect in data that the sentences were in prose, so the slug is gone.
         #
         # The HEADLINE was a different matter, and dropping the branch dropped
-        # a guard with it. ``dir`` is read on every path, so a recorded user
-        # found in a SHORT listing would become the tree this answer names,
-        # while the sentence beside it still says the tree named is the one the
-        # emulator starts with. Two things reach that state, and the first is
-        # not a hypothetical: :func:`_per_user_listing` globs TWICE, once per
-        # pattern, and a real machine reads the directory once per call. Each
-        # read is complete or empty on its own, but they are separated in time,
-        # so a directory that loses its read permission between them merges
-        # into a listing carrying matches and an unreadable place at once — a
-        # live race, on the running machine, with no foreign seam involved. The
-        # second is the seam itself: ``Machine`` is a protocol and
-        # :class:`~atlas.machine.GlobResult` permits incomplete WITH matches,
-        # which the same merge handles. A home a failed listing handed back is
-        # not a home found here, so the record does not move the headline until
-        # the listing that would confirm it succeeded.
+        # a guard with it: a home a failed listing handed back is not a home
+        # found here, so the record does not move the headline until the
+        # listing that would confirm it succeeded. What reaches a short
+        # listing that still carries matches is set out at
+        # :func:`_per_user_savedata_placement`, which names the stand-in tree
+        # there for both emulators; this branch is what keeps ``headline``
+        # itself true to what it means here — a user the read did not settle
+        # is not one this answer records.
         headline, sentence, reason = _vita3k_recorded_user_state(
             configured, homes, user_root, survey
         )
@@ -10217,10 +10240,11 @@ def _vita3k_savefile_placement(
     (user_management.cpp:87-89) — becomes a group of its own with the recorded
     id stated beside them, the directories it passes over are stated as
     skipped, and one whose user.xml atlas could not read is stated as
-    unestablished; where the recorded user is among the listed ones the
-    headline names its tree, because a frontend launch reopens exactly that
-    user; everywhere else the headline stays the first tree listed, or the
-    compiled stand-in where none is, and the caveat says what is not settled.
+    unestablished; where the listing completed and the recorded user is among
+    the listed ones the headline names its tree, because a frontend launch
+    reopens exactly that user; everywhere else it stays the first tree
+    listed, or the compiled stand-in where none is and where the listing came
+    back short, and the caveat says what is not settled.
     """
     config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)

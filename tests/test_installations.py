@@ -12,7 +12,7 @@ import pytest
 import atlas
 from atlas.firmware import resolve_links
 from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPrivateUsage]
-from atlas.machine import SYMLINK_HOPS, FixtureMachine
+from atlas.machine import GLOB_INCOMPLETE, SYMLINK_HOPS, FixtureMachine, GlobResult
 from atlas.oddities import SaveGroup, SaveMode
 from tests.answers import placed, state_placed
 
@@ -4117,6 +4117,25 @@ VITA3K_USER_00_XML = "/mnt/sd/vita/ux0/user/00/user.xml"
 NO_LISTED_USER = atlas.REASON_NO_LISTED_USER_ACCOUNT
 
 
+class _HalfBlind(FixtureMachine):
+    """The hidden-name glob comes back short, the wildcard one does not.
+
+    A listing of one root — which is what ``_per_user_listing`` makes — cannot
+    carry matches and an unreadable place at once in a fixture, which is why
+    this is a class: a root in ``unlistable`` or in ``inaccessible`` answers
+    incomplete with no matches at all, and an inaccessible entry below a
+    listable root leaves the listing complete. The resolver reaches the shape
+    anyway, by the two routes ``_per_user_savedata_placement`` sets out, so a
+    machine that shortens one of the two globs is what states it here.
+    """
+
+    def glob(self, pattern: str) -> GlobResult:
+        result = super().glob(pattern)
+        if pattern.endswith("/.*"):
+            return GlobResult(GLOB_INCOMPLETE, result.matches, (pattern[:-3],))
+        return result
+
+
 class TestTheUserAPerUserTreeWouldOpen:
     """Which user account answers, and what each configuration actually says.
 
@@ -4144,6 +4163,13 @@ class TestTheUserAPerUserTreeWouldOpen:
 
     def _user_caveat(self, placement):
         stated = [c for c in placement.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert stated
+        return stated[0]
+
+    def _names_caveat(self, placement):
+        # The caveat that carries the tree the answer names in its data, so a
+        # test can hold the two against each other.
+        stated = [c for c in placement.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
         assert stated
         return stated[0]
 
@@ -4193,14 +4219,12 @@ class TestTheUserAPerUserTreeWouldOpen:
     def test_a_short_listing_does_not_let_the_recorded_user_take_the_headline(self):
         """A home a failed listing handed back is not a home found here.
 
-        Two things reach that state. ``_per_user_listing`` globs twice, once
-        per pattern, and a real machine reads the directory once per call —
-        each read complete or empty, but separated in time, so a directory
-        that loses its read permission between them merges into a listing that
-        still carries matches. That is a live race, not a hypothetical. And
-        ``Machine`` is a protocol whose ``GlobResult`` permits the shape
-        outright, which the same merge handles. No fixture machine in the
-        vector family can produce either, so this test is what pins it.
+        Two routes reach that state, both set out at
+        ``_per_user_savedata_placement``: the user root is read once per glob
+        pattern and a real machine reads it once per call, and ``Machine`` is
+        a protocol whose ``GlobResult`` permits the shape outright. No fixture
+        machine in the vector family states a one-root listing in that shape,
+        so this test is what pins it.
 
         What must hold: the survey still lists every home the short listing did
         hand back — losing them would answer a narrower tree than was seen —
@@ -4208,19 +4232,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         beside it says the tree named is the one the emulator starts with and
         an answer must not contradict its own message.
         """
-        from atlas.machine import GLOB_INCOMPLETE, GlobResult
-
-        class HalfBlind(FixtureMachine):
-            """The hidden-name glob comes back short, the wildcard one does not."""
-
-            def glob(self, pattern: str) -> GlobResult:
-                result = super().glob(pattern)
-                if pattern.endswith("/.*"):
-                    return GlobResult(GLOB_INCOMPLETE, result.matches, (pattern[:-3],))
-                return result
-
         root = "/mnt/sd/vita/ux0/user"
-        machine = HalfBlind(
+        machine = _HalfBlind(
             {
                 **self.BASE,
                 VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 05\n",
@@ -4252,6 +4265,73 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert "the tree named is the one the emulator starts with" in caveat.message
         # And the sentence must not deny the homes the data beside it lists.
         assert "or none beyond those handed back is unknown here" in caveat.message
+
+    def test_vita3k_a_short_listing_names_the_start_tree_over_the_listed_one(self):
+        """Issue #382: the tree named and the sentence beside it say one thing.
+
+        The machine above cannot tell the two apart — its first listed home is
+        also Vita3K's stand-in, user 00 — so this one lists 05 alone. The
+        sentence a short listing carries says the tree named is the one the
+        emulator starts with, so ``dir`` is 00's tree, a directory this
+        machine does not have; 05 was seen and stays a group of its own, and
+        the caveat states the listing as unestablished.
+        """
+        root = "/mnt/sd/vita/ux0/user"
+        machine = _HalfBlind(
+            {
+                **self.BASE,
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 05\n",
+                f"{root}/05/user.xml": self._user_xml("05"),
+            },
+            dirs=["/mnt/sd/retrodeck/saves", f"{root}/05", f"{root}/05/savedata"],
+        )
+        rd = atlas.detect(HOME, machine)[0]
+        p = rd.emulators_for("psvita").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{root}/00/savedata"
+        assert [g.dir for g in p.file_set.groups] == [f"{root}/05/savedata"]
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
+        assert caveat.data["users"] == ("05",)
+        # The record names a listed user — the shape that takes the headline
+        # when the listing completes; a short listing establishes no user, so
+        # it does not.
+        assert caveat.data["configured_user"] == "05"
+        assert "the tree named is the one the emulator starts with" in caveat.message
+        assert self._names_caveat(p).data["dir"] == p.dir
+        unlistable = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE]
+        assert [c.data["path"] for c in unlistable] == [root]
+
+    def test_rpcs3_a_short_listing_names_the_start_tree_over_the_listed_one(self):
+        """Issue #382: the same rule, on the emulator that records no user.
+
+        RPCS3 never sets a headline of its own, so a short listing carrying
+        one home used to name that home while the sentence beside it claimed
+        the tree named is the one the emulator starts with. The home listed
+        here is 12345678, and the tree named is 00000001's.
+        """
+        machine = _HalfBlind(
+            {
+                **self.BASE,
+                RPCS3_VFS_YML: "/dev_hdd0/: /mnt/sd/hdd/\n",
+                f"{RPCS3_HOME}/12345678/localusername": "User",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", f"{RPCS3_HOME}/12345678/savedata"],
+        )
+        rd = atlas.detect(HOME, machine)[0]
+        p = rd.emulators_for("ps3").entries[0].savefile_location()
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{RPCS3_HOME}/00000001/savedata"
+        # The home the short listing did reach stays a group; the virtual
+        # memory cards follow the user groups, as they always do.
+        assert [g.dir for g in p.file_set.groups][0] == f"{RPCS3_HOME}/12345678/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
+        assert caveat.data["users"] == ("12345678",)
+        assert "the tree named is the one the emulator starts with" in caveat.message
+        assert self._names_caveat(p).data["dir"] == p.dir
+        unlistable = [c for c in p.caveats if c.code == atlas.CAVEAT_SAVE_DIR_UNLISTABLE]
+        assert [c.data["path"] for c in unlistable] == [RPCS3_HOME]
 
     def test_every_refusal_the_reader_answers_with_is_reachable_as_a_reason(self):
         # The pair above covers the vocabulary between them; this holds the
@@ -5008,16 +5088,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         from atlas.installations import (
             _per_user_listing,  # pyright: ignore[reportPrivateUsage] - the merge is the unit under test
         )
-        from atlas.machine import GLOB_INCOMPLETE, GlobResult
 
-        class HalfBlind(FixtureMachine):
-            def glob(self, pattern: str) -> GlobResult:
-                result = super().glob(pattern)
-                if pattern.endswith("/.*"):
-                    return GlobResult(GLOB_INCOMPLETE, result.matches, (pattern[:-3],))
-                return result
-
-        machine = HalfBlind({}, dirs=[f"{RPCS3_HOME}/00000001"])
+        machine = _HalfBlind({}, dirs=[f"{RPCS3_HOME}/00000001"])
         listing, users = _per_user_listing(machine, RPCS3_HOME)
         assert listing.status == GLOB_INCOMPLETE
         assert listing.unreadable == (RPCS3_HOME,)
