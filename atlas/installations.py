@@ -14487,17 +14487,19 @@ class EmulatorEntry:
 
     @property
     def declared_index(self) -> int | None:
-        """This entry's place, from 0, in the launch list the declaring layer yields.
+        """This entry's place, from 0, in the launch list the declaring layer yields — the
+        shipped position, which promotion never touches: the answer is in *effective*
+        order, so a promoted entry may put a higher position first and the value is not
+        the entry's index in the answer; the numbering is ES-DE's own and may skip one.
+        ``None`` on a derived entry: no layer declared it, so it has no declared position
+        (#133).
 
-        The shipped position, which promotion never touches — read it beside
-        :attr:`selection` to tell an entry promoted out of the middle from the
-        declared first that a user also selected. It is ES-DE's own numbering
-        rather than a count of ``<command>`` elements
-        (:func:`atlas.esde._stored_commands`), so the values across one answer
-        are distinct and ascending *in declared order* — the answer itself is
-        in effective order, where a promoted entry may put a higher position
-        first — and they may skip one. ``None`` on a derived entry: no layer
-        declared it, so it has no declared position (#133).
+        Read it beside :attr:`selection` to tell an entry promoted out of the
+        middle from the declared first that a user also selected. The numbering
+        comes from :func:`atlas.esde._stored_commands`, the walk ES-DE itself
+        makes, rather than from counting ``<command>`` elements — that is what
+        lets a position go unused — and across one answer the values are
+        distinct and ascending *in declared order*.
         """
         return self._spec.declared_index
 
