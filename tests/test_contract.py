@@ -238,6 +238,22 @@ class TestTheAlternativesEntryIsItsOwnShape:
         assert json.loads(json.dumps(block)) == block
 
 
+def _unwrapped(block: Any) -> list[Any]:
+    """The answers one expected block holds: the aggregate's per-installation ones, or itself."""
+    if isinstance(block, list):  # the aggregate: one entry per installation
+        return [entry["answer"] for entry in block]
+    return [block]
+
+
+def _vector_answers(file_name: str, vector: Any):
+    """Every serialized answer one vector states, with where it is stated."""
+    for question, block in vector.get("expected", {}).items():
+        if question == "installations":
+            continue
+        for answer in _unwrapped(block):
+            yield file_name, vector["name"], question, answer
+
+
 class TestAnswerShapeDiscipline:
     """The half of the usage guide's shape rule a corpus walk can actually hold.
 
@@ -263,14 +279,7 @@ class TestAnswerShapeDiscipline:
         """Every serialized answer in the corpus, unwrapped from the aggregate."""
         for path in sorted(_VECTOR_DIR.glob("*.json")):
             for vector in json.loads(path.read_text(encoding="utf-8"))["vectors"]:
-                for question, block in vector.get("expected", {}).items():
-                    if question == "installations":
-                        continue
-                    if isinstance(block, list):  # the aggregate: one entry per installation
-                        for entry in block:
-                            yield path.name, vector["name"], question, entry["answer"]
-                    else:
-                        yield path.name, vector["name"], question, block
+                yield from _vector_answers(path.name, vector)
 
     def test_every_answer_is_flat_or_a_named_single_key_wrapper(self):
         seen: set[str] = set()

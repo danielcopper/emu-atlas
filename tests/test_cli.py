@@ -60,6 +60,17 @@ def _flag(name: str, value) -> list[str]:
     return [] if value is None else [name, str(value)]
 
 
+def _firmware_argv(query) -> list[str]:
+    """The CLI spelling of the firmware question, whose kind names the command."""
+    verify = ["--verify"] if query.get("verify") else []
+    kind = query["kind"]
+    if kind == "core":
+        return ["firmware-for-core", "--core", query["core_so"]] + verify
+    if kind == "system":
+        return ["firmware-for-system", "--system", query["system"]] + verify
+    return ["firmware-inventory"] + verify
+
+
 def _question_argv(question: str, query) -> list[str]:
     """The CLI spelling of one question, selector not included."""
     if question in (
@@ -91,13 +102,7 @@ def _question_argv(question: str, query) -> list[str]:
     if question == "launchable":
         return ["launchable", query["system"], query["content_path"]]
     if question == "firmware":
-        verify = ["--verify"] if query.get("verify") else []
-        kind = query["kind"]
-        if kind == "core":
-            return ["firmware-for-core", "--core", query["core_so"]] + verify
-        if kind == "system":
-            return ["firmware-for-system", "--system", query["system"]] + verify
-        return ["firmware-inventory"] + verify
+        return _firmware_argv(query)
     if question == "identification":
         return (
             ["identify-firmware"]
