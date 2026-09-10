@@ -318,6 +318,25 @@ class TestJoiningAJsonKeyToTheAttributeItSerializes:
         }
 
 
+def _import_hiding_a_constructor(node: ast.ImportFrom, file_name: str) -> list[str]:
+    """The import shapes that leave a constructor invisible to the construction-site scan."""
+    offenders: list[str] = []
+    for alias in node.names:
+        if alias.name in reference.CAVEAT_TYPES and alias.asname:
+            offenders.append(f"{file_name}:{node.lineno} {alias.name} as {alias.asname}")
+        if alias.name == "*" and (node.module or "").startswith("atlas"):
+            offenders.append(f"{file_name}:{node.lineno} star import")
+    return offenders
+
+
+def _rebinding_of_a_constructor(node: ast.Assign | ast.AnnAssign, file_name: str) -> list[str]:
+    """The second name an assignment gives a constructor: calls through it go unread."""
+    value = node.value
+    if isinstance(value, ast.Name) and value.id in reference.CAVEAT_TYPES:
+        return [f"{file_name}:{node.lineno} rebinds {value.id}"]
+    return []
+
+
 class TestWhatTheSourceStatesAboutACodesData:
     def test_literal_keys_are_named_and_dynamic_sites_counted(self) -> None:
         entry = reference.CodeSites(literal_keys={"path"}, literal_sites=1, dynamic_sites=2)
@@ -362,15 +381,9 @@ class TestWhatTheSourceStatesAboutACodesData:
         for path, tree in reference.package_modules():
             for node in ast.walk(tree):
                 if isinstance(node, ast.ImportFrom):
-                    for alias in node.names:
-                        if alias.name in reference.CAVEAT_TYPES and alias.asname:
-                            offenders.append(f"{path.name}:{node.lineno} {alias.name} as {alias.asname}")
-                        if alias.name == "*" and (node.module or "").startswith("atlas"):
-                            offenders.append(f"{path.name}:{node.lineno} star import")
+                    offenders.extend(_import_hiding_a_constructor(node, path.name))
                 if isinstance(node, (ast.Assign, ast.AnnAssign)):
-                    value = node.value
-                    if isinstance(value, ast.Name) and value.id in reference.CAVEAT_TYPES:
-                        offenders.append(f"{path.name}:{node.lineno} rebinds {value.id}")
+                    offenders.extend(_rebinding_of_a_constructor(node, path.name))
         assert not offenders, f"the construction-site scan cannot see these: {offenders}"
 
 

@@ -179,6 +179,29 @@ def _span(first: str, last: str) -> range:
     return range(start, max(end, start) + 1)
 
 
+def _named_citations(text: str, file_name: str) -> list[tuple[str, str, int, str]]:
+    """Every line claimed by the citations that name their own component."""
+    return [
+        (component, script, line, file_name)
+        for component, script, first, last in CITATION.findall(text)
+        for line in _span(first, last)
+    ]
+
+
+def _bare_citations(
+    text: str, keys: tuple[str, ...], scope: str | None, file_name: str
+) -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, str, int]]]:
+    """The citations naming no component: read under *scope*, or recorded as unscoped."""
+    found: list[tuple[str, str, int, str]] = []
+    unresolved: set[tuple[str, str, str, int]] = set()
+    for script, first, last in BARE_CITATION.findall(text):
+        if scope is None:
+            unresolved.add((file_name, ".".join(keys), script, int(first)))
+            continue
+        found.extend((scope, script, line, file_name) for line in _span(first, last))
+    return found, unresolved
+
+
 def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, str, int]]]:
     """Every component-script citation the packaged data names, and the ones nothing scopes.
 
@@ -193,16 +216,10 @@ def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, s
     for path in sorted(DATA.glob("*.json")):
         document = json.loads(path.read_text(encoding="utf-8"))
         for keys, text in _strings(document):
-            for component, script, first, last in CITATION.findall(text):
-                for line in _span(first, last):
-                    found.append((component, script, line, path.name))
-            scope = _component_in_scope(keys, text)
-            for script, first, last in BARE_CITATION.findall(text):
-                if scope is None:
-                    unresolved.add((path.name, ".".join(keys), script, int(first)))
-                    continue
-                for line in _span(first, last):
-                    found.append((scope, script, line, path.name))
+            found.extend(_named_citations(text, path.name))
+            scoped, unscoped = _bare_citations(text, keys, _component_in_scope(keys, text), path.name)
+            found.extend(scoped)
+            unresolved |= unscoped
     return found, unresolved
 
 

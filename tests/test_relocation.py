@@ -73,6 +73,45 @@ print(json.dumps({
 """ % {"parent": _PARENT}
 
 
+def _from_import_reference(node: ast.ImportFrom, filename: str) -> list[str]:
+    """The ``from atlas… import`` binding, if this node is one — relative forms are not."""
+    module = node.module or ""
+    if node.level == 0 and (module == "atlas" or module.startswith("atlas.")):
+        return [f"{filename}:{node.lineno} from {module} import ..."]
+    return []
+
+
+def _import_references(node: ast.Import, filename: str) -> list[str]:
+    """The ``import atlas…`` bindings among this node's aliases."""
+    return [
+        f"{filename}:{node.lineno} import {alias.name}"
+        for alias in node.names
+        if alias.name == "atlas" or alias.name.startswith("atlas.")
+    ]
+
+
+def _called_name(func: ast.expr) -> str | None:
+    """The name a call spells, whether it is called plain or off an object."""
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    if isinstance(func, ast.Name):
+        return func.id
+    return None
+
+
+def _call_reference(node: ast.Call, filename: str) -> list[str]:
+    """The packaged-data read anchored to the literal name, if this call is one."""
+    name = _called_name(node.func)
+    if name not in ("files", "import_module"):
+        return []
+    first = node.args[0] if node.args else None
+    if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
+        return []
+    if first.value == "atlas" or first.value.startswith("atlas."):
+        return [f'{filename}:{node.lineno} {name}("{first.value}")']
+    return []
+
+
 def _self_references(source: str, filename: str) -> list[str]:
     """The swept binding shapes in *source*, each with its file:line.
 
@@ -83,25 +122,11 @@ def _self_references(source: str, filename: str) -> list[str]:
     found: list[str] = []
     for node in ast.walk(ast.parse(source, filename=filename)):
         if isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            if node.level == 0 and (module == "atlas" or module.startswith("atlas.")):
-                found.append(f"{filename}:{node.lineno} from {module} import ...")
+            found.extend(_from_import_reference(node, filename))
         elif isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name == "atlas" or alias.name.startswith("atlas."):
-                    found.append(f"{filename}:{node.lineno} import {alias.name}")
+            found.extend(_import_references(node, filename))
         elif isinstance(node, ast.Call):
-            func = node.func
-            name = func.attr if isinstance(func, ast.Attribute) else (
-                func.id if isinstance(func, ast.Name) else None
-            )
-            if name not in ("files", "import_module"):
-                continue
-            first = node.args[0] if node.args else None
-            if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
-                continue
-            if first.value == "atlas" or first.value.startswith("atlas."):
-                found.append(f'{filename}:{node.lineno} {name}("{first.value}")')
+            found.extend(_call_reference(node, filename))
     return found
 
 

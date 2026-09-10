@@ -204,6 +204,29 @@ class TestTheShapesAtlasReads:
         assert settings == {"ROMDirectory": "/roms", "Empty": ""}
 
 
+def _dotted_wrapper_imports(node: ast.Import, filename: str) -> list[str]:
+    """The ``import xml.etree…`` bindings among this node's aliases."""
+    return [
+        f"{filename}:{node.lineno} import {alias.name}"
+        for alias in node.names
+        if alias.name == "xml.etree" or alias.name.startswith("xml.etree.")
+    ]
+
+
+def _from_wrapper_import(node: ast.ImportFrom, filename: str) -> list[str]:
+    """The ``from``-form binding of the wrapper, if this node is one.
+
+    ``from xml import etree`` names the subpackage without ever spelling it
+    dotted, so the module alone does not tell it from any other ``xml`` import.
+    """
+    module = node.module or ""
+    if module == "xml.etree" or module.startswith("xml.etree."):
+        return [f"{filename}:{node.lineno} from {module} import ..."]
+    if module == "xml" and any(alias.name == "etree" for alias in node.names):
+        return [f"{filename}:{node.lineno} from xml import etree"]
+    return []
+
+
 def _wrapper_imports(source: str, filename: str) -> list[str]:
     """Every import of the ``xml.etree`` wrapper in *source*, with its file:line.
 
@@ -214,15 +237,9 @@ def _wrapper_imports(source: str, filename: str) -> list[str]:
     found: list[str] = []
     for node in ast.walk(ast.parse(source, filename=filename)):
         if isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name == "xml.etree" or alias.name.startswith("xml.etree."):
-                    found.append(f"{filename}:{node.lineno} import {alias.name}")
+            found.extend(_dotted_wrapper_imports(node, filename))
         elif isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            if module == "xml.etree" or module.startswith("xml.etree."):
-                found.append(f"{filename}:{node.lineno} from {module} import ...")
-            elif module == "xml" and any(alias.name == "etree" for alias in node.names):
-                found.append(f"{filename}:{node.lineno} from xml import etree")
+            found.extend(_from_wrapper_import(node, filename))
     return found
 
 

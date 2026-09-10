@@ -3517,6 +3517,25 @@ class TestNoDeclarationIsNeverSatisfied:
             FirmwareAnswer(root=None, cores=(), unclaimed=(), hash_checked=False, sources=(), caveats=())
 
 
+def _states_a_verified_wrong_file(core: CoreFirmware) -> bool:
+    """Whether this core reports any file, required or optional, whose bytes are known to be wrong."""
+    return any(r.checked == CHECKED_MISMATCH for r in _plain_requirements(core))
+
+
+def _assert_every_required_file_is_really_there(core: CoreFirmware) -> None:
+    """What an all-clear core promises about its required files, file by file."""
+    for requirement in _plain_requirements(core):
+        if requirement.need != NEED_REQUIRED:
+            continue
+        assert requirement.found == "file", "all-clear over something that is not a file"
+        assert requirement.checked != CHECKED_MISMATCH, (
+            "all-clear over a file whose bytes are known to be wrong"
+        )
+        assert not (
+            requirement.checked == CHECKED_UNKNOWN and requirement.identity is not None
+        ), "all-clear over a file whose identity could not be established"
+
+
 class TestPartialReaderIsNotMisled:
     """A caller that renders one field must never be shown something false.
 
@@ -3592,25 +3611,15 @@ class TestPartialReaderIsNotMisled:
         seen_mismatch = False
         for _, answer in self._answers():
             for core in answer.cores:
-                for requirement in _plain_requirements(core):
-                    if requirement.checked == CHECKED_MISMATCH:
-                        seen_mismatch = True
+                if _states_a_verified_wrong_file(core):
+                    seen_mismatch = True
                 if core.requirements_met is not True:
                     continue
                 assert core.declaration == DECLARATION_READ
-                for requirement in _plain_requirements(core):
-                    if requirement.need != NEED_REQUIRED:
-                        continue
-                    assert requirement.found == "file", "all-clear over something that is not a file"
-                    assert requirement.checked != CHECKED_MISMATCH, (
-                        "all-clear over a file whose bytes are known to be wrong"
-                    )
-                    assert not (
-                        requirement.checked == CHECKED_UNKNOWN and requirement.identity is not None
-                    ), "all-clear over a file whose identity could not be established"
+                _assert_every_required_file_is_really_there(core)
         assert seen_mismatch, (
-            "this class must exercise a verified-wrong required file, or it proves nothing about the case "
-            "that broke"
+            "this class must exercise a verified-wrong file, required or optional, or it proves nothing "
+            "about the case that broke"
         )
 
     def test_a_required_file_with_the_wrong_bytes_is_unmet(self):
