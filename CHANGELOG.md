@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/danielcopper/emu-atlas/compare/v0.17.0...v0.17.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **saves:** an incomplete per-user listing names the tree the emulator starts with ([#452](https://github.com/danielcopper/emu-atlas/issues/452)) ([05df1eb](https://github.com/danielcopper/emu-atlas/commit/05df1eb3eb0a165688975754f08fb53274618efd)), closes [#382](https://github.com/danielcopper/emu-atlas/issues/382)
+
 ## [0.17.0](https://github.com/danielcopper/emu-atlas/compare/v0.16.0...v0.17.0) (2026-09-10)
 
 
