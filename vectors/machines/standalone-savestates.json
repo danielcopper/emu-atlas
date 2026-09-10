@@ -1097,7 +1097,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "CEMU",
+            "token": "CEMU",
             "citation": "Cemu 2.6: unfiltered strings scan of the shipped components/cemu/bin/Cemu_relwithdebinfo carries no savestate or snapshot vocabulary, and the v2.6 tree's only 'savestate' spellings are the graphic-packs window persisting its own UI state (src/gui/GraphicPacksWindow2.cpp:326) and the issue template listing 'Add savestates' among features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18)",
             "caveats": []
           }
@@ -1135,7 +1135,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "RYUBING",
+            "token": "RYUBING",
             "citation": "projects/Ryubing (git.ryujinx.app) release 1.3.3: repo-wide across its 3938 C# sources, zero savestate vocabulary — the Ryujinx lineage has never had a guest-state serializer; docs.ryujinx.app documents save-file management only",
             "caveats": [
               {
@@ -1183,7 +1183,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "CEMU",
+            "token": "CEMU",
             "citation": "Cemu 2.6: unfiltered strings scan of the shipped components/cemu/bin/Cemu_relwithdebinfo carries no savestate or snapshot vocabulary, and the v2.6 tree's only 'savestate' spellings are the graphic-packs window persisting its own UI state (src/gui/GraphicPacksWindow2.cpp:326) and the issue template listing 'Add savestates' among features yet to be implemented (.github/ISSUE_TEMPLATE/feature_report.yaml:18)",
             "caveats": []
           }
@@ -1979,7 +1979,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "VITA3K",
+            "token": "VITA3K",
             "citation": "Vita3K build 3996 (commit cb1f592c): repo-wide, no savestate vocabulary — the only 'snapshot' is a comment on NID-export iteration (vita3k/modules/taiHEN/taiHEN.cpp:1331-1335) — and the shipped binary's only '_Save_state' strings are MSVC-STL thread-support symbols, not a feature",
             "caveats": []
           }
@@ -2017,7 +2017,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "RUFFLE",
+            "token": "RUFFLE",
             "citation": "ruffle-rs/ruffle@b001ac43, the commit the shipped binary names in its version string: repo-wide, no savestate vocabulary — the player's persistence is the SharedObjects tree behind --save-directory, the save question's business (#247) — and the unfiltered scan of components/ruffle/bin/ruffle agrees",
             "caveats": []
           }
@@ -2055,7 +2055,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "GZDOOM",
+            "token": "GZDOOM",
             "citation": "GZDoom g4.14.2: the engine's whole serialization surface is its savegame system — UNSAFE_CCMD(save) goes through G_BuildSaveName into G_SaveGame (src/console/c_cmds.cpp:702-731), quicksave rotation writes quick%02d (src/g_game.cpp:2293-2310) and autosaves auto%02d (:2271), all landing in G_GetSavegamesFolder (src/common/menu/savegamemanager.cpp:559-604) — the save question's business; no snapshot feature outside the game's own saves exists",
             "caveats": []
           }
@@ -2093,7 +2093,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "IRONWAIL",
+            "token": "IRONWAIL",
             "citation": "ironwail v0.8.2: the save command is Quake's own savegame system — Host_Savegame_f writes <gamedir>/<name>.sav (Quake/host_cmd.c:2373-2434, the extension at :2433, registered at :3784), autosaves under <gamedir>/autosave (:1420) — and the repository carries no savestate vocabulary at all",
             "caveats": [
               {
@@ -2139,7 +2139,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "OPENBOR",
+            "token": "OPENBOR",
             "citation": "OpenBOR v4.0 build 7533 (DCurrent/openbor v7533, the shipped AppImage): saveGameFile() writes module progress into <base>/Saves (engine/openbor.c:2764-2771; declared engine/openbor.h:4208) — the save question's business — and neither the repository nor the unfiltered scan of components/openbor/bin/OpenBOR carries any savestate vocabulary",
             "caveats": []
           }
@@ -2177,7 +2177,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "PICO-8",
+            "token": "PICO-8",
             "citation": "PICO-8 manual v0.2.7 (lexaloffle.com/dl/docs/pico-8_manual.html, the vendor's complete documented surface, read 2026-08-25): no savestate feature exists or ever has — cartridge persistence is CARTDATA, written under cdata/, the save question's business",
             "caveats": [
               {
@@ -2223,7 +2223,7 @@
         ],
         "entry_savestate_location": {
           "no_savestates": {
-            "emulator": "SOLARUS",
+            "token": "SOLARUS",
             "citation": "Solarus 2.0.4 (libsolarus.so.2.0.4, the soname the shipped launcher links): the engine's persistence is the quest-scripted savegame — Savegame::save() writes the file the quest names below the quest write directory (src/core/Savegame.cpp:353-373, the write-dir requirement at :114) — the save question's business; repo-wide the only 'saveState' is the launcher's Qt splitter call (launcher/sources/widgets/MainWindow.cpp:163) and the unfiltered engine scan carries no savestate vocabulary",
             "caveats": []
           }

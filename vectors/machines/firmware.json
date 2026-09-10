@@ -42,6 +42,8 @@
           "cores": [
             {
               "core_so": "snes9x_libretro.so",
+              "emulator": "snes9x_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -101,6 +103,8 @@
           "cores": [
             {
               "core_so": "mgba_libretro.so",
+              "emulator": "mgba_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "absent",
               "requirements_met": null,
@@ -180,6 +184,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -294,6 +300,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -347,6 +355,8 @@
             },
             {
               "core_so": "sameboy_libretro.so",
+              "emulator": "sameboy_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -526,6 +536,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -618,6 +630,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -717,6 +731,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
               "requirements_met": true,
@@ -770,6 +786,8 @@
             },
             {
               "core_so": "tgbdual_libretro.so",
+              "emulator": "tgbdual_libretro.so",
+              "declared_index": 1,
               "label": "TGB Dual",
               "declaration": "absent",
               "requirements_met": null,
@@ -788,6 +806,8 @@
             },
             {
               "core_so": null,
+              "emulator": "SAMEBOY",
+              "declared_index": 2,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
               "requirements_met": null,
@@ -910,6 +930,8 @@
           "cores": [
             {
               "core_so": "tgbdual_libretro.so",
+              "emulator": "tgbdual_libretro.so",
+              "declared_index": 0,
               "label": "TGB Dual",
               "declaration": "absent",
               "requirements_met": null,
@@ -977,6 +999,8 @@
           "cores": [
             {
               "core_so": "mgba_libretro.so",
+              "emulator": "mgba_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -1096,6 +1120,8 @@
           "cores": [
             {
               "core_so": "covered_libretro.so",
+              "emulator": "covered_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -1198,6 +1224,8 @@
           "cores": [
             {
               "core_so": "skyemu_libretro.so",
+              "emulator": "skyemu_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -1331,6 +1359,8 @@
           "cores": [
             {
               "core_so": "bluemsx_libretro.so",
+              "emulator": "bluemsx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -1439,6 +1469,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -1556,6 +1588,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -1662,6 +1696,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -1755,6 +1791,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -1848,6 +1886,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -1932,6 +1972,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -2025,6 +2067,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -2124,6 +2168,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -2218,6 +2264,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -2310,6 +2358,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -2411,6 +2461,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -2514,6 +2566,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -2614,6 +2668,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -2715,6 +2771,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -2801,6 +2859,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -2916,6 +2976,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -3046,6 +3108,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "unreadable",
               "requirements_met": null,
@@ -3064,6 +3128,8 @@
             },
             {
               "core_so": "genesis_plus_gx_libretro.so",
+              "emulator": "genesis_plus_gx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "unreadable",
               "requirements_met": null,
@@ -3082,6 +3148,8 @@
             },
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -3193,6 +3261,8 @@
           "cores": [
             {
               "core_so": "escape_libretro.so",
+              "emulator": "escape_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -3363,6 +3433,8 @@
           "cores": [
             {
               "core_so": "escape_libretro.so",
+              "emulator": "escape_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -3449,6 +3521,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -3526,6 +3600,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -3618,6 +3694,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -3733,6 +3811,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -3840,6 +3920,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -3948,6 +4030,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -4036,6 +4120,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -4126,6 +4212,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -4215,6 +4303,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -4302,6 +4392,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -4389,6 +4481,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -4481,6 +4575,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -4583,6 +4679,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -4680,6 +4778,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -4781,6 +4881,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -4873,6 +4975,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -4960,6 +5064,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -5047,6 +5153,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -5235,6 +5343,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -5313,6 +5423,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -5393,6 +5505,8 @@
           "cores": [
             {
               "core_so": "looper_libretro.so",
+              "emulator": "looper_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -5465,6 +5579,8 @@
           "cores": [
             {
               "core_so": "geolith_libretro.so",
+              "emulator": "geolith_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -5566,6 +5682,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -5677,6 +5795,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -5778,6 +5898,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -5890,6 +6012,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -6026,6 +6150,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -6133,6 +6259,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
               "requirements_met": null,
@@ -6160,6 +6288,8 @@
             },
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
               "requirements_met": null,
@@ -6252,6 +6382,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
               "requirements_met": true,
@@ -6279,6 +6411,8 @@
             },
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
               "requirements_met": true,
@@ -6378,6 +6512,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -6463,6 +6599,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -6562,6 +6700,8 @@
           "cores": [
             {
               "core_so": "odd_libretro.so",
+              "emulator": "odd_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -6660,6 +6800,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -6767,6 +6909,8 @@
           "cores": [
             {
               "core_so": "nocount_libretro.so",
+              "emulator": "nocount_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -6844,6 +6988,8 @@
           "cores": [
             {
               "core_so": "overcount_libretro.so",
+              "emulator": "overcount_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -6949,6 +7095,8 @@
           "cores": [
             {
               "core_so": "letterslot_libretro.so",
+              "emulator": "letterslot_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7054,6 +7202,8 @@
           "cores": [
             {
               "core_so": "noindex_libretro.so",
+              "emulator": "noindex_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7159,6 +7309,8 @@
           "cores": [
             {
               "core_so": "emptyslot_libretro.so",
+              "emulator": "emptyslot_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7262,6 +7414,8 @@
           "cores": [
             {
               "core_so": "emptyonly_libretro.so",
+              "emulator": "emptyonly_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7366,6 +7520,8 @@
           "cores": [
             {
               "core_so": "checksum_libretro.so",
+              "emulator": "checksum_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7461,6 +7617,8 @@
           "cores": [
             {
               "core_so": "repeated_libretro.so",
+              "emulator": "repeated_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -7552,6 +7710,8 @@
           "cores": [
             {
               "core_so": "absolute_libretro.so",
+              "emulator": "absolute_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -7637,6 +7797,8 @@
           "cores": [
             {
               "core_so": "shouting_libretro.so",
+              "emulator": "shouting_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -7728,6 +7890,8 @@
           "cores": [
             {
               "core_so": "trailing_libretro.so",
+              "emulator": "trailing_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -7828,6 +7992,8 @@
           "cores": [
             {
               "core_so": "relative_libretro.so",
+              "emulator": "relative_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -7911,6 +8077,8 @@
           "cores": [
             {
               "core_so": "relative_libretro.so",
+              "emulator": "relative_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -8072,6 +8240,8 @@
           "cores": [
             {
               "core_so": "nocount_libretro.so",
+              "emulator": "nocount_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -8275,6 +8445,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
               "requirements_met": true,
@@ -8473,6 +8645,8 @@
           "cores": [
             {
               "core_so": "mgba_libretro.so",
+              "emulator": "mgba_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -8550,6 +8724,8 @@
           "cores": [
             {
               "core_so": "mgba_libretro.so",
+              "emulator": "mgba_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": null,
@@ -8629,6 +8805,8 @@
           "cores": [
             {
               "core_so": "fictional_libretro.so",
+              "emulator": "fictional_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -8776,6 +8954,8 @@
           "cores": [
             {
               "core_so": "numero_libretro.so",
+              "emulator": "numero_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -8869,6 +9049,8 @@
           "cores": [
             {
               "core_so": "ep128emu_core_libretro.so",
+              "emulator": "ep128emu_core_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -8962,6 +9144,8 @@
           "cores": [
             {
               "core_so": "vice_x128_libretro.so",
+              "emulator": "vice_x128_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9049,6 +9233,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9196,6 +9382,8 @@
           "cores": [
             {
               "core_so": "smsplus_libretro.so",
+              "emulator": "smsplus_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9315,6 +9503,8 @@
           "cores": [
             {
               "core_so": "fbneo_libretro.so",
+              "emulator": "fbneo_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9410,6 +9600,8 @@
           "cores": [
             {
               "core_so": "ecwolf_libretro.so",
+              "emulator": "ecwolf_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -9505,6 +9697,8 @@
           "cores": [
             {
               "core_so": "scummvm_libretro.so",
+              "emulator": "scummvm_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9600,6 +9794,8 @@
           "cores": [
             {
               "core_so": "mkxp_libretro.so",
+              "emulator": "mkxp_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9689,6 +9885,8 @@
           "cores": [
             {
               "core_so": "mednafen_pce_libretro.so",
+              "emulator": "mednafen_pce_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9800,6 +9998,8 @@
           "cores": [
             {
               "core_so": "numero_libretro.so",
+              "emulator": "numero_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -9949,6 +10149,8 @@
           "cores": [
             {
               "core_so": "numero_libretro.so",
+              "emulator": "numero_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -10119,6 +10321,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
               "requirements_met": true,
@@ -10172,6 +10376,8 @@
             },
             {
               "core_so": null,
+              "emulator": "SAMEBOY",
+              "declared_index": 1,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
               "requirements_met": null,
@@ -10309,6 +10515,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -10421,6 +10629,8 @@
           "cores": [
             {
               "core_so": "gambatte_libretro.so",
+              "emulator": "gambatte_libretro.so",
+              "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
               "requirements_met": true,
@@ -10474,6 +10684,8 @@
             },
             {
               "core_so": null,
+              "emulator": "SAMEBOY",
+              "declared_index": 1,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
               "requirements_met": null,
@@ -10630,6 +10842,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "CEMU",
+              "declared_index": 0,
               "label": "Cemu (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -10728,6 +10942,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "cemu",
+              "declared_index": 0,
               "label": "Cemu (Native)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -10824,6 +11040,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "MELONDS",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -10946,6 +11164,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "MELONDS",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11034,6 +11254,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "MELONDS",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11164,6 +11386,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "MELONDS",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11281,6 +11505,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "MELONDS",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "unreadable",
               "requirements_met": null,
@@ -11362,6 +11588,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "melonds",
+              "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11448,6 +11676,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11538,6 +11768,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11630,6 +11862,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11720,6 +11954,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11807,6 +12043,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11897,6 +12135,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -11988,6 +12228,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "unreadable",
               "requirements_met": null,
@@ -12068,6 +12310,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12189,6 +12433,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12297,6 +12543,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "unreadable",
               "requirements_met": null,
@@ -12379,6 +12627,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12508,6 +12758,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12619,6 +12871,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12732,6 +12986,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12868,6 +13124,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -12967,6 +13225,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13062,6 +13322,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13160,6 +13422,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13259,6 +13523,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13398,6 +13664,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13554,6 +13822,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13698,6 +13968,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13816,6 +14088,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -13943,6 +14217,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14089,6 +14365,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14193,6 +14471,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14300,6 +14580,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14425,6 +14707,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14559,6 +14843,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14652,6 +14938,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14760,6 +15048,8 @@
           "cores": [
             {
               "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
               "requirements_met": null,
@@ -14856,6 +15146,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
               "requirements_met": null,
@@ -14896,6 +15188,8 @@
             },
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
               "requirements_met": null,
@@ -14989,6 +15283,8 @@
           "cores": [
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
               "requirements_met": false,
@@ -15016,6 +15312,8 @@
             },
             {
               "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
               "requirements_met": false,
@@ -15099,6 +15397,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
               "requirements_met": null,
@@ -15139,6 +15439,8 @@
             },
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
               "requirements_met": null,
@@ -15232,6 +15534,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
               "requirements_met": null,
@@ -15272,6 +15576,8 @@
             },
             {
               "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
               "requirements_met": null,
@@ -15369,6 +15675,8 @@
           "cores": [
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": 0,
               "label": "Flycast",
               "declaration": "read",
               "requirements_met": true,
@@ -15401,6 +15709,8 @@
             },
             {
               "core_so": "flycast_libretro.so",
+              "emulator": "flycast_libretro.so",
+              "declared_index": 1,
               "label": "Flycast (again)",
               "declaration": "read",
               "requirements_met": true,
@@ -15497,6 +15807,8 @@
           "cores": [
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": 0,
               "label": "Dolphin",
               "declaration": "read",
               "requirements_met": true,
@@ -15537,6 +15849,8 @@
             },
             {
               "core_so": "dolphin_libretro.so",
+              "emulator": "dolphin_libretro.so",
+              "declared_index": 1,
               "label": "Dolphin (again)",
               "declaration": "read",
               "requirements_met": true,
@@ -15635,6 +15949,8 @@
           "cores": [
             {
               "core_so": "mednafen_psx_hw_libretro.so",
+              "emulator": "mednafen_psx_hw_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -15696,6 +16012,8 @@
             },
             {
               "core_so": "pcsx_rearmed_libretro.so",
+              "emulator": "pcsx_rearmed_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -15757,6 +16075,8 @@
             },
             {
               "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": false,
@@ -15876,6 +16196,8 @@
           "cores": [
             {
               "core_so": "px68k_libretro.so",
+              "emulator": "px68k_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,
@@ -15908,6 +16230,8 @@
             },
             {
               "core_so": "yabause_libretro.so",
+              "emulator": "yabause_libretro.so",
+              "declared_index": null,
               "label": null,
               "declaration": "read",
               "requirements_met": true,

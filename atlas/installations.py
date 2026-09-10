@@ -11924,7 +11924,7 @@ def _savestate_absence_answer(
         )
     caveats.extend(arrangement)
     return SavestateAbsence(
-        emulator=card.token,
+        token=card.token,
         citation=absent.citation,
         sources=(f"standalone savestate card '{card.token}': {card.provenance}",),
         caveats=tuple(caveats),
@@ -13379,6 +13379,15 @@ class _CatalogueHost(Protocol):
         """
         ...
 
+    def entry_emulator(self, spec: EmulatorSpec) -> str | None:
+        """Which emulator *spec* launches, as this arrangement reads its commands.
+
+        The catalogue's own reading everywhere, plus whatever spellings the
+        arrangement adds to it (EmuDeck's launcher scripts). ``None`` where
+        no reading identifies an emulator.
+        """
+        ...
+
     def standalone_firmware_homes(self, command: str) -> "_XdgHomes | None":
         """Per-entry XDG bases where this launch's binary reads its own trees.
 
@@ -14467,6 +14476,8 @@ def _firmware_catalogue_entries(
                 label=entry.label,
                 kind=entry.kind,
                 core_so=entry.core_so,
+                emulator=entry.emulator,
+                declared_index=entry.declared_index,
                 standalone_token=token,
                 standalone_data_home=homes.data if homes is not None else None,
                 standalone_config_home=homes.config if homes is not None else None,
@@ -14619,6 +14630,26 @@ class EmulatorEntry:
         entry, which loads none.
         """
         return self._spec.core_so
+
+    @property
+    def emulator(self) -> str | None:
+        """Which emulator this is, in the spelling its own launch command uses: a libretro
+        entry's core file basename — the string ``core_so`` carries — or, for a standalone
+        one, the name the command states (ES-DE's ``%EMULATOR_X%`` token ``X``, an EmuDeck
+        launcher script's name). ``null`` says atlas could not identify an emulator from
+        the command, never that none is launched. The spelling is the frontend's own and
+        atlas neither invents nor renames it, which is what makes this the field two
+        answers about one emulator join on — ``label`` is a display name (``Dolphin
+        (Standalone)`` beside ``PrimeHack (Standalone)``, ``Cemu (Native)`` beside ``Cemu
+        (Proton)``), and a display name is presentation.
+
+        The reading is the arrangement's (:meth:`_CatalogueQueries.entry_emulator`):
+        ES-DE's own vocabulary everywhere, plus the launcher-script spelling on
+        EmuDeck. Nothing gates it — an emulator atlas holds no card for is
+        still identified, because which emulator an entry launches and what
+        atlas knows about it are two questions.
+        """
+        return self._installation.entry_emulator(self._spec)
 
     @property
     def command(self) -> str:
@@ -15133,6 +15164,11 @@ def _derived_catalogue_entries(
                 core_so=core.core_so,
                 command="",
                 provenance=_DERIVED_ENTRY_PROVENANCE,
+                # No command to read, and the core enumeration is where this
+                # entry came from: the core it was derived from is the
+                # emulator it launches, stated from the enumeration rather
+                # than parsed out of the empty string.
+                emulator=core.core_so,
                 declared_index=None,
             ),
         )
@@ -15272,6 +15308,24 @@ class _CatalogueQueries:
         what a command identifies is arrangement knowledge.
         """
         return emulator_token(command)
+
+    def entry_emulator(self, spec: EmulatorSpec) -> str | None:
+        """Which emulator this entry launches — the catalogue's reading by default.
+
+        The parser already read the command in ES-DE's own vocabulary
+        (:func:`atlas.esde.emulator_identity`) and every ES-DE-driven handle
+        stands on that reading. EmuDeck extends it, because its overlays also
+        launch through ``tools/launchers/<name>.sh`` scripts, and what a
+        command outside ES-DE's vocabulary identifies is arrangement
+        knowledge — the same reason :meth:`standalone_firmware_token` is
+        answered per handle.
+
+        Unlike that token this is not gated on anything: whether atlas holds
+        firmware or save knowledge for the emulator is a different question
+        from which emulator the entry launches, and an identity withheld for
+        want of a card would be an identity a client cannot join on.
+        """
+        return spec.emulator
 
     def standalone_firmware_homes(self, command: str) -> "_XdgHomes | None":
         """The per-entry override of the context's standalone bases — none by default.
@@ -18390,6 +18444,32 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if homes is None:
             return _EmuDeckGate(launch, variant, None, self._variant_reason(launch, variant))
         return _EmuDeckGate(launch, variant, homes, None)
+
+    def entry_emulator(self, spec: EmulatorSpec) -> str | None:
+        """The catalogue's reading, plus the launcher script EmuDeck launches through.
+
+        EmuDeck's overlays spell a launch two ways
+        (:meth:`_standalone_launch_identity`), and only one of them is ES-DE's
+        own: the second is a ``tools/launchers/<name>.sh`` script, whose name
+        without its ``.sh`` suffix is what identifies the emulator
+        (``bigpemu``, ``xenia`` — :func:`_emudeck_launcher` takes the suffix
+        off).
+        That reading is arrangement knowledge, which is why it lives here and
+        not in the catalogue parser.
+
+        Deliberately *not* the reading :meth:`standalone_firmware_token`
+        makes: that one is variant-gated, because a firmware answer may only
+        stand where the trees the cards describe are the ones the launch
+        really reads. An identity has no such condition — the entry launches
+        what it launches whether or not atlas knows where that emulator keeps
+        its files — so a ``-w`` Proton row and a flatpak nobody established
+        homes for are identified here exactly like the rest.
+        """
+        identity = super().entry_emulator(spec)
+        if identity is not None:
+            return identity
+        launcher = _emudeck_launcher(spec.command)
+        return None if launcher is None else launcher[0]
 
     def standalone_firmware_token(self, command: str) -> str | None:
         """The command's word, variant-gated — EmuDeck's own reading.

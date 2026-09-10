@@ -1175,3 +1175,73 @@ class TestTheTwoCorpusGates:
         assert reference.value_shape(["a", "b"]) == "string"
         assert reference.value_shape([["a"], []]) == "array"
         assert reference.value_shape([{"a": "1"}]) == "object"
+
+
+class TestTheIdentityFieldIsExplainedOnceForBothShapes:
+    """One field on two answer shapes, and one paragraph explaining it.
+
+    ``emulator`` is what a client joins a catalogue answer to a firmware answer
+    on, so the two rows of the page have to say the same thing about it. They
+    are written twice — one is a property on
+    :class:`atlas.installations.EmulatorEntry`, the other an attribute on
+    :class:`atlas.firmware.CoreFirmware` — and the page publishes each
+    docstring's first paragraph, which is exactly the part this holds together.
+    """
+
+    def _published(self) -> dict[str, str]:
+        from atlas.firmware import CoreFirmware
+        from atlas.installations import EmulatorEntry
+
+        sentences = reference.attribute_sentences([EmulatorEntry, CoreFirmware])
+        return {
+            owner: sentences[(owner, "emulator")]
+            for owner in ("EmulatorEntry", "CoreFirmware")
+        }
+
+    def test_both_rows_publish_the_same_paragraph(self):
+        published = self._published()
+        assert published["EmulatorEntry"] == published["CoreFirmware"]
+
+    def test_the_paragraph_states_the_null(self):
+        # The one reading the field must never invite: null is "atlas could not
+        # identify one", not "this entry launches no emulator".
+        assert "`null`" in self._published()["EmulatorEntry"]
+
+
+class TestThePositionIsExplainedTheSameWayOnBothShapes:
+    """``declared_index``'s two rows say the same thing about the same number.
+
+    Not the identity field's rule: these two paragraphs are deliberately NOT
+    identical, because their ``null`` cases differ — an entry has none only
+    when no layer declared it, a firmware core has none whenever no catalogue
+    row was behind the answer (the inventory, a core asked for by name). What
+    must never drift is what the number IS, so the invariants both paragraphs
+    carry are held here instead: counted from 0, the shipped position, and
+    untouched by promotion. A rewrite that drops one of them on one shape
+    leaves the page saying two things about one field.
+    """
+
+    INVARIANTS = ("from 0", "shipped position", "promotion never touches")
+
+    def _published(self) -> dict[str, str]:
+        from atlas.firmware import CoreFirmware
+        from atlas.installations import EmulatorEntry
+
+        sentences = reference.attribute_sentences([EmulatorEntry, CoreFirmware])
+        return {
+            owner: sentences[(owner, "declared_index")]
+            for owner in ("EmulatorEntry", "CoreFirmware")
+        }
+
+    def test_both_rows_state_every_invariant(self):
+        published = self._published()
+        missing = {
+            owner: [phrase for phrase in self.INVARIANTS if phrase not in paragraph]
+            for owner, paragraph in published.items()
+        }
+        assert missing == {"EmulatorEntry": [], "CoreFirmware": []}
+
+    def test_the_firmware_row_states_its_own_wider_null(self):
+        # The one thing the two may not say alike, spelled out so a later
+        # edit cannot quietly narrow it back to the entry's case.
+        assert "inventory" in self._published()["CoreFirmware"]

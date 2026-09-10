@@ -14,6 +14,7 @@ does.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, cast
 from pathlib import Path
 
@@ -704,6 +705,7 @@ class TestTheGrammarRefusesContradictions:
                             "label": "ParaLLEl N64",
                             "kind": "libretro",
                             "core_so": "parallel_n64_libretro.so",
+                            "emulator": "parallel_n64_libretro.so",
                             "declared_index": 0,
                             "selection": None,
                             "caveats": [],
@@ -782,4 +784,133 @@ class TestEveryDeclaredSlaveIsTheOneTheReaderWouldSelect:
             }[spec]
             if not reached:
                 wrong.append(f"{name}: declares {spec!r}, which this listing does not reach")
+        assert wrong == []
+
+
+class TestEveryIdentityIsAWordTheCommandCarries:
+    """The identity field, re-derived from the raw command text over the whole corpus.
+
+    Two claims a single vector cannot make, both read off the fixture machines
+    rather than off the expectations: an identity is a word the launch command
+    itself carries, and a null one is a command that carries no word to take.
+    The patterns here are the test's own — a second reading of the same text,
+    so a resolver that started inventing names would not be checked against
+    its own invention.
+    """
+
+    # The three shapes an identity can come from, spelled independently of
+    # atlas.esde and atlas.installations: a libretro core file, an ES-DE
+    # emulator token, an EmuDeck launcher script.
+    _CORE = re.compile(r"[A-Za-z0-9_\-\[\]]+_libretro\.so")
+    _TOKEN = re.compile(r"%EMULATOR_([A-Za-z0-9_-]+)%")
+    _LAUNCHER = re.compile(r"/tools/launchers/([A-Za-z0-9_.-]+)\.sh")
+    _RUNNER = "RETROARCH"
+
+    def _catalogue_answers(self):
+        """Every catalogue answer the corpus asks for, with the vector's name."""
+        for param in load_vectors():
+            vector = cast(dict[str, Any], param.values[0])
+            query = vector["input"].get("catalogue_query")
+            if query is None:
+                continue
+            inp = vector["input"]
+            installs = atlas.detect(inp["home"], fixture_machine(inp))
+            install = _select(installs, query.get("installation"), vector["name"])
+            content_path = query.get("content_path")
+            answer = install.emulators_for(query["system"], content_path=content_path)
+            yield vector["name"], install, query["system"], answer, content_path
+
+    def _identifiable(self, command: str) -> set[str]:
+        """Every word this command offers as an identity, by the test's own reading."""
+        words = set(self._CORE.findall(command))
+        words |= {t for t in self._TOKEN.findall(command) if t != self._RUNNER}
+        words |= set(self._LAUNCHER.findall(command))
+        return words
+
+    def test_a_stated_identity_is_a_word_the_command_carries(self):
+        wrong = []
+        for name, _, _, answer, _content in self._catalogue_answers():
+            for entry in answer.entries:
+                if entry.emulator is None:
+                    continue
+                if not entry.command:
+                    # The derived enumeration has no command to quote; the core
+                    # it was derived from is what it may name.
+                    if entry.emulator != entry.core_so:
+                        wrong.append(f"{name}/{entry.label}: {entry.emulator!r} for core {entry.core_so!r}")
+                elif entry.emulator not in self._identifiable(entry.command):
+                    wrong.append(f"{name}/{entry.label}: {entry.emulator!r} is not in {entry.command!r}")
+        assert wrong == []
+
+    def test_a_null_identity_is_a_command_with_no_word_to_take(self):
+        # And the corpus must actually reach one, or the claim above is
+        # vacuous for the case it exists to protect.
+        reached = 0
+        wrong = []
+        for name, _, _, answer, _content in self._catalogue_answers():
+            for entry in answer.entries:
+                if entry.emulator is not None:
+                    continue
+                reached += 1
+                offered = self._identifiable(entry.command)
+                if offered:
+                    wrong.append(f"{name}/{entry.label}: null, but the command offers {sorted(offered)}")
+        assert wrong == []
+        assert reached, "no fixture machine reaches an entry no command identifies"
+
+    @staticmethod
+    def _sorted(pairs):
+        return sorted(pairs, key=lambda pair: (pair[0] is None, pair[0] or "", pair[1] is None, pair[1] or 0))
+
+    @staticmethod
+    def _pairs(rows):
+        """What a client joins on: which emulator, and which row of the launch list."""
+        return [(row.emulator, row.declared_index) for row in rows]
+
+    def test_where_both_answers_name_emulators_they_name_the_same_ones(self):
+        # The join, over every catalogue the corpus declares: the same emulator
+        # under the same identity and the same declared position, whichever
+        # question is asked about it — nulls included, so a route that silently
+        # dropped either field on one shape is caught.
+        #
+        # "Where both name emulators": a catalogue answer can name entries
+        # against a firmware answer that names no core at all. EmuDeck's
+        # sealed catalogue is that case — the readable layers declare no such
+        # system, so the catalogue route derives its entries from the installed
+        # cores while the firmware route answers empty; both answers state
+        # `emulator-catalogue-sealed`, the catalogue one with
+        # `emulator-list-derived` beside it and the firmware one with
+        # `firmware-declaration-unknown`. No corpus vector reaches that state
+        # (this loop would fail if one did), so the claim is held where it
+        # applies.
+        #
+        # The pair and not the label, because the label does not join: the
+        # derived enumeration's firmware cores carry no label at all
+        # (a-bare-retroarch-derives-its-emulator-list-from-the-cores answers
+        # label None against the catalogue's "mGBA") while both sides name
+        # mgba_libretro.so. That asymmetry is the argument for the fields.
+        wrong = []
+        for name, install, system, answer, _content in self._catalogue_answers():
+            catalogue = self._sorted(self._pairs(answer.entries))
+            firmware = self._sorted(self._pairs(install.firmware_for_system(system=system).cores))
+            if firmware != catalogue:
+                wrong.append(f"{name}: catalogue {catalogue} vs firmware {firmware}")
+        assert wrong == []
+
+    def test_the_two_answers_agree_on_the_order_no_content_reorders(self):
+        # Sorted above because ONE thing legitimately reorders the catalogue
+        # answer and not the firmware one: a per-game altemulator. The firmware
+        # route names no content (installations._firmware_catalogue_entries
+        # passes content_path=None), so no per-game entry can match there,
+        # while the catalogue answer promotes the row the gamelist names. Asked
+        # without a content path, the two orders are identical — and this is
+        # what says the sort above hides nothing else.
+        wrong = []
+        for name, install, system, answer, content in self._catalogue_answers():
+            if content is not None:
+                continue
+            catalogue = self._pairs(answer.entries)
+            firmware = self._pairs(install.firmware_for_system(system=system).cores)
+            if firmware != catalogue:
+                wrong.append(f"{name}: catalogue {catalogue} vs firmware {firmware}")
         assert wrong == []

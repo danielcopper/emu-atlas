@@ -8,6 +8,7 @@ from atlas.machine import FixtureMachine
 from atlas.esde import (
     EmulatorSpec,
     commented_out_systems,
+    emulator_identity,
     esde_extension,
     expand_home_path,
     merge_layers,
@@ -1073,3 +1074,47 @@ class TestACommentedOutSystemIsReadAsAFact:
         # A comment is prose until it parses — half a block proves nothing.
         text = "<!-- <system><name>broken</name> --><!-- just words -->"
         assert commented_out_systems(text) == ()
+
+
+class TestTheIdentityACommandSpells:
+    """``emulator_identity`` — the catalogue's own reading of what a command launches."""
+
+    def test_a_core_command_is_identified_by_the_core_file(self):
+        # The identity of a libretro entry IS the file the launch loads, so it
+        # is the same string the entry's core_so carries — never the token in
+        # front of it.
+        command = "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%"
+        assert emulator_identity(command) == "flycast_libretro.so"
+
+    def test_a_command_with_no_core_is_identified_by_its_token(self):
+        assert emulator_identity("%EMULATOR_DUCKSTATION% %ROM%") == "DUCKSTATION"
+
+    def test_a_retroarch_launch_naming_no_core_identifies_nothing(self):
+        # EmuDeck's n3ds rows, as they stand on the reference machine: a
+        # RetroArch launch pointed at a Windows .dll. RETROARCH names the
+        # runner, so answering it would hand a client the frontend under the
+        # name of an emulator.
+        command = "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra_libretro.dll %ROM%"
+        assert emulator_identity(command) is None
+
+    def test_a_shell_line_identifies_nothing_here(self):
+        # The launcher script is EmuDeck's spelling and is read on EmuDeck's
+        # handle; the catalogue parser knows only ES-DE's own vocabulary.
+        assert emulator_identity("/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -g %ROM%") is None
+
+    def test_an_empty_command_identifies_nothing(self):
+        assert emulator_identity("") is None
+
+    def test_the_parser_puts_the_identity_on_every_spec(self):
+        text = (
+            '<?xml version="1.0"?><systemList><system><name>psp</name>'
+            "<path>%ROMPATH%/psp</path><extension>.iso</extension>"
+            '<command label="PPSSPP (Standalone)">%EMULATOR_PPSSPP% %ROM%</command>'
+            '<command label="PPSSPP">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so %ROM%</command>'
+            "</system></systemList>"
+        )
+        entries = parse_es_systems(text, provenance="test").systems["psp"].entries
+        assert [(e.label, e.emulator) for e in entries] == [
+            ("PPSSPP (Standalone)", "PPSSPP"),
+            ("PPSSPP", "ppsspp_libretro.so"),
+        ]

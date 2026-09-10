@@ -165,9 +165,16 @@ PATCH_CONTINUATIONS = 9
 KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack", "title"}
 FILE_SET_FIELDS = {"state", "files", "complete", "groups"}
 FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role"}
+# Named once because three rules read it: an entry's own check types the value,
+# wherever the entry appears, the catalogue answer's check reads the whole list of
+# them at once, and a firmware core carries the position of the catalogue row it was
+# built from under the same name.
+DECLARED_INDEX = "declared_index"
 FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
 FIRMWARE_CORE_FIELDS = {
     "core_so",
+    "emulator",
+    DECLARED_INDEX,
     "label",
     "declaration",
     "requirements_met",
@@ -255,11 +262,16 @@ ALTERNATIVE_FIELDS = {"mode", "options", "values"}
 # save data lives. Valid for granularity.value and an alternative's value only.
 GRANULARITY_VALUE_NONE = "none"
 CAVEAT_FIELDS = {"code", "data"}
-# Named once because two rules read it: an entry's own check types the value,
-# wherever the entry appears, and the catalogue answer's check reads the whole
-# list of them at once.
-DECLARED_INDEX = "declared_index"
-EMULATOR_FIELDS = {"system", "label", "kind", "core_so", DECLARED_INDEX, "selection", "caveats"}
+EMULATOR_FIELDS = {
+    "system",
+    "label",
+    "kind",
+    "core_so",
+    "emulator",
+    DECLARED_INDEX,
+    "selection",
+    "caveats",
+}
 # The three ways a catalogue answer carries no entries, each a different claim:
 # the arrangement has none, its one could not be read, or atlas has not
 # established where it keeps one. None of them can accompany actual entries.
@@ -1460,13 +1472,16 @@ def _validate_savestate_absence(name: str, outcome: Any, what: str) -> bool:
 
     The savestate question's third shape (#284): ``no_savestates`` states,
     with its citation, that the emulator has no such feature — an answer, not
-    a refusal — and the only caveats that may ride it are the card's own.
+    a refusal — and the only caveats that may ride it are the card's own. Its
+    emulator field is ``token``, atlas's packaged-card vocabulary, and not
+    ``emulator``, which everywhere else in the contract is the frontend's own
+    spelling.
     """
     if not (isinstance(outcome, dict) and set(outcome) == {"no_savestates"}):
         return False
     absence = outcome["no_savestates"]
-    _require_exact(name, absence, {"emulator", "citation", "caveats"}, f"{what}.no_savestates")
-    for field in ("emulator", "citation"):
+    _require_exact(name, absence, {"token", "citation", "caveats"}, f"{what}.no_savestates")
+    for field in ("token", "citation"):
         if not isinstance(absence[field], str) or not absence[field]:
             fail(f"{name}: {what}.no_savestates.{field} must be a non-empty string")
     _validate_caveats(name, absence["caveats"])
@@ -1918,6 +1933,8 @@ def _validate_core_identity(name: str, core: Any) -> None:
         fail(f"{name}: firmware core label must be null or a non-empty string")
     if core_so is None and label is None:
         fail(f"{name}: an emulator with neither a core nor a catalogue label cannot be identified")
+    _validate_emulator_identity(name, core, "firmware core")
+    _validate_declared_index(name, core, "firmware core")
     if core["declaration"] not in KNOWN_DECLARATION_STATES:
         fail(f"{name}: firmware core declaration must be one of {sorted(KNOWN_DECLARATION_STATES)}")
 
@@ -2185,6 +2202,45 @@ def _validate_identification(name: str, identification: Any, query: dict[str, An
     _validate_caveats(name, identification["caveats"])
 
 
+def _validate_declared_index(name: str, block: Any, subject: str) -> None:
+    """The declared position, on whichever of the two shapes carries it.
+
+    A position is a place in ES-DE's launch list, so it is null or a
+    non-negative integer and nothing else. What it may not be checked against
+    here is the identity: a row is a row whether or not anything identified
+    the emulator it launches, and a firmware core built from no catalogue row
+    has no position while still naming its own core. The claim that ties the
+    two together is between ANSWERS, not inside one block, and the corpus test
+    tests/test_machine_vectors.py::TestEveryIdentityIsAWordTheCommandCarries
+    holds it: where one machine is asked both questions about one system, the
+    firmware entries' (emulator, declared_index) pairs are the catalogue
+    entries' pairs as a set — and in the same order too wherever no
+    ``content_path`` promotes a row, which is a test of its own there.
+    """
+    index = block[DECLARED_INDEX]
+    if index is not None and (not isinstance(index, int) or isinstance(index, bool) or index < 0):
+        fail(f"{name}: {subject} {DECLARED_INDEX} must be null or an integer >= 0")
+
+
+def _validate_emulator_identity(name: str, entry: Any, subject: str) -> None:
+    """The identity field, on whichever of the two shapes carries it.
+
+    One rule beyond the type, and it is the one a forgotten construction site
+    trips: an emulator the answer names a ``.so`` for is identified by that
+    ``.so``. The identity of a libretro entry *is* the core file the command
+    loads, so a block stating a ``core_so`` and a different identity — a
+    ``null`` among them — states two answers to one question.
+    """
+    identity = entry["emulator"]
+    if identity is not None and (not isinstance(identity, str) or not identity):
+        fail(f"{name}: {subject} emulator must be null or a non-empty string")
+    if entry["core_so"] is not None and identity != entry["core_so"]:
+        fail(
+            f"{name}: {subject} states core_so {entry['core_so']!r} and emulator {identity!r} — "
+            "the core a launch loads is what identifies it, so the two cannot differ"
+        )
+
+
 def _validate_emulator(name: str, entry: Any) -> None:
     _require_exact(name, entry, EMULATOR_FIELDS, "each emulator")
     if not isinstance(entry["label"], str) or not entry["label"]:
@@ -2194,12 +2250,11 @@ def _validate_emulator(name: str, entry: Any) -> None:
     core_so = entry["core_so"]
     if core_so is not None and (not isinstance(core_so, str) or not core_so):
         fail(f"{name}: emulator core_so must be null or a non-empty string")
+    _validate_emulator_identity(name, entry, "catalogue entry")
     selection = entry["selection"]
     if selection is not None and not isinstance(selection, str):
         fail(f"{name}: emulator selection must be null or a string")
-    declared_index = entry[DECLARED_INDEX]
-    if declared_index is not None and (not isinstance(declared_index, int) or declared_index < 0):
-        fail(f"{name}: emulator declared_index must be null or an integer >= 0")
+    _validate_declared_index(name, entry, "emulator")
     if not isinstance(entry["system"], str) or not entry["system"]:
         fail(f"{name}: emulator system must be a non-empty string")
     _validate_caveats(name, entry["caveats"])
