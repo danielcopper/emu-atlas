@@ -160,19 +160,31 @@ def load_cards(filename: str, systems_at: tuple[str, ...] | None) -> dict[str, s
     emulators = raw.get("emulators")
     if not isinstance(emulators, dict):
         raise ValueError(f"{filename}: 'emulators' must be an object")
-    cards: dict[str, set[str] | None] = {}
-    for token, entry in emulators.items():
-        systems: set[str] | None = None
-        if systems_at is not None:
-            node: object = entry
-            for step in systems_at:
-                node = node.get(step) if isinstance(node, dict) else None
-            if node is not None:
-                if not isinstance(node, list):
-                    raise ValueError(f"{filename}: {token} states a non-list {'.'.join(systems_at)}")
-                systems = {str(s) for s in node}
-        cards[token.lower()] = systems
-    return cards
+    return {
+        token.lower(): _card_systems(filename, token, entry, systems_at)
+        for token, entry in emulators.items()
+    }
+
+
+def _card_systems(
+    filename: str, token: str, entry: object, systems_at: tuple[str, ...] | None
+) -> set[str] | None:
+    """The systems one card answers for, or ``None`` when it answers for the emulator.
+
+    ``systems_at`` is where in the card that list is kept, one key per level;
+    a card that does not carry it answers for the emulator, which is also what
+    a question whose cards never name systems asks for on every row.
+    """
+    if systems_at is None:
+        return None
+    node: object = entry
+    for step in systems_at:
+        node = node.get(step) if isinstance(node, dict) else None
+    if node is None:
+        return None
+    if not isinstance(node, list):
+        raise ValueError(f"{filename}: {token} states a non-list {'.'.join(systems_at)}")
+    return {str(s) for s in node}
 
 
 def question_cell(cards: dict[str, set[str] | None], key: str, systems: set[str]) -> str:
