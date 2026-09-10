@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/danielcopper/emu-atlas/compare/v0.15.1...v0.16.0) (2026-09-10)
+
+
+### Features
+
+* **contract:** the contract reference explains every value of a closed vocabulary ([#437](https://github.com/danielcopper/emu-atlas/issues/437)) ([af60207](https://github.com/danielcopper/emu-atlas/commit/af60207bce5656b33dd16d85e430c65022b5b5cb)), closes [#430](https://github.com/danielcopper/emu-atlas/issues/430)
+
+
+### Bug Fixes
+
+* **data:** split the DuckStation directory citation around the line that pins nothing ([#440](https://github.com/danielcopper/emu-atlas/issues/440)) ([f147449](https://github.com/danielcopper/emu-atlas/commit/f147449e88e466e2408d97401e0bed91447ff1b3)), closes [#298](https://github.com/danielcopper/emu-atlas/issues/298)
+
 ## [0.15.1](https://github.com/danielcopper/emu-atlas/compare/v0.15.0...v0.15.1) (2026-09-10)
 
 
