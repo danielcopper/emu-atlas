@@ -2257,7 +2257,7 @@ Four questions, verification strictly opt-in. The first three share one answer s
 ```python
 inst.firmware_for_core("mgba_libretro.so")                  # what does this core want, and where?
 inst.firmware_for_system("gba")                             # which cores run this system, what does each want?
-inst.firmware_inventory(verify=True)                        # everything — declared, present, and unclaimed
+inst.firmware_inventory(verify=True)                        # every installed core, plus what nothing claims
 inst.identify_firmware(md5="32fbbd84…")                     # this content: what is it, where does it go?
 ```
 
@@ -2269,6 +2269,10 @@ beside it when their conditions hold. Where none does, the list is derived from 
 and `emulator-catalogue-unavailable` says so. An id the readable layers of a sealed catalogue do not declare answers
 empty with `firmware-declaration-unknown` — a look that failed, never `system-unknown` — because the declaration may sit
 in the layer nobody could read.
+
+`firmware_inventory` enumerates the installed cores, and only those: a standalone emulator has no core to enumerate, so
+it is never an entry there. Where a frontend catalogue is the enumeration, `firmware_for_system` states it beside the
+libretro ones; where the enumeration is derived from the installed cores instead, no question reaches it at all.
 
 Reading a `FirmwareAnswer`:
 
