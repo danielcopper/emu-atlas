@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -23,9 +22,7 @@ from atlas import __version__
 from atlas.cli import run
 from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine
-
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_VECTOR_DIR = _REPO_ROOT / "vectors" / "machines"
+from tests.test_machine_vectors import fixture_machine, load_vectors
 
 # expected key → the input key carrying its query (the library runner's own
 # pairing, mirrored — tests/test_machine_vectors.py).
@@ -57,30 +54,6 @@ _LIBRARY_ONLY = {
     "entry_texture_pack_location",
     "entry_mod_location",
 }
-
-
-def _load_vectors():
-    files = sorted(_VECTOR_DIR.glob("*.json"))
-    assert files, f"no vector files found in {_VECTOR_DIR}"
-    for path in files:
-        data = json.loads(path.read_text())
-        for vector in data["vectors"]:
-            yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
-
-
-def _machine(inp) -> FixtureMachine:
-    return FixtureMachine(
-        inp["files"],
-        symlinks=inp.get("symlinks"),
-        cores=inp.get("cores"),
-        dirs=inp.get("dirs"),
-        inaccessible=inp.get("inaccessible"),
-        unlistable=inp.get("unlistable"),
-        appimages=inp.get("appimages"),
-        ps2_bios_headers=inp.get("ps2_bios_headers"),
-        archives=inp.get("archives"),
-        whdload_slaves=inp.get("whdload_slaves"),
-    )
 
 
 def _flag(name: str, value) -> list[str]:
@@ -154,13 +127,13 @@ def _argv_for(key: str, query, expected, name: str) -> list[str]:
     return _question_argv(key, query) + ["--installation", selector]
 
 
-@pytest.mark.parametrize("vector", list(_load_vectors()))
+@pytest.mark.parametrize("vector", list(load_vectors()))
 def test_the_cli_answers_every_vector_byte_for_byte(vector, capsys):
     inp = vector["input"]
     expected = vector["expected"]
     name = vector["name"]
     rationale = vector.get("rationale", name)
-    machine = _machine(inp)
+    machine = fixture_machine(inp)
 
     exit_code = run(["detect"], home=inp["home"], machine=machine)
     assert exit_code == 0
