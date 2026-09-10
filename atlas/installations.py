@@ -12906,7 +12906,8 @@ def _firmware_root(
     ``None`` comes back two ways: the setting cleared, or a spelling with no
     host equivalent. Absent resolves to the platform default RetroArch seeded
     before it read a line, and a configured path that is no directory comes
-    back as it stands — each of those two carries its own caveat instead.
+    back as it stands — and where the directory either names is not on the
+    machine, that arm says so with its own caveat.
     """
     machine = sandbox.machine
     caveats: list[Caveat] = []
