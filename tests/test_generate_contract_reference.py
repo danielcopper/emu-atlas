@@ -11,11 +11,13 @@ comparison above to be possible at all.
 from __future__ import annotations
 
 import ast
+import dataclasses
 import pathlib
 
 import pytest
 
 import atlas
+from atlas import placement
 from atlas.firmware import FirmwareAlternatives, FirmwareRequirement
 from atlas.placement import SavefilePlacement
 from scripts import generate_contract_reference as reference
@@ -24,6 +26,7 @@ from tests.corpus import caveat_blocks, expected_blocks
 
 CODE_SECTION = "## Caveat codes"
 VALUE_SECTION = "## Caveat data values"
+GUIDE_PATH = reference.REPO_ROOT / "docs" / "how-to-use.md"
 
 
 @pytest.fixture(scope="module")
@@ -48,6 +51,46 @@ def code_table_of(page: str) -> str:
     """The `Caveat codes` section alone, where one row per exported code lives."""
     start = page.index(CODE_SECTION)
     return page[start : page.index(VALUE_SECTION, start)]
+
+
+def guide_page() -> str:
+    """`docs/how-to-use.md`, the hand-written half the generated page sits beside."""
+    return GUIDE_PATH.read_text(encoding="utf-8")
+
+
+def first_column_of(page: str, header: str) -> set[str]:
+    """The backticked values in the first column of the one table *header* heads.
+
+    The guide's tables are hand-written, so they are found by their header
+    rather than by a line number, and exactly one table may answer to it —
+    a second would make the comparison below silently pick a table nobody meant.
+    """
+    lines = page.splitlines()
+    heads = [index for index, line in enumerate(lines) if line.startswith(header)]
+    assert len(heads) == 1, f"{header!r} heads {len(heads)} tables in the guide, not one"
+    values: set[str] = set()
+    for line in lines[heads[0] + 2 :]:
+        if not line.startswith("|"):
+            break
+        first = line.strip().strip("|").split("|")[0].strip()
+        if first.startswith("`") and first.endswith("`"):
+            values.add(first.strip("`"))
+    return values
+
+
+def subsection_values(page: str, heading: str) -> list[str]:
+    """The values one generated `Closed vocabularies` subsection states a meaning for."""
+    lines = page.splitlines()
+    # The heading, the blank line under it, the table's header and its
+    # separator, and then one line per value.
+    start = lines.index(f"### {heading}") + 4
+    values: list[str] = []
+    for line in lines[start:]:
+        if not line.startswith("|"):
+            break
+        values.append(line.strip().strip("|").split("|")[0].strip().strip("`"))
+    assert values, f"the subsection {heading!r} states no values"
+    return values
 
 
 class TestTheCommittedReferenceIsRegenerated:
@@ -591,6 +634,224 @@ class TestTheMeaningEveryFieldStates:
 
     def test_a_path_that_resolved_no_attribute_states_nothing(self) -> None:
         assert reference.meaning_cell("label", None, {}) == reference.NOTHING_STATED
+
+
+class TestWhatEachValueOfAClosedVocabularyMeans:
+    """The sixth reading one level down: the sentence under a value's own constant.
+
+    A vocabulary is on the page as a list of values, and a consumer branching
+    on one of them has to know what it says. The convention is the attribute
+    docstring's — a string statement standing directly under the assignment —
+    and the gate is stricter than the field one: a list explained in part is
+    exactly the state a new value slips into unnoticed, so it stops the
+    generation rather than publishing a table that reads as the whole list.
+    """
+
+    def test_a_constant_states_the_value_it_is_assigned(self) -> None:
+        # Read as a summary, like every other sentence on the page: the first
+        # paragraph, on one line, with the package's RST spelled the way
+        # markdown spells it.
+        tree = ast.parse('Alias = Literal["a", "b"]\nX: Alias = "a"\n"""What ``a`` says.\n\nAt length."""\n')
+        assert reference.module_value_statements(tree) == {
+            "a": [reference.ValueStatement("X", ("a", "b"), "What `a` says.")]
+        }
+
+    def test_a_constant_with_no_statement_under_it_states_nothing(self) -> None:
+        # The same rule the attribute reading follows: only the string
+        # expression standing directly under the assignment is read, so a
+        # comment above the constant — which is how most of them are written —
+        # leaves the value unexplained rather than half-quoted.
+        tree = ast.parse('# What `a` says.\nX = "a"\nY = "b"\n"""What `b` says."""\n')
+        assert sorted(reference.module_value_statements(tree)) == ["b"]
+
+    def test_an_annotation_scopes_a_constant_to_one_vocabulary(self) -> None:
+        # Two constants, one value, two vocabularies: value equality alone
+        # would state both sentences for both lists.
+        tree = ast.parse(
+            'Wide = Literal["x", "y"]\n'
+            'Narrow = Literal["x", "z"]\n'
+            'WIDE_X: Wide = "x"\n'
+            '"""The wide `x`."""\n'
+            'NARROW_X: Narrow = "x"\n'
+            '"""The narrow `x`."""\n'
+        )
+        assert [(s.constant, s.admits) for s in reference.module_value_statements(tree)["x"]] == [
+            ("WIDE_X", ("x", "y")),
+            ("NARROW_X", ("x", "z")),
+        ]
+
+    def test_the_three_root_vocabularies_of_one_module_stay_apart(self) -> None:
+        # The real case the scoping exists for: `content_directory` is spelled
+        # by three constants in `atlas/placement.py`, one per question, and
+        # only the savefile one states a meaning today. Value equality alone
+        # would hand that sentence to the other two lists as well — and each
+        # of them would then be explained in part, which is a failure.
+        stating = reference.value_statements()["atlas/placement.py"]["content_directory"]
+        assert [s.constant for s in stating] == ["ROOT_CONTENT_DIRECTORY"]
+        assert len(reference.stated_meanings(placement.ROOT_KINDS)[0]) == len(placement.ROOT_KINDS)
+        assert reference.stated_meanings(placement.STATE_ROOT_KINDS) == ({}, [])
+        assert reference.stated_meanings(placement.SCREENSHOT_ROOT_KINDS) == ({}, [])
+
+    def test_the_two_root_vocabularies_beside_it_render_as_they_did(
+        self, built: reference.Reference
+    ) -> None:
+        # The other half of the same case, on the page rather than in the
+        # reading: filling one of three vocabularies that share a value leaves
+        # the other two exactly as they were — no link, no subsection — and
+        # the generation runs through. The section is rendered here rather
+        # than taken from the built page, so that a failing gate reads as this
+        # test failing rather than as the page fixture refusing to build.
+        section = reference.closed_vocabularies(built)
+        assert reference.half_explained_vocabularies(built.published) == []
+        assert reference.ambiguous_value_meanings(built.published) == []
+        neighbours = {
+            vocabulary.heading: vocabulary
+            for vocabulary in built.published
+            if vocabulary.heading in {"STATE_ROOT_KINDS", "SCREENSHOT_ROOT_KINDS"}
+        }
+        assert sorted(neighbours) == ["SCREENSHOT_ROOT_KINDS", "STATE_ROOT_KINDS"]
+        for heading, vocabulary in neighbours.items():
+            assert "content_directory" in vocabulary.values
+            assert vocabulary.meanings == {}
+            assert not vocabulary.explained
+            assert reference.vocabulary_names_cell(vocabulary) == reference.backticked(vocabulary.names)
+            assert f"### {heading}" not in section
+        assert "### ROOT_KINDS" in section
+
+    def test_every_filled_value_constant_is_narrowed_by_its_annotation(
+        self, built: reference.Reference
+    ) -> None:
+        # The narrowing is the protection, and the bare fallback is only a
+        # fallback: a filled list resting on it is one new constant of the same
+        # value away from a collision that stops the page. Every constant
+        # behind a filled vocabulary carries the alias that scopes it.
+        bare = [
+            f"{module}:{statement.constant}"
+            for vocabulary in built.published
+            if vocabulary.explained
+            for module in sorted(reference.vocabulary_modules()[vocabulary.values])
+            for value in vocabulary.values
+            for statement in reference.value_statements()[module].get(value, [])
+            if statement.admits is None
+        ]
+        assert bare == [], bare
+
+    def test_a_vocabulary_no_module_declares_states_nothing(self) -> None:
+        assert reference.stated_meanings(("invented", "by", "nobody")) == ({}, [])
+
+    def test_two_constants_that_disagree_state_nothing_and_say_so(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Bare constants, the form that carries no narrowing at all: value
+        # equality alone leaves both of them speaking for `a`, and the answer
+        # to that is a stop with both names, never a pick.
+        values = ("a", "b", "c")
+        stating = {
+            "a": [
+                reference.ValueStatement("ONE", None, "One."),
+                reference.ValueStatement("TWO", None, "Two."),
+            ],
+            "b": [reference.ValueStatement("BEE", None, "Bee.")],
+            # Two names for one value — an alias — state it once, not twice:
+            # the sentences agree, so there is nothing to choose between.
+            "c": [
+                reference.ValueStatement("SEE", None, "See."),
+                reference.ValueStatement("ALSO_SEE", None, "See."),
+            ],
+        }
+        monkeypatch.setattr(reference, "vocabulary_modules", lambda: {values: {"atlas/made_up.py"}})
+        monkeypatch.setattr(reference, "value_statements", lambda: {"atlas/made_up.py": stating})
+        meanings, collisions = reference.stated_meanings(values)
+        assert meanings == {"b": "Bee.", "c": "See."}
+        assert len(collisions) == 1
+        assert "`a`" in collisions[0]
+        assert "`ONE`, `TWO`" in collisions[0]
+
+    def test_the_package_as_it_stands_explains_every_list_it_starts(
+        self, built: reference.Reference
+    ) -> None:
+        assert reference.half_explained_vocabularies(built.published) == []
+        assert reference.ambiguous_value_meanings(built.published) == []
+
+    def test_a_list_explained_in_part_stops_the_generation(self) -> None:
+        half = reference.PublishedVocabulary(
+            values=("a", "b"), names=("HALF",), attributes=(), meanings={"a": "One."}, collisions=()
+        )
+        whole = dataclasses.replace(half, names=("WHOLE",), meanings={"a": "One.", "b": "Two."})
+        bare = dataclasses.replace(half, names=("BARE",), meanings={})
+        failures = reference.half_explained_vocabularies([half, whole, bare])
+        assert len(failures) == 1
+        assert failures[0].startswith("`HALF`: of 2 values, 1 value states a meaning and 1 value states none — `b`")
+        # And the counting reads as English on both halves at every size, which
+        # a message printed to a person is worth the second assertion.
+        wider = dataclasses.replace(half, names=("WIDER",), values=("a", "b", "c"))
+        assert reference.half_explained_vocabularies([wider])[0].startswith(
+            "`WIDER`: of 3 values, 1 value states a meaning and 2 values state none — `b`, `c`"
+        )
+
+    def test_a_list_no_constant_states_renders_as_it_did(
+        self, built: reference.Reference, generated: str
+    ) -> None:
+        bare = [vocabulary for vocabulary in built.published if not vocabulary.meanings]
+        assert bare, "every published vocabulary states its values, so nothing holds the old shape"
+        for vocabulary in bare:
+            assert reference.vocabulary_names_cell(vocabulary) == reference.backticked(vocabulary.names)
+            assert f"### {vocabulary.heading}\n" not in generated
+
+    def test_build_carries_the_gate_among_its_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate is only a gate if `build()` carries it: every other test
+        # here calls the gate itself, and deleting the line that wires it in
+        # would leave them all passing.
+        real = reference.stated_meanings
+
+        def one_short(values: tuple[str, ...]) -> tuple[dict[str, str], list[str]]:
+            meanings, collisions = real(values)
+            if values == placement.PATCH_FORMATS:
+                assert meanings.pop("xdelta", None), "the probe found nothing to drop"
+            return meanings, collisions
+
+        monkeypatch.setattr(reference, "stated_meanings", one_short)
+        _, failures = reference.build()
+        assert any("`PATCH_FORMATS`" in failure and "`xdelta`" in failure for failure in failures), failures
+
+    def test_a_row_links_the_name_that_titles_its_own_subsection(
+        self, built: reference.Reference, generated: str
+    ) -> None:
+        explained = [vocabulary for vocabulary in built.published if vocabulary.explained]
+        assert explained, "no published vocabulary states what its values mean"
+        anchors = {reference.anchor(vocabulary.heading) for vocabulary in explained}
+        assert len(anchors) == len(explained), "two subsections would answer to one anchor"
+        for vocabulary in explained:
+            assert f"### {vocabulary.heading}\n" in generated
+            assert f"[`{vocabulary.heading}`]({reference.anchor(vocabulary.heading)})" in generated
+
+    def test_the_heading_is_a_tuple_name_rather_than_an_annotation_spelling(self) -> None:
+        # A consumer imports the tuple and branches on it; `Literal[X.y]`
+        # names an attribute rather than the list. Sorting puts the annotation
+        # spelling first wherever it beats the tuple's name — `PATCH_FORMATS`
+        # is one — so the preference is stated rather than taken from the order.
+        both = reference.PublishedVocabulary(
+            values=("a",), names=("Literal[X.y]", "NAMED"), attributes=(), meanings={}, collisions=()
+        )
+        assert both.heading == "NAMED"
+        annotation_only = dataclasses.replace(both, names=("Literal[X.y]",))
+        assert annotation_only.heading == "Literal[X.y]"
+
+    def test_the_guide_and_the_page_name_the_same_checked_values(self, generated: str) -> None:
+        # The guide's table carries the prose at length and this page carries
+        # the lookup; a value on one and not the other is the drift the two
+        # cannot be allowed. `null` is the guide's sixth row and not a member
+        # of the vocabulary — the page states nullability in its own column.
+        guide = first_column_of(guide_page(), "| `checked` ")
+        assert guide - {"null"} == set(subsection_values(generated, "FIRMWARE_CHECKED"))
+
+    def test_the_guide_and_the_page_name_the_same_system_firmware_values(
+        self, generated: str
+    ) -> None:
+        guide = first_column_of(guide_page(), "| value ")
+        assert guide - {"null"} == set(subsection_values(generated, "CORE_SYSTEM_FIRMWARE_STATES"))
 
 
 class TestDescribingACaveatDataKeysValues:

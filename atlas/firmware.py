@@ -194,9 +194,29 @@ FIRMWARE_DECLARED_KINDS = ("file", "directory")
 FirmwareChecked = Literal["verified", "mismatch", "unchecked", "unknown", "not-comparable"]
 
 CHECKED_VERIFIED: FirmwareChecked = "verified"
+"""The bytes were compared with the packaged identity and match: this file is the right one.
+It does not say the core can start — ``requirements_met`` is the verdict over the whole
+declaration.
+"""
 CHECKED_MISMATCH: FirmwareChecked = "mismatch"
+"""A file is there and its bytes are not the pinned ones — the one value that means *present
+with the wrong bytes*, and it appears only where ``verify`` ran. It never means absent: a
+missing file answers ``None``, never this.
+"""
 CHECKED_UNCHECKED: FirmwareChecked = "unchecked"
+"""A packaged identity exists and the bytes were not compared with it, because ``verify`` was
+not passed. It says neither that something is wrong nor that anything is right — the verdict
+costs one ``verify=True`` query.
+"""
 CHECKED_UNKNOWN: FirmwareChecked = "unknown"
+"""Nothing was compared and nothing is pending: no packaged identity exists for this
+destination, or its bytes would not come back, or its shape answered instead of its bytes — a
+directory where the core opens a file, a file where the core lists a folder, a folder answered
+by what it holds. It is no verdict on the entry: ``satisfied`` beside it is ``True`` for a plain
+file with no identity, ``False`` for a file where a folder is opened, ``None`` where the bytes
+were unreadable or a directory stands where a file is opened, and whatever the listing
+established for a listed folder — ``True``, ``False`` or ``None``.
+"""
 # The bytes differ from the pinned ones and that settles nothing, because the
 # identity is not whole-file comparable (:data:`FIRMWARE_IDENTITY_KINDS`). It
 # replaces ``mismatch`` for such an identity and never joins it: a verdict is
@@ -204,6 +224,10 @@ CHECKED_UNKNOWN: FirmwareChecked = "unknown"
 # spellings of the same idea ("incomparable") read as praise, and this is a
 # statement about a comparison, not about a file.
 CHECKED_NOT_COMPARABLE: FirmwareChecked = "not-comparable"
+"""The bytes differ from the pinned ones and the identity is not whole-file comparable, so the
+difference settles nothing. It is a withheld verdict and never a failure: an exact hit on the
+same file still answers ``verified``.
+"""
 
 FIRMWARE_CHECKED = ("verified", "mismatch", "unchecked", "unknown", "not-comparable")
 
@@ -2036,19 +2060,36 @@ CoreSystemFirmware = Literal[
 # PlayStation BIOS: its five images all read ``optional``, because that is what
 # its ``.info`` says, and the system still will not boot.
 SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT: CoreSystemFirmware = "cannot-run-without-firmware"
+"""The system does not start without a firmware image, and this core needs one of the ones it
+declares. It comes from the packaged table rather than from this machine, so it says nothing
+about whether an image is in place — that is ``requirements_met``.
+"""
 # The system does not start without an image, and this core carries its own
 # substitute, so its all-optional declaration is correct. PCSX ReARMed's HLE
 # BIOS is the recorded case; the table names such cores per system, each with
 # the evidence for it.
 SYSTEM_FIRMWARE_CORE_ALTERNATIVE: CoreSystemFirmware = "core-supplies-an-alternative"
+"""The system needs an image and this core carries its own substitute, so its all-optional
+declaration is right. It is a statement about this core and not about the system: another core
+on the same system may still need an image.
+"""
 # Somebody established that the system starts with no image present. Recorded
 # knowledge like the other two, and the reason it is a value of its own: it is
 # emphatically not the same claim as ``None``.
 SYSTEM_FIRMWARE_RUNS_WITHOUT: CoreSystemFirmware = "runs-without-firmware"
+"""Somebody established that the system starts with no image present. Recorded knowledge, and
+emphatically not the same claim as ``None``: ``None`` is a system nobody has looked at, or a
+core with no requirement and so no system on this answer to state anything about.
+"""
 # Nobody has established which. A value, not an absence — the table records a
 # system whose cores contradict each other so that the open question is
 # visible instead of merely unrecorded.
 SYSTEM_FIRMWARE_OPEN: CoreSystemFirmware = "open"
+"""Nobody has established whether this system starts without a firmware image. A value and not
+an absence — the table records the open question rather than leaving it merely unrecorded — and
+the open entry itself adds no world-knowledge caveat, having nothing to say beyond the field:
+another entry on the same core still marks what it states.
+"""
 
 CORE_SYSTEM_FIRMWARE_STATES = (
     SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
