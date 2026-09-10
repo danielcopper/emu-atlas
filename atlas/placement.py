@@ -428,6 +428,19 @@ CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
 # would be the failure this project exists to avoid. `data` carries `dir` and a
 # `citation` for the reading behind it.
 CAVEAT_FILE_NAMES_UNESTABLISHED = "file-names-unestablished"
+# A directory under this answer's own root that the card states and the
+# observation did not read. An observed set's groups describe the one directory
+# that was read, so a mode whose parts lie in sibling subdirectories — Kronos's
+# `kronos/stv` beside `kronos/saturn`, MAME 2010's seven trees beside its
+# `nvram` — drops them the moment a file turns up in the directory the answer
+# is about. One caveat per such directory, resolved the way the declared
+# answer's group resolves it. `data` carries `core`, `mode` and `dir`, and no
+# file names: one directory can hold two groups naming different files, and the
+# declared answer already states every one of them. The parts under *another*
+# root are `file-set-spans-roots`, and a directory whose names follow from
+# nothing atlas reads is `file-names-unestablished` as well as this — the two
+# say different things about the same place.
+CAVEAT_FILE_SET_DIRECTORIES_UNREAD = "file-set-directories-unread"
 # The caller named no system, and the answer holds anyway because every system
 # the core's record covers writes the same files. The claim is scoped to those
 # systems — `data["systems"]` lists them — because a core run for a system its
@@ -1135,19 +1148,21 @@ class FileSet:
     **An observed set's groups describe the directory that was read, and only
     it.** They are the found files sorted into what the declaration says they
     are, so a card that also writes elsewhere has parts that no group of this
-    answer carries. Two kinds: the parts under another root, which
-    :data:`CAVEAT_FILE_SET_SPANS_ROOTS` names in either state, and the parts
-    under this answer's own root in another subdirectory, which are the ones to
-    know about. Kronos declares three groups over ``kronos/saturn`` and
-    ``kronos/stv`` and an observation of the first states one; MAME 2010
-    declares eight directories and an observation states one. Of the seven it
-    drops, the three whose names were never derivable still travel as
-    :data:`CAVEAT_FILE_NAMES_UNESTABLISHED`, which carries the directory; the
-    four that state files travel nowhere. Those directories are in the card, and
-    the same question states them as groups until this content's own name turns
-    up in the answer's directory and the set becomes an observation. This is a
-    known gap in what an observed answer states, never a claim that the other
-    directories hold nothing.
+    answer carries — and every one of those parts is named by a caveat instead.
+    The parts under another root are :data:`CAVEAT_FILE_SET_SPANS_ROOTS`, in
+    either state. The parts under this answer's own root in another
+    subdirectory are :data:`CAVEAT_FILE_SET_DIRECTORIES_UNREAD`, one per
+    directory, on the observation alone: Kronos declares three groups over
+    ``kronos/saturn`` and ``kronos/stv`` and an observation of the first states
+    one group and names the other directory; MAME 2010 declares eight
+    directories, and an observation states one and names seven. A directory
+    whose file names were never derivable also keeps its
+    :data:`CAVEAT_FILE_NAMES_UNESTABLISHED`, which is the other fact about the
+    same place — one says the names do not follow from anything atlas reads,
+    the other says nothing read the directory. So a short ``groups`` list is
+    never a claim that the card's other directories hold nothing: what the
+    answer says about them is in the caveats, and what it says is that they
+    were not looked at.
     """
 
     state: FileSetState

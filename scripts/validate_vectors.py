@@ -345,6 +345,7 @@ KNOWN_CAVEAT_CODES = {
     "filenames-content-conditional",
     "file-names-unestablished",
     "file-set-across-systems",
+    "file-set-directories-unread",
     "file-set-spans-roots",
     "unknown-option-value",
     "system-directory-cleared",
