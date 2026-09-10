@@ -53,14 +53,16 @@ cores, and what a verdict in `atlas/data/system_firmware.json` must cite.
 nullability, what each one means, and which caveat code rides which question with which data keys. It is derived six
 ways — the annotations on the answer types, the vectors, an AST scan of the `Caveat(...)` and `Unresolved(...)`
 construction sites, an AST scan of the serializers in `atlas/contract.py`, the data registry `atlas.ENUMERATED_DATA`,
-which says which `(code, key)` values the constructors refuse, and the attribute docstrings on the answer types, which
-fill the meaning column — and it fails loudly rather than publishing a false claim: a field the annotations say cannot
-be `null` for which a vector produced `null` stops the generator, and so do two values under one `(code, key)`, a value
-the registry would refuse, a registry tuple two names claim, and a serialized field whose attribute carries no
-docstring. Regenerate after touching anything those six readings read, which is more than the obvious ones: an
-annotation, a `__post_init__` check, a module-level tuple, an entry in `ENUMERATED_DATA`, `atlas.__all__`, a class
-docstring, an attribute docstring and a serializer all move the page. A test fails when the committed page is not what
-the generator produces.
+which says which `(code, key)` values the constructors refuse, and the docstrings the package writes — on an answer
+type's attribute they fill the meaning column, and under a value constant they say what one value of a closed vocabulary
+means — and it fails loudly rather than publishing a false claim: a field the annotations say cannot be `null` for which
+a vector produced `null` stops the generator, and so do two values under one `(code, key)`, a value the registry would
+refuse, a registry tuple two names claim, a serialized field whose attribute carries no docstring, a value two constants
+of one module explain differently, and a vocabulary whose values are explained in part, because the value meanings are
+all or nothing per vocabulary. Regenerate after touching anything those six readings read, which is more than the
+obvious ones: an annotation, a `__post_init__` check, a module-level tuple, an entry in `ENUMERATED_DATA`,
+`atlas.__all__`, a class docstring, an attribute docstring, a sentence under a value constant and a serializer all move
+the page. A test fails when the committed page is not what the generator produces.
 
 ```bash
 python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md

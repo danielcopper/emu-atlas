@@ -34,11 +34,13 @@ and the page says which reading spoke:
   and says the corpus has not reached it.
 - **the attribute docstrings** — an AST scan of the answer types for the string
   written under each attribute, and for the docstring of each property and
-  method the contract serializes. The only reading that says what a field
-  *means*: a docstring is an expression with an end, so its summary can be
-  quoted, where a comment would leave this generator deciding where a sentence
-  stops. It is the one reading with no fallback — a serialized field whose
-  attribute writes nothing stops the generation rather than publishing a blank.
+  method the contract serializes, and for the string written under the constant
+  that names one value of a closed vocabulary. The only reading that says what a
+  field or a value *means*: a docstring is an expression with an end, so its
+  summary can be quoted, where a comment would leave this generator deciding
+  where a sentence stops. It is the one reading with no fallback — a serialized
+  field whose attribute writes nothing stops the generation rather than
+  publishing a blank, and so does a vocabulary explained in part.
 
 Joining the first two means matching a JSON key to the attribute it serializes.
 That match is by name, with two mechanical exceptions: a key filled by a list
@@ -680,6 +682,211 @@ def declared_vocabularies() -> dict[str, tuple[str, ...]]:
     for _, tree in package_modules():
         found.update(module_string_tuples(tree))
     return found
+
+
+# --------------------------------------------------------------------------
+# Reading 6 again — what one value of a closed vocabulary says
+# --------------------------------------------------------------------------
+
+
+@dataclasses.dataclass(frozen=True)
+class ValueStatement:
+    """One constant that states what a value of a closed vocabulary says.
+
+    ``admits`` is the value list the constant's own annotation allows, where
+    that annotation is a ``Literal`` alias the same module declares, and
+    ``None`` where it carries no such annotation. It is what holds three
+    constants spelling ``"content_directory"`` in one module apart: each is
+    annotated with its own question's alias, so each speaks for its own
+    vocabulary and for none of its neighbours.
+    """
+
+    constant: str
+    admits: tuple[str, ...] | None
+    sentence: str
+
+
+def module_literal_aliases(tree: ast.Module) -> dict[str, tuple[str, ...]]:
+    """Module-level ``NAME = Literal["a", "b"]`` aliases over plain strings."""
+    aliases: dict[str, tuple[str, ...]] = {}
+    for node in tree.body:
+        target, value = _assignment(node)
+        if target is None or not isinstance(value, ast.Subscript):
+            continue
+        if _called_name(value.value) != "Literal":
+            continue
+        elements = value.slice.elts if isinstance(value.slice, ast.Tuple) else [value.slice]
+        members = [e.value for e in elements if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+        if members and len(members) == len(elements):
+            aliases[target] = tuple(members)
+    return aliases
+
+
+def module_value_statements(tree: ast.Module) -> dict[str, list[ValueStatement]]:
+    """``{value: the constants that state what it says}`` for one module.
+
+    The attribute docstring's convention, moved to module level: a value
+    constant that belongs to a closed vocabulary the page publishes carries
+    its meaning as a string statement standing directly under its assignment.
+    Nothing else is read — a comment above the constant is prose this cannot
+    quote, for the same reason it cannot quote one above an attribute.
+    """
+    values = module_string_constants(tree)
+    aliases = module_literal_aliases(tree)
+    found: dict[str, list[ValueStatement]] = {}
+    for index, node in enumerate(tree.body):
+        target, _ = _assignment(node)
+        if target is None or target not in values:
+            continue
+        docstring = _string_expression(tree.body, index + 1)
+        if docstring is None:
+            continue
+        annotation = node.annotation if isinstance(node, ast.AnnAssign) else None
+        admits = aliases.get(_called_name(annotation) or "") if annotation is not None else None
+        found.setdefault(values[target], []).append(ValueStatement(target, admits, summary(docstring)))
+    return found
+
+
+@functools.cache
+def value_statements() -> dict[str, dict[str, list[ValueStatement]]]:
+    """``{module: {value: statements}}``, every module in the package."""
+    return {
+        str(path.relative_to(REPO_ROOT)): module_value_statements(tree)
+        for path, tree in package_modules()
+    }
+
+
+@functools.cache
+def vocabulary_modules() -> dict[tuple[str, ...], set[str]]:
+    """Every module that declares one exact value list, by that list.
+
+    A vocabulary's meanings are read in the module that declares it, which is
+    the module its value constants stand in; a value spelled in another module
+    is a homonym this reading has no reason to believe. Two ways of declaring
+    count, and they are the two the page already names: a module-level string
+    tuple, and the ``Literal`` alias an annotation is spelled through.
+
+    A tuple composed from another — ``EMULATOR_CONFIG_UNREADABLE_REASONS`` is
+    built by splat from ``REFUSAL_CODES`` — is invisible to both, exactly as it
+    is to :func:`declared_vocabularies`, so no module declares it here and
+    sentences written under its values would be collected by nothing. Such a
+    vocabulary renders as one nobody has annotated, which is what it is until
+    it is given a literal tuple or an alias to be found by.
+    """
+    found: dict[tuple[str, ...], set[str]] = {}
+    for path, tree in package_modules():
+        module = str(path.relative_to(REPO_ROOT))
+        declared = (*module_string_tuples(tree).values(), *module_literal_aliases(tree).values())
+        for members in declared:
+            found.setdefault(members, set()).add(module)
+    return found
+
+
+def stated_meanings(values: tuple[str, ...]) -> tuple[dict[str, str], list[str]]:
+    """What the source states about each member of *values*, and what it states twice.
+
+    A member takes the sentence of the constant assigned that string in a
+    module that declares this value list, narrowed by the constant's own
+    annotation: one annotated with a ``Literal`` alias speaks only for the
+    vocabulary that alias admits — which is what holds the three constants
+    spelling ``"content_directory"`` in ``atlas/placement.py`` to their own
+    question.
+
+    A bare ``NAME = "value"`` carries no such narrowing, and it falls back to
+    value equality alone: it speaks for every list of its module that holds its
+    value. Where that leaves two constants speaking for one member, the answer
+    is never a pick. Sentences that agree are one statement — an alias says the
+    same thing twice — and sentences that differ state nothing this can
+    publish: the value stays unexplained, the second return names both
+    constants, and :func:`ambiguous_value_meanings` stops the generation. The
+    member is then also missing from the first return, so the all-or-nothing
+    gate fires beside it and the vocabulary is not published half-explained.
+    """
+    meanings: dict[str, str] = {}
+    collisions: list[str] = []
+    modules = sorted(vocabulary_modules().get(values, set()))
+    for value in dict.fromkeys(values):
+        stating = [
+            statement
+            for module in modules
+            for statement in value_statements()[module].get(value, [])
+            if statement.admits is None or set(statement.admits) == set(values)
+        ]
+        sentences = {statement.sentence for statement in stating}
+        if len(sentences) > 1:
+            named = backticked(sorted(statement.constant for statement in stating))
+            collisions.append(f"`{value}` is stated by {named}, which do not agree")
+        elif sentences:
+            meanings[value] = next(iter(sentences))
+    return meanings, collisions
+
+
+@dataclasses.dataclass(frozen=True)
+class PublishedVocabulary:
+    """One closed value list the page publishes, and what its values mean."""
+
+    values: tuple[str, ...]
+    names: tuple[str, ...]
+    attributes: tuple[str, ...]
+    meanings: dict[str, str]
+    collisions: tuple[str, ...]
+
+    @property
+    def heading(self) -> str:
+        """The name its subsection is titled with, and the one its row links.
+
+        A bare name over a ``Literal[...]`` one: the tuple is what a consumer
+        imports and branches on, while the annotation spelling names an
+        attribute rather than the list. The names arrive sorted, so the choice
+        is the same on every run.
+        """
+        return next((name for name in self.names if not name.startswith("Literal[")), self.names[0])
+
+    @property
+    def unexplained(self) -> tuple[str, ...]:
+        """The members no constant states a meaning for."""
+        return tuple(value for value in dict.fromkeys(self.values) if value not in self.meanings)
+
+    @property
+    def explained(self) -> bool:
+        """Whether every member states a meaning, which is when a subsection is published."""
+        return bool(self.meanings) and not self.unexplained
+
+
+def published_vocabularies(walks: Mapping[str, ShapeWalk]) -> tuple[PublishedVocabulary, ...]:
+    """Every closed value list the page publishes, in the order it lists them.
+
+    There is one notion of *published* and this is it: a list is on the page
+    because a serialized attribute is declared against it or because ``atlas``
+    exports it, and the section below states no other rows than these.
+    """
+    named: dict[tuple[str, ...], set[str]] = {}
+    against: dict[tuple[str, ...], set[str]] = {}
+    for title in sorted(walks):
+        for path, field in sorted(walks[title].fields.items()):
+            if field is None:
+                continue
+            for vocabulary in field.vocabularies:
+                named.setdefault(vocabulary.values, set()).add(vocabulary.name)
+                against.setdefault(vocabulary.values, set()).add(f"{title}.{path}")
+    for name in atlas.__all__:
+        exported = getattr(atlas, name)
+        if isinstance(exported, tuple) and exported and all(isinstance(v, str) for v in exported):
+            named.setdefault(exported, set()).add(name)
+            against.setdefault(exported, set())
+    published: list[PublishedVocabulary] = []
+    for values in sorted(named, key=lambda v: min(named[v])):
+        meanings, collisions = stated_meanings(values)
+        published.append(
+            PublishedVocabulary(
+                values=values,
+                names=tuple(sorted(named[values])),
+                attributes=tuple(sorted(against[values])),
+                meanings=meanings,
+                collisions=tuple(collisions),
+            )
+        )
+    return tuple(published)
 
 
 def registered_enumerations() -> dict[tuple[str, str], str]:
@@ -1526,6 +1733,37 @@ def unstated_meanings(
     return found
 
 
+def half_explained_vocabularies(published: Sequence[PublishedVocabulary]) -> list[str]:
+    """Vocabularies whose members state a meaning in part.
+
+    All or nothing per list, and the strict direction is the point: a
+    half-annotated vocabulary is exactly the state a new value slips into
+    unnoticed, because a table explaining four of five values reads as one
+    explaining the list.
+    """
+    return [
+        f"`{vocabulary.heading}`: of {counted(len(vocabulary.values), 'value')}, "
+        f"{_states(len(vocabulary.meanings))} a meaning and {_states(len(vocabulary.unexplained))} none — "
+        f"{backticked(vocabulary.unexplained)}; a vocabulary this page explains, it explains whole"
+        for vocabulary in published
+        if vocabulary.meanings and vocabulary.unexplained
+    ]
+
+
+def _states(count: int) -> str:
+    """``1 value states`` / ``2 values state`` — the noun and its verb agreeing."""
+    return f"{counted(count, 'value')} {'states' if count == 1 else 'state'}"
+
+
+def ambiguous_value_meanings(published: Sequence[PublishedVocabulary]) -> list[str]:
+    """Values two constants of one module state differently, so the page can state neither."""
+    return [
+        f"`{vocabulary.heading}`: {collision}"
+        for vocabulary in published
+        for collision in vocabulary.collisions
+    ]
+
+
 def contradictions(walks: Mapping[str, ShapeWalk]) -> list[str]:
     """Attributes the annotations forbid to be ``null`` and a vector made ``null``."""
     found: list[str] = []
@@ -1608,6 +1846,7 @@ class Reference:
     serializers: dict[Shape, Serializer]
     titles: dict[Shape, str]
     walks: dict[str, ShapeWalk]
+    published: tuple[PublishedVocabulary, ...]
 
 
 def read_everything() -> Reference:
@@ -1647,6 +1886,7 @@ def read_everything() -> Reference:
         serializers=serializers,
         titles=titles,
         walks=walks,
+        published=published_vocabularies(walks),
     )
 
 
@@ -1716,8 +1956,9 @@ def corpus_header(reference: Reference) -> list[str]:
             "itself spells out), an AST scan of the **serializers** in `atlas/contract.py` (which function returns "
             "which shape, and which key it fills from a differently named attribute), the **data registry** "
             "`atlas.ENUMERATED_DATA` (which `(code, key)` values are refused at construction, whether or "
-            "not a vector exercises them), and the **attribute docstrings** on the answer types (what a field "
-            "_means_). An attribute an answer type "
+            "not a vector exercises them), and the **docstrings** the package writes — on an answer type's attribute "
+            "they say what a field _means_, and under a value constant what one value of a closed vocabulary means. "
+            "An attribute an answer type "
             "declares and no serialized answer carries is listed under "
             "[attributes no answer carries](#attributes-no-answer-carries) rather than described. "
             "[The guide](how-to-use.md) explains the answers at length, field by field; "
@@ -1998,32 +2239,27 @@ def attributes_no_answer_carries(reference: Reference) -> list[str]:
     ]
 
 
+def vocabulary_names_cell(vocabulary: PublishedVocabulary) -> str:
+    """One row's names, the heading linked to its subsection where there is one."""
+    linked = anchor(vocabulary.heading)
+    return ", ".join(
+        f"[`{name}`]({linked})" if vocabulary.explained and name == vocabulary.heading else f"`{name}`"
+        for name in vocabulary.names
+    )
+
+
 def closed_vocabularies(reference: Reference) -> list[str]:
     """Every closed value list, under every name the source holds it under."""
-    named: dict[tuple[str, ...], set[str]] = {}
-    against: dict[tuple[str, ...], set[str]] = {}
-    for title in sorted(reference.walks):
-        for path, field in sorted(reference.walks[title].fields.items()):
-            if field is None:
-                continue
-            for vocabulary in field.vocabularies:
-                named.setdefault(vocabulary.values, set()).add(vocabulary.name)
-                against.setdefault(vocabulary.values, set()).add(f"{title}.{path}")
-    for name in atlas.__all__:
-        exported = getattr(atlas, name)
-        if isinstance(exported, tuple) and exported and all(isinstance(v, str) for v in exported):
-            named.setdefault(exported, set()).add(name)
-            against.setdefault(exported, set())
     rows = [
         [
-            cell(backticked(sorted(named[values]))),
-            str(len(values)),
-            cell(backticked(values)),
-            cell(backticked(sorted(against[values])) or "no serialized attribute is declared against it"),
+            cell(vocabulary_names_cell(vocabulary)),
+            str(len(vocabulary.values)),
+            cell(backticked(vocabulary.values)),
+            cell(backticked(vocabulary.attributes) or "no serialized attribute is declared against it"),
         ]
-        for values in sorted(named, key=lambda v: min(named[v]))
+        for vocabulary in reference.published
     ]
-    return [
+    lines = [
         "## Closed vocabularies",
         "",
         *paragraph(
@@ -2034,9 +2270,36 @@ def closed_vocabularies(reference: Reference) -> list[str]:
             "tuples are listed even where no serialized attribute is declared against them, "
             "because the export is itself the offer to branch on the list."
         ),
+        *paragraph(
+            "A name that links leads to a subsection below stating what each of its values says. That is the "
+            "meaning column's reading applied one level down: the sentence is the string written directly under the "
+            "value's own constant, read in the module that declares the list. A constant annotated with a `Literal` "
+            "alias speaks only for the vocabulary that alias admits, which is what holds apart the several "
+            "constants of one module that spell the same value; a bare `NAME = \"value\"` carries no such narrowing "
+            "and speaks for every list of its module holding its value. Where two constants speak for one member, "
+            "sentences that agree are one statement and sentences that differ stop this generation rather than one "
+            "of them being picked. It is all or nothing besides: a list whose members state a meaning in part stops "
+            "the generation too, rather than publishing a table a reader would take for the whole list."
+        ),
         *table(["names", "values", "value list", "attributes declared against it"], rows),
         "",
     ]
+    for vocabulary in reference.published:
+        if not vocabulary.explained:
+            continue
+        lines.append(f"### {vocabulary.heading}")
+        lines.append("")
+        lines.extend(
+            table(
+                ["value", "meaning"],
+                [
+                    [cell(f"`{value}`"), cell(vocabulary.meanings[value])]
+                    for value in dict.fromkeys(vocabulary.values)
+                ],
+            )
+        )
+        lines.append("")
+    return lines
 
 
 def caveat_codes(reference: Reference) -> list[str]:
@@ -2176,6 +2439,8 @@ def build() -> tuple[list[str], list[str]]:
         *registry_disagreements(reference.witnessed, reference.enumerations),
         *ambiguous_vocabulary_names(reference.enumerations),
         *unstated_meanings(reference.walks, reference.sentences),
+        *half_explained_vocabularies(reference.published),
+        *ambiguous_value_meanings(reference.published),
     ]
     return lines, failures
 
@@ -2183,11 +2448,14 @@ def build() -> tuple[list[str], list[str]]:
 def main() -> None:
     lines, failures = build()
     if failures:
-        # Five gates print here and they do not share a pair of readings: the
-        # null cross-check is annotations against vectors, the shape and
-        # registry checks are the corpus against itself and against the
-        # registry, the naming check is the package against itself, and the
-        # meaning gate is the walk against the docstrings.
+        # Seven gates print here. The null cross-check is annotations against
+        # vectors, the shape and registry checks are the corpus against itself
+        # and against the registry, the naming check is the package against
+        # itself, the meaning gate is the walk against the docstrings, and the
+        # last two read one pair between them — a published vocabulary against
+        # the sentences under its own value constants — because they catch the
+        # two ways that pair fails: a list explained in part, and a value two
+        # constants explain differently.
         print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)
