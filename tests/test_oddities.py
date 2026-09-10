@@ -10,7 +10,7 @@ from typing import Mapping
 import pytest
 
 import atlas
-from atlas.machine import CoreOption, FixtureMachine, RealMachine
+from atlas.machine import CoreInfo, CoreOption, CoreReading, FixtureMachine, RealMachine
 from atlas.mode_rules import RULES as MODE_RULES
 from atlas.oddities import (
     ANCHOR_KINDS,
@@ -4287,14 +4287,69 @@ def _deployed_core_info(machine: RealMachine, card: CoreCard):
     return machine.query_core(str(DEPLOYED_CORES / card.so_name))
 
 
+def _skip_where_the_deployed_core_does_not_load(machine: RealMachine, card: CoreCard) -> None:
+    """Skip when the loader refuses this card's core: nothing was read from it.
+
+    The probe loads the deployed ``.so`` with ``ctypes``, which needs every
+    library that core declares it needs resolvable from the interpreter running
+    the tests. Where the loader cannot resolve one — the system OpenGL stack,
+    on the interpreter that surfaced this — a sound binary reads as empty,
+    and a test that measures cards against binaries fails the card for it
+    (#408). What the run then knows is nothing, and a skip is the only verdict
+    that says so; the assertions below stay exactly as they are for every core
+    that was really read.
+    """
+    unloadable = machine.read_core(str(DEPLOYED_CORES / card.so_name)).unloadable
+    if unloadable is not None:
+        pytest.skip(f"the deployed core for card {card.key!r} does not load here: {unloadable}")
+
+
+def _measured_or_skip_where_the_loader_refused_them_all(machine: RealMachine) -> list[str]:
+    """The cards whose governing option this run read from a binary, or a skip.
+
+    The two guards below demand at least one such card, because a run that
+    skipped every card passes exactly like a run that checked them all. The
+    failure they are written for is a probe that quietly stopped capturing
+    registrations, and its message accuses the cards and the probe of it — but
+    a loader that refuses the cores empties the list the same way, for a reason
+    that is neither. So where every card with a governing option was refused,
+    the run says so and skips; where one was read, or where a core loaded and
+    registered nothing, the guard decides exactly as it did before.
+    """
+    measured = sorted(
+        card.key for card in CARDS if _registered_governing_option(machine, card) is not None
+    )
+    if measured:
+        return measured
+    governed = [card for card in CARDS if card.option_key is not None]
+    refused = [
+        (card.key, unloadable)
+        for card in governed
+        if (unloadable := machine.read_core(str(DEPLOYED_CORES / card.so_name)).unloadable)
+    ]
+    if governed and len(refused) == len(governed):
+        key, reason = refused[0]
+        pytest.skip(
+            "the loader refuses every deployed core whose card governs its layout with an "
+            f"option, {key!r} among them: {reason}"
+        )
+    return measured
+
+
 def _registered_governing_option(machine: RealMachine, card: CoreCard) -> CoreOption | None:
     """A card's governing option as the deployed core registers it — ``None`` when unread.
 
-    Three ways to read nothing, none of them evidence against the card: the core
-    is not deployed on this machine, the probe captured no registration at all
-    (LRPS2 registers its options later than ``retro_set_environment``), or the
-    deployed core registers other keys than the card's — which is the generation
-    mismatch the resolver already answers with ``core-generation-mismatch``.
+    Four ways to read nothing, none of them evidence against the card: the core
+    is not deployed on this machine, the loader refuses it here, the probe
+    captured no registration at all (LRPS2 registers its options later than
+    ``retro_set_environment``), or the deployed core registers other keys than
+    the card's — which is the generation mismatch the resolver already answers
+    with ``core-generation-mismatch``.
+
+    Which is why a test that asserts over the answer states the refused load
+    first (:func:`_skip_where_the_deployed_core_does_not_load`), while the two
+    guards that count what was measured read it here as what it is: one more
+    card whose option this run did not read.
     """
     if card.option_key is None:
         return None
@@ -4330,6 +4385,78 @@ def deployed_core_bytes() -> Mapping[str, bytes]:
     }
 
 
+class _RefusingLoader(RealMachine):
+    """A machine whose loader refuses every core it is asked to read."""
+
+    REFUSAL = "libGL.so.1: cannot open shared object file: No such file or directory"
+
+    def read_core(self, so_path: str) -> CoreReading:
+        return CoreReading(None, self.REFUSAL)
+
+
+class _LoadingMachine(RealMachine):
+    """A machine that reads every core, and reads no option out of it."""
+
+    def read_core(self, so_path: str) -> CoreReading:
+        return CoreReading(CoreInfo(library_name="Stub", library_version=None, valid_extensions=None))
+
+
+# A card that governs its layout with an option, so the option reading below has
+# something to look for; which card it is does not matter to any test here.
+GOVERNED_CARD = next(card for card in CARDS if card.option_key is not None)
+
+
+class TestACoreTheLoaderRefusedCountsAsUnread:
+    """The two measurements below assert over binaries — this is the machine that read none.
+
+    Driven with a machine standing in for that seam, because what decides it is
+    the interpreter the suite happens to run under: the cards are real and the
+    deployed cores are real, and whether this loader resolves what they link is
+    neither.
+    """
+
+    def test_the_seam_keeps_the_refusal_and_query_core_does_not(self):
+        # What the machine states, and what a resolver would see of it: the
+        # message is kept at the seam, and query_core stays unknown.
+        machine = _RefusingLoader()
+        assert machine.read_core("/cores/any_libretro.so").unloadable == _RefusingLoader.REFUSAL
+        assert machine.query_core("/cores/any_libretro.so") is None
+
+    def test_a_card_whose_core_was_refused_is_skipped_with_the_loaders_reason(self):
+        machine = _RefusingLoader()
+        with pytest.raises(pytest.skip.Exception) as skipped:
+            _skip_where_the_deployed_core_does_not_load(machine, GOVERNED_CARD)
+        assert _RefusingLoader.REFUSAL in str(skipped.value)
+        assert GOVERNED_CARD.key in str(skipped.value)
+
+    def test_a_card_whose_core_was_read_is_not_skipped(self):
+        # The guard fires on the refusal and on nothing else — a core that
+        # loaded goes on to be measured, however little it registered.
+        _skip_where_the_deployed_core_does_not_load(_LoadingMachine(), GOVERNED_CARD)
+
+    def test_the_option_reading_still_counts_a_refused_core_as_unmeasured(self):
+        # Deliberate: the two guards that demand at least one measured card ask
+        # this helper for every card, so a refusal has to answer "not measured"
+        # there rather than end the whole guard on the first refused core.
+        assert _registered_governing_option(_RefusingLoader(), GOVERNED_CARD) is None
+
+    def test_the_guards_skip_where_the_loader_refused_every_governed_card(self):
+        # The reading above leaves the guards with an empty list, and an empty
+        # list is what a probe that stopped capturing registrations leaves too.
+        # Only one of those two is the cards' or the probe's doing, so the
+        # loader's refusal has to be told apart here as well.
+        machine = _RefusingLoader()
+        with pytest.raises(pytest.skip.Exception) as skipped:
+            _measured_or_skip_where_the_loader_refused_them_all(machine)
+        assert _RefusingLoader.REFUSAL in str(skipped.value)
+
+    def test_a_core_that_loaded_and_registered_nothing_still_reaches_the_guards(self):
+        # The other empty list, kept a failure: this machine opened every core
+        # and read no option out of any of them, which is what the guards were
+        # written to catch.
+        assert _measured_or_skip_where_the_loader_refused_them_all(_LoadingMachine()) == []
+
+
 class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
     """``governing_option.default`` exists for one reason: nothing else states it.
 
@@ -4348,8 +4475,10 @@ class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
     for a machine that has no options file.
 
     Skipped where the cores are not deployed: the Flatpak is not a build
-    dependency and CI has no emulator installation. Where they *are* deployed
-    the module must really measure something, which is the second test's job.
+    dependency and CI has no emulator installation. Skipped per card where the
+    loader refuses one of them, which reads exactly like a core registering
+    nothing and is not that (#408). Where they *are* deployed and open, the
+    module must really measure something, which is the second test's job.
     """
 
     @pytest.mark.parametrize("card", CARDS, ids=[card.key for card in CARDS])
@@ -4368,6 +4497,7 @@ class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
                 "option for it to be the default of"
             )
             return
+        _skip_where_the_deployed_core_does_not_load(prober, card)
         option = _registered_governing_option(prober, card)
         # What decides the invariant is whether a *default* was registered, not
         # whether the option was. A core can register the key and declare no
@@ -4406,13 +4536,11 @@ class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
         # them all. On a machine carrying the cores, at least one card has to
         # have been read from a binary — a probe that silently stopped working
         # would otherwise retire this whole measurement without a failure. The
-        # test above never skips now (it answers for both outcomes), so what
-        # this guards is the reading itself.
+        # test above skips one case only, the binary this loader would not
+        # open, so what this guards is the reading itself.
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
-        measured = sorted(
-            card.key for card in CARDS if _registered_governing_option(prober, card) is not None
-        )
+        measured = _measured_or_skip_where_the_loader_refused_them_all(prober)
         assert measured, (
             f"cores are deployed at {DEPLOYED_CORES} and not one card's governing option was read "
             "from a binary — either every card is a generation behind what is installed, or the "
@@ -4448,6 +4576,7 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
             # answer for is the options the rule reads: every declared one
             # must be registered by the deployed core, or the card describes
             # switches this generation does not have.
+            _skip_where_the_deployed_core_does_not_load(prober, card)
             info = _deployed_core_info(prober, card)
             if info is None or info.options is None:
                 pytest.skip(f"the deployed core for card {card.key!r} exposes no options to measure")
@@ -4467,6 +4596,7 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
                 f"the resolver takes {MODE_ALWAYS!r} and only that one"
             )
             return
+        _skip_where_the_deployed_core_does_not_load(prober, card)
         option = _registered_governing_option(prober, card)
         if option is None:
             pytest.skip(f"the deployed cores register no {card.option_key!r} for card {card.key!r}")
@@ -4485,9 +4615,7 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
         # without a single failure.
         if not DEPLOYED_CORES.is_dir():
             pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
-        measured = sorted(
-            card.key for card in CARDS if _registered_governing_option(prober, card) is not None
-        )
+        measured = _measured_or_skip_where_the_loader_refused_them_all(prober)
         assert measured, (
             f"cores are deployed at {DEPLOYED_CORES} and not one card's mode keys were read from a "
             "binary — either every card is a generation behind what is installed, or the probe "
