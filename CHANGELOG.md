@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.1](https://github.com/danielcopper/emu-atlas/compare/v0.15.0...v0.15.1) (2026-09-10)
+
+
+### Documentation
+
+* **contract:** lift consumer caveats into the published cell ([#427](https://github.com/danielcopper/emu-atlas/issues/427)) ([2342189](https://github.com/danielcopper/emu-atlas/commit/2342189ea3349e87db8d00772ece91443bfdd644)), closes [#426](https://github.com/danielcopper/emu-atlas/issues/426)
+* **contract:** the values of checked, what declared_index promises, a way back ([#432](https://github.com/danielcopper/emu-atlas/issues/432)) ([2c2bf8e](https://github.com/danielcopper/emu-atlas/commit/2c2bf8ecb61ed56c2f699e9d771b9a019459ca3f)), closes [#429](https://github.com/danielcopper/emu-atlas/issues/429)
+
 ## [0.15.0](https://github.com/danielcopper/emu-atlas/compare/v0.14.0...v0.15.0) (2026-09-09)
 
 
