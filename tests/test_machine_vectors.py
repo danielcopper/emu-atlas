@@ -527,14 +527,16 @@ class TestTheRunnerAsksEverythingItIsGiven:
         }
 
     def test_an_expectation_the_runner_cannot_ask_is_refused(self):
+        vector = self._vector({"savelocation": {}})
         with pytest.raises(AssertionError, match="cannot ask for expected.savelocation"):
-            test_machine_vector(self._vector({"savelocation": {}}))
+            test_machine_vector(vector)
 
     def test_an_expectation_without_its_query_is_refused(self):
         # The validator states this rule too; a port that only runs the runner
         # would otherwise meet a KeyError instead of the reason.
+        vector = self._vector({"systems": self._EMPTY_SYSTEMS})
         with pytest.raises(AssertionError, match="needs input.systems_query"):
-            test_machine_vector(self._vector({"systems": self._EMPTY_SYSTEMS}))
+            test_machine_vector(vector)
 
     def test_a_machine_with_nothing_to_ask_still_runs(self):
         # The guard against a vacuous suite: the two refusals above must come

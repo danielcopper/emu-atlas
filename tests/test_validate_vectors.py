@@ -1262,32 +1262,37 @@ class TestTheFileLevelRules:
             self._validate(path)
 
     def test_a_foreign_family_is_refused(self, tmp_path):
+        path = self._file(tmp_path, family="other")
         with pytest.raises(VectorError, match="family must be"):
-            self._validate(self._file(tmp_path, family="other"))
+            self._validate(path)
 
     def test_another_schema_is_refused(self, tmp_path):
         # The number is the contract's generation: a port built to schema 2
         # models no unlistable directory, so the corpus is not the same
         # promise and says so instead of failing one vector at a time.
+        path = self._file(tmp_path, schema=2)
         with pytest.raises(VectorError, match="schema must be"):
-            self._validate(self._file(tmp_path, schema=2))
+            self._validate(path)
 
     def test_a_nameless_vector_is_refused(self, tmp_path):
         nameless = {**_vector(), "name": ""}
+        path = self._file(tmp_path, vectors=[nameless])
         with pytest.raises(VectorError, match="missing or empty name"):
-            self._validate(self._file(tmp_path, vectors=[nameless]))
+            self._validate(path)
 
     def test_a_duplicate_name_is_refused(self, tmp_path):
         twin = {**_vector(), "input": {"home": HOME, "files": {"/other": ""}}}
+        path = self._file(tmp_path, vectors=[_vector(), twin])
         with pytest.raises(VectorError, match="duplicate name"):
-            self._validate(self._file(tmp_path, vectors=[_vector(), twin]))
+            self._validate(path)
 
     def test_a_duplicate_input_is_refused(self, tmp_path):
         # Same machine, same question, two expectations: one of them would
         # never be the answer, and nothing would say which.
         twin = {**_vector(), "name": "other"}
+        path = self._file(tmp_path, vectors=[_vector(), twin])
         with pytest.raises(VectorError, match="duplicate canonical input"):
-            self._validate(self._file(tmp_path, vectors=[_vector(), twin]))
+            self._validate(path)
 
     def test_a_duplicate_input_across_files_is_refused(self, tmp_path):
         seen = {}

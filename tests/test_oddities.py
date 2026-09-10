@@ -1789,7 +1789,7 @@ class TestAModeWhosePrimaryGroupDeclaresNoFiles:
         card = self._card(["x.sav"])
         mode = card.modes[MODE_ALWAYS]
         assert mode.files == ("x.sav",)
-        assert _file_set_caveats(card, mode, mode_value=MODE_ALWAYS, rom_stem="Game") == ()
+        assert _file_set_caveats(card, mode, mode_value=MODE_ALWAYS, rom_stem="Game") == []
 
 
 class TestAuditVerdictCaveats:
@@ -3145,8 +3145,9 @@ class TestStrictLoaders:
         # A declared set with no files is shape-identical to 'unknown' but
         # labelled 'declared' — and an empty alternative is an empty promise.
         mode = {"granularity": "per-game-file", "files": ["<save_id>.A1.bin"], field: []}
+        text = self._mode_card(mode)
         with pytest.raises(ValueError, match="empty list"):
-            load_oddities(self._mode_card(mode))
+            load_oddities(text)
 
     def test_an_empty_file_name_is_rejected(self):
         text = self._mode_card({"granularity": "per-game-file", "files": [""]})
@@ -3174,8 +3175,9 @@ class TestStrictLoaders:
             "files_established_for": "console",
             field: "",
         }
+        text = self._mode_card(mode)
         with pytest.raises(ValueError, match=field):
-            load_oddities(self._mode_card(mode))
+            load_oddities(text)
 
     def test_a_citation_without_a_scope_is_rejected(self):
         text = self._mode_card(

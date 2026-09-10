@@ -626,20 +626,20 @@ class _CfgPath:
     app_relative: bool = False
 
     @property
-    def caveats(self) -> tuple[Caveat, ...]:
+    def caveats(self) -> list[Caveat]:
         """The degradation, when the configured spelling has no host location."""
         if self.path is not None:
-            return ()
+            return []
         if self.app_relative:
-            return (_app_relative_caveat(self.key, self.configured),)
-        return (
+            return [_app_relative_caveat(self.key, self.configured)]
+        return [
             Caveat(
                 CAVEAT_SANDBOX_PATH_UNTRANSLATED,
                 f'{self.key} = "{self.configured}" names a location inside the Flatpak sandbox that '
                 "has no equivalent on this host — atlas cannot read what the emulator reads there",
                 {"key": self.key, "path": self.configured},
-            ),
-        )
+            )
+        ]
 
     @property
     def note(self) -> str:
@@ -1522,7 +1522,7 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
     if resolved.path == configured:
         return _SaveRoot(layout)
     if resolved.path is None:
-        return _SaveRoot(layout, reachable=False, caveats=resolved.caveats)
+        return _SaveRoot(layout, reachable=False, caveats=tuple(resolved.caveats))
     return _SaveRoot(
         _dc_replace(layout, directory=resolved.path),
         sources=(f'{key} = "{configured}"{resolved.note}',),
@@ -2793,7 +2793,7 @@ def _card_file_set(
 
 def _file_set_caveats(
     card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """What one declared file list cannot say about this mode's save.
 
     Two states the card keeps apart, each stated rather than left to an
@@ -2804,14 +2804,14 @@ def _file_set_caveats(
     :func:`_cross_root_parts` carries them.
     """
     if mode.files is None:
-        return (
+        return [
             Caveat(
                 CAVEAT_FILENAMES_UNVERIFIED,
                 f"core {card.key!r} in mode {mode_value!r} places per-game files under the standard "
                 "directory, but the filename scheme is unverified — file names not stated",
                 {"core": card.key, "mode": mode_value},
-            ),
-        )
+            )
+        ]
     if mode.files_without_save_id is not None or mode.files_established_for is not None:
         stated = _card_files(mode.files, rom_stem) or mode.files
         data: dict[str, DataValue] = {"core": card.key, "mode": mode_value, "files": stated}
@@ -2838,15 +2838,15 @@ def _file_set_caveats(
             )
         if mode.files_citation is not None:
             data["citation"] = mode.files_citation
-        return (
+        return [
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
                 f"core {card.key!r} in mode {mode_value!r}: the file set depends on the content, "
                 f"which atlas does not identify.{spelling}{scope}",
                 data,
-            ),
-        )
-    return ()
+            )
+        ]
+    return []
 
 
 def _unnamed_tree_caveats(
@@ -3022,7 +3022,7 @@ def _core_system_root(
             ROOT_SYSTEM_DIRECTORY,
             reachable=False,
             sources=(f'{cfg_label} chain: system_directory = "{raw_system}"',),
-            caveats=configured.caveats,
+            caveats=tuple(configured.caveats),
         )
     else:
         root = _SystemRoot(
@@ -3030,7 +3030,7 @@ def _core_system_root(
             ROOT_SYSTEM_DIRECTORY,
             sources=(f'{cfg_label} chain: system_directory = "{raw_system}"{configured.note}',),
         )
-    return _dc_replace(root, caveats=(*caveats, *root.caveats))
+    return cast(_SystemRoot, _dc_replace(root, caveats=(*caveats, *root.caveats)))
 
 
 def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
@@ -12797,7 +12797,7 @@ def _cfg_directory(
     if resolved is None:
         return None, ()
     if resolved.path is None or sandbox.machine.path_kind(resolved.path) != KIND_DIRECTORY:
-        return None, resolved.caveats
+        return None, tuple(resolved.caveats)
     return resolved.path, ()
 
 
@@ -13049,11 +13049,14 @@ class _FirmwareQueries:
         the same reason — it is what the handle's own read saw, not a fresh
         one.
         """
-        return _dc_replace(
-            context,
-            caveats=(
-                *context.caveats,
-                *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
+        return cast(
+            FirmwareContext,
+            _dc_replace(
+                context,
+                caveats=(
+                    *context.caveats,
+                    *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
+                ),
             ),
         )
 
@@ -16736,8 +16739,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 return _savestate_absence_answer(
                     card,
                     entry=(*entry_caveats, *extra),
-                    arrangement=arrangement_caveats(
-                        self.kind, observed_version=_marker_version(config)
+                    arrangement=tuple(
+                        arrangement_caveats(self.kind, observed_version=_marker_version(config))
                     ),
                 )
             health = self._health_from(config, marker_issues)
@@ -18418,8 +18421,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return _savestate_absence_answer(
                 card,
                 entry=(*entry_caveats, *extra),
-                arrangement=arrangement_caveats(
-                    self.kind, observed_version=self._observed_backend_head()
+                arrangement=tuple(
+                    arrangement_caveats(self.kind, observed_version=self._observed_backend_head())
                 ),
             )
         gate = self._standalone_launch_gate(spec)

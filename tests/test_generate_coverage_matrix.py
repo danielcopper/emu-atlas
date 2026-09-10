@@ -182,7 +182,8 @@ def test_the_standalone_half_counts_every_question(tmp_path, monkeypatch):
     # A question whose card file does not exist is a column of gaps rather than
     # a crash: that is what an unanswered question looks like.
     assert "savestate 0/2" in output
-    assert "save 1/2" in output and "texture 1/2" in output
+    assert "save 1/2" in output
+    assert "texture 1/2" in output
 
 
 class TestTheQuestionCell:

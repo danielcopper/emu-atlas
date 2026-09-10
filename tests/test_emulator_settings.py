@@ -98,8 +98,9 @@ class TestOneAddressPerFile:
     def test_a_file_whose_root_varies_refuses_to_answer_one_location(self):
         # Answering the first candidate would be a guess dressed as an address:
         # which one this launch opens is what the probe is for.
+        varying = settings_file("DUCKSTATION", "settings.ini")
         with pytest.raises(ValueError, match="decided by the launch"):
-            settings_file("DUCKSTATION", "settings.ini").only(**HOST)
+            varying.only(**HOST)
 
     def test_an_emulator_the_table_does_not_carry_fails_loudly(self):
         with pytest.raises(ValueError, match="no settings file"):
