@@ -611,23 +611,46 @@ def parse_gamelist(text: str) -> GamelistSelections:
     fail the whole file — selections ES-DE honors would read as none set.
     Anything unparseable yields empty selections, never a guess.
     """
+    root = _wrapped_gamelist(text)
+    if root is None:
+        return GamelistSelections(system_label=None, per_game={})
+    return GamelistSelections(
+        system_label=_gamelist_system_label(root), per_game=_gamelist_per_game(root)
+    )
+
+
+def _wrapped_gamelist(text: str) -> ET.Element | None:
+    """The gamelist under the synthetic root, or ``None`` when it does not parse.
+
+    The BOM and the XML declaration come off first: both are legal at the top
+    of a file and neither is legal in the middle of one, which is where the
+    wrapper would put them.
+    """
     stripped = text.removeprefix("\ufeff").strip()
     if stripped.startswith("<?"):
         end = stripped.find("?>")
         if end != -1:
             stripped = stripped[end + 2 :]
     try:
-        root = ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
+        return ET.fromstring(f"<atlas-wrapper>{stripped}</atlas-wrapper>")
     except ET.ParseError:
-        return GamelistSelections(system_label=None, per_game={})
+        return None
+
+
+def _gamelist_system_label(root: ET.Element) -> str | None:
+    """The per-system selection, from the two places ES-DE looks, in its order."""
     selection_el = root.find("alternativeEmulator")
     if selection_el is None:
         game_list = root.find("gameList")
         if game_list is not None:
             selection_el = game_list.find("alternativeEmulator")
-    system_label: str | None = None
-    if selection_el is not None:
-        system_label = (selection_el.findtext("label") or "").strip() or None
+    if selection_el is None:
+        return None
+    return (selection_el.findtext("label") or "").strip() or None
+
+
+def _gamelist_per_game(root: ET.Element) -> dict[str, str]:
+    """Each game entry's own ``<altemulator>``, by its gamelist-relative path."""
     per_game: dict[str, str] = {}
     for game in root.iter("game"):
         path = (game.findtext("path") or "").strip()
@@ -639,7 +662,7 @@ def parse_gamelist(text: str) -> GamelistSelections:
             if normalized.startswith("./"):
                 normalized = normalized[2:]
             per_game[normalized] = label
-    return GamelistSelections(system_label=system_label, per_game=per_game)
+    return per_game
 
 
 def parse_gamelist_alternative(text: str) -> str | None:

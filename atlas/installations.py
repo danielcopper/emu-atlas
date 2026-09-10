@@ -626,20 +626,20 @@ class _CfgPath:
     app_relative: bool = False
 
     @property
-    def caveats(self) -> tuple[Caveat, ...]:
+    def caveats(self) -> list[Caveat]:
         """The degradation, when the configured spelling has no host location."""
         if self.path is not None:
-            return ()
+            return []
         if self.app_relative:
-            return (_app_relative_caveat(self.key, self.configured),)
-        return (
+            return [_app_relative_caveat(self.key, self.configured)]
+        return [
             Caveat(
                 CAVEAT_SANDBOX_PATH_UNTRANSLATED,
                 f'{self.key} = "{self.configured}" names a location inside the Flatpak sandbox that '
                 "has no equivalent on this host — atlas cannot read what the emulator reads there",
                 {"key": self.key, "path": self.configured},
-            ),
-        )
+            )
+        ]
 
     @property
     def note(self) -> str:
@@ -1522,7 +1522,7 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
     if resolved.path == configured:
         return _SaveRoot(layout)
     if resolved.path is None:
-        return _SaveRoot(layout, reachable=False, caveats=resolved.caveats)
+        return _SaveRoot(layout, reachable=False, caveats=tuple(resolved.caveats))
     return _SaveRoot(
         _dc_replace(layout, directory=resolved.path),
         sources=(f'{key} = "{configured}"{resolved.note}',),
@@ -2793,7 +2793,7 @@ def _card_file_set(
 
 def _file_set_caveats(
     card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """What one declared file list cannot say about this mode's save.
 
     Two states the card keeps apart, each stated rather than left to an
@@ -2804,14 +2804,14 @@ def _file_set_caveats(
     :func:`_cross_root_parts` carries them.
     """
     if mode.files is None:
-        return (
+        return [
             Caveat(
                 CAVEAT_FILENAMES_UNVERIFIED,
                 f"core {card.key!r} in mode {mode_value!r} places per-game files under the standard "
                 "directory, but the filename scheme is unverified — file names not stated",
                 {"core": card.key, "mode": mode_value},
-            ),
-        )
+            )
+        ]
     if mode.files_without_save_id is not None or mode.files_established_for is not None:
         stated = _card_files(mode.files, rom_stem) or mode.files
         data: dict[str, DataValue] = {"core": card.key, "mode": mode_value, "files": stated}
@@ -2838,15 +2838,15 @@ def _file_set_caveats(
             )
         if mode.files_citation is not None:
             data["citation"] = mode.files_citation
-        return (
+        return [
             Caveat(
                 CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
                 f"core {card.key!r} in mode {mode_value!r}: the file set depends on the content, "
                 f"which atlas does not identify.{spelling}{scope}",
                 data,
-            ),
-        )
-    return ()
+            )
+        ]
+    return []
 
 
 def _unnamed_tree_caveats(
@@ -3022,7 +3022,7 @@ def _core_system_root(
             ROOT_SYSTEM_DIRECTORY,
             reachable=False,
             sources=(f'{cfg_label} chain: system_directory = "{raw_system}"',),
-            caveats=configured.caveats,
+            caveats=tuple(configured.caveats),
         )
     else:
         root = _SystemRoot(
@@ -3030,7 +3030,7 @@ def _core_system_root(
             ROOT_SYSTEM_DIRECTORY,
             sources=(f'{cfg_label} chain: system_directory = "{raw_system}"{configured.note}',),
         )
-    return _dc_replace(root, caveats=(*caveats, *root.caveats))
+    return cast(_SystemRoot, _dc_replace(root, caveats=(*caveats, *root.caveats)))
 
 
 def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
@@ -12797,7 +12797,7 @@ def _cfg_directory(
     if resolved is None:
         return None, ()
     if resolved.path is None or sandbox.machine.path_kind(resolved.path) != KIND_DIRECTORY:
-        return None, resolved.caveats
+        return None, tuple(resolved.caveats)
     return resolved.path, ()
 
 
@@ -12856,7 +12856,6 @@ def _retroarch_firmware_context(
     ships files into the firmware root passes them — a bare RetroArch ships
     none, so nothing is asked there.
     """
-    machine = sandbox.machine
     # The dropped lines are read here, not only the values: once an absent key
     # resolves silently to the platform default, a line the parser refused
     # looks exactly like a key nobody wrote — and the user did write it. The
@@ -12870,6 +12869,50 @@ def _retroarch_firmware_context(
     caveats: list[Caveat] = list(findings)
     sources: list[str] = list(extra_sources)
 
+    root, root_caveats, root_sources = _firmware_root(
+        sandbox, read, cfg_label=cfg_label, retroarch_config_dir=retroarch_config_dir
+    )
+    caveats.extend(root_caveats)
+    sources.extend(root_sources)
+    cores, cores_read, core_caveats, core_sources = _firmware_core_declarations(sandbox, parsed)
+    caveats.extend(core_caveats)
+    sources.extend(core_sources)
+
+    return FirmwareContext(
+        root=root,
+        cores=cores,
+        hashes=load_hashes(),
+        cores_read=cores_read,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+        arrangement_version=arrangement_version,
+        standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
+        standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
+        standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
+        standalone_sandbox=standalone_sandbox,
+        standalone_xdg_pinned=standalone_homes is not None and standalone_homes.xdg_pinned,
+        distribution=distribution,
+        distribution_sandbox=distribution_sandbox,
+    )
+
+
+def _firmware_root(
+    sandbox: _Sandbox, read: ParsedCfg, *, cfg_label: str, retroarch_config_dir: str
+) -> tuple[str | None, list[Caveat], list[str]]:
+    """The firmware root this cfg establishes, and what stands in the way of one.
+
+    ``system_directory`` is the root the declared paths are relative to — the
+    same directory RetroArch hands cores when they look their firmware up.
+    ``None`` comes back two ways: the setting cleared, or a spelling with no
+    host equivalent. Absent resolves to the platform default RetroArch seeded
+    before it read a line, and a configured path that is no directory comes
+    back as it stands — and where the directory either names is not on the
+    machine, that arm says so with its own caveat.
+    """
+    machine = sandbox.machine
+    caveats: list[Caveat] = []
+    sources: list[str] = []
+    parsed = read.values
     raw_system = parsed.get("system_directory")
     configured_system = sandbox.cfg_path("system_directory", raw_system) if raw_system is not None else None
     root = configured_system.path if configured_system is not None else None
@@ -12912,7 +12955,24 @@ def _retroarch_firmware_context(
         sources.append(f'{cfg_label}: system_directory = "{raw_system}"{configured_system.note}')
         if machine.path_kind(root) != KIND_DIRECTORY:
             caveats.append(_firmware_root_missing(root))
+    return root, caveats, sources
 
+
+def _firmware_core_declarations(
+    sandbox: _Sandbox, parsed: Mapping[str, str]
+) -> tuple[tuple[CoreDeclarations, ...], bool, list[Caveat], list[str]]:
+    """What the installed cores declare they want, and whether that could be read.
+
+    Two keys, read independently and free to point anywhere:
+    ``libretro_info_path`` names the ``.info`` files that declare what cores
+    want, and ``libretro_directory`` says which of those cores are actually
+    installed. Without the first there is nothing to declare; without the
+    second the declarations cannot be limited to the cores that are there, and
+    the answer says so rather than narrowing on a guess.
+    """
+    machine = sandbox.machine
+    caveats: list[Caveat] = []
+    sources: list[str] = []
     info_dir, info_caveats = _cfg_directory(sandbox, parsed, "libretro_info_path")
     core_dir, core_dir_caveats = _cfg_directory(sandbox, parsed, "libretro_directory")
     caveats.extend((*info_caveats, *core_dir_caveats))
@@ -12953,28 +13013,13 @@ def _retroarch_firmware_context(
             for unreadable in enumeration.unreadable
         )
 
-    return FirmwareContext(
-        root=root,
-        cores=cores,
-        hashes=load_hashes(),
-        # Whether the enumeration happened is now the seam's answer, not a
-        # guess from the list being empty. That guess was wrong in the safe
-        # direction — a genuinely empty core directory read as "nobody looked",
-        # so an installation that ships no cores could never say so — and the
-        # case it protected against, a directory that resolves but cannot be
-        # listed, is stated above by its own caveat.
-        cores_read=info_dir is not None and cores_listed,
-        sources=tuple(sources),
-        caveats=tuple(caveats),
-        arrangement_version=arrangement_version,
-        standalone_data_home=standalone_homes.data if standalone_homes is not None else None,
-        standalone_config_home=standalone_homes.config if standalone_homes is not None else None,
-        standalone_flatpak=standalone_homes.flatpak if standalone_homes is not None else None,
-        standalone_sandbox=standalone_sandbox,
-        standalone_xdg_pinned=standalone_homes is not None and standalone_homes.xdg_pinned,
-        distribution=distribution,
-        distribution_sandbox=distribution_sandbox,
-    )
+    # Whether the enumeration happened is the seam's answer, not a guess from
+    # the list being empty. That guess was wrong in the safe direction — a
+    # genuinely empty core directory read as "nobody looked", so an
+    # installation that ships no cores could never say so — and the case it
+    # protected against, a directory that resolves but cannot be listed, is
+    # stated above by its own caveat.
+    return cores, info_dir is not None and cores_listed, caveats, sources
 
 
 class _FirmwareQueries:
@@ -13005,11 +13050,14 @@ class _FirmwareQueries:
         the same reason — it is what the handle's own read saw, not a fresh
         one.
         """
-        return _dc_replace(
-            context,
-            caveats=(
-                *context.caveats,
-                *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
+        return cast(
+            FirmwareContext,
+            _dc_replace(
+                context,
+                caveats=(
+                    *context.caveats,
+                    *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
+                ),
             ),
         )
 
@@ -16692,8 +16740,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 return _savestate_absence_answer(
                     card,
                     entry=(*entry_caveats, *extra),
-                    arrangement=arrangement_caveats(
-                        self.kind, observed_version=_marker_version(config)
+                    arrangement=tuple(
+                        arrangement_caveats(self.kind, observed_version=_marker_version(config))
                     ),
                 )
             health = self._health_from(config, marker_issues)
@@ -18374,8 +18422,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return _savestate_absence_answer(
                 card,
                 entry=(*entry_caveats, *extra),
-                arrangement=arrangement_caveats(
-                    self.kind, observed_version=self._observed_backend_head()
+                arrangement=tuple(
+                    arrangement_caveats(self.kind, observed_version=self._observed_backend_head())
                 ),
             )
         gate = self._standalone_launch_gate(spec)
