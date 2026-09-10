@@ -8440,7 +8440,7 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
         assert isinstance(outcome, atlas.Unresolved)
         assert outcome.code == atlas.UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE
         assert outcome.data["path"] == path
-        assert outcome.data["emulator"]
+        assert outcome.data["token"]
         assert "config" in outcome.data
         return outcome
 

@@ -832,7 +832,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DOLPHIN",
+                "token": "DOLPHIN",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
               }
             },
@@ -891,7 +891,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "PPSSPP",
+                "token": "PPSSPP",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SYSTEM/ppsspp.ini"
               }
             }
@@ -1612,7 +1612,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DOLPHIN",
+                "token": "DOLPHIN",
                 "config": "/home/deck/.config/dolphin-emu/GFX.ini"
               }
             },
@@ -1776,7 +1776,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
@@ -1826,7 +1826,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
@@ -1874,7 +1874,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
@@ -1919,7 +1919,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "DUCKSTATION",
+              "token": "DUCKSTATION",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
             }
           }
@@ -1972,7 +1972,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.local/share/duckstation/settings.ini"
               }
             }
@@ -2026,7 +2026,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DOLPHIN",
+                "token": "DOLPHIN",
                 "config": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/GFX.ini"
               }
             },
@@ -2089,7 +2089,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "config": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/GFX.ini"
               }
             },
@@ -2196,7 +2196,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "PCSX2",
+              "token": "PCSX2",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini",
               "path": "/var/tmp/textures"
             }
@@ -2384,7 +2384,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
@@ -2426,7 +2426,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "DUCKSTATION",
+              "token": "DUCKSTATION",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini",
               "path": "/var/tmp/textures"
             }
@@ -2604,7 +2604,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
               }
             }
@@ -2655,7 +2655,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DOLPHIN",
+                "token": "DOLPHIN",
                 "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/GFX.ini"
               }
             },
@@ -2772,7 +2772,7 @@
             {
               "code": "emulator-config-unread",
               "data": {
-                "emulator": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "config": "/home/deck/.local/share/duckstation/settings.ini"
               }
             }

@@ -152,13 +152,13 @@ class TestTheStatedNoIsItsOwnShape:
         caveat = atlas.Caveat(
             atlas.CAVEAT_UNVERIFIED_VERSION,
             "nothing ships this emulator",
-            {"emulator": "DEMO", "verification": "build-unestablished"},
+            {"token": "DEMO", "verification": "build-unestablished"},
         )
         block = atlas.savestate_absence_contract(self._absence(caveats=(caveat,)))
         assert block["no_savestates"]["caveats"] == [
             {
                 "code": "unverified-version",
-                "data": {"emulator": "DEMO", "verification": "build-unestablished"},
+                "data": {"token": "DEMO", "verification": "build-unestablished"},
             }
         ]
 

@@ -5586,7 +5586,7 @@ def _pcsx2_texture_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"PCSX2's configuration ({ini_path}) exists and could not be read — where it "
             "reads texture packs from, and whether it reads them at all, is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     setting = card.directory
@@ -5611,7 +5611,7 @@ def _pcsx2_texture_placement(
                 f"the texture directory PCSX2's configuration names ({raw_dir!r}) has no "
                 f"spelling on this host — {ini_path} read fine, and nothing this answer "
                 "could anchor at",
-                {"emulator": card.token, "config": ini_path, "path": raw_dir},
+                {"token": card.token, "config": ini_path, "path": raw_dir},
             )
         root = host.path
     else:
@@ -5944,7 +5944,7 @@ def _duckstation_configured_directory(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"DuckStation's configuration ({read.unreadable}) exists and could not be read — "
             f"where it reads {reads} from is unknowable here",
-            {"emulator": token, "config": read.unreadable},
+            {"token": token, "config": read.unreadable},
         )
     # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
     # case-insensitive, so a case-variant spelling governs here as it does
@@ -5958,7 +5958,7 @@ def _duckstation_configured_directory(
                 f"the {named} directory DuckStation's configuration names ({configured!r}) "
                 f"has no spelling on this host — {read.stated_path} read fine, and nothing "
                 "this answer could anchor at",
-                {"emulator": token, "config": read.stated_path or "", "path": configured},
+                {"token": token, "config": read.stated_path or "", "path": configured},
             )
         directory = host.path
     else:
@@ -5976,7 +5976,7 @@ def _duckstation_configured_directory(
             f"whether {token} has {switch} switched on is not established — the setting lives "
             f"in {config_path}, which this answer reads for the directory and not for the "
             "switch, because the card states none",
-            {"emulator": token, "config": config_path},
+            {"token": token, "config": config_path},
         )
     )
     return directory, physical_dir, caveats
@@ -6115,7 +6115,7 @@ def _standalone_texture_placement(
                 f"whether {card.token} has texture replacement switched on is not established — the "
                 f"setting lives in {config_path}, a configuration of the emulator's own that atlas "
                 "does not read (standalone emulator configuration is its own roadmap block)",
-                {"emulator": card.token, "config": config_path},
+                {"token": card.token, "config": config_path},
             ),
             # The Dolphin family reads this tree through a directory index one
             # per-game key re-points, so the fixed join above is the answer for
@@ -7015,7 +7015,7 @@ def _dolphin_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"Dolphin's configuration ({ini_path}) exists and could not be read — which devices "
             "sit in the card slots and where the trees point is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = _parse_sectioned_ini(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
@@ -7230,7 +7230,7 @@ def _xemu_document(
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"xemu's configuration ({toml_path}) exists and could not be read — {lost}",
-            {"emulator": card.token, "config": toml_path},
+            {"token": card.token, "config": toml_path},
         )
     try:
         doc: Mapping[str, Any] = (
@@ -7240,7 +7240,7 @@ def _xemu_document(
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"xemu's configuration ({toml_path}) is not parseable TOML — {lost}",
-            {"emulator": card.token, "config": toml_path},
+            {"token": card.token, "config": toml_path},
         )
     return doc, (toml_path if result.status == READ_OK else None)
 
@@ -7272,7 +7272,7 @@ def _xemu_disk_pieces(
             "outside the image is addressable per game: back the image up whole, or parse "
             "its filesystem with the layout stated here",
             {
-                "emulator": card.token,
+                "token": card.token,
                 "image": os.path.join(group.dir, group.files[0]),
                 "layout": "UDATA/<title id>",
             },
@@ -7355,7 +7355,7 @@ def _xemu_savefile_placement(
             # this emitter's stated order (the disk image first, then the
             # EEPROM) whenever more than one file is named.
             data: dict[str, str | tuple[str, ...]] = {
-                "emulator": card.token,
+                "token": card.token,
                 "config": toml_path,
                 "path": untranslated[0],
             }
@@ -7372,7 +7372,7 @@ def _xemu_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"none of the files xemu's configuration names could be located from here "
             f"({toml_path}) — nothing this answer could anchor at",
-            {"emulator": card.token, "config": toml_path},
+            {"token": card.token, "config": toml_path},
         )
     directory = groups[0].dir
     # A <cwd>-templated directory is a property of the launch — nothing on the
@@ -7454,7 +7454,7 @@ def _cemu_mlc_root(
             f"the MLC path Cemu's configuration names ({configured!r}) has no spelling "
             f"on this host — {xml_path} read fine, and nothing this answer could "
             "anchor at",
-            {"emulator": token, "config": xml_path, "path": configured},
+            {"token": token, "config": xml_path, "path": configured},
         )
         return None, reading, refusal
     return resolved.path, reading, None
@@ -7479,7 +7479,7 @@ def _cemu_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"Cemu's configuration ({xml_path}) exists and could not be read — where the MLC "
             "and every save in it live is unknowable here",
-            {"emulator": card.token, "config": xml_path},
+            {"token": card.token, "config": xml_path},
         )
     doc: _ET.Element | None = None
     if result.status == READ_OK and result.text:
@@ -7490,7 +7490,7 @@ def _cemu_savefile_placement(
                 UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
                 f"Cemu's configuration ({xml_path}) is not parseable XML — where the MLC and "
                 "every save in it live is unknowable here",
-                {"emulator": card.token, "config": xml_path},
+                {"token": card.token, "config": xml_path},
             )
     caveats: list[Caveat] = [*extra_caveats]
     if "--mlc" in command:
@@ -7676,7 +7676,7 @@ def _azahar_sdmc_root(
             f"the SD path Azahar's configuration names ({configured_dir!r}) has no "
             f"spelling on this host — {ini_path} read fine, and nothing this answer "
             "could anchor at",
-            {"emulator": card.token, "config": ini_path, "path": configured_dir},
+            {"token": card.token, "config": ini_path, "path": configured_dir},
         )
         return None, tuple(readings), refusal
     return resolved.path, tuple(readings), None
@@ -7710,7 +7710,7 @@ def _azahar_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"Azahar's configuration ({ini_path}) exists and could not be read — where the "
             "emulated SD and every save on it live is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     caveats: list[Caveat] = [*extra_caveats]
@@ -7872,7 +7872,7 @@ def _duckstation_settings(
         refusal = Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"DuckStation's configuration ({read.unreadable}) exists and could not be read — {lost}",
-            {"emulator": card.token, "config": read.unreadable},
+            {"token": card.token, "config": read.unreadable},
         )
         return read.root, {}, None, (), refusal
     if not read.ambiguous:
@@ -8281,7 +8281,7 @@ def _duckstation_savefile_placement(
                 f"the memory-card directory DuckStation's configuration names ({raw_dir!r}) "
                 f"has no spelling on this host — {stated_ini} read fine, and nothing this "
                 "answer could anchor at",
-                {"emulator": card.token, "config": stated_ini or "", "path": raw_dir},
+                {"token": card.token, "config": stated_ini or "", "path": raw_dir},
             )
         memcards_dir = host.path
     slots = tuple(
@@ -8619,7 +8619,7 @@ def _pcsx2_memcards_dir(
             f"the memory-card directory PCSX2's configuration names ({raw_dir!r}) has no "
             f"spelling on this host — {ini_path} read fine, and nothing this answer "
             "could anchor at",
-            {"emulator": card.token, "config": ini_path, "path": raw_dir},
+            {"token": card.token, "config": ini_path, "path": raw_dir},
         )
         return None, reading, refusal
     return host.path, reading, None
@@ -8728,7 +8728,7 @@ def _pcsx2_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"PCSX2's configuration ({ini_path}) exists and could not be read — which cards "
             "its slots hold and where they live is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
@@ -8949,7 +8949,7 @@ def _melonds_config(
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"melonDS's configuration ({read.unreadable}) exists and could not be read — {lost}",
-            {"emulator": card.token, "config": read.unreadable},
+            {"token": card.token, "config": read.unreadable},
         )
     config = read.config
     assert config is not None  # a read is either a document or an unreadable path
@@ -9032,7 +9032,7 @@ def _melonds_root(
             f"the {what} directory melonDS's configuration names ({trimmed!r}) has no "
             f"spelling on this host — {config.stated_file} read fine, and nothing this "
             "answer could anchor at",
-            {"emulator": card.token, "config": config.stated_file or "", "path": trimmed},
+            {"token": card.token, "config": config.stated_file or "", "path": trimmed},
         )
         return _MelonRoot(
             directory="", root_kind=ROOT_EMULATOR_DIRECTORY, mode="", refusal=refusal
@@ -9670,7 +9670,7 @@ def _rpcs3_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"RPCS3's VFS configuration ({vfs_path}) exists and could not be read — which "
             "drive its saves live on is unknowable here",
-            {"emulator": card.token, "config": vfs_path},
+            {"token": card.token, "config": vfs_path},
         )
     text = result.text or "" if result.status == READ_OK else ""
     read = read_scalars(text, fallbacks={_RPCS3_EMULATOR_DIR_KEY: f"{config_dir}/"})
@@ -9679,7 +9679,7 @@ def _rpcs3_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"RPCS3's VFS configuration ({vfs_path}) states a construct atlas does not read "
             f"({read.refusal}) — which drive its saves live on is unknowable here",
-            {"emulator": card.token, "config": vfs_path, "reason": read.refusal},
+            {"token": card.token, "config": vfs_path, "reason": read.refusal},
         )
     if _RPCS3_HDD0_KEY in read.skipped:
         # Stated as a nested block, a list or a multi-line scalar: RPCS3 reads a
@@ -9692,7 +9692,7 @@ def _rpcs3_savefile_placement(
             "atlas does not read — its value is unread, not absent, so which drive its saves "
             "live on is unknowable here",
             {
-                "emulator": card.token,
+                "token": card.token,
                 "config": vfs_path,
                 "reason": REASON_KEY_UNREAD,
                 "key": _RPCS3_HDD0_KEY,
@@ -9713,7 +9713,7 @@ def _rpcs3_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
             f"the drive RPCS3's VFS configuration names ({raw!r}) has no spelling on "
             f"this host — {vfs_path} read fine, and nothing this answer could anchor at",
-            {"emulator": card.token, "config": vfs_path, "path": raw},
+            {"token": card.token, "config": vfs_path, "path": raw},
         )
     hdd0 = host.path
     vmc = os.path.join(hdd0, _RPCS3_VMC_SUBDIR)
@@ -10229,7 +10229,7 @@ def _vita3k_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"Vita3K's configuration ({config_path}) exists and could not be read — where "
             "its ux0 tree lives is unknowable here",
-            {"emulator": card.token, "config": config_path},
+            {"token": card.token, "config": config_path},
         )
     read = read_scalars(result.text or "" if result.status == READ_OK else "")
     if read.refusal is not None:
@@ -10237,7 +10237,7 @@ def _vita3k_savefile_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"Vita3K's configuration ({config_path}) states a construct atlas does not read "
             f"({read.refusal}) — where its ux0 tree lives is unknowable here",
-            {"emulator": card.token, "config": config_path, "reason": read.refusal},
+            {"token": card.token, "config": config_path, "reason": read.refusal},
         )
     if _VITA3K_PREF_PATH_KEY in read.skipped:
         # Stated as a nested block, a list or a multi-line scalar: the emulator
@@ -10249,7 +10249,7 @@ def _vita3k_savefile_placement(
             "construct atlas does not read — its value is unread, not absent, so where its "
             "ux0 tree lives is unknowable here",
             {
-                "emulator": card.token,
+                "token": card.token,
                 "config": config_path,
                 "reason": REASON_KEY_UNREAD,
                 "key": _VITA3K_PREF_PATH_KEY,
@@ -10262,7 +10262,7 @@ def _vita3k_savefile_placement(
             f"Vita3K's configuration ({config_path}) names no pref-path, and an empty one "
             "means a default this build derives at run time rather than writing down "
             "(config.cpp:189-190) — where its ux0 tree lives is not established here",
-            {"emulator": card.token, "config": config_path},
+            {"token": card.token, "config": config_path},
         )
     host = sandbox.host(_VITA3K_PREF_PATH_KEY, stated)
     if host.path is None:
@@ -10271,7 +10271,7 @@ def _vita3k_savefile_placement(
             f"the preference path Vita3K's configuration names ({stated!r}) has no "
             f"spelling on this host — {config_path} read fine, and nothing this answer "
             "could anchor at",
-            {"emulator": card.token, "config": config_path, "path": stated},
+            {"token": card.token, "config": config_path, "path": stated},
         )
     user_root = os.path.join(host.path, _VITA3K_USER_TREE)
     listing, directories = _per_user_listing(machine, user_root)
@@ -10551,7 +10551,7 @@ def _pcsx2_savestate_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"PCSX2's configuration ({ini_path}) exists and could not be read — where a "
             "state lands is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     raw, spelled = _simpleini_value(values, setting.section, setting.key)
@@ -10572,7 +10572,7 @@ def _pcsx2_savestate_placement(
                 f"the states directory PCSX2's configuration names ({raw!r}) has no "
                 f"spelling on this host — {ini_path} read fine, and nothing this answer "
                 "could anchor at",
-                {"emulator": card.token, "config": ini_path, "path": raw},
+                {"token": card.token, "config": ini_path, "path": raw},
             )
         directory = host.path
     else:
@@ -10660,7 +10660,7 @@ def _duckstation_savestate_placement(
                 f"the states directory DuckStation's configuration names ({raw!r}) has "
                 f"no spelling on this host — {stated_ini} read fine, and nothing this "
                 "answer could anchor at",
-                {"emulator": card.token, "config": stated_ini or "", "path": raw},
+                {"token": card.token, "config": stated_ini or "", "path": raw},
             )
         directory = host.path
         reading = f'settings.ini: [{setting.section}] {spelled} = "{raw}"'
@@ -10840,7 +10840,7 @@ def _xemu_savestate_placement(
             f"xemu.toml names no hard-disk image ([sys.files] {stated.key}) — the machine "
             "has no disk to keep a snapshot in, and where one would be attached is "
             "unknowable here",
-            {"emulator": card.token, "config": toml_path},
+            {"token": card.token, "config": toml_path},
         )
     if os.path.isabs(hdd):
         host = sandbox.host(stated.key, hdd)
@@ -10850,7 +10850,7 @@ def _xemu_savestate_placement(
                 f"the hard-disk image xemu's configuration names ({hdd!r}) has no spelling "
                 f"on this host — {toml_path} read fine, and nothing this answer could "
                 "anchor at",
-                {"emulator": card.token, "config": toml_path, "path": hdd},
+                {"token": card.token, "config": toml_path, "path": hdd},
             )
         directory, image = os.path.split(host.path)
         image_path = host.path
@@ -10891,7 +10891,7 @@ def _xemu_savestate_placement(
                 "into the qcow2 itself, with no file per state — so back the image up "
                 f"whole; entries inside it are named {card.names} ({stated.citation})",
                 {
-                    "emulator": card.token,
+                    "token": card.token,
                     "image": image_path,
                     "names": card.names or "",
                     "citation": stated.citation,
@@ -11417,7 +11417,7 @@ def _mame_savestate_placement(
             "one still writes the file and warns that save states are not officially "
             "supported for it (machine.cpp:927-928), so reliability is the driver's own",
             {
-                "emulator": card.token,
+                "token": card.token,
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287",
             },
         ),
@@ -11522,7 +11522,7 @@ def _mame_ini_probe(
                 UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
                 f"MAME's configuration ({candidate}) exists and could not be read — where "
                 "a state lands is unknowable here",
-                {"emulator": token, "config": candidate},
+                {"token": token, "config": candidate},
             )
         return _MameIniReading(_mame_ini_values(result.text or ""), candidate)
     return _MameIniReading({}, None)
@@ -11694,7 +11694,7 @@ def _mame_root_value(
                 f"{stated_file} names the states directory through ${missing}, a value of "
                 "the launch's own environment this answer cannot establish — where a state "
                 "lands is unknowable here",
-                {"emulator": card.token, "config": stated_path or shape.file},
+                {"token": card.token, "config": stated_path or shape.file},
             )
         return substituted, f'{stated_file}: {key} {raw}' + (
             "" if substituted == raw else f" — the environment expands it to {substituted}"
@@ -11744,7 +11744,7 @@ def _mame_root_anchor(
                 f"no spelling on this host — {stated_ini or shape.file} read fine, and "
                 "nothing this answer could anchor at",
                 {
-                    "emulator": card.token,
+                    "token": card.token,
                     "config": stated_ini or shape.file,
                     "path": substituted,
                 },
@@ -11919,7 +11919,7 @@ def _savestate_absence_answer(
             Caveat(
                 CAVEAT_UNVERIFIED_VERSION,
                 absent.build_unestablished,
-                {"emulator": card.token, "verification": "build-unestablished"},
+                {"token": card.token, "verification": "build-unestablished"},
             )
         )
     caveats.extend(arrangement)
@@ -12465,7 +12465,7 @@ def _pcsx2_mod_placement(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"PCSX2's configuration ({ini_path}) exists and could not be read — where it "
             "reads patches from is unknowable here",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     # The key the way the emulator matches it (#295): CSimpleIniA is ASCII
@@ -12489,7 +12489,7 @@ def _pcsx2_mod_placement(
                 f"the patches directory PCSX2's configuration names ({raw_dir!r}) has no "
                 f"spelling on this host — {ini_path} read fine, and nothing this answer "
                 "could anchor at",
-                {"emulator": card.token, "config": ini_path, "path": raw_dir},
+                {"token": card.token, "config": ini_path, "path": raw_dir},
             )
         directory = host.path
     else:
@@ -12502,7 +12502,7 @@ def _pcsx2_mod_placement(
             f"whether {card.token} has patch loading switched on is not established — the "
             f"setting lives in {ini_path}, which this answer reads for the directory and not "
             "for the switch, because the card states none",
-            {"emulator": card.token, "config": ini_path},
+            {"token": card.token, "config": ini_path},
         )
     )
     sources = [
@@ -12596,7 +12596,7 @@ def _standalone_mod_placement(
                 f"whether {card.token} has mod loading switched on is not established — the setting "
                 f"lives in {config_path}, a configuration of the emulator's own that atlas does not "
                 "read (standalone emulator configuration is its own roadmap block)",
-                {"emulator": card.token, "config": config_path},
+                {"token": card.token, "config": config_path},
             )
         )
     else:

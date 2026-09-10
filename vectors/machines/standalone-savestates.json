@@ -488,7 +488,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "PCSX2",
+              "token": "PCSX2",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
             }
           }
@@ -1141,7 +1141,7 @@
               {
                 "code": "unverified-version",
                 "data": {
-                  "emulator": "RYUBING",
+                  "token": "RYUBING",
                   "verification": "build-unestablished"
                 }
               }
@@ -1243,7 +1243,7 @@
             {
               "code": "savestate-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
                 "names": "<snapshot name, else vm-YYYYMMDDhhmmss>",
                 "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
@@ -1291,7 +1291,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "XEMU",
+              "token": "XEMU",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
             }
           }
@@ -1352,7 +1352,7 @@
             {
               "code": "savestate-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
                 "names": "<snapshot name, else vm-YYYYMMDDhhmmss>",
                 "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
@@ -1449,7 +1449,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -1545,7 +1545,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -1640,7 +1640,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -1732,7 +1732,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -1833,7 +1833,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -1940,7 +1940,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2099,7 +2099,7 @@
               {
                 "code": "unverified-version",
                 "data": {
-                  "emulator": "IRONWAIL",
+                  "token": "IRONWAIL",
                   "verification": "build-unestablished"
                 }
               }
@@ -2183,7 +2183,7 @@
               {
                 "code": "unverified-version",
                 "data": {
-                  "emulator": "PICO-8",
+                  "token": "PICO-8",
                   "verification": "build-unestablished"
                 }
               }
@@ -2315,7 +2315,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2386,7 +2386,7 @@
             {
               "code": "savestate-inside-image",
               "data": {
-                "emulator": "XEMU",
+                "token": "XEMU",
                 "image": "<cwd>/images/xbox_hdd.qcow2",
                 "names": "<snapshot name, else vm-YYYYMMDDhhmmss>",
                 "citation": "ui/xemu-snapshots.c:156-158 (the snapshot browser opens the file g_config.sys.files.hdd_path names), :193-198 (bdrv_all_find_vmstate_bs + bdrv_snapshot_list); migration/savevm.c:3285-3301 (save_snapshot writes the VM state into the vmstate device and the record across every snapshot-capable one); block/snapshot.c:736-777 (the vmstate device is the first snapshot-capable one — the qcow2 hard disk) at v0.8.135"
@@ -2486,7 +2486,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2643,7 +2643,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2739,7 +2739,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2849,7 +2849,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -2956,7 +2956,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -3065,7 +3065,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -3163,7 +3163,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -3210,7 +3210,7 @@
           "unresolved": {
             "code": "emulator-config-unreadable",
             "data": {
-              "emulator": "MAME",
+              "token": "MAME",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/adam.ini"
             }
           }
@@ -3366,7 +3366,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -3413,7 +3413,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "DUCKSTATION",
+              "token": "DUCKSTATION",
               "config": "/home/deck/.local/share/duckstation/settings.ini",
               "path": "/app/share/duckstation/states"
             }
@@ -3511,7 +3511,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }
@@ -3558,7 +3558,7 @@
           "unresolved": {
             "code": "emulator-config-path-untranslatable",
             "data": {
-              "emulator": "MAME",
+              "token": "MAME",
               "config": "/home/deck/.mame/mame.ini",
               "path": "/run/user/1000/mame/sta"
             }
@@ -3672,7 +3672,7 @@
             {
               "code": "savestate-support-machine-dependent",
               "data": {
-                "emulator": "MAME",
+                "token": "MAME",
                 "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
               }
             }

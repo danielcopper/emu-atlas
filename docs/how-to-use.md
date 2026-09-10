@@ -1545,19 +1545,24 @@ shapes are never mistakable. **That field is `token`, not `emulator`, and the di
 atlas's own name for a carded emulator, while `emulator` on a catalogue entry or a firmware core is the spelling the
 frontend's launch command uses. They agree on RetroDECK, whose commands carry the card's own token, and part company on
 EmuDeck, where the entry for Cemu reports `cemu` (its launcher script) against this answer's `CEMU`. Join catalogue
-answers to firmware answers on `emulator` together with `declared_index`; read `token` as what atlas's card is called.
-Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx lineage (Ryubing) never had one; Ruffle's persistence is the
-SharedObjects tree; GZDoom's, ironwail's, OpenBOR's, PICO-8's and Solarus's whole serialization is their
-savegame/cartdata system — the **save** question's business, and the cards say so rather than blurring a quicksave into
-a machine snapshot. No tree-derived caveat ever rides a stated no (health findings and link walks qualify paths, and the
-absence names none — it answers even where the EmuDeck variant gate would refuse the save question). What does ride is
-everything that qualifies the claim itself: `unverified-version` with `verification: "build-unestablished"` for the
-emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8 — the citation then names the release or manual the
-record read); the arrangement evidence caveats (`arrangement-unverified` / `arrangement-version-drifted`) exactly as on
-a placement — a stated no is world knowledge pinned to the build a verified arrangement ships, and an arrangement atlas
-has not confirmed on this version says so; and the entry's catalogue-status and `per-game-override` caveats, because a
-gamelist that would launch a different emulator for this game is a statement about emulator identity — "Cemu has no
-savestates" needs the rider that Cemu may not be what runs.
+answers to firmware answers on `emulator` together with `declared_index`; read `token` as what atlas's card is called,
+except under `platform-unknown`, whose `token` is an ES-DE `<platform>` tag rather than a card. Inside a `data` mapping
+the rule that holds is the negative one: no caveat or refusal spells a card token `emulator`, so a key named `emulator`
+anywhere on the wire is always the launch identity and never the card. A card token rides caveat data as `token`, and —
+where the caveat is about the core that runs — as `core`, beside the libretro core names that key also carries; so read
+the key for what it is, and never take `emulator` for the card. Cemu 2.6 and Vita3K ship no state serializer; the
+Ryujinx lineage (Ryubing) never had one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's,
+OpenBOR's, PICO-8's and Solarus's whole serialization is their savegame/cartdata system — the **save** question's
+business, and the cards say so rather than blurring a quicksave into a machine snapshot. No tree-derived caveat ever
+rides a stated no (health findings and link walks qualify paths, and the absence names none — it answers even where the
+EmuDeck variant gate would refuse the save question). What does ride is everything that qualifies the claim itself:
+`unverified-version` with `verification: "build-unestablished"` for the emulators no arrangement ships a build of
+(Ryubing, ironwail, PICO-8 — the citation then names the release or manual the record read); the arrangement evidence
+caveats (`arrangement-unverified` / `arrangement-version-drifted`) exactly as on a placement — a stated no is world
+knowledge pinned to the build a verified arrangement ships, and an arrangement atlas has not confirmed on this version
+says so; and the entry's catalogue-status and `per-game-override` caveats, because a gamelist that would launch a
+different emulator for this game is a statement about emulator identity — "Cemu has no savestates" needs the rider that
+Cemu may not be what runs.
 
 ## Where do texture packs go?
 
