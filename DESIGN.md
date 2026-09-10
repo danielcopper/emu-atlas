@@ -86,7 +86,7 @@ inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, phy
 ```python
 inst.firmware_for_core("mgba_libretro.so")           # does this emulator need firmware, and where does it go?
 inst.firmware_for_system("gb")                       # which emulators run this system, and what does each want?
-inst.firmware_inventory(verify=True)                 # everything installed, plus what nobody asks for
+inst.firmware_inventory(verify=True)                 # every installed core, plus what nothing claims
 inst.identify_firmware(md5="32fbbd84...")            # this content — where does it go, under what name?
 # -> the first three: FirmwareAnswer (root, cores, unclaimed, hash_checked, sources, caveats).
 #    identify_firmware answers off content, so it has its own shape:

@@ -13074,7 +13074,14 @@ class _FirmwareQueries:
         return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
 
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
-        """Every installed core's firmware, plus what is lying around unclaimed."""
+        """Every installed core's firmware, plus what is lying around unclaimed.
+
+        The installed cores are the whole enumeration: a standalone emulator has
+        no core, so its firmware is never an entry here. Where a frontend
+        catalogue enumerates a system's emulators, :meth:`firmware_for_system`
+        states it instead; where none does, that route is derived from the
+        installed cores too and no route reaches it.
+        """
         return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
 
     def identify_firmware(
