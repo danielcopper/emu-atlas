@@ -1707,9 +1707,17 @@ class SavestateAbsence:
     absence names no path for them to qualify.
     """
 
-    emulator: str
-    """The emulator this stated no is about, named by the token its packaged card
-    carries.
+    token: str
+    """The emulator this stated no is about, named by the token its packaged card carries —
+    atlas's own vocabulary for a carded emulator, and deliberately not ``emulator``, which
+    on a catalogue entry and a firmware core is the frontend's own spelling of the launch.
+
+    The two vocabularies agree wherever an arrangement's commands carry the
+    card's own word, which is every RetroDECK launch, and part company where
+    one spells a launch its own way: EmuDeck runs Cemu through a launcher
+    script, so the entry there reports ``cemu`` while the card behind this
+    answer is ``CEMU``. One name per vocabulary is what keeps a client from
+    joining the two by accident.
     """
     citation: str
     """The evidence for the no, contractual so that a client repeating the claim repeats
@@ -1722,8 +1730,8 @@ class SavestateAbsence:
     """
 
     def __post_init__(self) -> None:
-        if not self.emulator:
-            raise ValueError("SavestateAbsence: emulator must be non-empty")
+        if not self.token:
+            raise ValueError("SavestateAbsence: token must be non-empty")
         if not self.citation:
             raise ValueError(
                 "SavestateAbsence: citation must be non-empty — a stated no without its "

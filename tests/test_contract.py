@@ -134,7 +134,7 @@ class TestTheStatedNoIsItsOwnShape:
 
     def _absence(self, **overrides):
         stated = {
-            "emulator": "DEMO",
+            "token": "DEMO",
             "citation": "the whole tree at v1: no state serializer",
             "sources": ("standalone savestate card 'DEMO': prose",),
         }
@@ -144,7 +144,7 @@ class TestTheStatedNoIsItsOwnShape:
     def test_the_answer_serializer_branches_to_it(self):
         block = atlas.savestate_answer_contract(self._absence())
         assert set(block) == {"no_savestates"}
-        assert block["no_savestates"]["emulator"] == "DEMO"
+        assert block["no_savestates"]["token"] == "DEMO"
         assert block["no_savestates"]["citation"].startswith("the whole tree")
         assert block["no_savestates"]["caveats"] == []
 

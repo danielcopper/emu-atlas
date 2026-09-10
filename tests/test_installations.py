@@ -2237,7 +2237,7 @@ class TestTheStatedNoIsAnAnswer:
     def test_the_absence_answers_with_its_citation(self):
         outcome = self._entry().savestate_location()
         assert isinstance(outcome, atlas.SavestateAbsence)
-        assert outcome.emulator == "CEMU"
+        assert outcome.token == "CEMU"
         assert "feature_report.yaml:18" in outcome.citation
         assert outcome.caveats == ()
 
@@ -8655,3 +8655,185 @@ class TestTheTemplatesACardsOwnRuleFills:
 
         with pytest.raises(ValueError, match="filled it with nothing"):
             _fill_rule_templates("puae", "archived-floppy-redirected", mode, {})
+
+
+class TestEveryEntryCarriesTheIdentityItsCommandSpells:
+    """The identity field, per arrangement and per launch spelling (#444).
+
+    The catalogue answer and the firmware answer both carry it, and a client
+    joins the two on it — never on the label, which is where an arrangement
+    puts whatever reads well.
+    """
+
+    RD_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>psp</name>\n'
+        "    <path>%ROMPATH%/psp</path>\n    <extension>.iso</extension>\n"
+        '    <command label="PPSSPP (Standalone)">%EMULATOR_PPSSPP% %ROM%</command>\n'
+        '    <command label="PPSSPP">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so'
+        " %ROM%</command>\n  </system>\n</systemList>\n"
+    )
+
+    # Six rows in the shapes EmuDeck's own overlays use: two launcher rows for
+    # one emulator (the Proton one adds cemu.sh's -w), a third launcher row for
+    # another, a libretro row, a RetroArch launch naming a Windows .dll, and a
+    # token row. The reference machine's n3ds system declares two of those .dll
+    # rows (Citra and Citra 2018) where this fixture keeps one: they differ only
+    # in which .dll they name, and one is what the identity rule needs.
+    ED_SYSTEMS = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n'
+        "    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.rpx</extension>\n"
+        '    <command label="Cemu (Native)">/bin/bash '
+        "/home/deck/Emulation/tools/launchers/cemu.sh -f -g %ROM%</command>\n"
+        '    <command label="Cemu (Proton)">/bin/bash '
+        "/home/deck/Emulation/tools/launchers/cemu.sh -w -f -g z:%ROM%</command>\n"
+        "  </system>\n  <system>\n    <name>atarijaguar</name>\n"
+        "    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64</extension>\n"
+        '    <command label="BigPEmu (Proton)">/bin/bash '
+        "/home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n"
+        '    <command label="Virtual Jaguar">%EMULATOR_RETROARCH% -L '
+        "%CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n"
+        "  </system>\n  <system>\n    <name>n3ds</name>\n"
+        "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n"
+        '    <command label="Citra">%EMULATOR_RETROARCH% -L '
+        "%CORE_RETROARCH%\\citra_libretro.dll %ROM%</command>\n"
+        '    <command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+
+    def _retrodeck(self):
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                RD_BUNDLED_ESDE: self.RD_SYSTEMS,
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+
+    # The cores as RetroDECK's own configuration spells them: the value is a
+    # /app path inside the flatpak, which the handle resolves to the deploy.
+    RD_CORES_APP = "/app/retrodeck/components/retroarch/rd_extras/cores"
+    RD_CORES = (
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck"
+        "/components/retroarch/rd_extras/cores"
+    )
+
+    def _retrodeck_with_the_core(self):
+        """The same machine with the psp core installed and a firmware root, so all three routes answer."""
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
+                    'system_directory = "/mnt/sd/retrodeck/bios"\n'
+                    f'libretro_directory = "{self.RD_CORES_APP}"\n'
+                    f'libretro_info_path = "{self.RD_CORES_APP}"\n'
+                ),
+                RD_BUNDLED_ESDE: self.RD_SYSTEMS,
+                f"{self.RD_CORES}/ppsspp_libretro.info": (
+                    'corename = "PPSSPP"\nsystemname = "PlayStation Portable"\n'
+                ),
+                "/mnt/sd/retrodeck/bios/.keep": "",
+            },
+            cores={f"{self.RD_CORES}/ppsspp_libretro.so": {"library_name": "PPSSPP"}},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+
+    def _emudeck(self, **kwargs):
+        files = {
+            EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+            STANDALONE_CFG: 'savefile_directory = "/home/deck/Emulation/saves"\n',
+            f"{HOME}/Emulation/saves/.keep": "",
+            f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.ED_SYSTEMS,
+        }
+        return atlas.EmuDeck(HOME, FixtureMachine(files, **kwargs))
+
+    def _identities(self, install, system):
+        return {e.label: e.emulator for e in install.emulators_for(system).entries}
+
+    def test_a_retrodeck_token_entry_is_identified_by_its_token(self):
+        # RetroDECK spells every standalone launch with ES-DE's own token, so
+        # the token IS the identity — and the libretro row beside it carries
+        # the core file, the same string its core_so carries.
+        entries = self._retrodeck().emulators_for("psp").entries
+        assert [(e.label, e.emulator) for e in entries] == [
+            ("PPSSPP (Standalone)", "PPSSPP"),
+            ("PPSSPP", "ppsspp_libretro.so"),
+        ]
+        assert entries[1].emulator == entries[1].core_so
+
+    def test_an_emudeck_launcher_entry_is_identified_by_its_script(self):
+        assert self._identities(self._emudeck(), "atarijaguar") == {
+            "BigPEmu (Proton)": "bigpemu",
+            "Virtual Jaguar": "virtualjaguar_libretro.so",
+        }
+
+    def test_the_windows_build_row_is_identified_like_its_native_sibling(self):
+        # cemu.sh -w runs the Windows build under Proton, which is why the
+        # firmware token refuses it: no configuration tree atlas reads. The
+        # identity is not that question — both rows launch Cemu and both say
+        # so, which is what lets a client group them.
+        assert self._identities(self._emudeck(), "wiiu") == {
+            "Cemu (Native)": "cemu",
+            "Cemu (Proton)": "cemu",
+        }
+
+    def test_the_identity_stands_where_the_firmware_token_refuses(self):
+        # The same command, read by both seams: the gated one answers nothing
+        # because no AppImage is installed and the launch falls to Proton, the
+        # identity answers all the same.
+        ed = self._emudeck()
+        command = "/bin/bash /home/deck/Emulation/tools/launchers/cemu.sh -w -f -g z:%ROM%"
+        assert ed.standalone_firmware_token(command) is None
+        assert self._identities(ed, "wiiu")["Cemu (Proton)"] == "cemu"
+
+    def test_a_retroarch_launch_naming_no_core_identifies_nothing(self):
+        # atlas could not identify the emulator, and says so rather than
+        # naming RETROARCH, which is the runner and not an emulator.
+        assert self._identities(self._emudeck(), "n3ds") == {
+            "Citra": None,
+            "Azahar (Standalone)": "AZAHAR",
+        }
+
+    def test_a_derived_entry_is_identified_by_the_core_it_was_derived_from(self):
+        # No catalogue, no command — and still an identity, because the core
+        # enumeration is where the entry came from (#133).
+        cores_dir = TestADerivedEmulatorList.CORES_DIR
+        machine = FixtureMachine(
+            {
+                TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG,
+                f"{cores_dir}/mgba_libretro.info": TestADerivedEmulatorList.MGBA_INFO,
+            },
+            cores={f"{cores_dir}/mgba_libretro.so": {"library_name": "mGBA"}},
+            dirs=[f"{HOME}/saves"],
+        )
+        entry = atlas.BareRetroArchFlatpak(HOME, machine).emulators_for("gba").entries[0]
+        assert entry.command == ""
+        assert entry.emulator == entry.core_so == "mgba_libretro.so"
+
+    def test_only_a_catalogue_row_hands_over_a_position(self):
+        # The two routes the published docstring names as null: the inventory
+        # and a core asked for by name were built from no catalogue row, so
+        # they have no position to state — while the same machine's
+        # per-system answer, which IS built from rows, carries theirs. The
+        # field defaults to None, so this is what would notice a position
+        # threaded into a route that has no row behind it.
+        rd = self._retrodeck_with_the_core()
+        by_system = {c.label: c.declared_index for c in rd.firmware_for_system(system="psp").cores}
+        assert by_system == {"PPSSPP (Standalone)": 0, "PPSSPP": 1}
+
+        inventory = rd.firmware_inventory().cores
+        assert [c.core_so for c in inventory] == ["ppsspp_libretro.so"]
+        assert [c.declared_index for c in inventory] == [None]
+
+        by_name = rd.firmware_for_core(core_so="ppsspp_libretro.so").cores
+        assert [c.core_so for c in by_name] == ["ppsspp_libretro.so"]
+        assert [c.declared_index for c in by_name] == [None]
+
+    def test_the_firmware_answer_carries_the_entrys_identity(self):
+        # The join the field exists for: the same emulator, named the same way
+        # in both answers, including where it is null.
+        ed = self._emudeck()
+        catalogue = self._identities(ed, "n3ds")
+        firmware = {c.label: c.emulator for c in ed.firmware_for_system(system="n3ds").cores}
+        assert firmware == catalogue == {"Citra": None, "Azahar (Standalone)": "AZAHAR"}

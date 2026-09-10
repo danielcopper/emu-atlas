@@ -152,7 +152,12 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   produces a name the project does not use. The spellings are packaged world knowledge, cited to the project's own text
   and versioned like every other table (`atlas/data/distribution_labels.json`); no machine states them as names. Nothing
   in atlas branches on one either, and an identifier the table does not cover raises rather than falling back to itself
-  — a gap is a build mistake, not a default.
+  — a gap is a build mistake, not a default. The same split runs through the **emulators**: a catalogue entry and a
+  firmware core both carry `emulator`, the identity its launch command spells (the core file's basename, or the name the
+  command states), beside the `label` the frontend renders. A client joins two answers on the identity, because the
+  label is where an arrangement puts whatever reads well — `Cemu (Native)` and `Cemu (Proton)` are one emulator — and
+  because a standalone entry has no `core_so` to join on. The identity is never invented: it is the frontend's own word
+  or `null`.
 - **Detection reports health, structurally.** Detection triggers on marker _existence_; health separates marker read
   status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
   present-but-broken installation (unreadable marker, unmounted SD card, stale EmuDeck whose claimed RetroArch config is

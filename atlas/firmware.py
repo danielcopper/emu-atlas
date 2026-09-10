@@ -2175,6 +2175,50 @@ class CoreFirmware:
     """Every degradation of this core's answer, and on any declaration but ``read`` the
     statement of why the list is not the whole story.
     """
+    emulator: str | None = None
+    """Which emulator this is, in the spelling its own launch command uses: a libretro
+    entry's core file basename — the string ``core_so`` carries — or, for a standalone
+    one, the name the command states (ES-DE's ``%EMULATOR_X%`` token ``X``, an EmuDeck
+    launcher script's name). ``null`` says atlas could not identify an emulator from
+    the command, never that none is launched. The spelling is the frontend's own and
+    atlas neither invents nor renames it, which is what makes this the field two
+    answers about one emulator join on — ``label`` is a display name (``Dolphin
+    (Standalone)`` beside ``PrimeHack (Standalone)``, ``Cemu (Native)`` beside ``Cemu
+    (Proton)``), and a display name is presentation.
+
+    The join this exists for runs between questions: a client asks the
+    catalogue which emulators launch a system, the user picks one, and the
+    firmware answer for that pick is found by this field rather than by the
+    display name it was rendered under. Where this answer was built from a
+    catalogue entry the two carry the same string by construction
+    (:attr:`atlas.installations.EmulatorEntry.emulator`); where it was built
+    from an installed core instead — the per-core route, the inventory — it
+    is that core's own ``.so`` name, which is what a catalogue entry loading
+    that core would have said.
+    """
+    declared_index: int | None = None
+    """The place, from 0, of the catalogue row this answer was built from — the shipped
+    position ES-DE gives it, which promotion never touches, exactly as
+    :attr:`atlas.installations.EmulatorEntry.declared_index` states it. ``null`` where no
+    catalogue row was behind this answer at all: the inventory, a question asked about a
+    core by name, and the derived enumeration (#133), which no layer declared. With
+    ``emulator`` it makes the join to a catalogue entry exact where the identity alone
+    would not be, because two rows of one system can launch one emulator (EmuDeck
+    declares its Cemu twice, native and under Proton) and the position is what tells
+    those two rows apart.
+
+    The pair is the join and each half is needed: the identity says which
+    emulator, the position says which row of the catalogue's launch list. A
+    client holding a row it rendered from ``emulators_for`` therefore finds
+    that row's firmware by matching both, and where this is ``null`` the
+    answer describes no row and only the identity can be matched at all.
+
+    The numbering is the catalogue's, so everything
+    :attr:`atlas.installations.EmulatorEntry.declared_index` says about it
+    holds here unchanged: it is ES-DE's own walk rather than a count of
+    ``<command>`` elements, it may skip a position, and it is not an index
+    into any list a client holds.
+    """
     system_firmware: CoreSystemFirmware | None = None
     """What is recorded about the SYSTEM this core declares firmware for — world
     knowledge, not a reading of this machine; ``null`` means nothing is recorded about
@@ -2617,6 +2661,19 @@ class CatalogueEntry:
     catalogue, because what a command identifies is arrangement knowledge.
     ``None`` where the command identifies nothing atlas can act on.
 
+    ``emulator`` is the entry's identity as the client sees it
+    (:attr:`CoreFirmware.emulator`), carried across this seam so the firmware
+    answer for an entry can be joined to the catalogue answer that named it.
+    It is *not* ``standalone_token``: that one is gated on the firmware
+    knowledge this route needs and answers ``None`` wherever the trees a card
+    describes are not the ones this launch reads, while an identity is
+    ungated and stands for a libretro entry too.
+
+    ``declared_index`` travels beside it and for the same reason: the identity
+    names an emulator and two rows of one system can launch one emulator, so
+    the row is what the position adds. Both are the catalogue entry's own
+    values, handed over unchanged — this seam derives neither.
+
     The two homes are the per-entry override of the context's standalone
     bases: ``None`` means the arrangement's own pair governs, and a value
     means this entry's launch picks a binary whose trees hang elsewhere —
@@ -2627,6 +2684,8 @@ class CatalogueEntry:
     label: str
     kind: str
     core_so: str | None
+    emulator: str | None = None
+    declared_index: int | None = None
     standalone_token: str | None = None
     standalone_data_home: str | None = None
     standalone_config_home: str | None = None
@@ -4092,6 +4151,7 @@ def _read_core(
     core: CoreDeclarations,
     label: str | None,
     *,
+    declared_index: int | None = None,
     verify: bool,
     folders: _FolderReads,
 ) -> tuple[CoreFirmware, list[Caveat]]:
@@ -4099,8 +4159,10 @@ def _read_core(
 
     Both routes that reach a read declaration — the per-core/system one and the
     catalogue one — build it here, because they differ only in where the label
-    comes from. A field carried at one site and forgotten at the other is
-    invisible: the answer still type-checks, the caveat that mentions the fact
+    and the declared position come from: a catalogue row hands over both, and
+    a question asked about a core by name has neither. A field carried at one
+    site and forgotten at the other is invisible: the answer still
+    type-checks, the caveat that mentions the fact
     still appears on the core, and the suite stays green. ``unread`` was
     exactly that. It reached the catalogue route empty, so
     ``_declared_without_requiring`` saw nothing declared and an empty
@@ -4113,6 +4175,11 @@ def _read_core(
         CoreFirmware(
             core_so=core.core_so,
             label=label,
+            # A core answers for itself: the ``.so`` the catalogue would name
+            # to load it is what identifies this emulator, whichever route
+            # asked (per-core, per-system, inventory).
+            emulator=core.core_so,
+            declared_index=declared_index,
             declaration=DECLARATION_READ,
             requirements=requirements,
             caveats=_core_caveats(core, core_caveats),
@@ -4175,11 +4242,15 @@ def _cores_a_derived_assignment_may_hide(
     )
 
 
-def _undeclarable_core(core: CoreDeclarations, label: str | None) -> CoreFirmware:
+def _undeclarable_core(
+    core: CoreDeclarations, label: str | None, declared_index: int | None = None
+) -> CoreFirmware:
     """A core that is here, whose ``.info`` is not — present, and unexplained."""
     return CoreFirmware(
         core_so=core.core_so,
         label=label,
+        emulator=core.core_so,
+        declared_index=declared_index,
         declaration=DECLARATION_UNREADABLE,
         requirements=(),
         caveats=(
@@ -4396,6 +4467,9 @@ def firmware_for_core(
                     CoreFirmware(
                         core_so=f"{stem}.so",
                         label=None,
+                        # The caller named a core this machine does not have,
+                        # and the name is still the identity it asked about.
+                        emulator=f"{stem}.so",
                         declaration=DECLARATION_ABSENT,
                         requirements=(),
                         caveats=(reason,),
@@ -4596,6 +4670,8 @@ def _packaged_standalone_core(
         CoreFirmware(
             core_so=None,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_PACKAGED,
             requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=(_packaged_provenance_caveat(entry, card),),
@@ -4609,6 +4685,8 @@ def _melonds_config_unreadable_core(entry: CatalogueEntry, path: str) -> CoreFir
     return CoreFirmware(
         core_so=None,
         label=entry.label,
+        emulator=entry.emulator,
+        declared_index=entry.declared_index,
         declaration=DECLARATION_UNREADABLE,
         requirements=(),
         caveats=(
@@ -4837,6 +4915,8 @@ def _melonds_standalone_core(
         CoreFirmware(
             core_so=None,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_PACKAGED,
             requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=tuple(caveats),
@@ -4926,6 +5006,8 @@ def _pcsx2_standalone_core(
             CoreFirmware(
                 core_so=None,
                 label=entry.label,
+                emulator=entry.emulator,
+                declared_index=entry.declared_index,
                 declaration=DECLARATION_UNREADABLE,
                 requirements=(),
                 caveats=(
@@ -4965,6 +5047,8 @@ def _pcsx2_standalone_core(
                 CoreFirmware(
                     core_so=None,
                     label=entry.label,
+                    emulator=entry.emulator,
+                    declared_index=entry.declared_index,
                     declaration=DECLARATION_PACKAGED,
                     requirements=(),
                     caveats=(*caveats, untranslated),
@@ -4995,6 +5079,8 @@ def _pcsx2_standalone_core(
             CoreFirmware(
                 core_so=None,
                 label=entry.label,
+                emulator=entry.emulator,
+                declared_index=entry.declared_index,
                 declaration=DECLARATION_PACKAGED,
                 requirements=(),
                 caveats=tuple(caveats),
@@ -5040,6 +5126,8 @@ def _pcsx2_standalone_core(
         CoreFirmware(
             core_so=None,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_PACKAGED,
             requirements=(requirement,),
             caveats=tuple(caveats),
@@ -5101,6 +5189,8 @@ def _xemu_unreadable_core(entry: CatalogueEntry, path: str, why: str) -> CoreFir
     return CoreFirmware(
         core_so=None,
         label=entry.label,
+        emulator=entry.emulator,
+        declared_index=entry.declared_index,
         declaration=DECLARATION_UNREADABLE,
         requirements=(),
         caveats=(
@@ -5238,6 +5328,8 @@ def _xemu_standalone_core(
         CoreFirmware(
             core_so=None,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_PACKAGED,
             requirements=tuple(sorted(requirements, key=_by_destination)),
             caveats=tuple(caveats),
@@ -5260,6 +5352,8 @@ def _duckstation_unreadable_core(entry: CatalogueEntry, path: str) -> CoreFirmwa
     return CoreFirmware(
         core_so=None,
         label=entry.label,
+        emulator=entry.emulator,
+        declared_index=entry.declared_index,
         declaration=DECLARATION_UNREADABLE,
         requirements=(),
         caveats=(
@@ -5651,6 +5745,8 @@ def _duckstation_standalone_core(
             CoreFirmware(
                 core_so=None,
                 label=entry.label,
+                emulator=entry.emulator,
+                declared_index=entry.declared_index,
                 declaration=DECLARATION_PACKAGED,
                 requirements=(),
                 caveats=(*caveats, untranslated),
@@ -5712,6 +5808,8 @@ def _duckstation_standalone_core(
         CoreFirmware(
             core_so=None,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_PACKAGED,
             requirements=requirements,
             caveats=tuple(caveats),
@@ -5952,6 +6050,8 @@ def _standalone_entry_core(
         CoreFirmware(
             core_so=entry.core_so,
             label=entry.label,
+            emulator=entry.emulator,
+            declared_index=entry.declared_index,
             declaration=DECLARATION_UNSUPPORTED,
             requirements=(),
             caveats=(
@@ -6012,6 +6112,8 @@ def _catalogue_entry_core(
             CoreFirmware(
                 core_so=entry.core_so,
                 label=entry.label,
+                emulator=entry.emulator,
+                declared_index=entry.declared_index,
                 declaration=DECLARATION_ABSENT,
                 requirements=(),
                 caveats=(reason,),
@@ -6019,8 +6121,16 @@ def _catalogue_entry_core(
             [],
         )
     if core.info_status != READ_OK:
-        return _undeclarable_core(core, entry.label), []
-    return _read_core(machine, context, core, entry.label, verify=verify, folders=folders)
+        return _undeclarable_core(core, entry.label, entry.declared_index), []
+    return _read_core(
+        machine,
+        context,
+        core,
+        entry.label,
+        declared_index=entry.declared_index,
+        verify=verify,
+        folders=folders,
+    )
 
 
 def _empty_system_statement(

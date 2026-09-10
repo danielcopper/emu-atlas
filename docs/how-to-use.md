@@ -1535,24 +1535,29 @@ instead of a generic refusal. The answer is the question's third shape:
 ```python
 outcome = entry.savestate_location()
 
-outcome.emulator   # 'CEMU'
+outcome.token      # 'CEMU' — the packaged card's own token, not the entry's `emulator` (below)
 outcome.citation   # the spans and scans that establish the no — contractual
 outcome.caveats    # () — or the one caveat a stated no can carry (below)
 ```
 
-It serializes as `{"no_savestates": {"emulator": …, "citation": …, "caveats": […]}}` — its own top-level key, so the
-three shapes are never mistakable. Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx lineage (Ryubing) never had
-one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's, OpenBOR's, PICO-8's and Solarus's whole
-serialization is their savegame/cartdata system — the **save** question's business, and the cards say so rather than
-blurring a quicksave into a machine snapshot. No tree-derived caveat ever rides a stated no (health findings and link
-walks qualify paths, and the absence names none — it answers even where the EmuDeck variant gate would refuse the save
-question). What does ride is everything that qualifies the claim itself: `unverified-version` with
-`verification: "build-unestablished"` for the emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8 — the
-citation then names the release or manual the record read); the arrangement evidence caveats (`arrangement-unverified` /
-`arrangement-version-drifted`) exactly as on a placement — a stated no is world knowledge pinned to the build a verified
-arrangement ships, and an arrangement atlas has not confirmed on this version says so; and the entry's catalogue-status
-and `per-game-override` caveats, because a gamelist that would launch a different emulator for this game is a statement
-about emulator identity — "Cemu has no savestates" needs the rider that Cemu may not be what runs.
+It serializes as `{"no_savestates": {"token": …, "citation": …, "caveats": […]}}` — its own top-level key, so the three
+shapes are never mistakable. **That field is `token`, not `emulator`, and the difference is a vocabulary:** `token` is
+atlas's own name for a carded emulator, while `emulator` on a catalogue entry or a firmware core is the spelling the
+frontend's launch command uses. They agree on RetroDECK, whose commands carry the card's own token, and part company on
+EmuDeck, where the entry for Cemu reports `cemu` (its launcher script) against this answer's `CEMU`. Join catalogue
+answers to firmware answers on `emulator` together with `declared_index`; read `token` as what atlas's card is called.
+Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx lineage (Ryubing) never had one; Ruffle's persistence is the
+SharedObjects tree; GZDoom's, ironwail's, OpenBOR's, PICO-8's and Solarus's whole serialization is their
+savegame/cartdata system — the **save** question's business, and the cards say so rather than blurring a quicksave into
+a machine snapshot. No tree-derived caveat ever rides a stated no (health findings and link walks qualify paths, and the
+absence names none — it answers even where the EmuDeck variant gate would refuse the save question). What does ride is
+everything that qualifies the claim itself: `unverified-version` with `verification: "build-unestablished"` for the
+emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8 — the citation then names the release or manual the
+record read); the arrangement evidence caveats (`arrangement-unverified` / `arrangement-version-drifted`) exactly as on
+a placement — a stated no is world knowledge pinned to the build a verified arrangement ships, and an arrangement atlas
+has not confirmed on this version says so; and the entry's catalogue-status and `per-game-override` caveats, because a
+gamelist that would launch a different emulator for this game is a statement about emulator identity — "Cemu has no
+savestates" needs the rider that Cemu may not be what runs.
 
 ## Where do texture packs go?
 
@@ -1859,6 +1864,7 @@ answer.caveats                     # why there are no entries, when there are no
 entry = answer.entries[0]          # the effective default (per-game altemulator > per-system choice > declared order)
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
 entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
+entry.emulator                     # 'mupen64plus_next_libretro.so' — the identity, on both kinds of entry
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
 entry.declared_index               # 0 — where the layer that declared the system put it, promotion aside
 entry.selection                    # why it is first, when a user promoted it — None for declared order
@@ -1867,6 +1873,26 @@ entry.provenance                   # which catalogue layer declared it (prose, f
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
+
+**`emulator` is the identity; `label` is presentation.** The identity is the emulator the entry launches, spelled the
+way the launch command itself spells it: the core file's basename for a libretro entry (the same string `core_so`
+carries), and for a standalone one the name the command states — ES-DE's `%EMULATOR_X%` token `X` (`DUCKSTATION`,
+`AZAHAR`), or on EmuDeck the `tools/launchers/<name>.sh` script it runs (`bigpemu`, `cemu`, `xenia`). Nothing is
+invented or renamed: the value is the frontend's own word, read off this machine. **Join on it together with
+`declared_index`** — the firmware answer's cores carry both fields under the same names, so "the user picked this entry,
+now show me its firmware" is one comparison of one pair. Each half does its own job. The identity names an **emulator,
+not a row**, and several rows of one system can share it (EmuDeck's `Cemu (Native)` and `Cemu (Proton)` are both
+`cemu`); `declared_index` names the row, the shipped position this answer's entries carry under that same name. The
+label is not the join: an arrangement puts whatever reads well there, and two emulators can carry labels one word apart.
+One neighbour not to confuse it with: the savestate answer's stated no carries `token`, atlas's own name for a carded
+emulator (`CEMU`), where this field carries the frontend's spelling of the same emulator (`cemu` on EmuDeck) — one
+emulator, two vocabularies, two field names. It is `null` where atlas could not identify an emulator from the command —
+the shape it was written for is EmuDeck's `n3ds` rows, RetroArch launches naming a Windows `.dll`, where the only
+`%EMULATOR_…%` token is `%EMULATOR_RETROARCH%`: the frontend's runner, never an emulator. **Never match on a `null`
+identity by itself** — it would collapse EmuDeck's two `n3ds` rows into one — but the pair still joins them, because
+each keeps its own `declared_index` in both answers. A `null` says atlas could not identify the emulator, never "this
+entry launches nothing"; the entry itself is as real as any other. Whether atlas holds firmware or save knowledge for
+the emulator does not enter into it — the identity is not gated on what atlas knows.
 
 **`declared_index` is the shipped order; the list is in the effective one.** It is the entry's 0-based place in the
 launch list ES-DE builds from the `<command>` elements of the layer that declared the system — the bundled
@@ -1945,11 +1971,12 @@ versioned systemname map (and the same selection) the firmware route has always 
 derive different lists. Such an answer carries `emulator-list-derived`, and the code means three things at once: the
 order claims no default (no catalogue, no user selection — there is no "entry that would run"), no entry carries a
 launch command (`command` is empty — a catalogue declares those, and inventing one would be a guess), and a catalogue
-could declare a different list. The entries are otherwise real: `core_so` names the core, the label is the core's own
-`corename`, and the entry routes work — `entry.savefile_location(...)` answers, because a derived entry is a core and
-the core question was always answerable there. `systems()` on these arrangements lists the systems the cores file under,
-marked the same way. What stays unchanged: `launchable` (the accept-list is catalogue knowledge), and a system the
-readable EmuDeck layers _do_ declare (the catalogue's own answer, never overridden by a derivation).
+could declare a different list. The entries are otherwise real: `core_so` names the core, `emulator` names it too (the
+enumeration is where the entry came from, so the identity stands with no command to read it out of), the label is the
+core's own `corename`, and the entry routes work — `entry.savefile_location(...)` answers, because a derived entry is a
+core and the core question was always answerable there. `systems()` on these arrangements lists the systems the cores
+file under, marked the same way. What stays unchanged: `launchable` (the accept-list is catalogue knowledge), and a
+system the readable EmuDeck layers _do_ declare (the catalogue's own answer, never overridden by a derivation).
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
 that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
@@ -2280,6 +2307,8 @@ Reading a `FirmwareAnswer`:
 answer = inst.firmware_for_core("pcsx_rearmed_libretro.so", verify=True)
 answer.root                        # the live system_directory (None + caveat only when the key is cleared)
 for core in answer.cores:
+    core.emulator                  # the identity — the same word the catalogue entry carries, or None
+    core.declared_index            # the catalogue row it was built from, or None (no row behind it)
     core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
     core.requirements_met          # True | False | None — THE field to render (see below)
     core.system_firmware           # what is RECORDED about this core's system — world knowledge (see below)
@@ -2302,6 +2331,26 @@ for core in answer.cores:
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
 answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
 ```
+
+**Joining a firmware answer back to the entry the user picked: `(core.emulator, core.declared_index)`.** Both are the
+catalogue entry's own fields, under the same names and with the same values. The identity is the core file's basename
+for a libretro core and the launch command's own word for a standalone one, `null` where no command identified an
+emulator; the position is the shipped place of the catalogue row this answer was built from, `null` where no catalogue
+row was behind it at all — the inventory, `firmware_for_core`, a derived enumeration. `label` does not join: it is a
+display name, and on a derived enumeration the firmware core carries none at all while its identity stands. `core_so`
+does not join either, because a standalone emulator has none.
+
+So a client that asked `emulators_for(system)`, let the user pick a row, and now wants that row's firmware matches the
+pair. Neither half carries it alone. The identity is not enough where two rows launch one emulator, because both cores
+then carry the one value and the position is what separates them; and where the identity is `null` the position still
+joins the row — EmuDeck's two `n3ds` rows identify no emulator and are told apart by their positions in both answers —
+while matching that `null` on its own would collapse them. Two asymmetries to plan for. A sealed catalogue can leave the
+firmware answer with no core to match at all: where the readable layers declare no such system, the catalogue answer
+derives its entries from the installed cores while the firmware answer comes back empty, and both answers state
+`emulator-catalogue-sealed`, the catalogue one with `emulator-list-derived` beside it and the firmware one with
+`firmware-declaration-unknown`. And passing a `content_path` promotes the row a per-game `altemulator` names in the
+catalogue answer only, since the firmware answer names no content — so match on the pair, never on the place in the
+list.
 
 ### Two fields, two owners — `requirements` and `requirements_met`
 
@@ -2660,9 +2709,9 @@ serialized answer carries **its fields flat** at the top level, and which fields
 business — a savefile placement leads with `dir`, a mod placement with `trees`, a soft-patching answer with
 `candidates`. At the top level there are exactly two exceptions, and each announces itself as a **single-key object
 naming its shape**: a refusal is `{"unresolved": {"code": …, "data": {…}}}`, and a savestate question's stated no is
-`{"no_savestates": {"emulator": …, "citation": …, "caveats": […]}}`. (The same single-key discriminator style appears
-once more further in, around a firmware requirement that is a choice between region images — `{"alternatives": [ … ]}`
-inside `cores[].requirements[]`. It is documented with the firmware answer; watch for it if you walk that list.)
+`{"no_savestates": {"token": …, "citation": …, "caveats": […]}}`. (The same single-key discriminator style appears once
+more further in, around a firmware requirement that is a choice between region images — `{"alternatives": [ … ]}` inside
+`cores[].requirements[]`. It is documented with the firmware answer; watch for it if you walk that list.)
 
 **Those two are the shape the contract promises for anything added later**, so a client can recognize a shape it does
 not know instead of misreading it: what is not a question's own flat answer arrives as a single-key wrapper naming
