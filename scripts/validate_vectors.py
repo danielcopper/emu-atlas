@@ -1996,24 +1996,39 @@ def _group_verdict(options: list[Any]) -> Any:
     return None
 
 
+def _declared_images(core: Any) -> list[Any]:
+    """Every image the block declares, alternatives groups flattened."""
+    return [
+        option
+        for requirement in core["requirements"]
+        for option in requirement.get("alternatives", [requirement])
+    ]
+
+
 def _system_image_in_place(core: Any) -> bool | None:
     """Does the core have the image its SYSTEM cannot start without? Three-valued.
 
     ``True`` wherever the question does not arise, so only a core the table
     says needs an image and does not excuse can narrow a verdict. There the
-    declared images are a disjunction — one usable image is what the system
-    asks for — so ``True`` on any satisfied image, ``False`` only when every
-    one of them is demonstrably not, and ``None`` in between: an undetermined
-    image might be the one that would serve, and a refused declaration is one
-    atlas would not follow to a destination, so neither settles the absence.
+    images of the needing system are a disjunction — one usable image is what
+    the system asks for — so ``True`` on any satisfied image, ``False`` only
+    when every one of them is demonstrably not, and ``None`` in between: an
+    undetermined image might be the one that would serve, and a refused
+    declaration is one atlas would not follow to a destination, so neither
+    settles the absence.
+
+    **This reads one needing system, which is all the wire can carry.** The
+    package asks that disjunction per needing system and conjoins the results
+    (:attr:`atlas.firmware.CoreFirmware._system_image_in_place`), and the
+    systems the packaged table named are not serialized — an answer carries
+    the verdict, not the table's reasons for it. So this holds only blocks
+    whose requirements resolve to a single system, where the needing system is
+    necessarily that one and the scope is the whole list;
+    :func:`_needing_system_is_on_the_wire` is what keeps the others out.
     """
     if core["system_firmware"] != "cannot-run-without-firmware":
         return True
-    images = [
-        option
-        for requirement in core["requirements"]
-        for option in requirement.get("alternatives", [requirement])
-    ]
+    images = _declared_images(core)
     if any(image["satisfied"] is True for image in images):
         return True
     if images and not core["refused"] and all(image["satisfied"] is False for image in images):
@@ -2021,30 +2036,102 @@ def _system_image_in_place(core: Any) -> bool | None:
     return None
 
 
-def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
-    """``requirements_met`` is derived, never asserted: recompute and compare."""
-    requirements = core["requirements"]
-    refused = core["refused"]
-    plain = [r for r in requirements if "alternatives" not in r]
-    groups = [r["alternatives"] for r in requirements if "alternatives" in r]
+def _needing_system_is_on_the_wire(core: Any) -> bool:
+    """Can this block's system-level need be recomputed from what it serializes?
+
+    Yes for a core the reading does not narrow — any state but the one that
+    does, an excused need included. Yes for one whose requirements resolve to
+    a **single** system:
+    the state is derived from the systems the requirements carry and a need
+    names at least one of them, so with one system on the block the needing
+    system is that system and the recomputation is exact.
+
+    No for a core reaching several, because the block does not say which of
+    them the table named — and both ways of guessing publish a wrong
+    expectation. Assuming every system needs an image would reject a correct
+    answer where one of them is recorded ``open``; assuming one of them would
+    reject the answer where both are needs. Such a block is therefore not
+    recomputed here rather than recomputed by a guess, and the shape is not
+    unchecked: ``tests/test_firmware.py`` holds the per-system rule over a
+    two-system fixture with a table of its own, which a vector cannot carry.
+
+    Nothing is skipped today. Counted over every ``expected.firmware.cores[]``
+    block in ``vectors/machines/*.json`` whose ``system_firmware`` is
+    ``cannot-run-without-firmware``, by the distinct ``system`` values of its
+    ``requirements[]`` and their ``alternatives[]``: 37 blocks, each resolving
+    to one system.
+    """
+    if core["system_firmware"] != "cannot-run-without-firmware":
+        return True
+    return len({image["system"] for image in _declared_images(core)}) <= 1
+
+
+def _declaration_verdict(core: Any) -> bool | None:
+    """``requirements_met`` from the block's own declaration, system reading left out.
+
+    The half of the derivation that needs nothing but this block: what was
+    declared, what was found, and what was refused. The system-level reading
+    is folded in by the caller, because that is the half a multi-system block
+    cannot carry.
+    """
+    if core["declaration"] != "read":
+        return None
+    plain = [r for r in core["requirements"] if "alternatives" not in r]
+    groups = [r["alternatives"] for r in core["requirements"] if "alternatives" in r]
     required = [r for r in plain if r["need"] == "required"]
+    if any(r["satisfied"] is False for r in required) or any(
+        _group_verdict(options) is False for options in groups
+    ):
+        return False
+    if any(r["satisfied"] is None for r in required) or any(
+        _group_verdict(options) is None for options in groups
+    ):
+        return None
+    # A required file atlas refused to look at is not an all-clear.
+    return None if any(r["need"] == "required" for r in core["refused"]) else True
+
+
+def _validate_core_verdict_bound(name: str, core: Any, met: Any, declared: bool | None) -> None:
+    """What still holds where the system term cannot be recomputed.
+
+    Two answers the term cannot reach, held exactly: an unread declaration
+    answers ``null`` whatever the table says about the system, because the
+    verdict stops there; and a declaration whose own reading is ``false`` is
+    already the narrowest answer, which a reading that only narrows cannot
+    lift. A declaration answering ``null`` keeps the half that matters most —
+    it may never be ``true`` — and only a declaration green on its own is left
+    unheld, which is exactly the case the missing term decides.
+    """
+    if core["declaration"] != "read" or declared is False:
+        if met is not declared:
+            fail(
+                f"{name}: requirements_met must be {declared!r} for this core — the system-level reading "
+                "this block cannot carry does not reach that answer, and only ever narrows"
+            )
+    elif declared is None and met is True:
+        fail(
+            f"{name}: requirements_met must be null or false for this core — its declaration alone leaves "
+            "it unsaid, and the system-level reading only ever narrows that further"
+        )
+
+
+def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
+    """``requirements_met`` is derived, never asserted: recompute and compare.
+
+    Where :func:`_needing_system_is_on_the_wire` says the system term cannot be
+    recomputed, only that term is dropped and the rest still holds —
+    :func:`_validate_core_verdict_bound` says which part and why.
+    """
+    declared = _declaration_verdict(core)
+    if not _needing_system_is_on_the_wire(core):
+        _validate_core_verdict_bound(name, core, met, declared)
+        return
     system_image = _system_image_in_place(core)
     if core["declaration"] != "read":
         expected = None
-    elif (
-        any(r["satisfied"] is False for r in required)
-        or any(_group_verdict(options) is False for options in groups)
-        or system_image is False
-    ):
+    elif declared is False or system_image is False:
         expected = False
-    elif (
-        any(r["satisfied"] is None for r in required)
-        or any(_group_verdict(options) is None for options in groups)
-        or system_image is None
-    ):
-        expected = None
-    elif any(r["need"] == "required" for r in refused):
-        # A required file atlas refused to look at is not an all-clear.
+    elif declared is None or system_image is None:
         expected = None
     else:
         expected = True

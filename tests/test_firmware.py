@@ -2646,6 +2646,209 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # And the state is the strongest of the two, not the first seen.
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
 
+    # --- whose image answers whose need, on a core declaring for two systems -
+
+    def _mgba_machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
+        # The fixture declares two of mGBA's images — a Game Boy boot ROM
+        # beside its GBA BIOS — told apart by the per-file override rule
+        # (gb_bios.bin) from the systemname the rest falls back to (gba). The
+        # deployed .info declares four images and resolves to four systems
+        # (gb, gbc and snes by override, gba by systemname); two is what this
+        # rule needs, and two is what the shipped table has entries for.
+        return _machine(
+            {
+                f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
+                f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"},
+                **(bios or {}),
+            }
+        )
+
+    def _only_the_advance_needs_an_image(self) -> dict[str, SystemFirmware]:
+        # A table written here, routed through the loader so it is one the
+        # loader accepts: the Game Boy Advance needs an image and the Game Boy
+        # question is open. Both systems the shipped table records for mGBA
+        # are open, and recording the Advance is its own question with its own
+        # evidence — so this shape exists nowhere but in a test, and no machine
+        # vector can carry it either, the vector runner having no key for a
+        # table.
+        return load_system_firmware(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "spec": "a spec",
+                    "systems": {
+                        "Game Boy/Game Boy Color": {
+                            "verdict": VERDICT_OPEN,
+                            "evidence": EVIDENCE_OPEN,
+                            "source": "a fixture",
+                        },
+                        "Game Boy Advance": {
+                            "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                            "evidence": EVIDENCE_VERIFIED,
+                            "source": "a fixture",
+                        },
+                    },
+                }
+            )
+        )
+
+    def test_another_systems_image_does_not_answer_this_systems_need(self):
+        # The defect #431 names: the Game Boy boot ROM is established usable
+        # and the GBA BIOS is not there, so a disjunction over every declared
+        # image would answer `True` over a machine that will not boot a GBA
+        # game. The need belongs to the Game Boy Advance and is asked over the
+        # images filed under it.
+        machine = self._mgba_machine(
+            bios={f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5}}
+        )
+        context = _context(machine, system_firmware=self._only_the_advance_needs_an_image())
+        core = firmware_for_core(machine, context, core_so="mgba_libretro.so", verify=True).cores[0]
+        assert [(r.file_name, r.system, r.satisfied) for r in _plain_requirements(core)] == [
+            ("gb_bios.bin", "gb", True),
+            ("gba_bios.bin", "gba", False),
+        ]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.system_firmware_needs == ("gba",)
+        assert core.requirements_met is False
+        # One mark, and it names the Advance — not because that system is the
+        # needing one, but because the Game Boy entry is open and a mark rides
+        # only an entry that states something.
+        assert [(m.data["system"], m.data["evidence"]) for m in self._marks(core)] == [
+            ("gba", EVIDENCE_WORD_VERIFIED)
+        ]
+
+    def test_the_needing_systems_own_image_answers_its_need(self):
+        # The other half of the same fixture: the GBA BIOS is the image the
+        # Game Boy Advance asks for, and the Game Boy boot ROM missing beside
+        # it is a question about another machine.
+        machine = self._mgba_machine(
+            bios={f"{BIOS_DIR}/gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6}}
+        )
+        context = _context(machine, system_firmware=self._only_the_advance_needs_an_image())
+        core = firmware_for_core(machine, context, core_so="mgba_libretro.so", verify=True).cores[0]
+        assert [(r.file_name, r.satisfied) for r in _plain_requirements(core)] == [
+            ("gb_bios.bin", False),
+            ("gba_bios.bin", True),
+        ]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is True
+
+    def test_an_unjudged_image_of_the_needing_system_leaves_the_answer_unsaid(self):
+        # Scoping narrows which images are asked about; it does not turn the
+        # tri-state into a two-state. The GBA BIOS is present and nobody
+        # judged it, so it might be the one that would serve — `None`, with
+        # the Game Boy image beside it established usable and irrelevant.
+        machine = self._mgba_machine(
+            bios={
+                f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
+                f"{BIOS_DIR}/gba_bios.bin": {"status": "unreadable"},
+            }
+        )
+        context = _context(machine, system_firmware=self._only_the_advance_needs_an_image())
+        core = firmware_for_core(machine, context, core_so="mgba_libretro.so", verify=True).cores[0]
+        assert [(r.file_name, r.satisfied) for r in _plain_requirements(core)] == [
+            ("gb_bios.bin", True),
+            ("gba_bios.bin", None),
+        ]
+        assert core.requirements_met is None
+
+    def _both_systems_need_an_image(self) -> dict[str, SystemFirmware]:
+        # The same fixture with both entries recording a need: two machines,
+        # each of which does not start without one of its own images.
+        return load_system_firmware(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "spec": "a spec",
+                    "systems": {
+                        name: {
+                            "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                            "evidence": EVIDENCE_VERIFIED,
+                            "source": "a fixture",
+                        }
+                        for name in ("Game Boy/Game Boy Color", "Game Boy Advance")
+                    },
+                }
+            )
+        )
+
+    def _two_needs(self, bios: Mapping[str, FixtureFileSpec]) -> CoreFirmware:
+        machine = self._mgba_machine(bios=bios)
+        context = _context(machine, system_firmware=self._both_systems_need_an_image())
+        return firmware_for_core(machine, context, core_so="mgba_libretro.so", verify=True).cores[0]
+
+    def test_two_needing_systems_each_need_an_image_of_their_own(self):
+        # The conjunction met: each machine has one of its own images, so the
+        # one field a client renders is green.
+        core = self._two_needs(
+            {
+                f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
+                f"{BIOS_DIR}/gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6},
+            }
+        )
+        assert core.system_firmware_needs == ("gb", "gba")
+        assert core.requirements_met is True
+
+    def test_one_image_does_not_answer_for_two_needing_systems(self):
+        # One image between them is not one image apiece: the Game Boy has its
+        # boot ROM, the Game Boy Advance has nothing, and a single disjunction
+        # over the union of both systems' images would call that green.
+        core = self._two_needs(
+            {f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5}}
+        )
+        assert core.system_firmware_needs == ("gb", "gba")
+        assert core.requirements_met is False
+
+    def test_a_second_needing_system_nobody_judged_leaves_the_answer_unsaid(self):
+        # The Game Boy is served and the Advance's image is present and
+        # unjudged: it might be the one that would serve, so neither `True`
+        # nor `False` is honest about the pair.
+        core = self._two_needs(
+            {
+                f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5},
+                f"{BIOS_DIR}/gba_bios.bin": {"status": "unreadable"},
+            }
+        )
+        assert core.requirements_met is None
+
+    def test_a_demonstrated_absence_outranks_an_unjudged_image_across_systems(self):
+        # The Game Boy has no image at all and the Advance's is unjudged. One
+        # machine that demonstrably will not boot is the answer, whatever is
+        # still unsettled about the other.
+        core = self._two_needs({f"{BIOS_DIR}/gba_bios.bin": {"status": "unreadable"}})
+        assert core.requirements_met is False
+
+    def test_one_declared_system_makes_the_scope_the_whole_declaration(self):
+        # The reduction: SwanStation declares both its images under the one
+        # system the table speaks about, so the scoped set is every image it
+        # declares and the answer is the one this reading always gave.
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
+        core = self._core(machine, SWANSTATION_SO)
+        assert core.system_firmware_needs == ("psx",)
+        assert {r.system for r in _plain_requirements(core)} == {"psx"}
+        assert core.requirements_met is True
+
+    def test_a_core_the_table_excuses_names_no_needing_system(self):
+        # The exempted core has no need to scope: its all-optional
+        # declaration is right, and the field says so by being empty.
+        core = self._core(self._psx_machine(), REARMED_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+        assert core.system_firmware_needs == ()
+
+    def test_a_need_with_no_system_named_is_refused(self):
+        # The state and the systems it is about travel together, because a
+        # need with no machine behind it cannot tell the images that would
+        # answer it from the ones filed under something else.
+        with pytest.raises(ValueError, match="names the systems it is about"):
+            CoreFirmware(
+                core_so="x_libretro.so",
+                label=None,
+                declaration=DECLARATION_READ,
+                requirements=(),
+                caveats=(),
+                system_firmware=SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+            )
+
     def test_an_exemption_names_one_core_and_not_its_system(self):
         # The exemption is per core, so the other cores of an excused
         # system are untouched by it.

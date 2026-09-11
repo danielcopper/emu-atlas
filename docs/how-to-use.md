@@ -2394,7 +2394,7 @@ a black box:
 
 | value                          | what it says                                                                            |
 | ------------------------------ | --------------------------------------------------------------------------------------- |
-| `cannot-run-without-firmware`  | the system needs an image, and this core needs one of the ones it declares              |
+| `cannot-run-without-firmware`  | the system needs an image, and this core needs one of the ones it declares for it       |
 | `core-supplies-an-alternative` | it needs one, and this core carries its own substitute — its all-optional list is right |
 | `runs-without-firmware`        | somebody established that the system starts with no image present                       |
 | `open`                         | nobody has established which                                                            |
@@ -2404,20 +2404,24 @@ Read that last row twice: `null` is the state of a system nobody has looked at, 
 all-clear reports something nobody checked. It is also the answer for a core whose system could not be established at
 all — one whose declaration was never read has no system on this answer to state anything about.
 
-What the reading does to `requirements_met`: over `cannot-run-without-firmware` the declared images are a
-**disjunction** — the system needs one of them, not all — so any image that is usable keeps the answer the declaration
-alone gave, and only every image being demonstrably absent or wrong makes it `False`. An image nobody judged, or a
+What the reading does to `requirements_met`: over `cannot-run-without-firmware` the images of the needing system are a
+**disjunction** — that system needs one of them, not all — so any image of its own that is usable keeps that system's
+need met, and only every one of them being demonstrably absent or wrong makes it `False`. An image nobody judged, or a
 declaration atlas refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading
 only ever narrows the field, never widens it — nothing becomes `True` that was not `True` before.
 
-The set that disjunction asks over is **every image the core declares**, not the ones filed under the system that needs
-one. Those coincide exactly while such a core covers a single system, which every core reaching that state does today —
-37 core blocks in the vector corpus and 3 emulators on the reference installation, each declaring for one system. A
-multi-system core would pull them apart: mGBA declares Game Boy boot ROMs beside its GBA BIOS, so an established usable
-Game Boy dump would answer for a Game Boy Advance that needs a BIOS. (A dump merely sitting there would not: unverified
-it leaves the verdict `None`, and wrong bytes make it `False`.) None does today, and that is a floor on what has been
-looked at rather than a proof that none can appear. Scoping the set by system means deciding which image serves which
-machine — a second decision not taken here, related to issue #375.
+The set that disjunction asks over is **the images filed under the system that needs one**, never every image the core
+declares, and where two systems need one it is asked of each: a disjunction inside each system, a conjunction across
+them, so `True` only when every needing system has an image of its own. That is what a core declaring for several
+systems needs: mGBA declares Game Boy boot ROMs beside its GBA BIOS, and a usable Game Boy dump is no answer for a Game
+Boy Advance that needs a BIOS — over that machine, only a GBA BIOS is. Its deployed declaration resolves to four systems
+on the reference installation (Game Boy, Game Boy Color and Super Nintendo by per-file rule, Game Boy Advance by its
+`systemname`), and both systems the table has an entry for are recorded `open`, so nothing turns on it there yet. Where
+a core in this state declares for one system the conjunction has one term, its disjunction spans the whole declaration,
+and the field reads as it always did — which is every core reaching that state measured so far: 37 core blocks in the
+vector corpus and 3 emulators on the reference installation, each declaring for a single system. Which images a system's
+name covers is as fine as the per-file override table makes it — a `.info` files every image under one `systemname`, so
+where nothing separates them they are one system's images.
 
 Where the table states something — `cannot-run-without-firmware` in either shape, or `runs-without-firmware` — the core
 carries a `system-firmware-world-knowledge` caveat with `system` and `evidence`, the latter being `verified` or

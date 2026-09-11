@@ -2056,13 +2056,16 @@ CoreSystemFirmware = Literal[
 ]
 
 # The system does not start without a firmware image, and this core needs one
-# of the ones it declares. The state SwanStation is in over a machine with no
-# PlayStation BIOS: its five images all read ``optional``, because that is what
-# its ``.info`` says, and the system still will not boot.
+# of the ones it declares for that system. The state SwanStation is in over a
+# machine with no PlayStation BIOS: its five images all read ``optional``,
+# because that is what its ``.info`` says, and the system still will not boot.
 SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT: CoreSystemFirmware = "cannot-run-without-firmware"
 """The system does not start without a firmware image, and this core needs one of the ones it
-declares. It comes from the packaged table rather than from this machine, so it says nothing
-about whether an image is in place — that is ``requirements_met``.
+declares **for that system**. It comes from the packaged table rather than from this machine, so
+it says nothing about whether an image is in place — that is ``requirements_met``, which asks
+each such system for one of the images filed under it: a Game Boy dump is no answer for a Game
+Boy Advance, and a core two such systems speak about needs one image apiece. It is one question
+per system, and this value says one system is in that state without saying how many are.
 """
 # The system does not start without an image, and this core carries its own
 # substitute, so its all-optional declaration is correct. PCSX ReARMed's HLE
@@ -2233,10 +2236,10 @@ class CoreFirmware:
 
     The four stated values are :data:`CORE_SYSTEM_FIRMWARE_STATES`:
     ``cannot-run-without-firmware`` (the system needs an image and this core
-    needs one of the ones it declares), ``core-supplies-an-alternative`` (it
-    needs one and this core carries its own substitute),
-    ``runs-without-firmware`` (somebody established that it starts with none
-    present), and ``open`` (nobody has established which).
+    needs one of the ones it declares under that system),
+    ``core-supplies-an-alternative`` (it needs one and this core carries its
+    own substitute), ``runs-without-firmware`` (somebody established that it
+    starts with none present), and ``open`` (nobody has established which).
 
     :data:`CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE` is stated per *system*
     rather than per value: one mark for each system whose entry states
@@ -2248,6 +2251,25 @@ class CoreFirmware:
     this same core — the word means the same thing as a value here and as an
     evidence level, and for that reason never reaches a client as an evidence
     level at all.
+    """
+    system_firmware_needs: tuple[str, ...] = ()
+    """The systems whose recorded need this core is not excused from, as system ids.
+
+    Which machines the need is about, which is what lets each of them be asked
+    over the images filed under it rather than over every image the core
+    declares: :attr:`_system_image_in_place` asks one disjunction per id here,
+    over that id's requirements alone, and every one of them has to be
+    answered. Empty under every other state, because
+    nothing else is a need — an excused one is this core's substitute, an open
+    question is nobody's answer, and a system established to run without needs
+    no image at all.
+
+    Every id here came off a requirement of this same core
+    (:attr:`FirmwareRequirement.system`), which is where the systems the table
+    was asked about came from — so the set it scopes is never empty. Out of
+    the contract for the reason ``unread`` is: what a client acts on is the
+    verdict and the mark beside it, and one fact serialized twice is one fact
+    that can disagree with itself.
     """
     refused: tuple[RefusedDeclaration, ...] = ()
     """The declarations atlas would not follow, each with its reason, so a dropped file
@@ -2310,6 +2332,12 @@ class CoreFirmware:
                 f"CoreFirmware: system_firmware must be one of {CORE_SYSTEM_FIRMWARE_STATES} or None, "
                 f"got {self.system_firmware!r}"
             )
+        if self.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT and not self.system_firmware_needs:
+            raise ValueError(
+                f"CoreFirmware: {SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT!r} names the systems it is about — "
+                "without them the images that would answer the need cannot be told from the ones "
+                "filed under another system"
+            )
         for entry in self.requirements:
             if isinstance(entry, FirmwareRequirement) and entry.regions is not None:
                 raise ValueError(
@@ -2364,50 +2392,80 @@ class CoreFirmware:
         answer is on a core that really is in the state
         :data:`SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT` names.
 
-        There the declared images are read as a **disjunction**: one of them
-        being usable is what the system asks for, and which image serves which
-        console region is a separate question this does not answer. So ``True``
-        the moment any declared image is satisfied, ``False`` only when every
-        one of them is demonstrably not, and ``None`` in between — an
-        undetermined image might be the one that would serve, and a refused
-        declaration is an image atlas would not follow to a destination, so
-        neither leaves the absence established.
+        **A disjunction inside each needing system, a conjunction across
+        them.** Every system in :attr:`system_firmware_needs` has to have one
+        of *its own* images (:meth:`_system_image_for`), because each of them
+        is a machine that does not start without one — so ``True`` only when
+        every needing system has one, ``False`` as soon as one of them
+        demonstrably has none, and ``None`` where what is left is unjudged.
+        ``False`` outranks ``None`` for the reason it does everywhere here: a
+        demonstrated absence is a demonstration, and one machine that will not
+        boot is the answer whatever is unsettled about another.
 
-        **Which set is asked, and the limit of that.** The disjunction spans
-        every image the core declares, not the images filed under the system
-        that needs one. Those two sets coincide exactly while a core in this
-        state declares for a single system, and a **multi-system** core would
-        pull them apart: mGBA declares Game Boy boot ROMs beside its GBA BIOS,
-        so an *established usable* Game Boy dump would answer for a Game Boy
-        Advance that needs a BIOS. A merely present dump would not — it leaves
-        the verdict unsaid, and wrong bytes make it ``False``; only a
-        satisfied image reads as the system's need met.
+        The two questions are separate, which is what the two steps buy. One
+        system's image can never answer another's: mGBA declares Game Boy boot
+        ROMs beside its GBA BIOS, so with both machines needing one, a
+        satisfied Game Boy dump beside an absent GBA BIOS is ``False`` — read
+        as one flat list over both systems it would be ``True``, over a
+        machine that will not boot a GBA game.
 
-        No core reaches that combination today — mGBA declares the spread,
-        it simply never reaches ``cannot-run-without-firmware`` while doing
-        so. What follows is the measurement behind that sentence, with the
-        rule it was counted by.
-        Counting rule: over every ``expected.firmware.cores[]`` block in
-        ``vectors/machines/*.json`` whose ``system_firmware`` is
-        ``cannot-run-without-firmware``, the distinct ``system`` values of its
-        ``requirements[]`` and their ``alternatives[]``; and the same reading
-        over :func:`firmware_inventory` on the reference machine. **37** corpus
+        Where a core in this state **declares for one system** it has one
+        needing system, the conjunction has one term, and its disjunction
+        spans the whole declaration — which is how this read before the scope
+        was drawn. That is every such core measured so far. Counting rule:
+        over every
+        ``expected.firmware.cores[]`` block in ``vectors/machines/*.json``
+        whose ``system_firmware`` is ``cannot-run-without-firmware``, the
+        distinct ``system`` values of its ``requirements[]`` and their
+        ``alternatives[]``; and the same reading over
+        :func:`firmware_inventory` on the reference machine. **37** corpus
         blocks, every one of them one system; **3** cores on the machine
         (``mednafen_psx``, ``mednafen_psx_hw`` and ``swanstation``), all
         ``psx``.
 
-        That is a floor on what has been looked at, not a proof that no such
-        core can appear: the day one does, this reading is wrong for it and
-        the fix is to scope the disjunction by system — a second decision,
-        about which of a multi-system core's images serve which machine, that
-        is not taken here and is related to issue #375.
+        Which system an image belongs to is as fine as the declaration and the
+        override table make it: a ``.info`` files every image under one
+        ``systemname``, so the images of a multi-system core are told apart
+        only where a per-file rule says so
+        (:attr:`FirmwareRequirement.system_source`). Where nothing separates
+        them the whole declaration is one system's images, so the table was
+        asked about one system and the scope is that whole list — the exact
+        scope for that core rather than a coarser stand-in for one, because
+        the images really are all filed under the system that needs them. It
+        reaches the same answer as the paragraph above for a different reason:
+        there the table names one of several systems, here the declaration
+        distinguishes only one to name.
         """
         if self.system_firmware != SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT:
             return True
+        verdicts = [self._system_image_for(system) for system in self.system_firmware_needs]
+        if any(verdict is False for verdict in verdicts):
+            return False
+        return None if any(verdict is None for verdict in verdicts) else True
+
+    def _system_image_for(self, system: str) -> bool | None:
+        """Does one needing *system* have an image of its own that is usable? Three-valued.
+
+        Its images are a **disjunction**: one of them being usable is what the
+        system asks for, and which image serves which console region is a
+        separate question this does not answer. So ``True`` the moment one is
+        satisfied, ``False`` only when every one of them is demonstrably not,
+        and ``None`` in between — an undetermined image might be the one that
+        would serve, so the absence is not established.
+
+        :attr:`refused` withholds that ``False`` for **every** needing system
+        rather than for the one it belongs to, and the asymmetry is deliberate:
+        a refused declaration never reached a destination, so atlas never read
+        which system's image it would have been. Scoping it by system would
+        mean deciding that, which is the guess this package does not make — and
+        the safe side of the guess is the one that withholds a demonstration,
+        never the one that invents it.
+        """
         images = [
             option
             for entry in self.requirements
             for option in (entry.options if isinstance(entry, FirmwareAlternatives) else (entry,))
+            if option.system == system
         ]
         if any(image.satisfied is True for image in images):
             return True
@@ -2423,7 +2481,10 @@ class CoreFirmware:
         signal: with ``hash_checked`` false a required file of known identity answers
         ``None`` though the image is in place; read :attr:`~FirmwareRequirement.present`
         for presence. A ``False`` is always demonstrated; a ``True`` need not be, over a
-        required file the packaged table does not cover.
+        required file the packaged table does not cover. That world knowledge is asked per
+        system and answered per system: each system that cannot run without an image needs
+        one of the images filed under *that* system, so a core two such systems speak about
+        needs one image apiece — never one image between them.
 
         That second source is what lets this field be right where the
         declaration alone cannot be: a ``.info`` has no way to say "this
@@ -2458,18 +2519,20 @@ class CoreFirmware:
         separated their answers was a flag in a text file that cannot express
         the requirement.
 
-        What that system-level need asks for is **one** of the images this
-        core declares — all of them, not the ones filed under the needing
-        system. The two sets coincide exactly while such a core declares for a
-        single system, which is the case for every core reaching that state in
-        the vector corpus (37 blocks) and on the reference machine (3 cores);
-        the counting rule is in :attr:`_system_image_in_place`. That is a
-        floor on what has been looked at rather than a proof that no other
-        core can appear. A multi-system core would pull the two sets apart —
-        an established usable Game Boy dump answering for a Game Boy Advance —
-        and scoping the set by system is a second decision, about which image
-        serves which machine, that is not taken here and is related to issue
-        #375.
+        What that system-level need asks for is **one** of the images filed
+        under the system that needs it, and where two systems need one it asks
+        that of each: a disjunction inside each system, a conjunction across
+        them, so ``True`` only when every needing system has an image of its
+        own. A multi-system core is where that differs from reading one flat
+        list, and mGBA is the case: it declares Game Boy boot ROMs beside its
+        GBA BIOS, and a usable Game Boy dump is no answer for a Game Boy
+        Advance that needs a BIOS. Where a core in this state declares for one system —
+        every core reaching this state measured so far, 37 blocks in the
+        vector corpus and 3 cores on the reference machine — the conjunction
+        has one term, its disjunction spans the whole declaration, and this
+        reads as it always did; the counting rule is in
+        :attr:`_system_image_in_place`, and which images a system's name
+        covers is as fine as the per-file override table makes it (#340).
         """
         if self.declaration != DECLARATION_READ:
             return None
@@ -4313,8 +4376,13 @@ def _core_alternative_key(core_so: str | None) -> str | None:
 
 def _system_firmware_state(
     core: CoreFirmware, recorded: Mapping[str, tuple[SystemFirmware, ...]]
-) -> tuple[CoreSystemFirmware | None, tuple[Caveat, ...]]:
+) -> tuple[CoreSystemFirmware | None, tuple[str, ...], tuple[Caveat, ...]]:
     """What the table says about the systems *core* declares firmware for.
+
+    Three things, because the state alone does not say *which* system it is
+    about: the state, the systems whose unexcused need it rests on (empty
+    under every other state, and what :attr:`CoreFirmware.system_firmware_needs`
+    carries so the need is asked over that system's images), and the marks.
 
     The systems come off the requirements already on the answer
     (:attr:`FirmwareRequirement.system`, alternatives flattened) rather than
@@ -4347,7 +4415,7 @@ def _system_firmware_state(
     )
     hits = [(system, entry) for system in systems for entry in recorded.get(system, ())]
     if not hits:
-        return None, ()
+        return None, (), ()
     # One mark per stated (system, evidence) pair rather than per entry: two
     # table keys can land on one system id, and where they also rest on the
     # same level the second mark would repeat the first word for word. The
@@ -4371,20 +4439,25 @@ def _system_firmware_state(
         for system, evidence in readings
     )
     alternative = _core_alternative_key(core.core_so)
-    needs = [entry for _, entry in hits if entry.verdict == VERDICT_CANNOT_RUN_WITHOUT]
-    excused = [
-        entry
-        for entry in needs
-        if any(candidate.core == alternative for candidate in entry.alternatives)
-    ]
-    if len(excused) < len(needs):
-        return SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT, caveats
+    needs = [(system, entry) for system, entry in hits if entry.verdict == VERDICT_CANNOT_RUN_WITHOUT]
+    # The systems, not the entries: which machine each need is about is what
+    # the image the need asks for is filed under, and two table keys landing
+    # on one id are one machine asking once.
+    unexcused = tuple(
+        dict.fromkeys(
+            system
+            for system, entry in needs
+            if not any(candidate.core == alternative for candidate in entry.alternatives)
+        )
+    )
+    if unexcused:
+        return SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT, unexcused, caveats
     if needs:
-        return SYSTEM_FIRMWARE_CORE_ALTERNATIVE, caveats
+        return SYSTEM_FIRMWARE_CORE_ALTERNATIVE, (), caveats
     if any(entry.verdict == VERDICT_OPEN for _, entry in hits):
-        return SYSTEM_FIRMWARE_OPEN, caveats
+        return SYSTEM_FIRMWARE_OPEN, (), caveats
     if any(entry.verdict == VERDICT_RUNS_WITHOUT for _, entry in hits):
-        return SYSTEM_FIRMWARE_RUNS_WITHOUT, caveats
+        return SYSTEM_FIRMWARE_RUNS_WITHOUT, (), caveats
     # Unreachable while this vocabulary is total over the table's verdicts,
     # and it refuses rather than answering ``None`` precisely because the day
     # it stops being total is the day a recorded verdict would silently become
@@ -4417,11 +4490,16 @@ def _stating_system_firmware(
     table = _recorded_by_system(recorded)
     stated: list[CoreFirmware] = []
     for core in cores:
-        state, caveats = _system_firmware_state(core, table)
+        state, needs, caveats = _system_firmware_state(core, table)
         stated.append(
             core
             if state is None
-            else replace(core, system_firmware=state, caveats=(*core.caveats, *caveats))
+            else replace(
+                core,
+                system_firmware=state,
+                system_firmware_needs=needs,
+                caveats=(*core.caveats, *caveats),
+            )
         )
     return tuple(stated)
 
