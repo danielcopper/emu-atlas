@@ -70,7 +70,7 @@ SCRIPT_NAME = re.compile(r"^component_[a-z_]+\.sh$")
 # module docstring can point at a number the suite keeps rather than carry one
 # that rots. Move it when a citation is added, removed or respelled from one
 # form into the other, not to quiet a test.
-CITATION_SPANS = (107, 108)
+CITATION_SPANS = (108, 107)
 # Only the plain `name="value"` form, which is every assignment these scripts
 # make. Anything else is left alone rather than half-understood.
 ASSIGNMENT = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*$')
