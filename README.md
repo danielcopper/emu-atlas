@@ -162,13 +162,16 @@ data, never free text alone and never silence.
   there) and each requirement states its **absolute destination** under the live `system_directory` whether or not a
   file is sitting there. Two axes stay apart: `need` is `required` / `optional`, `checked` is `verified` / `mismatch` /
   `unchecked` (identity known, not asked about) / `unknown` (cannot be established) / `not-comparable` (the bytes differ
-  and the identity is an archive, whose hash pins a packaging rather than a content) — "we did not look" is never the
-  same answer as "we looked and cannot tell", and neither is "we looked and it settles nothing". `requirements_met` is
-  `true` only when every required file is there and atlas _established_ it is the right one: wrong bytes make it
-  `false`, and never verified — the default — makes it `null`, so a green light is asked for rather than assumed. A core
-  that declares nothing answers "needs nothing"; one whose `.info` cannot be read answers `declaration="unreadable"`,
-  one that is not here `"absent"`, and a standalone emulator outside the resolver's coverage `"unsupported"` — the same
-  empty list never means four things. `identify_firmware` runs the download flow off content: one md5 comes back with
+  and the identity is an archive, whose hash pins a packaging rather than a content) / `unrecognised` (the bytes were
+  read and the emulator's own table has no row for them) / `refused` (the emulator will not open the file at all) /
+  `unread` (the bytes were asked for and did not come back) — "we did not look" is never the same answer as "we looked
+  and cannot tell", and neither is "we looked and it settles nothing" or "we read them and nothing knows them".
+  `requirements_met` is `true` only when every required file is there and atlas _established_ it is the right one: wrong
+  bytes make it `false`, and never verified — the default — makes it `null`, so a green light is asked for rather than
+  assumed. A core that declares nothing answers "needs nothing"; one whose `.info` cannot be read answers
+  `declaration="unreadable"`, one that is not here `"absent"`, a standalone emulator outside the resolver's coverage
+  `"unsupported"`, and a carded one whose card established nothing `"packaged"` with `requirements_met: null` — the same
+  empty list never means five things. `identify_firmware` runs the download flow off content: one md5 comes back with
   every name it is known as and every destination on this machine that wants it. Files nobody declares are listed
   separately and identified by bytes; save data the rule cards claim (Flycast's VMUs, PCSX2's memory cards) is excluded
   outright. Where a file's system had to be derived from what its whole core is called — the per-file table is derived

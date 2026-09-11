@@ -363,6 +363,11 @@ def _identity_contract(identity: FirmwareIdentity | None) -> dict[str, Any] | No
     moved the bytes, and which version of the curated list called it a drift,
     are explanations rather than the thing a consumer branches on, and both
     travel on the caveat that rides with the value, where the explanations live.
+
+    ``sha1`` is ``null`` where the table that named this content pins no sha1
+    (:class:`FirmwareIdentity`) — a property of the table, never of the file,
+    so a consumer matching on hashes reads it as "this one is not on offer"
+    rather than as anything about the bytes.
     """
     if identity is None:
         return None

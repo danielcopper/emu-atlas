@@ -34,7 +34,14 @@ def _read(files=None, **kwargs):
 
 def _candidate(md5: str | None, path: str = "/bios/image.bin"):
     table = duckstation.bios_table()
-    return duckstation.BiosCandidate(path=path, image=None if md5 is None else table.identify(md5))
+    return duckstation.BiosCandidate(
+        path=path,
+        image=None if md5 is None else table.identify(md5),
+        # The size the search kept the file at. The ranking never reads it —
+        # it is what an identity built from a row needs, since the table pins
+        # its sizes for the whole search and nothing per row.
+        size=table.sizes[0],
+    )
 
 
 class TestWhichRootSpeaks:
@@ -363,6 +370,27 @@ class TestWhichImageWouldBoot:
         table = duckstation.bios_table()
         for image in table.images:
             assert table.matches_region(image, "any")
+
+    def test_a_tie_is_never_mixed_between_known_and_unknown_images(self):
+        """Every tie is identified throughout or unidentified throughout.
+
+        The first term of the rank separates them — a known image never ties
+        with an unknown one — which is what lets the firmware answer read the
+        pick's identity as the whole tie's: an ambiguous pick is about WHICH
+        image boots, never about whether one is there.
+
+        Held over the pool of every row the table carries beside two files it
+        does not know, once per console region and once over the unknown files
+        alone, so a ranking that stopped putting known images first fails here.
+        """
+        table = duckstation.bios_table()
+        unknown = [_candidate(None, "/bios/unknown-a.bin"), _candidate(None, "/bios/unknown-b.bin")]
+        known = [_candidate(image.md5, f"/bios/{index}.bin") for index, image in enumerate(table.images)]
+        for region in ("any", "ntsc-u", "ntsc-j", "pal"):
+            for pool in (known + unknown, unknown):
+                pick = table.pick(pool, region)
+                assert pick is not None
+                assert len({candidate.image is None for candidate in pick.tied}) == 1
 
 
 class TestTheLoaderRefusesAMalformedTable:

@@ -233,6 +233,19 @@ FIRMWARE_ALTERNATIVE_OPTION_FIELDS = FIRMWARE_REQUIREMENT_FIELDS | {"regions"}
 # region_keys spell) — a closed vocabulary, like the keyings above.
 KNOWN_FIRMWARE_REGIONS = {"ntsc-u", "ntsc-j", "pal"}
 KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "packaged"}
+# Which declarations carry something for `requirements_met` to weigh, and which
+# force it to null before a file is looked at — a declaration read off the
+# machine and atlas's own packaged card are both judged, the other three state
+# nothing about files. That is one fact with two uses here: the same two are
+# the declarations allowed to carry requirements at all
+# (`_validate_core_requirements`), because a declaration that states no file
+# has nothing to weigh. The halves are disjoint and cover
+# KNOWN_DECLARATION_STATES exactly, and
+# tests/test_validate_vectors.py::TestTheVocabularyIsOneVocabulary pins that
+# against atlas's own pair — a sixth state falling into neither would be judged
+# by whichever side an inequality left it on.
+JUDGED_DECLARATIONS = {"read", "packaged"}
+UNJUDGED_DECLARATIONS = {"unreadable", "absent", "unsupported"}
 KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
 # What is recorded about the SYSTEM behind a core, and therefore world
 # knowledge rather than a reading of the fixture. `null` is the fifth state
@@ -253,7 +266,23 @@ IDENTITY_FIELDS = {"md5", "sha1", "size", "kind"}
 # caveat that rides with `not-comparable`.
 KNOWN_IDENTITY_KINDS = {"file", "archive"}
 KNOWN_FIRMWARE_NEEDS = {"required", "optional"}
-KNOWN_FIRMWARE_CHECKED = {"verified", "mismatch", "unchecked", "unknown", "not-comparable"}
+KNOWN_FIRMWARE_CHECKED = {
+    "verified",
+    "mismatch",
+    "unchecked",
+    "unknown",
+    "not-comparable",
+    "unrecognised",
+    "refused",
+    "unread",
+}
+# The `checked` values that may stand where no packaged identity does. Each
+# says something different about why: nothing was compared, the bytes were
+# read and no row holds them, the emulator would not open the file at all, or
+# the bytes were asked for and did not come back. Only `unread` also stands
+# WITH an identity, because a table keyed by the declared name pins one before
+# any byte is read while a content-keyed table has nothing to pin without them.
+NO_IDENTITY_CHECKED = {"unknown", "unrecognised", "refused", "unread"}
 GRANULARITY_FIELDS = {"value", "mode", "readings", "alternatives"}
 READING_FIELDS = {"key", "value", "options_file"}
 ALTERNATIVE_FIELDS = {"mode", "options", "values"}
@@ -435,6 +464,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-content-contradictory",
     "firmware-content-unstated",
     "firmware-image-identified",
+    "firmware-image-refused",
     "firmware-image-unlisted",
     "firmware-image-contradicted",
     "firmware-image-ambiguous",
@@ -1629,9 +1659,15 @@ def _validate_soft_patch_outcome(name: str, outcome: Any, what: str = "soft_patc
 
 def _validate_identity(name: str, identity: Any, what: str) -> None:
     _require_exact(name, identity, IDENTITY_FIELDS, what)
-    for key in ("md5", "sha1"):
-        if not isinstance(identity[key], str) or not identity[key]:
-            fail(f"{name}: {what} {key} must be a non-empty string")
+    if not isinstance(identity["md5"], str) or not identity["md5"]:
+        fail(f"{name}: {what} md5 must be a non-empty string")
+    # A table that pins no sha1 answers null for it — DuckStation's recognises
+    # an image by md5 alone. An empty string would be a hash nobody has rather
+    # than a hash nobody pins, so it is refused the way a bad md5 is.
+    if identity["sha1"] is not None and (
+        not isinstance(identity["sha1"], str) or not identity["sha1"]
+    ):
+        fail(f"{name}: {what} sha1 must be a non-empty string or null")
     if not isinstance(identity["size"], int) or identity["size"] < 0:
         fail(f"{name}: {what} size must be a non-negative integer")
     if identity["kind"] not in KNOWN_IDENTITY_KINDS:
@@ -1746,11 +1782,10 @@ def _validate_absent_requirement(name: str, found: str, checked: Any, satisfied:
 
 
 # What each `checked` value obliges `satisfied` to be, and the sentence that
-# says why. Every value settles `satisfied` on its own except `unknown`, whose
-# answer depends on whether an identity exists at all — so that one is computed
-# in `_satisfied_for` and the four that are constants live here. The two halves
-# together must cover KNOWN_FIRMWARE_CHECKED exactly, and a test pins that: a
-# sixth value arriving with no rule would otherwise be validated by nothing.
+# says why. Every value settles `satisfied` on its own, so the table is the
+# whole rule: it must cover KNOWN_FIRMWARE_CHECKED exactly, and a test pins
+# that, because a value arriving with no rule would be looked up here and
+# crash mid-validation.
 SATISFIED_BY_CHECKED: dict[str, tuple[Any, str]] = {
     # The invariant a present-but-wrong file used to slip through.
     "mismatch": (False, "a file whose bytes are known to be wrong is never satisfied, present or not"),
@@ -1759,6 +1794,19 @@ SATISFIED_BY_CHECKED: dict[str, tuple[Any, str]] = {
     # neither a verdict (`mismatch`) nor an all-clear.
     "not-comparable": (None, "'not-comparable' establishes nothing, so satisfied must be null"),
     "unchecked": (None, "an identity that exists and was not verified is not an all-clear"),
+    # Over a FILE this value means no table covers it, because the shape cases
+    # answer elsewhere and a read failure is `unread` — so the name in the
+    # right place is the whole of what can ever be established.
+    "unknown": (True, "a file no table covers is satisfied by being in place under the right name"),
+    # The bytes were read and no row of the emulator's own table holds them.
+    # It boots such an image, so this is neither a failure nor an all-clear.
+    "unrecognised": (None, "'unrecognised' bytes are no verdict, so satisfied must be null"),
+    # The emulator turned the file down before reading it, so the launch boots
+    # nothing from it — the one present-file failure a stat settles.
+    "refused": (False, "a file the emulator refuses is never satisfied"),
+    # The bytes were asked for and did not come back, so the comparison the
+    # emulator makes never happened — a statement about atlas's read.
+    "unread": (None, "bytes that did not come back establish nothing, so satisfied must be null"),
     "verified": (True, "a verified file is satisfied"),
 }
 
@@ -1769,11 +1817,27 @@ def _refuse_unreachable_checked(name: str, identity: Any, checked: Any, *, hash_
     Both rules are about the *reach* of the check rather than its outcome, and
     both run before any verdict rule — so a value the run could never have
     reached is reported as that, not as a wrong ``satisfied``.
+
+    :data:`NO_IDENTITY_CHECKED` is the set that may stand where no identity
+    does, and each member says something different about why: ``unknown``
+    that nothing was compared, ``unrecognised`` that the bytes were read and
+    the emulator's own table holds no row for them, ``refused`` that the
+    emulator would not open the file at all — settled by a stat, so it is the
+    one value that by itself fails a present file on a run without hash
+    checking — and ``unread`` that the bytes were asked for and did not come
+    back. The message names the set rather than counting it in prose.
     """
-    if identity is None and checked != "unknown":
-        fail(f"{name}: with no known identity the bytes cannot be established — checked must be 'unknown'")
+    if identity is None and checked not in NO_IDENTITY_CHECKED:
+        fail(
+            f"{name}: with no known identity, checked must be one of "
+            f"{sorted(NO_IDENTITY_CHECKED)}, got {checked!r}"
+        )
     if identity is not None and not hash_checked and checked != "unchecked":
         fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
+    if checked in ("unrecognised", "unread") and not hash_checked:
+        fail(f"{name}: {checked!r} says the bytes were asked for, which a run without hash checking did not do")
+    if checked == "refused" and identity is not None:
+        fail(f"{name}: a file the emulator refuses was never looked up, so 'refused' carries no identity")
 
 
 def _refuse_not_comparable_over_a_dump(name: str, identity: Any) -> None:
@@ -1784,14 +1848,21 @@ def _refuse_not_comparable_over_a_dump(name: str, identity: Any) -> None:
         fail(f"{name}: only an archive identity can be 'not-comparable' — a dump's bytes do compare")
 
 
-def _satisfied_for(identity: Any, checked: Any) -> tuple[Any, str]:
-    """What ``satisfied`` must be for this ``checked``, and why."""
-    if checked == "unknown":
-        return (
-            None if identity is not None else True,
-            "'unknown' is undetermined when an identity exists and settled when none can",
+def _refuse_unknown_beside_an_identity(name: str, identity: Any, checked: Any) -> None:
+    """Over a FILE, ``unknown`` and an identity no longer meet.
+
+    The pair used to carry two facts at once: a shape that answered instead of
+    the bytes, and a read that failed. The read failure is ``unread`` now, and
+    a shape is never a file — a directory at a file declaration still answers
+    ``unknown`` beside the identity its table pins, and that requirement never
+    reaches this rule
+    (tests/test_machine_vectors.py::TestUnknownNoLongerCarriesAReadFailure).
+    """
+    if checked == "unknown" and identity is not None:
+        fail(
+            f"{name}: a file whose table pins an identity cannot be 'unknown' — bytes that did "
+            "not come back are 'unread', and a shape that answered is not a file"
         )
-    return SATISFIED_BY_CHECKED[checked]
 
 
 def _validate_file_requirement(
@@ -1805,9 +1876,10 @@ def _validate_file_requirement(
     exclusive, so exactly one of them ever applies.
     """
     _refuse_unreachable_checked(name, identity, checked, hash_checked=hash_checked)
+    _refuse_unknown_beside_an_identity(name, identity, checked)
     if checked == "not-comparable":
         _refuse_not_comparable_over_a_dump(name, identity)
-    expected, why = _satisfied_for(identity, checked)
+    expected, why = SATISFIED_BY_CHECKED[checked]
     if satisfied is not expected:
         fail(f"{name}: {why}")
 
@@ -1943,7 +2015,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
     requirements = core["requirements"]
     if not isinstance(requirements, list):
         fail(f"{name}: firmware core requirements must be a list")
-    if core["declaration"] not in ("read", "packaged") and requirements:
+    if core["declaration"] not in JUDGED_DECLARATIONS and requirements:
         fail(f"{name}: a core atlas could not read declares nothing — its requirements must be empty")
     if core["declaration"] != "read" and not core["caveats"]:
         fail(
@@ -2073,8 +2145,16 @@ def _declaration_verdict(core: Any) -> bool | None:
     declared, what was found, and what was refused. The system-level reading
     is folded in by the caller, because that is the half a multi-system block
     cannot carry.
+
+    Two declarations are weighed and three are not
+    (:data:`JUDGED_DECLARATIONS`), and the packaged one reads its empty list
+    differently: a card with no requirement established nothing — a probe
+    whose switch is off, a search whose bytes were never read — while a
+    ``.info`` declaring nothing needs nothing.
     """
-    if core["declaration"] != "read":
+    if core["declaration"] in UNJUDGED_DECLARATIONS:
+        return None
+    if core["declaration"] == "packaged" and not core["requirements"]:
         return None
     plain = [r for r in core["requirements"] if "alternatives" not in r]
     groups = [r["alternatives"] for r in core["requirements"] if "alternatives" in r]
@@ -2094,7 +2174,7 @@ def _declaration_verdict(core: Any) -> bool | None:
 def _validate_core_verdict_bound(name: str, core: Any, met: Any, declared: bool | None) -> None:
     """What still holds where the system term cannot be recomputed.
 
-    Two answers the term cannot reach, held exactly: an unread declaration
+    Two answers the term cannot reach, held exactly: an unjudged declaration
     answers ``null`` whatever the table says about the system, because the
     verdict stops there; and a declaration whose own reading is ``false`` is
     already the narrowest answer, which a reading that only narrows cannot
@@ -2102,7 +2182,7 @@ def _validate_core_verdict_bound(name: str, core: Any, met: Any, declared: bool 
     it may never be ``true`` — and only a declaration green on its own is left
     unheld, which is exactly the case the missing term decides.
     """
-    if core["declaration"] != "read" or declared is False:
+    if core["declaration"] in UNJUDGED_DECLARATIONS or declared is False:
         if met is not declared:
             fail(
                 f"{name}: requirements_met must be {declared!r} for this core — the system-level reading "
@@ -2127,7 +2207,7 @@ def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
         _validate_core_verdict_bound(name, core, met, declared)
         return
     system_image = _system_image_in_place(core)
-    if core["declaration"] != "read":
+    if core["declaration"] in UNJUDGED_DECLARATIONS:
         expected = None
     elif declared is False or system_image is False:
         expected = False
@@ -2137,8 +2217,8 @@ def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
         expected = True
     if met is not expected:
         fail(
-            f"{name}: requirements_met must be {expected!r} for this core — it is the one field a client "
-            "renders, and deriving it wrongly is the whole failure mode"
+            f"{name}: requirements_met must be {expected!r} for this core — it is the field a client "
+            "renders as its traffic light, and deriving it wrongly is the whole failure mode"
         )
 
 

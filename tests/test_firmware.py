@@ -1,7 +1,7 @@
 """Tests for atlas.firmware — emulators, their firmware, and what is on disk.
 
 The model is proven from data along its two axes: ``need`` is what an emulator
-asks for, ``present``/``checked`` is what the machine answers, and the five
+asks for, ``present``/``checked`` is what the machine answers, and the six
 ``checked`` values stay apart. Two classes carry the load. The first is
 :class:`TestNoDeclarationIsNeverSatisfied`: having no declaration must never
 look like nothing missing. The second is :class:`TestPartialReaderIsNotMisled`
@@ -26,7 +26,10 @@ import pytest
 from atlas.firmware import (
     CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
+    CORE_DECLARATION_STATES,
     CORE_SYSTEM_FIRMWARE_STATES,
+    DECLARATIONS_JUDGED,
+    DECLARATIONS_UNJUDGED,
     SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
     SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
     SYSTEM_FIRMWARE_OPEN,
@@ -46,7 +49,9 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
     CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
     CAVEAT_FIRMWARE_IMAGE_CONTRADICTED,
+    CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS,
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
+    CAVEAT_FIRMWARE_IMAGE_REFUSED,
     CAVEAT_FIRMWARE_IMAGE_UNLISTED,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
@@ -57,6 +62,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_ROOT_UNUSABLE,
     CAVEAT_FIRMWARE_SCAN_INCOMPLETE,
     CAVEAT_FIRMWARE_SEARCH_UNVERIFIED,
+    CAVEAT_FIRMWARE_PACKAGED_DECLARATION,
     CAVEAT_FIRMWARE_UNREADABLE,
     CAVEAT_NO_FIRMWARE_DECLARATION,
     CAVEAT_NO_FIRMWARE_REQUIREMENT,
@@ -66,10 +72,14 @@ from atlas.firmware import (
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_NOT_COMPARABLE,
+    CHECKED_REFUSED,
     CHECKED_UNCHECKED,
+    CHECKED_UNREAD,
     CHECKED_UNKNOWN,
+    CHECKED_UNRECOGNISED,
     CHECKED_VERIFIED,
     DECLARATION_ABSENT,
+    DECLARATION_PACKAGED,
     DECLARATION_UNSUPPORTED,
     DECLARATION_READ,
     DECLARATION_UNREADABLE,
@@ -143,6 +153,7 @@ from atlas.system_firmware import (
 from atlas.systems import known_systems
 
 import atlas.firmware
+from atlas import duckstation
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -720,8 +731,8 @@ class TestPerCoreAnswer:
 class TestCheckedAxis:
     """The values of ``checked`` — and that none of them collapse.
 
-    The fifth, ``not-comparable``, has its own class below: it is the only
-    one that depends on what kind of identity the table carries.
+    ``not-comparable`` has its own class below: it is the only one that
+    depends on what kind of identity the table carries.
     """
 
     def test_nothing_there_means_nothing_to_check(self):
@@ -773,13 +784,31 @@ class TestCheckedAxis:
         )
         assert _by_name(answer)["scph5501.bin"].checked == "mismatch"
 
-    def test_a_present_but_unreadable_file_stays_unknown_and_says_so(self):
+    def test_a_present_but_unreadable_file_is_unread_and_says_so(self):
+        # The bytes were asked for and did not come back, which is a statement
+        # about atlas's read. It kept the identity its table pins for the
+        # declared name: that was known before any byte was read.
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
         answer = firmware_for_core(
             machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
         )
-        assert _by_name(answer)["scph5501.bin"].checked == "unknown"
+        requirement = _by_name(answer)["scph5501.bin"]
+        assert requirement.checked == CHECKED_UNREAD
+        assert requirement.satisfied is None
+        assert requirement.identity is not None
         assert CAVEAT_FIRMWARE_UNREADABLE in [c.code for c in answer.caveats]
+
+    def test_unread_stands_with_an_identity_and_without_one(self):
+        # The one value on both sides of the identity question, and the pair
+        # says which kind of table covers the entry: keyed by the declared
+        # name, or keyed by content.
+        for identity in (FirmwareIdentity(md5="0" * 32, sha1="1" * 40, size=8, kind="file"), None):
+            requirement = FirmwareRequirement(
+                core_so="x.so", system="psx", system_source="systemname", need="required",
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="",
+                identity=identity, found="file", checked=CHECKED_UNREAD,
+            )
+            assert requirement.satisfied is None
 
     def test_hash_checked_records_whether_verification_ran(self):
         machine = _machine()
@@ -916,11 +945,11 @@ class TestArchiveIdentitiesWithhold:
         )
         assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_UNCHECKED
 
-    def test_unreadable_bytes_stay_unknown(self):
+    def test_unreadable_bytes_are_unread_not_not_comparable(self):
         # A read failure is not a comparison that came out inconclusive: the
         # unreadable answer wins, and its own caveat says so.
         answer = _archive_answer({"size": ARCHIVE_SIZE})
-        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_UNKNOWN
+        assert _by_name(answer)["ecwolf.pk3"].checked == CHECKED_UNREAD
 
     def test_unreadable_bytes_carry_the_read_failure_caveat(self):
         answer = _archive_answer({"size": ARCHIVE_SIZE})
@@ -1043,12 +1072,23 @@ class TestRequirementInvariants:
                 found="missing", checked="verified",
             )
 
-    def test_a_present_file_must_state_one_of_the_five(self):
+    def test_a_present_file_must_state_a_value_of_the_vocabulary(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
                 core_so="x.so", system="psx", system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="file", checked=None,
+            )
+
+    def test_a_refused_file_cannot_carry_an_identity(self):
+        # The emulator turned it down before any table was consulted, so
+        # there is nothing an identity could have been read from.
+        identity = FirmwareIdentity(md5="0" * 32, sha1=None, size=8, kind="file")
+        with pytest.raises(ValueError, match="carries no identity"):
+            FirmwareRequirement(
+                core_so=None, system="psx", system_source="card", need="required",
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="",
+                identity=identity, found="file", checked=CHECKED_REFUSED,
             )
 
     def test_need_is_only_required_or_optional(self):
@@ -3846,7 +3886,7 @@ class TestPartialReaderIsNotMisled:
         ).cores[0]
         undecided = next(r for r in _plain_requirements(core) if r.file_name == "scph5501.bin")
         assert undecided.found == "file"
-        assert undecided.checked == CHECKED_UNKNOWN
+        assert undecided.checked == CHECKED_UNREAD
         assert undecided.satisfied is None
         assert core.unmet == ()
         assert [r.file_name for r in core.undetermined] == ["scph5501.bin"]
@@ -4471,6 +4511,417 @@ class TestAPartialReaderOfAGroupIsNotMisled:
         flattened = answer.requirements
         assert [r.file_name for r in flattened] == ["scph5501.bin", "scph5502.bin"]
         assert [r.regions for r in flattened] == [("ntsc-u",), ("ntsc-j", "pal")]
+
+
+def _card_requirement(file_name: str, **overrides: object) -> FirmwareRequirement:
+    """One requirement of a packaged card — missing at its destination by default."""
+    fields: dict[str, object] = {
+        "core_so": None, "system": "psx", "system_source": "card", "need": NEED_REQUIRED,
+        "file_name": file_name, "path": f"/bios/{file_name}", "declared": file_name,
+        "description": "", "identity": None, "found": "missing", "checked": None,
+    }
+    fields.update(overrides)
+    return FirmwareRequirement(**fields)  # type: ignore[arg-type]
+
+
+def _packaged_core(*requirements: FirmwareRequirement) -> CoreFirmware:
+    provenance = Caveat(CAVEAT_FIRMWARE_PACKAGED_DECLARATION, "", {})
+    return CoreFirmware(
+        core_so=None, label="DuckStation (Standalone)", declaration=DECLARATION_PACKAGED,
+        requirements=requirements, caveats=(provenance,),
+    )
+
+
+class TestEveryDeclarationIsJudgedOrExcusedByName:
+    """A declaration is weighed or excused because it is named, never by default.
+
+    ``requirements_met`` gated on ``!= read`` from the day it was written, when
+    the vocabulary was read/unreadable/absent. ``packaged`` arrived later with
+    real requirements behind it and fell into the unjudged side of that
+    inequality, so every card answered ``None`` and nobody had decided it. The
+    two halves are tuples now and the property branches on one of them, so a
+    value added tomorrow is judged or excused by name.
+    """
+
+    def test_the_two_halves_cover_the_vocabulary_exactly(self):
+        assert set(DECLARATIONS_JUDGED) | set(DECLARATIONS_UNJUDGED) == set(CORE_DECLARATION_STATES)
+
+    def test_a_declaration_is_never_in_both_halves(self):
+        assert set(DECLARATIONS_JUDGED) & set(DECLARATIONS_UNJUDGED) == set()
+
+    def test_the_property_reads_the_tuple_this_test_reads(self):
+        # The halves agreeing with the vocabulary says nothing about the code
+        # if the property no longer asks them, which is the state the defect
+        # was in: a name and an inequality, both defensible, disagreeing.
+        source = ast.parse(Path(atlas.firmware.__file__).read_text(encoding="utf-8"))
+        bodies = [
+            node
+            for node in ast.walk(source)
+            if isinstance(node, ast.FunctionDef) and node.name == "requirements_met"
+        ]
+        assert len(bodies) == 1, "requirements_met is defined once"
+        names = {node.id for node in ast.walk(bodies[0]) if isinstance(node, ast.Name)}
+        assert "DECLARATIONS_UNJUDGED" in names
+
+    def test_every_unjudged_declaration_answers_none(self):
+        # Behaviour beside the name: each of the three really does stop the
+        # verdict. None of them may carry requirements, so the empty list is
+        # the whole of what such a core states.
+        for declaration in DECLARATIONS_UNJUDGED:
+            core = CoreFirmware(
+                core_so="x_libretro.so", label=None, declaration=declaration,
+                requirements=(), caveats=(Caveat(CAVEAT_NO_FIRMWARE_DECLARATION, "", {}),),
+            )
+            assert core.requirements_met is None, declaration
+
+
+class TestAPackagedDeclarationIsJudged:
+    """A card is a declaration, so the field that judges declarations judges it.
+
+    What atlas established about a packaged card is the same kind of thing it
+    establishes about a ``.info``: which files an emulator opens, and what is
+    at those destinations. The one place the two part company is the empty
+    list — a ``.info`` declaring nothing needs nothing, a card with nothing
+    established states nothing.
+    """
+
+    def test_a_required_file_in_place_is_true(self):
+        core = _packaged_core(_card_requirement("scph5501.bin", found="file", checked=CHECKED_UNKNOWN))
+        assert core.requirements_met is True
+
+    def test_a_required_file_missing_is_false(self):
+        core = _packaged_core(_card_requirement("scph5501.bin"))
+        assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
+        assert core.requirements_met is False
+
+    def test_one_of_three_missing_is_false(self):
+        # melonDS's shape: a probe set where two paths are configured and the
+        # third is not. The list is a conjunction, so one absence decides it.
+        core = _packaged_core(
+            _card_requirement("bios9.bin", found="file", checked=CHECKED_UNKNOWN),
+            _card_requirement("bios7.bin", found="file", checked=CHECKED_UNKNOWN),
+            _card_requirement("firmware.bin"),
+        )
+        assert core.requirements_met is False
+
+    def test_an_optional_file_missing_is_still_true(self):
+        # Cemu's keys.txt: the card marks it optional because decrypted content
+        # runs without it, and this field has always weighed the required ones.
+        core = _packaged_core(_card_requirement("keys.txt", need="optional"))
+        assert core.requirements_met is True
+        assert core.unmet == ()
+
+    def test_a_file_nobody_judged_leaves_it_unsaid(self):
+        core = _packaged_core(
+            _card_requirement("scph5501.bin", found="file", checked=CHECKED_UNRECOGNISED)
+        )
+        assert core.requirements_met is None
+
+    def test_an_empty_card_states_nothing_rather_than_nothing_needed(self):
+        # The one asymmetry with a read declaration, and the reason it exists:
+        # an empty card is a probe whose switch is off or a search whose bytes
+        # were never read, never an emulator that needs no file.
+        assert _packaged_core().requirements_met is None
+
+
+class TestAnIdentifiedImageIsVerified:
+    """DuckStation hashes the file it is about to load, so the requirement carries that.
+
+    The emulator names no BIOS of its own: it keeps every file of an accepted
+    size and recognises what is left against a table compiled into it. atlas
+    carries that table and the caveat beside the requirement already said
+    which image the picked bytes are — while the requirement itself said
+    ``unknown`` with no identity, which reads as "no table covers this file".
+    The answer now carries the reading in the field the verdict is derived
+    from.
+
+    Both routes into that table are held here, because upstream reads them
+    through one function: the search calls ``LoadImageFromFile`` per candidate
+    it kept and a named region key hands it the composed path (bios.cpp:385
+    and :350), and the size gate, the hash and the lookup all sit inside it.
+    """
+
+    BIOS = "/mnt/sd/retrodeck/bios"
+    # Rows of DuckStation's own table, so a test that stops agreeing with the
+    # shipped data fails rather than passing against an invention.
+    SCPH5501 = "490f666e1afb15b7362b406ed1cea246"
+    SCPH5502 = "32736f17079d0b2b7024407c39bd3050"
+    # A Saturn dump: an accepted size, and no row of the table holds its bytes.
+    SATURN = "85ec9ca47d8f6807718151cbcca8b964"
+    PS1_SIZE = 524288
+
+    def _machine(
+        self, bios: Mapping[str, FixtureFileSpec], *, named: str = "", **kwargs: object
+    ) -> FixtureMachine:
+        """A RetroDECK arrangement whose psx row is the DuckStation standalone entry.
+
+        *named* is the value of ``PathNTSCU``; empty leaves every region key
+        empty, which is the state both arrangements ship and the one the
+        search speaks for.
+        """
+        config = "/home/deck/.var/app/net.retrodeck.retrodeck/config"
+        deployed = (
+            "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck"
+            "/components/es-de/share/es-de/resources/systems/linux/es_systems.xml"
+        )
+        tree: dict[str, FixtureFileSpec] = {
+            f"{config}/retrodeck/retrodeck.json": json.dumps(
+                {"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves",
+                           "bios_path": self.BIOS}}
+            ),
+            f"{config}/retroarch/retroarch.cfg": (
+                f'savefile_directory = "/mnt/sd/retrodeck/saves"\nlibretro_directory = "/app/cores"\n'
+                f'system_directory = "{self.BIOS}"\n'
+            ),
+            deployed: (
+                '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>psx</name>\n'
+                "    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n"
+                "    <extension>.chd</extension>\n"
+                '    <command label="DuckStation (Legacy) (Standalone)">'
+                "%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n"
+                "    <platform>psx</platform>\n  </system>\n</systemList>\n"
+            ),
+            f"{config}/duckstation/settings.ini": (
+                f"[BIOS]\nSearchDirectory = {self.BIOS}\nPathNTSCU = {named}\n"
+                "PathNTSCJ = \nPathPAL = \n"
+            ),
+            **bios,
+        }
+        return FixtureMachine(
+            tree, dirs=["/mnt/sd/retrodeck/saves", self.BIOS], **kwargs  # type: ignore[arg-type]
+        )
+
+    def _image(self, md5: str) -> dict[str, str | int]:
+        return {"md5": md5, "size": self.PS1_SIZE}
+
+    def _core(self, machine: FixtureMachine, *, verify: bool = True) -> CoreFirmware:
+        installs = atlas.detect("/home/deck", machine)
+        answer = installs[0].firmware_for_system(system="psx", verify=verify)
+        return next(core for core in answer.cores if core.declaration == DECLARATION_PACKAGED)
+
+    def _codes(self, core: CoreFirmware) -> list[str]:
+        return [caveat.code for caveat in core.caveats]
+
+    def test_the_picked_image_carries_the_row_the_table_named(self):
+        core = self._core(self._machine({f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501)}))
+        requirement = core.requirements[0]
+        assert isinstance(requirement, FirmwareRequirement)
+        assert requirement.checked == CHECKED_VERIFIED
+        assert requirement.identity is not None
+        assert requirement.identity.md5 == self.SCPH5501
+        assert requirement.identity.size == self.PS1_SIZE
+        # The table pins no sha1 and names no file, so both stay empty rather
+        # than being filled from somewhere else.
+        assert requirement.identity.sha1 is None
+        assert requirement.identity.known_as == ()
+        assert requirement.identity.table_version
+        assert CAVEAT_FIRMWARE_IMAGE_IDENTIFIED in self._codes(core)
+        assert core.requirements_met is True
+
+    def test_a_tie_between_identified_images_is_still_a_verdict(self):
+        # Which of them boots is the directory's order and atlas cannot read
+        # it; that both are images this emulator knows is established, so the
+        # ambiguity is about WHICH file, never about whether one is there.
+        core = self._core(
+            self._machine(
+                {
+                    f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501),
+                    f"{self.BIOS}/scph5502.bin": self._image(self.SCPH5502),
+                }
+            )
+        )
+        requirement = core.requirements[0]
+        assert isinstance(requirement, FirmwareRequirement)
+        assert requirement.checked == CHECKED_VERIFIED
+        assert CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS in self._codes(core)
+        assert core.requirements_met is True
+
+    def test_bytes_no_row_holds_are_unrecognised_rather_than_unknown(self):
+        core = self._core(self._machine({f"{self.BIOS}/mpr-17933.bin": self._image(self.SATURN)}))
+        requirement = core.requirements[0]
+        assert isinstance(requirement, FirmwareRequirement)
+        assert requirement.checked == CHECKED_UNRECOGNISED
+        assert requirement.identity is None
+        # The emulator boots such an image with a warning, so this is neither
+        # a failure nor an all-clear — and the verdict says exactly that.
+        assert requirement.satisfied is None
+        assert CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED in self._codes(core)
+        assert core.requirements_met is None
+
+    def test_an_unreadable_pick_reads_the_same_on_both_routes(self):
+        # One file, two ways to reach it: the directory search and a region
+        # key that names it. Neither read its bytes, so neither may say what
+        # it is, and the two answers are the same answer.
+        bios = {f"{self.BIOS}/scph5501.bin": {"status": "unreadable", "size": self.PS1_SIZE}}
+        searched = self._core(self._machine(bios)).requirements[0]
+        assert isinstance(searched, FirmwareRequirement)
+        named = self._named_option(self._core(self._machine(bios, named="scph5501.bin")))
+        assert searched.checked == named.checked == CHECKED_UNREAD
+        assert searched.satisfied is named.satisfied is None
+        assert searched.identity is named.identity is None
+
+    def test_no_state_of_the_search_alone_reaches_a_false_verdict(self):
+        """With every region key empty, the search never demonstrates an absence.
+
+        Each state either names the file the ranking reached — with what its
+        bytes turned out to be, up to and including that they would not come
+        back — or states no requirement at all, and a packaged card with no
+        requirement answers ``None``. So a red light over this emulator always
+        comes from a named region key, and never from a directory atlas could
+        not read to the end.
+        """
+        image = self._image(self.SCPH5501)
+        states = {
+            "an empty directory": self._machine({}),
+            "a directory that cannot be listed": self._machine({}, unlistable=[self.BIOS]),
+            "a file of an accepted size whose bytes will not come back": self._machine(
+                {f"{self.BIOS}/scph5501.bin": {"status": "unreadable", "size": self.PS1_SIZE}}
+            ),
+            "bytes no row of the table holds": self._machine(
+                {f"{self.BIOS}/mpr-17933.bin": self._image(self.SATURN)}
+            ),
+            "an image the table knows": self._machine({f"{self.BIOS}/scph5501.bin": image}),
+        }
+        verdicts = {name: self._core(machine).requirements_met for name, machine in states.items()}
+        assert [name for name, met in verdicts.items() if met is False] == []
+        assert verdicts["an image the table knows"] is True
+        # The unreadable state names its file now rather than staying silent,
+        # and the verdict it leaves is still undetermined rather than green.
+        unreadable = self._core(states["a file of an accepted size whose bytes will not come back"])
+        picked = unreadable.requirements[0]
+        assert isinstance(picked, FirmwareRequirement)
+        assert picked.checked == CHECKED_UNREAD
+        assert verdicts["a file of an accepted size whose bytes will not come back"] is None
+        # The same machine asked without a content check: nothing was hashed,
+        # so nothing is claimed and nothing is denied either.
+        assert self._core(states["an image the table knows"], verify=False).requirements_met is None
+
+    # --- the same table, reached by a region key that names a file ----------
+
+    def _named_option(self, core: CoreFirmware) -> FirmwareRequirement:
+        """The option of the alternatives group a named NTSC-U key contributes."""
+        group = core.requirements[0]
+        assert isinstance(group, FirmwareAlternatives)
+        return next(option for option in group.options if option.regions == ("ntsc-u",))
+
+    def test_a_named_image_the_table_knows_is_verified(self):
+        core = self._core(
+            self._machine(
+                {f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501)}, named="scph5501.bin"
+            )
+        )
+        option = self._named_option(core)
+        assert option.checked == CHECKED_VERIFIED
+        assert option.identity is not None
+        assert option.identity.md5 == self.SCPH5501
+        assert option.satisfied is True
+
+    def test_a_named_image_no_row_holds_is_unrecognised(self):
+        core = self._core(
+            self._machine(
+                {f"{self.BIOS}/mpr-17933.bin": self._image(self.SATURN)}, named="mpr-17933.bin"
+            )
+        )
+        option = self._named_option(core)
+        assert option.checked == CHECKED_UNRECOGNISED
+        assert option.identity is None
+        assert option.satisfied is None
+
+    def test_the_named_and_the_searched_reading_of_one_file_agree(self):
+        # The defect this closes: one file, two routes, two answers. Upstream
+        # reads both through LoadImageFromFile, so the two options the group
+        # carries for one path may not disagree about its bytes.
+        core = self._core(
+            self._machine(
+                {f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501)}, named="scph5501.bin"
+            )
+        )
+        group = core.requirements[0]
+        assert isinstance(group, FirmwareAlternatives)
+        at_path = [o for o in group.options if o.path == f"{self.BIOS}/scph5501.bin"]
+        assert len(at_path) == 2, "the named key and the search both speak for this file"
+        assert {o.checked for o in at_path} == {CHECKED_VERIFIED}
+        assert len({(o.identity.md5, o.identity.size) for o in at_path if o.identity}) == 1
+
+    def test_a_named_file_of_another_size_is_refused(self):
+        # LoadImageFromFile refuses a file whose size is none of the three
+        # before reading a byte (bios.cpp:183-190), so this launch boots
+        # nothing from it — a demonstrated failure, and one a stat settles.
+        core = self._core(
+            self._machine({f"{self.BIOS}/scph5501.bin": "far too short to be a BIOS"},
+                          named="scph5501.bin")
+        )
+        option = self._named_option(core)
+        assert option.checked == CHECKED_REFUSED
+        assert option.satisfied is False
+        assert option.identity is None
+
+    def test_the_refusal_says_which_size_was_read_and_which_are_accepted(self):
+        # "Wrong size" a user cannot act on is no sentence at all: the data
+        # carries the number read and the three the emulator loads.
+        content = "far too short to be a BIOS"
+        core = self._core(
+            self._machine({f"{self.BIOS}/scph5501.bin": content}, named="scph5501.bin")
+        )
+        refusal = next(c for c in core.caveats if c.code == CAVEAT_FIRMWARE_IMAGE_REFUSED)
+        assert refusal.data["path"] == f"{self.BIOS}/scph5501.bin"
+        assert refusal.data["size"] == str(len(content))
+        # The constructor freezes a sequence value, so the tuple is what a client reads.
+        assert refusal.data["accepted"] == tuple(str(size) for size in duckstation.bios_table().sizes)
+        assert refusal.data["token"] == "DUCKSTATION"
+
+    def test_a_refused_file_is_answered_without_a_content_check(self):
+        # The gate is a stat, so the verdict needs no verify — the one
+        # checked value that fails a present file without one.
+        machine = self._machine(
+            {f"{self.BIOS}/scph5501.bin": "far too short to be a BIOS"}, named="scph5501.bin"
+        )
+        option = self._named_option(self._core(machine, verify=False))
+        assert option.checked == CHECKED_REFUSED
+        assert option.satisfied is False
+
+    def test_a_named_image_whose_bytes_will_not_come_back_is_unread(self):
+        # The read failed for atlas, which is no evidence the launch cannot
+        # read it — so the answer withholds the verdict and states the failure
+        # under the one code every other route uses for it. The identity stays
+        # null because this table is keyed by content: without the bytes there
+        # is no row to pin.
+        core = self._core(
+            self._machine(
+                {f"{self.BIOS}/scph5501.bin": {"status": "unreadable", "size": self.PS1_SIZE}},
+                named="scph5501.bin",
+            )
+        )
+        option = self._named_option(core)
+        assert option.checked == CHECKED_UNREAD
+        assert option.satisfied is None
+        assert option.identity is None
+        assert CAVEAT_FIRMWARE_UNREADABLE in self._codes(core)
+        assert core.requirements_met is None
+
+    def test_the_search_never_refuses_what_it_picked(self):
+        # The search keeps only files of an accepted size (bios.cpp:378), so
+        # no candidate it picks can be one the loader turns down for its size.
+        # Held over every state the search reaches, including a directory
+        # whose only file is of a size it skips.
+        states = [
+            self._machine({f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501)}),
+            self._machine({f"{self.BIOS}/mpr-17933.bin": self._image(self.SATURN)}),
+            self._machine({f"{self.BIOS}/notes.txt": "not a BIOS at all"}),
+            self._machine({}),
+        ]
+        for machine in states:
+            for verify in (True, False):
+                core = self._core(machine, verify=verify)
+                options = [
+                    option
+                    for entry in core.requirements
+                    for option in (
+                        entry.options if isinstance(entry, FirmwareAlternatives) else (entry,)
+                    )
+                ]
+                assert [o for o in options if o.checked == CHECKED_REFUSED] == []
+                assert CAVEAT_FIRMWARE_IMAGE_REFUSED not in self._codes(core)
 
 
 class TestAnAnswerStatesAnObservationOnce:

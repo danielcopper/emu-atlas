@@ -96,10 +96,16 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    what lies there is the right thing. Two axes, never merged:
 #      need     required | optional            — what the emulator asks for
 #      checked  verified | mismatch | unchecked | unknown | not-comparable
-#                                               — what the machine says
-#    "unchecked" (we did not look), "unknown" (we looked and cannot tell) and
+#               | unrecognised | refused | unread — what the machine says
+#    "unchecked" (we did not look), "unknown" (we looked and cannot tell),
 #    "not-comparable" (we looked, the bytes differ, and that settles nothing —
-#    the identity is an archive) are three different answers.
+#    the identity is an archive) and "unrecognised" (we read the bytes and the
+#    emulator's own table has no row for them) are four different answers,
+#    and "refused" (the emulator will not open the file at all) is the fifth —
+#    the only one that by itself fails a present file without a content
+#    check (a shape fails one through "found" instead), and
+#    "unread" (the bytes were asked for and did not come back) is the sixth —
+#    a statement about atlas's read, never about the emulator's.
 #    A third axis is about the DECLARATION rather than the destination, so it
 #    holds when nothing is there:
 #      declared_kind  file | directory  — what the core OPENS the path at
@@ -120,10 +126,13 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
 #    Having no declaration at all is a caveat on an EMPTY
 #    answer, because empty is honest and "nothing missing" would be a lie —
 #    and which empty it is has its own field:
-#      declaration  read | unreadable | absent | unsupported
+#      declaration  read | unreadable | absent | unsupported | packaged
 #    "absent" is a claim about the machine (no such core here), "unsupported"
 #    one about atlas (the emulator is here, its rules are outside coverage) —
 #    the same fact, and the same word, the placement route answers with.
+#    "packaged" is atlas's own card for a standalone emulator, and its empty
+#    list is the one that says nothing was established rather than that
+#    nothing is needed.
 #    A declaration is display knowledge, never a launch gate: at the RetroArch
 #    pin (a79435a) the .info firmware list is evaluated only by display
 #    surfaces — menu_displaylist.c:880 and ui_qt.cpp:1238, of which the
@@ -549,11 +558,12 @@ visible in `system_source`, and marked as derived where the core spans systems.
   decisions derive from that snapshot.
 - **Firmware is emulator-centric.** A requirement is one `(core, declared file)` pair: the core decides the expected
   name and the absolute destination, the packaged identity decides whether what lies there is right. `need` (`required`
-  / `optional`) and `checked` (`verified` / `mismatch` / `unchecked` / `unknown` / `not-comparable`) are independent
-  axes, and neither `unchecked` vs `unknown` nor "core needs nothing" vs "core unknown" may collapse — the second pair
-  is told apart by `installed` plus a caveat, never by list length. A file nobody declares is not a requirement at all;
-  it is an `UnclaimedFile`, identified by **content**, and save data the rule cards claim never appears there. Hash
-  checking is opt-in (`verify=`): policy and caching belong to the caller, not the library.
+  / `optional`) and `checked` (`verified` / `mismatch` / `unchecked` / `unknown` / `not-comparable` / `unrecognised` /
+  `refused` / `unread`) are independent axes, and neither `unchecked` vs `unknown` nor "core needs nothing" vs "core
+  unknown" may collapse — the second pair is told apart by `installed` plus a caveat, never by list length. A file
+  nobody declares is not a requirement at all; it is an `UnclaimedFile`, identified by **content**, and save data the
+  rule cards claim never appears there. Hash checking is opt-in (`verify=`): policy and caching belong to the caller,
+  not the library.
 - **A packaged identity says what kind of thing it is, and that decides what a difference means.** 24 of the 388
   identities are archives — MAME romset sets, plus data packs and program jars released and versioned with the project
   that builds their core — whose whole-file hash pins one packaging of one version, so bytes that differ from it are the
@@ -601,7 +611,9 @@ visible in `system_source`, and marked as derived where the core spans systems.
   is there _and_ nothing established contradicts it — a present file with the wrong bytes makes it `false`, and one
   whose identity could not be established makes it `null`. `satisfied` per requirement and `requirements_met` per core
   are both in the contract for one reason: a consumer deriving them from `need` and `present` gets the mismatch case
-  wrong, which is exactly how a verified-broken BIOS reads as all-clear.
+  wrong, which is exactly how a verified-broken BIOS reads as all-clear. It judges every declaration that states files —
+  one read off the machine and atlas's own packaged card alike — and the three that state none (`unreadable`, `absent`,
+  `unsupported`) answer `null` because they are named, never because an inequality left them there.
 - **The requirement list is the emulator's statement; the verdict beside it is atlas's, and it reads world knowledge.**
   Every `need` is `firmware<N>_opt` inverted and stays whatever the core declared — nothing read off the machine is
   overwritten. But the format has no way to say "this machine does not start without one of these", so a core that knows
