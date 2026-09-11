@@ -354,16 +354,20 @@ excusing nothing.
 enters a firmware answer — and states what it says on every core of that answer:
 
 - **`system_firmware`** is the per-core field. Four stated values: `cannot-run-without-firmware` (the system needs an
-  image and this core needs one of the ones it declares), `core-supplies-an-alternative` (it needs one and this core
-  carries its own substitute), `runs-without-firmware` (somebody established that it starts with none present) and
-  `open`. `null` is the fifth state and it means **nothing is recorded about this system** — never that nothing is
-  needed. A core whose system could not be established answers `null` for the same reason: nothing is recorded about a
-  system nobody named.
-- **`requirements_met`** stops being green where a system needs an image, the core is not excused, and every image it
-  declares is demonstrably not in place. One image being usable is what the system asks for, so any satisfied image
-  keeps the answer it had; an image nobody judged, or a declaration atlas refused to follow, leaves `null` rather than
-  `false`, because neither establishes that the core has nothing. The reading only ever narrows the field — it makes
-  nothing true that was not true before.
+  image and this core needs one of the ones it declares for that system), `core-supplies-an-alternative` (it needs one
+  and this core carries its own substitute), `runs-without-firmware` (somebody established that it starts with none
+  present) and `open`. `null` is the fifth state and it means **nothing is recorded about this system** — never that
+  nothing is needed. A core whose system could not be established answers `null` for the same reason: nothing is
+  recorded about a system nobody named.
+- **`requirements_met`** stops being green where a system needs an image, the core is not excused, and every image filed
+  under that system is demonstrably not in place. One image being usable is what that system asks for, so any satisfied
+  image of its own keeps the answer it had; an image nobody judged, or a declaration atlas refused to follow, leaves
+  `null` rather than `false`, because neither establishes that the core has nothing. Each needing system is asked that
+  of its own images and all of them have to be answered — a disjunction inside each system, a conjunction across them —
+  so mGBA's Game Boy boot ROM is no answer for a Game Boy Advance, and a core two entries speak about needs one image
+  apiece rather than one between them. Where a core in this state declares for one system that conjunction has one term
+  and its disjunction spans the whole declaration. The reading only ever narrows the field — it makes nothing true that
+  was not true before.
 - **`system-firmware-world-knowledge`** rides on the core where the table **states** something, carrying the system and
   the evidence level — spelled `verified` or `derived`, because the contract is the public surface and the bracket forms
   above are this repository's own notation — and nothing else. The verdict is the field's job; this is the mark that

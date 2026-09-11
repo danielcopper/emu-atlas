@@ -170,6 +170,36 @@ def _core(**overrides) -> Vector:
     }
 
 
+def _gba_requirement(**overrides) -> Vector:
+    """The second system's image, beside the Game Boy one ``_requirement`` builds."""
+    return _requirement(
+        system="gba",
+        file_name="gba_bios.bin",
+        path=f"{BIOS}/gba_bios.bin",
+        declared="gba_bios.bin",
+        **overrides,
+    )
+
+
+def _two_system_core(**overrides) -> Vector:
+    """A core declaring for two systems, in the state whose need is asked per system.
+
+    The shape the validator cannot recompute in full: which of the two systems
+    the packaged table named is not serialized, so the system term is dropped
+    and only what the declaration decides is still held.
+    """
+    return _core(
+        **{
+            "system_firmware": "cannot-run-without-firmware",
+            "requirements": [
+                _requirement(system_source="override", need="optional"),
+                _gba_requirement(need="optional"),
+            ],
+            **overrides,
+        }
+    )
+
+
 def _firmware(**overrides) -> Vector:
     return {
         "root": BIOS,
@@ -952,6 +982,27 @@ FIRMWARE_CORE_CASES = [
          "firmware core requirements_met must be true, false, or null", id="core-met-type"),
     case(_base_firmware(cores=[_core(requirements_met=True)]),
          "requirements_met must be", id="core-met-overclaims"),
+    # The three the bound still holds on a block whose system term is dropped:
+    # a required file demonstrably not in place answers false, a required file
+    # nobody judged may not answer true, and a declaration that was not read
+    # answers null — none of them a verdict the missing term could overturn.
+    case(_base_firmware(cores=[_two_system_core(requirements=[_requirement(system_source="override",
+                                                                           need="optional"),
+                                                              _gba_requirement()],
+                                                requirements_met=None)]),
+         "requirements_met must be False for this core", id="two-system-need-false-is-still-derived"),
+    case(_base_firmware(cores=[_two_system_core(requirements=[_requirement(system_source="override",
+                                                                           need="optional"),
+                                                              _gba_requirement(found="file", present=True,
+                                                                               identity=_identity(),
+                                                                               checked="unchecked",
+                                                                               satisfied=None)],
+                                                requirements_met=True)]),
+         "must be null or false for this core", id="two-system-need-never-true-out-of-ignorance"),
+    case(_base_firmware(cores=[_two_system_core(declaration="packaged", requirements_met=False,
+                                                caveats=[{"code": "firmware-packaged-declaration",
+                                                          "data": {"core_so": CORE_SO}}])]),
+         "requirements_met must be None for this core", id="two-system-need-on-an-unread-declaration"),
     case(_base_firmware(cores=[_core(refused={})]), "firmware core refused must be a list", id="core-refused-not-list"),
     case(_base_firmware(cores=[_core(refused=[{"declared": "x", "need": "required"}])]),
          "each refused declaration must be exactly the fields", id="refused-missing-field"),
@@ -1410,6 +1461,29 @@ ACCEPTED_CASES = [
                                              caveats=[{"code": "firmware-declaration-unread", "data": {}}])],
                                 caveats=[{"code": "no-firmware-declaration", "data": {}}]),
                  id="a-core-whose-declaration-could-not-be-read"),
+    # The Game Boy image is usable and the GBA one is missing, and the answer
+    # is false: which of the two systems needs an image is what the block does
+    # not carry, so the recomputation drops that term instead of insisting on
+    # the answer a single-system reading would have derived (`true`).
+    pytest.param(_base_firmware(hash_checked=True,
+                                cores=[_two_system_core(
+                                    requirements=[_requirement(system_source="override", need="optional",
+                                                               found="file", present=True, identity=_identity(),
+                                                               checked="verified", satisfied=True),
+                                                  _gba_requirement(need="optional")],
+                                    requirements_met=False)]),
+                 id="a-two-system-need-the-block-cannot-recompute"),
+    # And the same block answering `null`, the other value the dropped term
+    # can produce.
+    pytest.param(_base_firmware(hash_checked=True,
+                                cores=[_two_system_core(
+                                    requirements=[_requirement(system_source="override", need="optional",
+                                                               found="file", present=True, identity=_identity(),
+                                                               checked="verified", satisfied=True),
+                                                  _gba_requirement(need="optional", found="inaccessible",
+                                                                   present=None, satisfied=None)],
+                                    requirements_met=None)]),
+                 id="a-two-system-need-left-unsaid"),
     pytest.param(_base_identification(identity=_identity(), known_as=["gb_bios.bin"], caveats=[],
                                       requirements=[_requirement(identity=_identity(), found="missing",
                                                                  present=False, checked=None, satisfied=False)]),
