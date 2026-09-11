@@ -638,4 +638,9 @@ visible in `system_source`, and marked as derived where the core spans systems.
   one md5 per name and no member list.
 - Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only vs. never launched, for want
   of an interpreter to launch it under) — revisit with the feature-detection extension (ROADMAP: card variants), which
-  reworks the probe anyway. Tracked as issue #412.
+  reworks the probe anyway. Tracked as issue #412. One of the four is stated already, beside `query_core` rather than in
+  it: `RealMachine.read_core` keeps the loader's refusal — the sandbox-only case and more, because a `.so` this loader
+  can make no sense of lands there too. `query_core` still tells the two apart, a refused core answering `None` where a
+  core that loaded and registered nothing answers a `CoreInfo` with `options=None`; what cannot tell them apart is the
+  option reading a measurement does on top of it, and the tests that hold cards against the deployed binaries needed to
+  (#408). A crash that printed nothing, a missing `.so` and a probe never launched still arrive as one _unknown_.

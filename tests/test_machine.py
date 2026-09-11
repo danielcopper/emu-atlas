@@ -43,6 +43,7 @@ from atlas.machine import (
     GlobResult,
     CoreInfo,
     CoreProbeInterpreter,
+    CoreReading,
     FixtureMachine,
     ReadResult,
     RealMachine,
@@ -765,9 +766,26 @@ class TestRealMachine:
         m = RealMachine()
         assert m.query_core(str(not_a_core)) is None
 
+    def test_a_file_the_loader_refuses_reads_as_unloadable(self, tmp_path):
+        # The same file, through the seam that keeps the refusal: a real probe
+        # of a real path, and the loader's own message comes back with it. What
+        # the resolver sees is unknown either way; what a measurement needs is
+        # that this was not a core answering "I register nothing".
+        not_a_core = tmp_path / "fake.so"
+        not_a_core.write_text("not an ELF")
+        reading = RealMachine().read_core(str(not_a_core))
+        assert reading.info is None
+        assert reading.unloadable is not None
+        assert "fake.so" in reading.unloadable
+
     def test_query_core_on_missing_path_is_none(self):
         m = RealMachine()
         assert m.query_core("/nonexistent/core.so") is None
+
+    def test_a_path_with_nothing_at_it_names_no_refusal(self):
+        # Nothing was loaded and nothing refused to load: the reading says only
+        # that there is no answer, which is what a missing path can support.
+        assert RealMachine().read_core("/nonexistent/core.so") == CoreReading(None)
 
 
 def _fake_core(tmp_path):
@@ -850,6 +868,31 @@ class TestCoreProbeAnswer:
         _stub_probe(monkeypatch, stdout=b"cannot load core: libGL.so.1: cannot open shared object file\n")
         assert RealMachine().query_core(_fake_core(tmp_path)) is None
 
+    def test_a_refused_load_is_carried_as_the_refusal_it_is(self, tmp_path, monkeypatch):
+        # The probe's third outcome: the loader would not open the .so, and its
+        # message is the line. Read as an empty answer instead, a core nothing
+        # here can open is indistinguishable from one that registers no options
+        # — and a measurement holding cards against binaries then fails a card
+        # for a library the interpreter cannot resolve (#408).
+        refusal = b'{"unloadable": "libGL.so.1: cannot open shared object file"}\n'
+        _stub_probe(monkeypatch, stdout=refusal, returncode=1)
+        reading = RealMachine().read_core(_fake_core(tmp_path))
+        assert reading == CoreReading(None, "libGL.so.1: cannot open shared object file")
+
+    def test_a_reading_is_an_answer_or_a_refusal_and_never_both(self):
+        # Exclusive by construction: a core the loader would not open never
+        # reported a library_name, so a reading claiming both states is a bug
+        # in whoever built it rather than something a machine can be in.
+        with pytest.raises(ValueError):
+            CoreReading(self.MGBA, "libGL.so.1: cannot open shared object file")
+
+    def test_a_refused_load_is_unknown_to_the_resolver(self, tmp_path, monkeypatch):
+        # The distinction stops at the seam: query_core answers what a resolver
+        # acts on, and a core that would not load is unknown like any other.
+        refusal = b'{"unloadable": "libGL.so.1: cannot open shared object file"}\n'
+        _stub_probe(monkeypatch, stdout=refusal, returncode=1)
+        assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
     def test_nothing_printed_at_all_is_unknown(self, tmp_path, monkeypatch):
         _stub_probe(monkeypatch, stdout=b"", returncode=1)
         assert RealMachine().query_core(_fake_core(tmp_path)) is None
@@ -914,6 +957,17 @@ class TestCoreProbeMemory:
         machine, so = RealMachine(), _fake_core(tmp_path)
         assert machine.query_core(so) is None
         assert machine.query_core(so) is None
+        assert len(calls) == 2
+
+    def test_a_refused_load_is_asked_again(self, tmp_path, monkeypatch):
+        # The case the narrowing was written for, now that it is stated rather
+        # than empty: the host library the loader could not find is installable
+        # while the .so never changes, so the refusal is not remembered either.
+        refusal = b'{"unloadable": "libGL.so.1: cannot open shared object file"}\n'
+        calls = _stub_probe(monkeypatch, stdout=refusal, returncode=1)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.read_core(so).unloadable is not None
+        assert machine.read_core(so).unloadable is not None
         assert len(calls) == 2
 
     def test_a_probe_no_interpreter_could_run_is_asked_again(self, tmp_path, monkeypatch):
