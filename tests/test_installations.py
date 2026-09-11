@@ -4154,10 +4154,11 @@ class TestTheUserAPerUserTreeWouldOpen:
         DOLPHIN_ESDE: PER_USER_ESDE,
     }
 
-    def _answer(self, system, files=None, dirs=()):
+    def _answer(self, system, files=None, dirs=(), **kwargs):
         rd = _retrodeck(
             {**self.BASE, **(files or {})},
             dirs=["/mnt/sd/retrodeck/saves", *dirs],
+            **kwargs,
         )
         return rd.emulators_for(system).entries[0].savefile_location()
 
@@ -4555,14 +4556,15 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/01.bak/savedata"]
 
     def test_vita3k_the_stem_cuts_at_the_rightmost_period_like_the_filesystem(self):
-        # std::filesystem::path::stem cuts at the rightmost period unless it
-        # leads the name or the name is "." or ".." (libstdc++
-        # _M_find_extension, fs_path.cc:1866-1891 at gcc 14.2.0), so a
-        # directory ..bak answers to "." — a reader that skips the whole
-        # leading run of periods would say ..bak, and with ..bak recorded
-        # would headline its tree as the recorded user's. The survey reaches
-        # the name the way the emulator's directory_iterator does, so the
-        # mirror is pinned where it acts.
+        # The stem is boost::filesystem's path::stem — fs is boost
+        # (util/fs.h:20,30) — and both of boost's stems cut at the rightmost
+        # period where that period does not lead the name (stem_v3,
+        # path.cpp:824-834; stem_v4, :836-846), so a directory ..bak answers
+        # to "." under either. A reader that skips the whole leading run of
+        # periods would say ..bak, and with ..bak recorded would headline its
+        # tree as the recorded user's. The survey reaches the name the way the
+        # emulator's directory_iterator does, so the mirror is pinned where it
+        # acts.
         p = self._answer(
             "psvita",
             files={
@@ -4598,8 +4600,11 @@ class TestTheUserAPerUserTreeWouldOpen:
 
     def test_vita3k_a_leading_period_user_directory_is_reached_and_listed(self):
         # directory_iterator returns .hidden like any other name (get_users_list,
-        # user_management.cpp:87), and an id-less user.xml keys it by its stem,
-        # which is the whole name. A survey that globbed "*" alone never saw
+        # user_management.cpp:87), and an id-less user.xml keys it by its stem —
+        # the whole name under the stem rule atlas mirrors. [D] The emulator's
+        # own build compiles boost's stem_v3, which keys this one shape as the
+        # empty string; that divergence is documented at `_vita3k_stem` and is
+        # not what this test decides. A survey that globbed "*" alone never saw
         # the directory and read the recorded user as having no tree here.
         p = self._answer(
             "psvita",
@@ -4676,7 +4681,7 @@ class TestTheUserAPerUserTreeWouldOpen:
             "00, which has no user.xml, and 01, whose user.xml does not parse"
             in caveat.message
         )
-        assert "those directories are not stated as users" in caveat.message
+        assert "those entries are not stated as users" in caveat.message
 
     def test_vita3k_a_directory_answering_to_another_id_is_not_the_recorded_user(self):
         # The recorded directory exists and its user.xml loads — but it
@@ -4980,7 +4985,7 @@ class TestTheUserAPerUserTreeWouldOpen:
             "00000000, which is not named by eight bytes opening with a non-zero number "
             "(check_user, system_utils.cpp:59-69 at build 7c6b3dcd), and 12345678, which "
             "holds no localusername file (GetUserAccounts, user_account.cpp:57-60 at "
-            "build 7c6b3dcd), so those directories are not stated as users" in caveat.message
+            "build 7c6b3dcd), so those entries are not stated as users" in caveat.message
         )
         # The full name-and-localusername pair already stands in user_sentence
         # — the aside cites the one call each entry actually turns on instead.
@@ -5081,6 +5086,254 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert "lists 12345678, 23456789, and 34567890 is not established — their localusername" in message
         assert self._user_caveat(three).data["unestablished"] == ("12345678", "23456789", "34567890")
 
+    def test_rpcs3_a_home_whose_own_stat_fails_is_stated_not_dropped(self):
+        # The defect this pins: such an entry used to leave the survey without
+        # a word — no group, no skip, no unestablished. It cannot be a group
+        # (nothing says it is a directory) and it cannot be a skip (the walk
+        # that would reach it stats every entry, File.cpp:2091-2105, with a
+        # stat that is not known to fail where atlas's did), so it is stated
+        # as the one thing that is true of it.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+            inaccessible=[f"{RPCS3_HOME}/12345678"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["unestablished"] == ("12345678",)
+        assert "skipped" not in caveat.data
+        assert (
+            "whether RPCS3 lists 12345678 is not established — nothing about it could be "
+            "looked at, not even whether it is a directory, and the walk that would reach "
+            "it stats every entry (unix_dir::read, File.cpp:2091-2105 at build 7c6b3dcd)"
+            in caveat.message
+        )
+        # No group names its savedata: a tree below a name that was never
+        # established to be a directory is a path nothing was shown to write.
+        assert f"{RPCS3_HOME}/12345678/savedata" not in [g.dir for g in p.file_set.groups]
+
+    def test_rpcs3_an_unstatable_name_check_user_rejects_is_the_emulators_own_skip(self):
+        # check_user reads nothing but the name (system_utils.cpp:59-69,
+        # applied at user_account.cpp:49-54), so a name it rejects is passed
+        # over whichever way the emulator's own walk went — the entry never
+        # reaching the loop, or reaching it as something that is no directory
+        # (dropped at user_account.cpp:43-46, before the name is read), or
+        # reaching it as a directory the name then rejects. Established as a
+        # skip without any stat — only an accepted name is left undecided.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+            inaccessible=[
+                f"{RPCS3_HOME}/notauser",
+                f"{RPCS3_HOME}/00000000",
+                f"{RPCS3_HOME}/12345678",
+            ],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001",)
+        assert caveat.data["skipped"] == ("00000000", "notauser")
+        assert caveat.data["unestablished"] == ("12345678",)
+        assert (
+            "00000000, which is not named by eight bytes opening with a non-zero number"
+            in caveat.message
+        )
+        assert (
+            "notauser, which is not named by eight bytes opening with a non-zero number"
+            in caveat.message
+        )
+        assert "whether RPCS3 lists 12345678 is not established" in caveat.message
+
+    def test_rpcs3_a_plain_file_beside_the_homes_is_no_user_and_says_nothing(self):
+        # The other half of the split the listing makes. A file is not a
+        # directory and both emulators agree about it, so it drops out
+        # silently — it is neither a group nor an entry the survey states.
+        # A resolver that folded every non-directory into the unstatable set
+        # would state it, which is what this pins.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User", f"{RPCS3_HOME}/12345678": "not a home"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001",)
+        assert "unestablished" not in caveat.data
+        assert "skipped" not in caveat.data
+        assert "12345678" not in caveat.message
+        assert f"{RPCS3_HOME}/12345678/savedata" not in [g.dir for g in p.file_set.groups]
+
+    def test_rpcs3_a_dead_link_beside_the_homes_is_no_user_and_says_nothing(self):
+        # A dead link is a name the listing shows and a stat that answers
+        # missing, not inaccessible — the emulator's own walk drops it for the
+        # same reason it drops any entry whose fstatat fails, and there is
+        # nothing left to state about it.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+            symlinks={f"{RPCS3_HOME}/12345678": "/nowhere"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001",)
+        assert "unestablished" not in caveat.data
+        assert "12345678" not in caveat.message
+
+    def test_vita3k_a_plain_file_beside_the_users_is_no_user_and_says_nothing(self):
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01": "not a user directory",
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert "unestablished" not in caveat.data
+        assert "skipped" not in caveat.data
+        assert "/mnt/sd/vita/ux0/user/01/savedata" not in [g.dir for g in p.file_set.groups]
+
+    def test_vita3k_a_dead_link_beside_the_users_is_no_user_and_says_nothing(self):
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            symlinks={"/mnt/sd/vita/ux0/user/01": "/nowhere"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert "unestablished" not in caveat.data
+
+    def test_rpcs3_an_inaccessible_entry_leaves_the_listing_complete(self):
+        # An inaccessible entry below a listable root is not an unlistable
+        # root: the glob still reached every name. So the answer must not
+        # carry the caveat that says which users exist here is unknown for
+        # want of a listing — the survey states the one entry instead.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+            inaccessible=[f"{RPCS3_HOME}/12345678"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert atlas.CAVEAT_SAVE_DIR_UNLISTABLE not in [c.code for c in p.caveats]
+
+    def test_rpcs3_the_two_undecided_reasons_each_keep_their_own_clause(self):
+        # A localusername that could not be looked at and an entry whose own
+        # stat failed are undecided about different things, so they are two
+        # clauses rather than one list under whichever reason came first.
+        p = self._rpcs3(
+            dirs=[f"{RPCS3_HOME}/12345678/savedata"],
+            inaccessible=[f"{RPCS3_HOME}/12345678/localusername", f"{RPCS3_HOME}/23456789"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["unestablished"] == ("12345678", "23456789")
+        assert "whether RPCS3 lists 12345678 is not established — its localusername" in caveat.message
+        assert (
+            "whether RPCS3 lists 23456789 is not established — nothing about it could be "
+            "looked at" in caveat.message
+        )
+
+    def test_vita3k_a_user_root_entry_whose_stat_fails_is_stated_not_dropped(self):
+        # Vita3K reaches such an entry through boost's directory_entry, which
+        # answers is_directory from the kind readdir handed the walk and only
+        # stats where that kind is absent — so the entry passes the directory
+        # test and stands or falls on its user.xml, is skipped, or throws out
+        # of the listing, by a d_type atlas does not read. Not established, and
+        # stated as that.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert caveat.data["unestablished"] == ("01",)
+        assert "skipped" not in caveat.data
+        assert (
+            "whether Vita3K lists 01 is not established — nothing about it could be looked "
+            "at, not even whether it is a directory, and what the emulator's own listing "
+            "makes of such an entry depends on the kind its walk was handed rather than on "
+            "a stat" in caveat.message
+        )
+        assert "/mnt/sd/vita/ux0/user/01/savedata" not in [g.dir for g in p.file_set.groups]
+        assert atlas.CAVEAT_SAVE_DIR_UNLISTABLE not in [c.code for c in p.caveats]
+
+    def test_vita3k_an_inaccessible_entry_alone_leaves_the_survey_open(self):
+        # The only entry is one nothing could be told about: "no user
+        # directory exists below ux0/user — nothing has saved here yet" would
+        # be false of it, and so would stating it as a user.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n"},
+            dirs=["/mnt/sd/vita/ux0/user"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert caveat.data["unestablished"] == ("01",)
+        assert "no user directory exists below" not in caveat.message
+        assert (
+            "whether any directory here is a user Vita3K would list is not established"
+            in caveat.message
+        )
+
+    def test_vita3k_the_recorded_user_sentence_does_not_claim_a_user_xml_was_unread(self):
+        # The sentence that answers a recorded user against an undecided
+        # survey used to say "the user.xml under 01 could not be read" for
+        # every unestablished entry. That is false of an entry whose own stat
+        # failed — no user.xml was reached to be read — so the sentence stays
+        # reason-neutral and the aside carries each entry's own reason.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_SETUP_UNESTABLISHED
+        assert caveat.data["configured_user"] == "01"
+        assert caveat.data["unestablished"] == ("01",)
+        assert "the user.xml under 01 could not be read" not in caveat.message
+        assert "what 01 holds could not be established here" in caveat.message
+
+    def test_vita3k_the_two_undecided_reasons_each_keep_their_own_clause(self):
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: {"status": "unreadable"},
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["unestablished"] == ("00", "01")
+        assert "whether Vita3K lists 00 is not established — its user.xml" in caveat.message
+        assert (
+            "whether Vita3K lists 01 is not established — nothing about it could be looked at"
+            in caveat.message
+        )
+
     def test_the_listing_is_complete_only_when_both_globs_are(self):
         # The two globs share one walk on both machines, so nothing in the
         # tree can fail one and not the other — the merge rule is pinned with
@@ -5090,10 +5343,11 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
 
         machine = _HalfBlind({}, dirs=[f"{RPCS3_HOME}/00000001"])
-        listing, users = _per_user_listing(machine, RPCS3_HOME)
-        assert listing.status == GLOB_INCOMPLETE
-        assert listing.unreadable == (RPCS3_HOME,)
-        assert users == ("00000001",)
+        found = _per_user_listing(machine, RPCS3_HOME)
+        assert found.listing.status == GLOB_INCOMPLETE
+        assert found.listing.unreadable == (RPCS3_HOME,)
+        assert found.users == ("00000001",)
+        assert found.unstatable == ()
 
 
 class TestEmuDeckStandaloneLaunchers:
