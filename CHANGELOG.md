@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.2](https://github.com/danielcopper/emu-atlas/compare/v0.17.1...v0.17.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **machine:** a deployed core the loader refuses is stated as unread, not as stating no default ([#454](https://github.com/danielcopper/emu-atlas/issues/454)) ([7b5382e](https://github.com/danielcopper/emu-atlas/commit/7b5382ec2e85969071b63192df514b6b35147a27)), closes [#408](https://github.com/danielcopper/emu-atlas/issues/408)
+* **saves:** a user-root entry whose stat fails is stated, not dropped ([#456](https://github.com/danielcopper/emu-atlas/issues/456)) ([8770be8](https://github.com/danielcopper/emu-atlas/commit/8770be88bb160d946addcad7c41c0868bd781d23)), closes [#371](https://github.com/danielcopper/emu-atlas/issues/371)
+
 ## [0.17.1](https://github.com/danielcopper/emu-atlas/compare/v0.17.0...v0.17.1) (2026-09-10)
 
 
