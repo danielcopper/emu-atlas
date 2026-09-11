@@ -240,26 +240,175 @@ def module_string_constants(tree: ast.Module) -> dict[str, str]:
     return values
 
 
-def module_string_tuples(tree: ast.Module) -> dict[str, tuple[str, ...]]:
-    """Module-level ``NAME = ("a", "b")`` tuples of plain strings."""
+def module_string_tuples(
+    tree: ast.Module, imported: Mapping[str, tuple[str, ...]] | None = None
+) -> dict[str, tuple[str, ...]]:
+    """Module-level ``NAME = ("a", "b")`` tuples of plain strings.
+
+    A tuple may be *composed* rather than spelled out:
+    ``EMULATOR_CONFIG_UNREADABLE_REASONS = (*REFUSAL_CODES, REASON_KEY_UNREAD)``
+    states seven values without a literal holding them. A starred name is
+    resolved where the name is a string tuple this reading already holds — one
+    assigned earlier in the same module, or one *imported* carries in from the
+    module it was imported from. Everything else stays exactly as unresolved as
+    it was: a tuple with an element this cannot read states nothing at all,
+    rather than a shorter list that would read as the whole of it.
+    """
     values = module_string_constants(tree)
     tuples: dict[str, tuple[str, ...]] = {}
     for node in tree.body:
         target, value = _assignment(node)
         if target is None or not isinstance(value, ast.Tuple):
             continue
-        resolved: list[str] = []
-        for element in value.elts:
-            if isinstance(element, ast.Constant) and isinstance(element.value, str):
-                resolved.append(element.value)
-            elif isinstance(element, ast.Name) and element.id in values:
-                resolved.append(values[element.id])
-            else:
-                resolved = []
-                break
+        resolved = _tuple_strings(value, values, {**(imported or {}), **tuples})
         if resolved:
-            tuples[target] = tuple(resolved)
+            tuples[target] = resolved
     return tuples
+
+
+def _tuple_strings(
+    node: ast.Tuple, constants: Mapping[str, str], tuples: Mapping[str, tuple[str, ...]]
+) -> tuple[str, ...] | None:
+    """The strings a tuple states, or ``None`` where one of its elements is not one."""
+    resolved: list[str] = []
+    for element in node.elts:
+        if isinstance(element, ast.Constant) and isinstance(element.value, str):
+            resolved.append(element.value)
+        elif isinstance(element, ast.Name) and element.id in constants:
+            resolved.append(constants[element.id])
+        elif isinstance(element, ast.Starred) and (splat := _starred_name(element)) in tuples:
+            resolved.extend(tuples[splat])
+        else:
+            return None
+    return tuple(resolved)
+
+
+def _starred_name(element: ast.Starred) -> str:
+    """The name a ``*NAME`` element splats, or ``""`` where it splats an expression."""
+    return element.value.id if isinstance(element.value, ast.Name) else ""
+
+
+@dataclasses.dataclass(frozen=True)
+class ImportedTuple:
+    """One string tuple an import carries into a module, and where it came from.
+
+    The module matters as much as the values: a list composed by splatting this
+    name holds values whose constants stand in *that* module, and that is what
+    lets :func:`vocabulary_modules` count it as declaring the composed list too.
+    """
+
+    values: tuple[str, ...]
+    module: str
+
+
+def imported_string_tuples(
+    path: Path, tree: ast.Module, literal: Mapping[Path, dict[str, tuple[str, ...]]]
+) -> dict[str, ImportedTuple]:
+    """The string tuples one module's ``from .sibling import NAME`` lines bring in.
+
+    Only the form the package writes is followed: a top-level import of a
+    sibling module in the same package, written with one dot. An import this
+    cannot resolve to a module of *literal* contributes nothing, and the tuple
+    that would have splatted its name stays unresolved.
+    """
+    found: dict[str, ImportedTuple] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or node.level != 1 or not node.module:
+            continue
+        source = path.parent / f"{node.module}.py"
+        tuples = literal.get(source, {})
+        module = str(source.relative_to(REPO_ROOT))
+        for alias in node.names:
+            if alias.name in tuples:
+                found[alias.asname or alias.name] = ImportedTuple(tuples[alias.name], module)
+    return found
+
+
+def module_splat_sources(
+    tree: ast.Module, imported: Mapping[str, ImportedTuple]
+) -> dict[str, set[str]]:
+    """``{assigned name: the modules its tuple splats values in from}``.
+
+    A tuple that splats a name assigned above it in the same file inherits that
+    name's sources, so a same-file chain carries the far module along. A splat
+    of a name this module assigns itself adds no module of its own — there is
+    none in it — and it adds none for the import of the same name either, which
+    is the shadowing :func:`module_string_tuples` resolves the same way round:
+    its ``{**imported, **tuples}`` lets a tuple the module assigned win over the
+    one an import carried in. The mirror here is by name rather than by whether
+    that local tuple resolved, so a module that shadows an imported tuple name
+    with one this reading cannot read credits no module rather than the wrong
+    one — which leaves a list declared in one module where two would have been
+    right, and that is the direction a gate can still speak about, once any
+    one of the list's sentences is collected.
+    """
+    found: dict[str, set[str]] = {}
+    assigned: set[str] = set()
+    for node in tree.body:
+        target, value = _assignment(node)
+        if target is None or not isinstance(value, ast.Tuple):
+            continue
+        sources: set[str] = set()
+        for element in value.elts:
+            if not isinstance(element, ast.Starred):
+                continue
+            splat = _starred_name(element)
+            sources |= found.get(splat, set())
+            if splat in imported and splat not in assigned:
+                sources.add(imported[splat].module)
+        assigned.add(target)
+        if sources:
+            found[target] = sources
+    return found
+
+
+@functools.cache
+def _literal_string_tuples() -> dict[Path, dict[str, tuple[str, ...]]]:
+    """Pass one: what each module states without looking at its imports."""
+    return {path: module_string_tuples(tree) for path, tree in package_modules()}
+
+
+@functools.cache
+def package_string_tuples() -> dict[str, dict[str, tuple[str, ...]]]:
+    """``{module: {name: the values it states}}`` for every module under ``atlas/``.
+
+    Two passes, because a composed tuple is stated in another module's terms:
+    the first reads what each module states on its own — a splat of a tuple
+    assigned above it in the same file included — and the second re-reads each
+    module with the tuples of that first pass its imports bring in. A splat
+    across modules therefore reaches one hop: a name imported from a module
+    that itself composed it out of an import stays unresolved. One hop is what
+    the package writes, and following further would be walking an import graph
+    this page has no reason to walk.
+    """
+    literal = _literal_string_tuples()
+    return {
+        str(path.relative_to(REPO_ROOT)): module_string_tuples(
+            tree,
+            {
+                name: carried.values
+                for name, carried in imported_string_tuples(path, tree, literal).items()
+            },
+        )
+        for path, tree in package_modules()
+    }
+
+
+@functools.cache
+def package_splat_sources() -> dict[str, dict[str, set[str]]]:
+    """``{module: {name: the modules a composed tuple splats its values in from}}``.
+
+    The provenance beside :func:`package_string_tuples`, read off the same two
+    passes. It answers the question a composed list raises and a literal one
+    does not: where do the constants that spell these values live?
+    """
+    literal = _literal_string_tuples()
+    return {
+        str(path.relative_to(REPO_ROOT)): module_splat_sources(
+            tree, imported_string_tuples(path, tree, literal)
+        )
+        for path, tree in package_modules()
+    }
 
 
 # --------------------------------------------------------------------------
@@ -679,8 +828,8 @@ def _member_docstrings(node: ast.ClassDef) -> Iterator[tuple[str, str]]:
 def declared_vocabularies() -> dict[str, tuple[str, ...]]:
     """Every module-level string tuple in the package, by name."""
     found: dict[str, tuple[str, ...]] = {}
-    for _, tree in package_modules():
-        found.update(module_string_tuples(tree))
+    for tuples in package_string_tuples().values():
+        found.update(tuples)
     return found
 
 
@@ -760,24 +909,38 @@ def value_statements() -> dict[str, dict[str, list[ValueStatement]]]:
 def vocabulary_modules() -> dict[tuple[str, ...], set[str]]:
     """Every module that declares one exact value list, by that list.
 
-    A vocabulary's meanings are read in the module that declares it, which is
-    the module its value constants stand in; a value spelled in another module
-    is a homonym this reading has no reason to believe. Two ways of declaring
-    count, and they are the two the page already names: a module-level string
-    tuple, and the ``Literal`` alias an annotation is spelled through.
+    A vocabulary's meanings are read in the modules that declare it, which are
+    the modules its value constants stand in; a value spelled in a module with
+    no claim on the list is a homonym this reading has no reason to believe.
+    Two ways of declaring count, and they are the two the page already names: a
+    module-level string tuple, and the ``Literal`` alias an annotation is
+    spelled through.
 
-    A tuple composed from another — ``EMULATOR_CONFIG_UNREADABLE_REASONS`` is
-    built by splat from ``REFUSAL_CODES`` — is invisible to both, exactly as it
-    is to :func:`declared_vocabularies`, so no module declares it here and
-    sentences written under its values would be collected by nothing. Such a
-    vocabulary renders as one nobody has annotated, which is what it is until
-    it is given a literal tuple or an alias to be found by.
+    A composed tuple counts as spelled, and where its splat crossed a module it
+    declares its list in both. ``ARCHIVE_SUFFIXES`` and ``_BLOB_KEYS`` splat a
+    name of their own module and name one;
+    ``EMULATOR_CONFIG_UNREADABLE_REASONS`` is assigned in ``atlas/placement.py``
+    by splatting ``REFUSAL_CODES``, which :func:`package_string_tuples`
+    resolves, and six of its seven values are the constants of
+    ``atlas/yaml_scalars.py`` the splat carried in, so both are named.
+    :func:`package_splat_sources` is what says so, and what makes the second
+    module a declarer rather than a coincidence: it was reached by following
+    the import that carried the values, not by matching a spelling. Within a
+    declaring module the matching is still by spelling, which is what the
+    ``Literal`` narrowing in :func:`stated_meanings` exists to hold apart.
+
+    A vocabulary no module declares either way is read by nothing, so a
+    sentence written under one of its values would be collected by nothing —
+    :func:`undeclared_vocabulary_meanings` stops the generation rather than
+    letting that sentence stand unread.
     """
     found: dict[tuple[str, ...], set[str]] = {}
     for path, tree in package_modules():
         module = str(path.relative_to(REPO_ROOT))
-        declared = (*module_string_tuples(tree).values(), *module_literal_aliases(tree).values())
-        for members in declared:
+        sources = package_splat_sources()[module]
+        for name, members in package_string_tuples()[module].items():
+            found.setdefault(members, set()).update({module, *sources.get(name, ())})
+        for members in module_literal_aliases(tree).values():
             found.setdefault(members, set()).add(module)
     return found
 
@@ -910,10 +1073,11 @@ def registered_enumerations() -> dict[tuple[str, str], str]:
 def vocabulary_names() -> dict[tuple[str, ...], list[str]]:
     """Contents → every name this package gives that exact tuple, preference applied.
 
-    Two sources: the module-level literal tuples the AST reading collects, and
-    the package's exported names — the second is not redundant, because a tuple
-    assembled from others (``EMULATOR_CONFIG_UNREADABLE_REASONS`` is built by
-    splat) is invisible to an AST reading of literals.
+    Two sources: the module-level tuples the AST reading collects, and the
+    package's exported names. The second is what the preference below is made
+    of — it says which of two names for one tuple a cell cites — and it is also
+    what a reading of the source alone cannot state: exporting is a fact about
+    ``atlas.__all__``, not about the assignment the tuple is written as.
 
     An **exported** name wins outright where one exists: the merge below keys
     both readings by contents and lets the exported list overwrite the private
@@ -1764,6 +1928,67 @@ def ambiguous_value_meanings(published: Sequence[PublishedVocabulary]) -> list[s
     ]
 
 
+def undeclared_vocabulary_meanings(published: Sequence[PublishedVocabulary]) -> list[str]:
+    """Meanings written for a published list no module declares, which nothing reads.
+
+    The third of the vocabulary family, and the mirror of the other two. Those
+    refuse to publish a claim the source does not back; this one refuses to
+    *ignore* one the source does make. :func:`stated_meanings` reads a
+    vocabulary's sentences in the modules that declare it, so a list declared by
+    none collects nothing — writing every meaning it has changes no byte of the
+    page and trips no gate, which is the one failure a silent reading can have.
+
+    The scope is wider than :func:`stated_meanings` reads on, and it has to be:
+    there is no declaring module to look in, so every module is. Two narrowings
+    keep that width from naming a constant whose author meant another list. An
+    annotated constant speaks only where its ``Literal`` alias admits exactly
+    these members, which is the narrowing :func:`stated_meanings` applies. And a
+    constant whose own module declares some list holding its value is left
+    alone: that list is what its sentence is spoken for, so the sentence is not
+    one this page can say nobody claimed, however many other lists happen to
+    spell the same word. What it is *not* is a promise that a reader will ever
+    see that sentence: the list it is spoken for may be one the page never
+    publishes, and then the narrowing has taken the constant out of this gate's
+    reach without putting its meaning anywhere. That is what it costs, and it
+    costs nothing while no list the page leaves unpublished carries a statement
+    at all — which is not an assumption here but a test, because a number or a
+    universal in a docstring rots and a test does not.
+    """
+    declared = vocabulary_modules()
+    statements = value_statements()
+    spoken_for: dict[str, set[str]] = {}
+    for values, modules in declared.items():
+        for module in modules:
+            spoken_for.setdefault(module, set()).update(values)
+    found: list[str] = []
+    for vocabulary in published:
+        if declared.get(vocabulary.values):
+            continue
+        members = set(vocabulary.values)
+        for module in sorted(statements):
+            unread = sorted(members - spoken_for.get(module, set()))
+            found.extend(_unread_meanings(vocabulary, module, unread, statements[module], members))
+    return found
+
+
+def _unread_meanings(
+    vocabulary: PublishedVocabulary,
+    module: str,
+    unread: Sequence[str],
+    statements: Mapping[str, list[ValueStatement]],
+    members: set[str],
+) -> Iterator[str]:
+    """One failure per constant of *module* that states a value nothing will read."""
+    for value in unread:
+        for statement in statements.get(value, []):
+            if statement.admits is None or set(statement.admits) == members:
+                yield (
+                    f"`{vocabulary.heading}`: `{statement.constant}` in {module} states what "
+                    f"`{value}` means, and no module declares this list, so nothing reads the "
+                    "sentence — give the list a literal tuple or a `Literal` alias to be found by"
+                )
+
+
 def contradictions(walks: Mapping[str, ShapeWalk]) -> list[str]:
     """Attributes the annotations forbid to be ``null`` and a vector made ``null``."""
     found: list[str] = []
@@ -2273,10 +2498,12 @@ def closed_vocabularies(reference: Reference) -> list[str]:
         *paragraph(
             "A name that links leads to a subsection below stating what each of its values says. That is the "
             "meaning column's reading applied one level down: the sentence is the string written directly under the "
-            "value's own constant, read in the module that declares the list. A constant annotated with a `Literal` "
-            "alias speaks only for the vocabulary that alias admits, which is what holds apart the several "
+            "value's own constant, read in the modules that declare the list, which for a list composed by splat is "
+            "the module that assigns it and the module its splatted values came from. A constant annotated with a "
+            "`Literal` alias speaks only for the vocabulary that alias admits, which is what holds apart the several "
             "constants of one module that spell the same value; a bare `NAME = \"value\"` carries no such narrowing "
-            "and speaks for every list of its module holding its value. Where two constants speak for one member, "
+            "and speaks for every list holding its value that its own module declares or contributed those values "
+            "to. Where two constants speak for one member, "
             "sentences that agree are one statement and sentences that differ stop this generation rather than one "
             "of them being picked. It is all or nothing besides: a list whose members state a meaning in part stops "
             "the generation too, rather than publishing a table a reader would take for the whole list."
@@ -2441,6 +2668,7 @@ def build() -> tuple[list[str], list[str]]:
         *unstated_meanings(reference.walks, reference.sentences),
         *half_explained_vocabularies(reference.published),
         *ambiguous_value_meanings(reference.published),
+        *undeclared_vocabulary_meanings(reference.published),
     ]
     return lines, failures
 
@@ -2448,14 +2676,15 @@ def build() -> tuple[list[str], list[str]]:
 def main() -> None:
     lines, failures = build()
     if failures:
-        # Seven gates print here. The null cross-check is annotations against
+        # Eight gates print here. The null cross-check is annotations against
         # vectors, the shape and registry checks are the corpus against itself
         # and against the registry, the naming check is the package against
         # itself, the meaning gate is the walk against the docstrings, and the
-        # last two read one pair between them — a published vocabulary against
+        # last three read one pair between them — a published vocabulary against
         # the sentences under its own value constants — because they catch the
-        # two ways that pair fails: a list explained in part, and a value two
-        # constants explain differently.
+        # three ways that pair fails: a list explained in part, a value two
+        # constants explain differently, and a sentence written for a list no
+        # module declares, which no reading here would ever collect.
         print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)

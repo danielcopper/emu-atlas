@@ -17,7 +17,7 @@ import pathlib
 import pytest
 
 import atlas
-from atlas import placement
+from atlas import placement, yaml_scalars
 from atlas.firmware import FirmwareAlternatives, FirmwareRequirement
 from atlas.placement import SavefilePlacement
 from scripts import generate_contract_reference as reference
@@ -867,6 +867,278 @@ class TestWhatEachValueOfAClosedVocabularyMeans:
         assert guide - {"null"} == set(subsection_values(generated, "CORE_SYSTEM_FIRMWARE_STATES"))
 
 
+class TestATupleComposedFromAnotherStatesItsValues:
+    """``(*REFUSAL_CODES, REASON_KEY_UNREAD)`` is a vocabulary, not an expression.
+
+    A value list the package writes by splatting another states its members as
+    plainly as a literal does, and every reading that asks which module declares
+    a list has to see it — otherwise the list is declared by nobody, and the
+    sentences written under its value constants are collected by nothing.
+    """
+
+    def test_a_splat_of_a_tuple_assigned_above_it_resolves(self) -> None:
+        tree = ast.parse('A = "a"\nB = "b"\nFIRST = (A, B)\nBOTH = (*FIRST, "c")\n')
+        assert reference.module_string_tuples(tree)["BOTH"] == ("a", "b", "c")
+
+    def test_a_chain_of_them_in_one_module_resolves_to_the_end(self) -> None:
+        # Within one file the reading walks the body in order, so each tuple is
+        # already held by the time the next one splats it — there is no hop
+        # limit to state here, and the limit below is the cross-module one.
+        tree = ast.parse('ONE = ("a",)\nTWO = (*ONE, "b")\nTHREE = (*TWO, "c")\n')
+        assert reference.module_string_tuples(tree)["THREE"] == ("a", "b", "c")
+
+    def test_a_splat_of_a_name_the_reading_does_not_hold_states_nothing(self) -> None:
+        # The shape #435 is about: the tuple is real Python and the reading
+        # cannot say what it holds, so it states nothing at all rather than the
+        # one value it could read — a short list would read as the whole list.
+        tree = ast.parse('BOTH = (*ELSEWHERE, "c")\n')
+        assert reference.module_string_tuples(tree) == {}
+
+    def test_a_splat_of_an_expression_states_nothing(self) -> None:
+        tree = ast.parse('BOTH = (*sorted(ELSEWHERE), "c")\n')
+        assert reference.module_string_tuples(tree) == {}
+
+    def test_an_imported_tuple_resolves_the_splat_that_names_it(self) -> None:
+        tree = ast.parse('from .sibling import FIRST\nBOTH = (*FIRST, "c")\n')
+        assert reference.module_string_tuples(tree) == {}
+        assert reference.module_string_tuples(tree, {"FIRST": ("a", "b")})["BOTH"] == ("a", "b", "c")
+
+    def test_the_imports_read_are_the_ones_the_package_writes(self) -> None:
+        # A top-level import of a sibling module in the same package, written
+        # with one dot, bound under the name the import binds. An import that
+        # reaches no module of the first pass brings nothing in, and the tuple
+        # that splats its name stays unresolved.
+        path = reference.PACKAGE_DIR / "made_up.py"
+        tree = ast.parse(
+            "from .sibling import FIRST, ABSENT\n"
+            "from .sibling import SECOND as RENAMED\n"
+            "from .missing import GONE\n"
+            "from ..outside import HIGHER\n"
+        )
+        literal = {reference.PACKAGE_DIR / "sibling.py": {"FIRST": ("a",), "SECOND": ("b",)}}
+        assert reference.imported_string_tuples(path, tree, literal) == {
+            "FIRST": reference.ImportedTuple(("a",), "atlas/sibling.py"),
+            "RENAMED": reference.ImportedTuple(("b",), "atlas/sibling.py"),
+        }
+
+    def test_a_composed_tuple_names_the_module_its_values_came_from(self) -> None:
+        # The provenance the declaring-module reading rests on, and the
+        # same-file chain carrying it: `MORE` never names the sibling, and its
+        # values came from there all the same.
+        tree = ast.parse('from .sibling import FIRST\nBOTH = (*FIRST, "c")\nMORE = (*BOTH, "d")\n')
+        imported = {"FIRST": reference.ImportedTuple(("a", "b"), "atlas/sibling.py")}
+        assert reference.module_splat_sources(tree, imported) == {
+            "BOTH": {"atlas/sibling.py"},
+            "MORE": {"atlas/sibling.py"},
+        }
+
+    def test_a_splat_of_a_name_the_module_assigns_itself_names_no_other_module(self) -> None:
+        tree = ast.parse('FIRST = ("a",)\nBOTH = (*FIRST, "b")\n')
+        assert reference.module_splat_sources(tree, {}) == {}
+
+    def test_a_name_the_module_shadows_credits_no_module_to_the_import(self) -> None:
+        # `module_string_tuples` merges `{**imported, **tuples}`, so the tuple
+        # the module assigned wins and `BOTH` holds `("x", "y")` — none of it
+        # from the sibling. Crediting the sibling here would hand a list a
+        # declaring module whose constants spell none of its values.
+        tree = ast.parse(
+            'from .sibling import NAME\nNAME = ("x",)\nBOTH = (*NAME, "y")\n'
+        )
+        imported = {"NAME": reference.ImportedTuple(("a", "b"), "atlas/sibling.py")}
+        assert reference.module_string_tuples(tree, {"NAME": ("a", "b")})["BOTH"] == ("x", "y")
+        assert reference.module_splat_sources(tree, imported) == {}
+
+    def test_the_only_composed_tuple_the_page_publishes_resolves_whole(self) -> None:
+        # The package writes four module-level tuples with a splat in them:
+        # `ARCHIVE_SUFFIXES` and `_BLOB_KEYS` in `atlas/machine.py` splat a
+        # name of their own module, `_KNOWN_FILE_TEMPLATES` in
+        # `atlas/oddities.py` and this one splat an imported name. Only this
+        # one is a vocabulary the page publishes. `_KNOWN_FILE_TEMPLATES` stays
+        # unresolved for a reason that has nothing to do with its splat: its
+        # two plain elements are scalars imported from `atlas/placement.py`,
+        # and the module-constant reading holds only names a module assigns.
+        values = tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)
+        assert values == (*yaml_scalars.REFUSAL_CODES, atlas.REASON_KEY_UNREAD)
+        assert reference.declared_vocabularies()["EMULATOR_CONFIG_UNREADABLE_REASONS"] == values
+
+    def test_both_modules_the_composed_list_is_spelled_across_declare_it(self) -> None:
+        # The half that makes the sentences readable: the list is assigned in
+        # `atlas/placement.py`, and six of its seven value constants stand in
+        # `atlas/yaml_scalars.py`. A reading that named only the assigning
+        # module would collect nothing written beside those six.
+        values = tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)
+        assert sorted(reference.vocabulary_modules()[values]) == [
+            "atlas/placement.py",
+            "atlas/yaml_scalars.py",
+        ]
+
+    def test_a_sentence_in_the_module_the_values_came_from_is_collected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # What naming both modules buys, at the reading that spends it: one
+        # value's constant stands where the list is assigned, the other's in
+        # the module the splat carried it in from, and both sentences are read.
+        values = ("borrowed", "own")
+        stating = {
+            "atlas/source.py": {
+                "borrowed": [reference.ValueStatement("BORROWED", None, "From next door.")]
+            },
+            "atlas/user.py": {"own": [reference.ValueStatement("OWN", None, "Assigned here.")]},
+        }
+        both = {"atlas/source.py", "atlas/user.py"}
+        monkeypatch.setattr(reference, "vocabulary_modules", lambda: {values: both})
+        monkeypatch.setattr(reference, "value_statements", lambda: stating)
+        assert reference.stated_meanings(values) == (
+            {"borrowed": "From next door.", "own": "Assigned here."},
+            [],
+        )
+
+    def test_the_registry_names_it_from_the_source_now_as_well(self) -> None:
+        # It was the exported names alone that kept this pair from citing "an
+        # unnamed tuple"; the source reading reaches it too, and the cell is
+        # the same either way.
+        assert reference.vocabulary_names()[tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)] == [
+            "EMULATOR_CONFIG_UNREADABLE_REASONS"
+        ]
+
+
+class TestAMeaningWrittenForAListNoModuleDeclares:
+    """The third vocabulary gate: a sentence no reading here would ever collect.
+
+    The other two refuse to publish a claim the source does not back. This one
+    refuses to ignore one the source does make: meanings are read in the modules
+    that declare the list, so a list declared by none collects nothing, and
+    writing every meaning it has would change no byte of the page and fail
+    nowhere — the one failure a silent reading can have.
+    """
+
+    UNDECLARED = ("first-thing", "second-thing")
+
+    def published(self) -> reference.PublishedVocabulary:
+        return reference.PublishedVocabulary(
+            values=self.UNDECLARED, names=("REASONS",), attributes=(), meanings={}, collisions=()
+        )
+
+    def test_every_list_the_page_publishes_is_declared_somewhere(
+        self, built: reference.Reference
+    ) -> None:
+        declared = reference.vocabulary_modules()
+        undeclared = [
+            vocabulary.heading
+            for vocabulary in built.published
+            if not declared.get(vocabulary.values)
+        ]
+        assert undeclared == []
+        assert reference.undeclared_vocabulary_meanings(built.published) == []
+
+    def test_a_sentence_under_an_undeclared_lists_value_stops_the_generation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A fixture module with exactly the shape that goes unread: a tuple
+        # composed by splat from a name this reading cannot follow, so nothing
+        # declares the list, and a statement standing under one of its values.
+        tree = ast.parse(
+            'SECOND_THING = "second-thing"\n'
+            '"""The second thing happened."""\n'
+            "REASONS = (*SOMEWHERE_ELSE, SECOND_THING)\n"
+        )
+        assert reference.module_string_tuples(tree) == {}, "the fixture's list declares itself"
+        stating = reference.module_value_statements(tree)
+        monkeypatch.setattr(reference, "vocabulary_modules", dict)
+        monkeypatch.setattr(reference, "value_statements", lambda: {"atlas/made_up.py": stating})
+        failures = reference.undeclared_vocabulary_meanings([self.published()])
+        assert failures == [
+            "`REASONS`: `SECOND_THING` in atlas/made_up.py states what `second-thing` means, "
+            "and no module declares this list, so nothing reads the sentence — give the list a "
+            "literal tuple or a `Literal` alias to be found by"
+        ]
+
+    def test_a_declared_list_states_nothing_here_however_it_is_written(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The same sentence under the same constant, once the list is declared:
+        # `stated_meanings` collects it, so this gate has nothing to say and
+        # the other two take over.
+        stating = {"second-thing": [reference.ValueStatement("SECOND_THING", None, "The second.")]}
+        monkeypatch.setattr(
+            reference, "vocabulary_modules", lambda: {self.UNDECLARED: {"atlas/made_up.py"}}
+        )
+        monkeypatch.setattr(reference, "value_statements", lambda: {"atlas/made_up.py": stating})
+        assert reference.undeclared_vocabulary_meanings([self.published()]) == []
+
+    def test_a_constant_scoped_to_another_list_is_not_read_as_this_ones(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The narrowing `stated_meanings` reads a constant on, read the same
+        # way here: an annotated constant speaks for the list its alias admits
+        # and for no neighbour that happens to spell the same value.
+        elsewhere = reference.ValueStatement(
+            "ELSEWHERES_SECOND", ("second-thing", "third-thing"), "Not this one."
+        )
+        stating = {"second-thing": [elsewhere]}
+        monkeypatch.setattr(reference, "vocabulary_modules", dict)
+        monkeypatch.setattr(reference, "value_statements", lambda: {"atlas/made_up.py": stating})
+        assert reference.undeclared_vocabulary_meanings([self.published()]) == []
+
+    def test_no_list_the_page_leaves_unpublished_carries_a_statement(
+        self, built: reference.Reference
+    ) -> None:
+        # What the second narrowing costs, held at zero. A constant is left
+        # alone because a list its module declares is spoken for by it — and
+        # that list may be one the page never publishes, in which case the
+        # meaning reaches no reader and no gate says so. The day a sentence is
+        # written under an unpublished list's value, this fails and the
+        # narrowing has to be revisited rather than quietly hiding it.
+        published = {vocabulary.values for vocabulary in built.published}
+        statements = reference.value_statements()
+        carried = [
+            f"{module}:{statement.constant}"
+            for values, modules in reference.vocabulary_modules().items()
+            if values not in published
+            for module in sorted(modules)
+            for value in dict.fromkeys(values)
+            for statement in statements.get(module, {}).get(value, [])
+        ]
+        assert carried == [], carried
+
+    def test_a_constant_its_own_module_already_speaks_for_is_not_named(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate reads every module, because an undeclared list has none of
+        # its own to read. `open` is spelled by two lists here: one
+        # `atlas/alpha.py` declares, and an undeclared one the page publishes.
+        # `ALPHA_OPEN`'s sentence is collected for alpha's list, so it is not a
+        # sentence nothing reads, and naming it would send someone to a
+        # constant whose author never meant this vocabulary.
+        declared = {("open", "closed"): {"atlas/alpha.py"}}
+        stating = {
+            "atlas/alpha.py": {"open": [reference.ValueStatement("ALPHA_OPEN", None, "Alpha's.")]}
+        }
+        monkeypatch.setattr(reference, "vocabulary_modules", lambda: declared)
+        monkeypatch.setattr(reference, "value_statements", lambda: stating)
+        published = dataclasses.replace(self.published(), values=("open", "pending"))
+        assert reference.undeclared_vocabulary_meanings([published]) == []
+
+    def test_build_carries_the_gate_among_its_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate is only a gate if `build()` carries it. A real, filled
+        # vocabulary is made undeclared, which is exactly the state #435
+        # measured: its sentences stop being collected, so the all-or-nothing
+        # gate falls silent and this one has to speak instead.
+        real = reference.vocabulary_modules()
+        undeclared = {
+            values: modules
+            for values, modules in real.items()
+            if values != placement.PATCH_FORMATS
+        }
+        monkeypatch.setattr(reference, "vocabulary_modules", lambda: undeclared)
+        _, failures = reference.build()
+        named = [failure for failure in failures if failure.startswith("`PATCH_FORMATS`")]
+        assert named, failures
+        assert all("nothing reads the sentence" in failure for failure in named)
+
+
 class TestDescribingACaveatDataKeysValues:
     VOCABULARIES = {"NEEDS": ("required", "optional"), "BIG": ("a", "b", "c", "d")}
 
@@ -1059,8 +1331,9 @@ class TestTheDataRegistryReading:
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
             # Built by splat from REFUSAL_CODES, so no literal tuple in the
-            # source holds these members — the AST reading alone called this
-            # one "an unnamed tuple" until the exported names were read too.
+            # source holds these members. The exported names were what kept
+            # this one from being cited as "an unnamed tuple" until the AST
+            # reading learned to resolve the splat as well.
             ("emulator-config-unreadable", "reason"): "EMULATOR_CONFIG_UNREADABLE_REASONS",
         }
 
