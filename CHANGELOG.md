@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.18.0](https://github.com/danielcopper/emu-atlas/compare/v0.17.2...v0.18.0) (2026-09-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** a packaged card is judged, an identified image verified ([#469](https://github.com/danielcopper/emu-atlas/issues/469))
+
+### Features
+
+* **contract:** a meaning written for a vocabulary no module declares stops the generator ([#465](https://github.com/danielcopper/emu-atlas/issues/465)) ([24f8e4b](https://github.com/danielcopper/emu-atlas/commit/24f8e4bf26886708a078330729b8168f2b542675)), closes [#435](https://github.com/danielcopper/emu-atlas/issues/435)
+
+
+### Bug Fixes
+
+* **data:** every citation span names its script, and the canary insists ([#457](https://github.com/danielcopper/emu-atlas/issues/457)) ([8791273](https://github.com/danielcopper/emu-atlas/commit/8791273166701f927b814c10de16bc8a70594a8f)), closes [#439](https://github.com/danielcopper/emu-atlas/issues/439)
+* **data:** the PCSX2 texture citation names the update script's line too ([#464](https://github.com/danielcopper/emu-atlas/issues/464)) ([895aba9](https://github.com/danielcopper/emu-atlas/commit/895aba95b78996276d9fdd92e1244aeb0a229eb8)), closes [#462](https://github.com/danielcopper/emu-atlas/issues/462)
+* **firmware:** a packaged card is judged, an identified image verified ([#469](https://github.com/danielcopper/emu-atlas/issues/469)) ([ad47784](https://github.com/danielcopper/emu-atlas/commit/ad477847a8135db0307cf2d17262fc19daad1fb9)), closes [#461](https://github.com/danielcopper/emu-atlas/issues/461)
+* **firmware:** a system need is asked over the images filed under that system ([#463](https://github.com/danielcopper/emu-atlas/issues/463)) ([47d7c77](https://github.com/danielcopper/emu-atlas/commit/47d7c77acb83260677ab0bd1412b530a6dd3396c)), closes [#431](https://github.com/danielcopper/emu-atlas/issues/431)
+
 ## [0.17.2](https://github.com/danielcopper/emu-atlas/compare/v0.17.1...v0.17.2) (2026-09-11)
 
 
