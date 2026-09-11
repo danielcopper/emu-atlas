@@ -3,11 +3,13 @@
 The weekly canary deploys the newest RetroDECK and un-skips every machine-bound
 test, which is how the core anchors and the emulator directory names get
 re-read days before the reference machine updates. The packaged data's other
-half pointed nowhere: **112 citations name a RetroDECK component script and a
-line number**, every one of them read once, by hand, from one release. A
-release that inserts a line, renames a variable or moves a ``dir_prep`` left
-the suite green and the citation pointing at a line that no longer said what it
-said.
+half pointed nowhere: **every span that names a RetroDECK component script and
+a line number was read once, by hand, from one release** — ``CITATION_SPANS``
+below says how many there are and how the two spellings split, and a test
+holds it against what the patterns match over the packaged data, so the count
+cannot go stale in prose. A release that inserts a line, renames a variable or
+moves a ``dir_prep`` left the suite green and the citation pointing at a line
+that no longer said what it said.
 
 Three passes, weakest last:
 
@@ -21,12 +23,14 @@ Three passes, weakest last:
 3. **Every other citation** is at least a script that is still deployed and a
    line that still exists and still says something. It catches a component
    that went away or a file that shrank, which is what the two content passes
-   would otherwise report as a mismatch nobody can read. Most citations name
-   the script without naming its component — ``component_functions.sh:3``,
-   because the sentence around it already said which emulator — so the
-   component is resolved from the same string where one is named there, and
-   otherwise from the token the entry sits under. One citation resolves
-   neither way and is listed as such rather than dropped quietly.
+   would otherwise report as a mismatch nobody can read. Both spellings are
+   read and neither is the rule: a citation either names its component
+   (``components/dolphin/component_prepare.sh:26``) or leaves it to the
+   sentence around it (``component_functions.sh:3``, where that sentence
+   already said which emulator). So the component is resolved from the same
+   string where one is named there, and otherwise from the token the entry
+   sits under. One citation resolves neither way and is listed as such rather
+   than dropped quietly.
 
 Skipped where RetroDECK is not deployed, by the same path check that silences
 the rest of the machine-bound tier.
@@ -52,6 +56,21 @@ COMPONENTS = Path(
 CITATION = re.compile(r"components/([a-z0-9_-]+)/(component_[a-z_]+\.sh):(\d+)(?:-(\d+))?")
 # The same reference with the component left to the sentence around it.
 BARE_CITATION = re.compile(r"(?<!/)\b(component_[a-z_]+\.sh):(\d+)(?:-(\d+))?")
+# Any line span at all, named or not. The lookahead keeps a format spec out of
+# it — `{:016X}` is a placeholder, not a claim about a line.
+SPAN = re.compile(r":\d+(?:-\d+)?(?![0-9A-Za-z_])")
+# A span with a file name welded to it, which is every spelling either pattern
+# above accepts and also the upstream ones neither reads (`qthost.cpp:562-582`).
+NAMED_SPAN = re.compile(r"(?P<name>[A-Za-z0-9_.+-]+\.[A-Za-z0-9_+]+)(?P<span>:\d+(?:-\d+)?)")
+# The file names this suite can re-read: a component script, and nothing else.
+SCRIPT_NAME = re.compile(r"^component_[a-z_]+\.sh$")
+# How many spans the two spellings match over the packaged data: the ones
+# naming the component beside the script, then the ones leaving the component
+# to the sentence. A test below holds this against the live count, so the
+# module docstring can point at a number the suite keeps rather than carry one
+# that rots. Move it when a citation is added, removed or respelled from one
+# form into the other, not to quiet a test.
+CITATION_SPANS = (107, 108)
 # Only the plain `name="value"` form, which is every assignment these scripts
 # make. Anything else is left alone rather than half-understood.
 ASSIGNMENT = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*$')
@@ -202,14 +221,36 @@ def _bare_citations(
     return found, unresolved
 
 
+def _unnamed_spans(text: str) -> list[str]:
+    """The line spans in *text* that continue a component-script citation unnamed.
+
+    A span is *named* when a file name is welded to it (``NAMED_SPAN``): that
+    covers both spellings the collection reads and the upstream ``file:line``
+    citations no pass here re-reads. What is left is a naked ``:N[-M]``, which
+    belongs to whichever file name the sentence last pinned a line on — so it
+    is a claim about a deployed component script exactly when that name is one
+    (``SCRIPT_NAME``), and about an upstream source otherwise.
+    """
+    named = list(NAMED_SPAN.finditer(text))
+    welded = {match.start("span") for match in named}
+    unnamed: list[str] = []
+    for span in SPAN.finditer(text):
+        if span.start() in welded:
+            continue
+        before = [match for match in named if match.end() <= span.start()]
+        if before and SCRIPT_NAME.match(before[-1].group("name")):
+            unnamed.append(span.group(0))
+    return unnamed
+
+
 def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, str, int]]]:
     """Every component-script citation the packaged data names, and the ones nothing scopes.
 
     Collection-time work stays collection-time work: the *check* on the second
     half is a test of its own below, because an assertion here fails the
-    module's import and takes all hundred and fifty tests in this file with it
-    — one unscoped citation would read as "the citation canary is gone"
-    instead of "one citation needs a component name".
+    module's import and takes every test in this file with it — one unscoped
+    citation would read as "the citation canary is gone" instead of "one
+    citation needs a component name".
     """
     found: list[tuple[str, str, int, str]] = []
     unresolved: set[tuple[str, str, str, int]] = set()
@@ -231,6 +272,52 @@ def test_every_citation_names_a_component_or_an_emulator():
         "the set of citations naming neither a component nor an emulator has changed: "
         f"{sorted(UNSCOPED_CITATIONS ^ UNRESOLVED_CITATIONS)} — a citation nothing can resolve "
         "is one nothing re-reads, so name the component or record it here with the others"
+    )
+
+
+def test_no_citation_claims_a_script_line_without_naming_the_script():
+    """A span into a component script carries the script's name, or nothing reads it.
+
+    The collection reads two spellings, ``components/<c>/<script>:N[-M]`` and
+    the bare ``<script>:N[-M]``. A citation that pins one line and then
+    continues with a naked ``:N[-M]`` matches neither: the second line is
+    claimed as evidence in the prose and re-read by nothing, so it can go blank
+    or move under the citation the way the named ones cannot (#439). This scan
+    is the same walk the collection makes, every string of every
+    ``atlas/data/*.json``, and it is scoped by no field name at all: a citation
+    is prose, it sits wherever a sentence needed one, and a scan that knew a
+    list of field names would miss the next place one turns up.
+
+    Named means welded: a span counts as named when the characters before its
+    colon are a file name, ``[A-Za-z0-9_.+-]+\\.[A-Za-z0-9_+]+`` (``NAMED_SPAN``),
+    and the check fires only where the nearest such name before it is a
+    ``component_<word>.sh`` (``SCRIPT_NAME``). So the upstream ``file:line``
+    citations beside these — ``Pcsx2Config.cpp:2258, :2284`` and their kind, which
+    no pass here re-reads — and a format spec like ``{:016X}`` are left alone.
+
+    The same walk counts what the two spellings match, against
+    ``CITATION_SPANS``: the module docstring points at that constant instead of
+    carrying a number of its own, so the count is held here or nowhere.
+    """
+    unnamed: list[tuple[str, str, str]] = []
+    counted = [0, 0]
+    for path in sorted(DATA.glob("*.json")):
+        for keys, text in _strings(json.loads(path.read_text(encoding="utf-8"))):
+            unnamed.extend(
+                (path.name, ".".join(keys), span) for span in _unnamed_spans(text)
+            )
+            counted[0] += len(CITATION.findall(text))
+            counted[1] += len(BARE_CITATION.findall(text))
+    assert not unnamed, (
+        "a citation claims a component-script line without naming the script, so nothing "
+        f"re-reads it: {sorted(unnamed)} — write the span as <script>:N[-M], the form the "
+        "other multi-span citations use, or the line is evidence on paper only"
+    )
+    assert tuple(counted) == CITATION_SPANS, (
+        f"the data carries {counted[0]} spans naming a component and {counted[1]} naming "
+        f"only the script, and CITATION_SPANS says {CITATION_SPANS} — a citation was added, "
+        "removed or respelled from one form into the other, so move the constant the module "
+        "docstring points at"
     )
 
 
