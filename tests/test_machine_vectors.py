@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, cast
+from typing import Any, Iterator, cast
 from pathlib import Path
 
 import pytest
@@ -24,6 +24,7 @@ import atlas
 import atlas.machine
 from atlas import whdload
 from atlas import placement, retroarch_cfg
+from atlas.firmware import CORE_DECLARATION_STATES
 from atlas.machine import FixtureMachine
 from tests.corpus import caveat_blocks, expected_blocks
 from scripts import validate_vectors
@@ -354,6 +355,168 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
 
     def test_the_corpus_shows_no_code_atlas_cannot_emit(self):
         assert sorted(self._codes_in_corpus() - self._exported_codes()) == []
+
+
+def core_blocks(node: Any) -> Iterator[dict[str, Any]]:
+    """Every serialized firmware core under *node*, recognised by its own shape.
+
+    A core is the block that carries a declaration and the verdict over it, so
+    the walk finds one wherever an answer puts it — the per-core route, the
+    per-system one and the inventory all serialize the same shape.
+    """
+    if isinstance(node, dict):
+        if "declaration" in node and "requirements_met" in node:
+            yield node
+        for value in node.values():
+            yield from core_blocks(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from core_blocks(value)
+
+
+class TestEveryJudgedDeclarationReachesBothVerdicts:
+    """A verdict no vector produces is a verdict no port is held to.
+
+    ``requirements_met`` is the field a client renders as its traffic light,
+    and for three weeks every ``packaged`` block in this corpus answered
+    ``null`` — 36 of them, 25 with a requirement list behind them — because
+    the property gated on ``!= read``. The suite stayed green throughout,
+    because nothing asked whether a declaration that can be judged ever was.
+
+    So the matrix is the check: group the corpus by declaration, and every
+    declaration that reaches the field with something to weigh must reach both
+    ``True`` and ``False`` somewhere. A declaration whose every block declares
+    nothing is exempt — there is no verdict to demonstrate — and that is why
+    the exemption is derived from the corpus rather than listed here.
+    """
+
+    def _matrix(self) -> dict[str, dict[str, int]]:
+        matrix: dict[str, dict[str, int]] = {}
+        for _, expected in expected_blocks():
+            for core in core_blocks(expected):
+                seen = matrix.setdefault(core["declaration"], {"true": 0, "false": 0, "null": 0, "weighed": 0})
+                seen[str(core["requirements_met"]).lower().replace("none", "null")] += 1
+                seen["weighed"] += 1 if core["requirements"] else 0
+        return matrix
+
+    def test_a_declaration_with_requirements_reaches_true_and_false(self):
+        matrix = self._matrix()
+        rendered = "\n".join(f"  {name}: {counts}" for name, counts in sorted(matrix.items()))
+        missing = [
+            f"{name} never reaches {verdict}"
+            for name, counts in sorted(matrix.items())
+            if counts["weighed"]
+            for verdict in ("true", "false")
+            if not counts[verdict]
+        ]
+        assert missing == [], f"{missing}\n{rendered}"
+
+    def test_the_matrix_covers_every_declaration_the_vocabulary_has(self):
+        # Without this the check above passes by never seeing a declaration at
+        # all, which is the failure mode a corpus-derived exemption invites.
+        assert set(self._matrix()) == set(CORE_DECLARATION_STATES)
+
+
+class TestWhatTheContentReadFoundReachesTheRequirement:
+    """The caveat named the image and the requirement said the table covers nothing.
+
+    Two statements about one file, in one answer, disagreeing: the caveat says
+    DuckStation's table knows these bytes, the requirement beside it said
+    ``unknown`` with no identity — which is the value for a file no table
+    covers. The path is what ties a caveat to the requirements it is about,
+    and *requirements* is the plural it has to be: two routes can state one
+    path in one answer, and only the one that hashed the file carries what the
+    hashing found. So the check reads every option at the caveat's path, asks
+    that one of them carries the reading, and that none of them carries a
+    reading that contradicts it.
+    """
+
+    # Every reading that would contradict the caveat's own sentence about the
+    # file at that path. `refused` and `unread` contradict both: a file the
+    # emulator will not open, or whose bytes did not come back, is one nothing
+    # hashed — so no caveat may say what its bytes are.
+    CONTRADICTING = {
+        "firmware-image-identified": {"unrecognised", "mismatch", "refused", "unread"},
+        "firmware-content-unidentified": {"verified", "mismatch", "refused", "unread"},
+    }
+
+    def _paired(self, code: str) -> list[tuple[str, str, list[dict[str, Any]]]]:
+        """Every ``(where, path, the options at that path)`` the corpus pairs with *code*."""
+        pairs = []
+        for where, expected in expected_blocks():
+            for core in core_blocks(expected):
+                options = [
+                    option
+                    for requirement in core["requirements"]
+                    for option in requirement.get("alternatives", [requirement])
+                ]
+                for caveat_code, data in caveat_blocks(core["caveats"]):
+                    at_path = [o for o in options if o["path"] == data.get("path")]
+                    if caveat_code == code and at_path:
+                        pairs.append((where, data["path"], at_path))
+        return pairs
+
+    def _wrong(self, code: str, checked: str, *, identity: bool) -> list[str]:
+        """Where no option at the path carries the reading, or one contradicts it."""
+        wrong = []
+        for where, path, options in self._paired(code):
+            readings = [f"{o['checked']}/{'identity' if o['identity'] else 'none'}" for o in options]
+            carried = any(
+                o["checked"] == checked and (o["identity"] is not None) == identity for o in options
+            )
+            contradicted = any(o["checked"] in self.CONTRADICTING[code] for o in options)
+            if not carried or contradicted:
+                wrong.append(f"{where}: {path} is {', '.join(readings)}")
+        return wrong
+
+    def test_an_identified_image_is_verified_where_it_is_the_requirement(self):
+        assert self._paired("firmware-image-identified"), "no vector pairs one with a requirement"
+        assert self._wrong("firmware-image-identified", "verified", identity=True) == []
+
+    def test_an_unidentified_image_is_unrecognised_rather_than_unknown(self):
+        assert self._paired("firmware-content-unidentified"), "no vector pairs one with a requirement"
+        assert self._wrong("firmware-content-unidentified", "unrecognised", identity=False) == []
+
+
+class TestUnknownNoLongerCarriesAReadFailure:
+    """``unknown`` beside an identity used to mean two things, and now means one.
+
+    A file whose bytes did not come back answered ``unknown`` with the
+    identity its table pinned — the same pair a shape answers with, and
+    indistinguishable from it by the value alone. The read failure is
+    ``unread`` now, and what is left of the pair is the shape case: a
+    directory standing where the core opens a file, where ``satisfied`` never
+    consults ``checked`` at all.
+
+    Measured over the corpus rather than asserted: the walk names every block
+    that still carries the pair, and every one of them must be that shape.
+    """
+
+    def _pairs(self) -> list[tuple[str, dict[str, Any]]]:
+        return [
+            (where, option)
+            for where, expected in expected_blocks()
+            for core in core_blocks(expected)
+            for requirement in core["requirements"]
+            for option in requirement.get("alternatives", [requirement])
+            if option["checked"] == "unknown" and option["identity"] is not None
+        ]
+
+    def test_no_file_carries_unknown_beside_an_identity(self):
+        wrong = [
+            f"{where}: {option['path']} is a {option['found']} at a {option['declared_kind']} declaration"
+            for where, option in self._pairs()
+            if option["found"] != "directory"
+        ]
+        assert wrong == []
+
+    def test_the_pair_that_remains_is_the_obstructed_shape(self):
+        # The corpus does carry it, so the rule above is holding something
+        # rather than passing over an empty walk.
+        remaining = self._pairs()
+        assert remaining, "no block carries unknown beside an identity — the walk proves nothing"
+        assert {option["found"] for _, option in remaining} == {"directory"}
+        assert {option["declared_kind"] for _, option in remaining} == {"file"}
 
 
 class TestEveryEnumeratedValueComesFromItsClosedVocabulary:

@@ -982,10 +982,12 @@ FIRMWARE_CORE_CASES = [
          "firmware core requirements_met must be true, false, or null", id="core-met-type"),
     case(_base_firmware(cores=[_core(requirements_met=True)]),
          "requirements_met must be", id="core-met-overclaims"),
-    # The three the bound still holds on a block whose system term is dropped:
-    # a required file demonstrably not in place answers false, a required file
-    # nobody judged may not answer true, and a declaration that was not read
-    # answers null — none of them a verdict the missing term could overturn.
+    # The two the bound still holds on a block whose system term is dropped: a
+    # required file demonstrably not in place answers false, and a required
+    # file nobody judged may not answer true — neither a verdict the missing
+    # term could overturn. The two cases under them are about the declaration
+    # instead, where no term is missing at all: one that is never judged, and
+    # the packaged one's empty list.
     case(_base_firmware(cores=[_two_system_core(requirements=[_requirement(system_source="override",
                                                                            need="optional"),
                                                               _gba_requirement()],
@@ -999,10 +1001,15 @@ FIRMWARE_CORE_CASES = [
                                                                                satisfied=None)],
                                                 requirements_met=True)]),
          "must be null or false for this core", id="two-system-need-never-true-out-of-ignorance"),
-    case(_base_firmware(cores=[_two_system_core(declaration="packaged", requirements_met=False,
-                                                caveats=[{"code": "firmware-packaged-declaration",
-                                                          "data": {"core_so": CORE_SO}}])]),
-         "requirements_met must be None for this core", id="two-system-need-on-an-unread-declaration"),
+    case(_base_firmware(cores=[_core(declaration="absent", requirements=[], requirements_met=False,
+                                     caveats=[{"code": "firmware-declaration-unknown", "data": {}}])]),
+         "requirements_met must be None for this core", id="unjudged-declaration-with-a-verdict"),
+    # A card with no requirement established nothing — an empty packaged list
+    # is never the all-clear an empty read one is.
+    case(_base_firmware(cores=[_core(declaration="packaged", requirements=[], requirements_met=True,
+                                     caveats=[{"code": "firmware-packaged-declaration",
+                                               "data": {"core_so": CORE_SO}}])]),
+         "requirements_met must be None for this core", id="empty-packaged-list-is-not-an-all-clear"),
     case(_base_firmware(cores=[_core(refused={})]), "firmware core refused must be a list", id="core-refused-not-list"),
     case(_base_firmware(cores=[_core(refused=[{"declared": "x", "need": "required"}])]),
          "each refused declaration must be exactly the fields", id="refused-missing-field"),
@@ -1104,7 +1111,28 @@ REQUIREMENT_CASES = [
          id="requirement-obstructing-directory-with-a-verdict"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unchecked",
                                                                 satisfied=None)], requirements_met=None)]),
-         "with no known identity the bytes cannot be established", id="requirement-no-identity-not-unknown"),
+         "with no known identity, checked must be one of",
+         id="requirement-no-identity-not-unknown"),
+    # The other half of that rule: bytes nobody read cannot be the bytes the
+    # emulator's table does not know.
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                checked="unrecognised", satisfied=None)],
+                                     requirements_met=None)]),
+         "says the bytes were asked for", id="requirement-unrecognised-without-hashing"),
+    # Its sibling: bytes that did not come back were still asked for, which a
+    # run without a content check never did.
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                checked="unread", satisfied=None)],
+                                     requirements_met=None)]),
+         "says the bytes were asked for", id="requirement-unread-without-hashing"),
+    # The stat-cheap failure: it needs no hash check, and it may not carry an
+    # identity, because nothing was ever looked up for it.
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                identity=_identity(),
+                                                                checked="refused", satisfied=False)],
+                                     requirements_met=False)]),
+         "'refused' carries no identity", id="requirement-refused-with-an-identity"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
                                                                 checked="verified", satisfied=True)],
                                      requirements_met=True)]),
@@ -1127,7 +1155,15 @@ REQUIREMENT_CASES = [
          "'not-comparable' establishes nothing", id="requirement-not-comparable-satisfied"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, checked="unknown",
                                                                 satisfied=None)], requirements_met=None)]),
-         "'unknown' is undetermined when an identity exists", id="requirement-unknown-verdict-wrong"),
+         "satisfied by being in place under the right name", id="requirement-unknown-verdict-wrong"),
+    # The pair the read failure used to hide in: over a FILE it is refused
+    # outright now, because `unread` carries that fact and a shape is not a file.
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(found="file", present=True,
+                                                                identity=_identity(),
+                                                                checked="unknown", satisfied=None)],
+                                     requirements_met=None)]),
+         "cannot be 'unknown'", id="requirement-unknown-beside-an-identity"),
     case(_base_firmware(hash_checked=True,
                         cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
                                                                 checked="unchecked", satisfied=True)],
@@ -1705,6 +1741,20 @@ class TestTheVocabularyIsOneVocabulary:
     def test_the_declaration_state_vocabularies_match(self):
         assert validate_vectors.KNOWN_DECLARATION_STATES == self._exported("DECLARATION_")
 
+    def test_the_two_halves_of_the_declaration_vocabulary_match(self):
+        # The split `requirements_met` branches on, hand-copied like every
+        # other list here. A state in neither half would be judged by the
+        # validator and excused by the package, or the other way round, and
+        # the vector it disagreed about would be the first to say so.
+        from atlas.firmware import DECLARATIONS_JUDGED, DECLARATIONS_UNJUDGED
+
+        judged = validate_vectors.JUDGED_DECLARATIONS
+        unjudged = validate_vectors.UNJUDGED_DECLARATIONS
+        assert judged & unjudged == set()
+        assert judged | unjudged == validate_vectors.KNOWN_DECLARATION_STATES
+        assert judged == set(DECLARATIONS_JUDGED)
+        assert unjudged == set(DECLARATIONS_UNJUDGED)
+
     def test_the_firmware_need_vocabularies_match(self):
         assert validate_vectors.KNOWN_FIRMWARE_NEEDS == self._exported("NEED_")
 
@@ -1715,13 +1765,10 @@ class TestTheVocabularyIsOneVocabulary:
         assert validate_vectors.KNOWN_IDENTITY_KINDS == self._exported("IDENTITY_")
 
     def test_every_checked_value_has_a_satisfied_rule(self):
-        # The verdict table settles four of the values and `unknown` is
-        # computed, because its answer depends on whether an identity exists.
-        # A sixth value arriving with no rule would be looked up in the table
-        # and crash mid-validation, so the two halves are pinned to cover the
-        # vocabulary exactly.
-        ruled = set(validate_vectors.SATISFIED_BY_CHECKED) | {"unknown"}
-        assert ruled == validate_vectors.KNOWN_FIRMWARE_CHECKED
+        # Every value settles `satisfied` on its own, so the table is the whole
+        # rule. A value arriving with no rule would be looked up in it and
+        # crash mid-validation, so it is pinned to cover the vocabulary.
+        assert set(validate_vectors.SATISFIED_BY_CHECKED) == validate_vectors.KNOWN_FIRMWARE_CHECKED
 
     def test_the_firmware_region_vocabulary_is_the_cards_own(self):
         # The region words come from the one emitting card's region_keys —

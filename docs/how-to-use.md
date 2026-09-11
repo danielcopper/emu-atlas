@@ -2057,10 +2057,11 @@ decrypted content runs without it). Packaged means exactly what it says: the emu
 expects is atlas's card, established from the emulator's source at the shipped release and stated as such by the
 `firmware-packaged-declaration` caveat on the entry — never dressed up as a machine read. Everything about _this_
 machine stays live: the destination is the emulator's own probe path resolved against this arrangement's trees (through
-symlinks, like every requirement path), `found` is what actually sits there, and `checked` stays `"unknown"` on a
-present file because no packaged identity can exist for a user-supplied key file. Such a requirement carries
-`core_so: null` and `system_source: "card"`, and its `path` may lie outside the firmware root — the emulator's own tree
-is the door that matters.
+symlinks, like every requirement path), `found` is what actually sits there, and the card is judged — `requirements_met`
+answers over it the way it answers over a `.info`. On Cemu's key file `checked` stays `"unknown"` on a present file,
+because no packaged identity can exist for a user-supplied key file; only DuckStation's search reads bytes, and it is
+the card that carries an identity. Such a requirement carries `core_so: null` and `system_source: "card"`, and its
+`path` may lie outside the firmware root — the emulator's own tree is the door that matters.
 
 A card states its probes one of three ways, and melonDS is the second: **the paths are configuration values**, not fixed
 names under a tree. Its card names the keys (`[DS] BIOS9Path`, `[DSi] NANDPath`, …) and the resolver reads each value
@@ -2141,6 +2142,22 @@ reference machine, so the file named is one of them rather than the one that boo
 not a fault either: DuckStation boots it with a warning, so it is stated as the pick with
 `firmware-content-unidentified` beside it.
 
+**The requirement carries that reading, not just the caveat.** The pick is made by hashing, so where the table knows the
+bytes the requirement answers `checked: "verified"` with an `identity` built from the row — `md5` as the table pins it,
+`size` the accepted size the file was read at, `sha1` `null` because this table pins none, `known_as` empty because this
+emulator names no BIOS file — and `requirements_met` is `True`. Where the table does not know them it answers
+`checked: "unrecognised"` with no identity and `satisfied: None`, and the verdict stays unsaid: the emulator boots such
+an image, so the reading is neither a proof nor a refutation. An ambiguous pick is still `verified`, and reading why is
+worth a moment: a known image never ranks with an unknown one, so the files in a tie are known together — what the tie
+leaves open is _which_ image boots, never whether one is there.
+
+Two things the search will not do. It states no requirement at all where it never got to a file — no `verify`, or a
+directory nothing was kept from (no file of an accepted size, or a listing that could not be read) — and an empty
+packaged list is `None`, so **no state of the search alone makes `requirements_met` `False`**. A red light over this
+emulator comes from a region key naming an image that is not there, which a stat settles without hashing. Where it did
+reach a file whose bytes would not come back, it names that file with `checked: "unread"` and the read failure beside
+it, the same answer a region key naming that file would give.
+
 **When a region key names an image, the answer becomes alternatives.** One launch reads exactly one of `PathNTSCU`,
 `PathNTSCJ` and `PathPAL` — `GetBIOSImage` switches on the console region, which under the shipped Auto setting is the
 running disc's own — so a named image and the search's find for the remaining regions are never two files one launch
@@ -2152,6 +2169,23 @@ the option of its one region, the search's find (or its degradation caveats) cov
 option carrying its `regions` as data. Pick the option whose `regions` contain your disc's region; a region no option
 lists has nothing stated for it and the caveats say why. Only the everything-searched state — every key empty, which is
 what both arrangements ship — stays a plain, unconditional requirement.
+
+A named option is read for content exactly as a found one is **when you pass `verify`**, and that is upstream's doing
+rather than a choice: the value is combined with the search directory and handed to the same loader the search calls per
+candidate, and the size gate, the whole-file hash and the table lookup all sit inside it. So under `verify` a named
+image the table knows carries `verified` with its identity, one no row holds carries `"unrecognised"`, and where a key
+names the very file the search would also pick, the two options the group carries for that one path say the same thing
+about its bytes. Without `verify` nothing is hashed on either side, and the two routes differ in shape rather than in
+what they claim: the named option answers `"unknown"` with `satisfied: true`, which says only that a file is in place
+under the name the setting spells, while the search states no requirement at all and says so in
+`firmware-search-unverified`.
+
+One state reads differently and it is the one to act on: a named file whose size is none of the three the emulator
+accepts is one it refuses to load at all, so that launch boots nothing. The option answers `checked: "refused"` with
+`satisfied: false` and no identity, and `firmware-image-refused` beside it carries the size read and the three accepted
+(`path`, `token`, `size`, `accepted`) so the sentence you show says why. That verdict needs no `verify`: the gate is a
+stat, not a read, and `refused` is the one `checked` value that by itself fails a present file without one. The search
+never reaches it, because it keeps only files of an accepted size in the first place.
 
 Those same three keys are the second family DuckStation's **per-game layer** reaches, so this answer carries the layer
 statement described under the standalone save section — same codes, same gate, its own keys. They travel a different
@@ -2347,8 +2381,9 @@ for core in answer.cores:
             req.declared_kind          # 'file' | 'directory'      — what the core OPENS the path at
             req.present                # True | False | None       — what lies at the destination
             req.checked                # 'verified' | 'mismatch' | 'unchecked' | 'unknown' | 'not-comparable'
-                                       #   — or None, when nothing is there to check
+                                       #   | 'unrecognised' | 'refused' — or None, when nothing is there
             req.identity               # the packaged identity, or None; req.identity.kind is 'file' | 'archive'
+                                       #   req.identity.sha1 is None where the table that named it pins none
             req.satisfied              # True | False | None       — present AND nothing contradicts it;
                                        #   over a folder the core lists, the verdict about what it holds
             req.supplied_by            # the distribution's own copy, or None — see below
@@ -2382,12 +2417,33 @@ list.
 that core's own `.info` carries, read live off the machine and never overwritten — a core that marks a file it cannot
 start without `optional` still reads `optional` here.
 
+One field inside an entry has two owners along the same line, and it is `description`: under a `read` declaration it is
+the packager's own `firmwareN_desc`, prose atlas passes through and never acts on, while under a `packaged` one there is
+no packager to quote and the sentence is atlas's own, composed from the card. Both are prose for a human, and neither is
+something to match on.
+
 `requirements_met` is **atlas's own verdict** about that declaration, and it draws on **world knowledge** as well as on
 what was read from the machine. The world knowledge is a packaged, source-cited table of which systems do not start
 without a firmware image (`atlas/data/system_firmware.json`, and [the readings behind it](research/system-firmware.md)),
 because that is the half a `.info` has no way to state: the format says "optional" or "required" per file and cannot say
 "this machine does not start without one of these". So a core that knows its system needs a BIOS can only mark every
 image optional, and read on the declaration alone that says nothing is missing over a machine that will not boot.
+
+**It judges a packaged card as it judges a `.info`.** A card is a declaration too — which files the emulator opens, read
+from its own source at the shipped release — and what sits at those destinations is read off this machine exactly as the
+`.info` route reads it, so the same verdict applies: `True` where every required file is in place and nothing
+established contradicts it, `False` where one is demonstrably absent or wrong. What the `True` rests on differs per card
+and is worth knowing: over Cemu, PCSX2, melonDS and xemu the destinations carry no packaged identity at all, so a
+present file is `checked: "unknown"` and the `True` says only that the right name is in the right place — the same
+lower-bound `True` the `.info` route has always answered for a file the hash table does not cover. DuckStation is the
+one card that reaches further, because that emulator recognises its BIOS by content and atlas carries the table it
+recognises with.
+
+The one place a card is read differently from a `.info` is the **empty list**, and it reads the opposite way: a core
+whose `.info` declares nothing needs nothing, so `requirements_met` is `True`, while a card with no requirement
+established nothing — melonDS with external BIOS switched off probes no path, DuckStation asked without `verify` hashes
+nothing — so `requirements_met` is `None`. An empty `requirements` under `declaration: "packaged"` is never an
+all-clear.
 
 `core.system_firmware` is what the table says about this core's system, and it is on the answer so the verdict is never
 a black box:
@@ -2563,7 +2619,14 @@ for an absolute one: `firmware0_path =
 
 The two axes never merge: `need` is what the emulator asks for, `checked` is what the machine says. `"unchecked"` means
 _we did not look_ (you passed `verify=False`); `"unknown"` means _we looked and cannot tell_ (no packaged identity for
-this file); `"not-comparable"` means _we looked, the bytes differ, and that decides nothing_. The last one is for the 24
+this file); `"unrecognised"` means _we read the bytes and the emulator's own table has no row for them_;
+`"not-comparable"` means _we looked, the bytes differ, and that decides nothing_; `"refused"` means _the emulator will
+not open this file at all_, which a stat settles and no other value carries by itself; `"unread"` means _we asked for
+the bytes and they did not come back_, which is a statement about atlas's read and none about the emulator's.
+`"unknown"` and `"unrecognised"` are the two easy to run together, and they part company over what is beside them:
+`"unknown"` **with no identity** is a file nothing can ever be established about, so `satisfied` is `True` — beside an
+identity it is now only the shape cases below, where `satisfied` is `None`, `False` or the folder's own verdict — while
+`"unrecognised"` is a reading that came back without a name, so `satisfied` is always `None`. The last one is for the 24
 packaged identities that are archives rather than dumps — MAME romset zips, plus data packs and program jars released
 and versioned with the project that builds their core — whose whole-file hash pins one packaging of one version, so a
 difference from it is the ordinary state of a correct file. `req.identity.kind` says which kind an identity is before
@@ -2579,18 +2642,20 @@ green.
 The per-file `checked` beside that light is the comparison's own statement, and every value pins what `satisfied` may be
 beside it — the pair is what you render for one file:
 
-| `checked`        | `satisfied`                                                                                          | what it says                                                                                                                                                                                                                                                             | what it does not say                                                                                                                    |
-| ---------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `verified`       | `True`                                                                                               | the bytes were compared with the packaged identity and match — this file is the right one                                                                                                                                                                                | that the core can start: one file is right, and `requirements_met` is the verdict over the whole declaration                            |
-| `mismatch`       | `False`                                                                                              | a file is there and its bytes are not the pinned ones — the one value that means _present with the wrong bytes_, and it appears only when `verify` ran (`hash_checked: true`)                                                                                            | that the file is absent — `present` is `True`; a missing file is never `mismatch`, it is `null`                                         |
-| `unchecked`      | `None`                                                                                               | a packaged identity exists and the bytes were not compared with it, because `verify` was not passed (`hash_checked: false`)                                                                                                                                              | that anything is wrong, or that anything is right — a file under the right name is there, and the verdict costs one `verify=True` query |
-| `unknown`        | `True` for a file with no identity; `None`, `False` or the folder's verdict in the shape cases below | no packaged identity exists to compare against (`identity` is `None`), so a file under the right name is all that can ever be established and `satisfied` is `True` with nothing hashed — the same value rides the shape cases below, where no bytes were weighed either | that the bytes were checked, and that `True` beside it is an all-clear — nothing was compared; it is not a failure either               |
-| `not-comparable` | `None`                                                                                               | the bytes differ from the pinned ones and the identity is an archive, so the difference settles nothing (see above)                                                                                                                                                      | that the file is wrong — never render it as a failure; an exact hit on the same file still answers `verified`                           |
-| `null`           | `False` when missing, `None` when inaccessible                                                       | nothing is at the destination, or the path could not be looked at — `found` is `missing` or `inaccessible` — so there were no bytes to compare                                                                                                                           | that a check failed: nothing was checked; read `found` to tell _not there_ from _could not look_                                        |
+| `checked`        | `satisfied`                                                                                          | what it says                                                                                                                                                                                                                                                                                                                                                | what it does not say                                                                                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verified`       | `True`                                                                                               | the bytes were compared with the packaged identity and match — this file is the right one                                                                                                                                                                                                                                                                   | that the core can start: one file is right, and `requirements_met` is the verdict over the whole declaration                                                                  |
+| `mismatch`       | `False`                                                                                              | a file is there and its bytes are not the pinned ones — the one value that means _present with the wrong bytes_, and it appears only when `verify` ran (`hash_checked: true`)                                                                                                                                                                               | that the file is absent — `present` is `True`; a missing file is never `mismatch`, it is `null`                                                                               |
+| `unchecked`      | `None`                                                                                               | a packaged identity exists and the bytes were not compared with it, because `verify` was not passed (`hash_checked: false`)                                                                                                                                                                                                                                 | that anything is wrong, or that anything is right — a file under the right name is there, and the verdict costs one `verify=True` query                                       |
+| `unknown`        | `True` for a file with no identity; `None`, `False` or the folder's verdict in the shape cases below | no packaged identity exists to compare against (`identity` is `None`), so a file under the right name is all that can ever be established and `satisfied` is `True` with nothing hashed — the same value rides the shape cases below, where the shape answered instead of the bytes. Bytes that were asked for and did not come back are `unread`, not this | that the bytes were checked, and that `True` beside it is an all-clear — nothing was compared; it is not a failure either                                                     |
+| `not-comparable` | `None`                                                                                               | the bytes differ from the pinned ones and the identity is an archive, so the difference settles nothing (see above)                                                                                                                                                                                                                                         | that the file is wrong — never render it as a failure; an exact hit on the same file still answers `verified`                                                                 |
+| `unrecognised`   | `None`                                                                                               | the bytes were read and the emulator's own table has no row for them (`identity` is `None`, `hash_checked: true`) — DuckStation's search is where it appears, and that emulator boots such an image saying "Using an unknown BIOS"                                                                                                                          | that the file is wrong, and that it is right — the reading came back without a name, which is why it is not `unknown`'s `True`                                                |
+| `refused`        | `False`                                                                                              | the emulator will not open this file at all and the launch boots nothing from it — DuckStation's size gate is the case, a named image whose size is none of the three it loads (`identity` is `None`)                                                                                                                                                       | that the bytes are wrong: none were read. a stat settles it, so it is the one value here that by itself fails a present file without `verify`                                 |
+| `unread`         | `None`                                                                                               | the bytes were asked for under `verify` and did not come back, so the comparison never happened — it says nothing about whether the emulator can read them, since the read that failed is atlas's own                                                                                                                                                       | that the file is wrong or right: nothing was compared. An `identity` rides it where a table pins one for the declared name, and is `None` where the table is keyed by content |
+| `null`           | `False` when missing, `None` when inaccessible                                                       | nothing is at the destination, or the path could not be looked at — `found` is `missing` or `inaccessible` — so there were no bytes to compare                                                                                                                                                                                                              | that a check failed: nothing was checked; read `found` to tell _not there_ from _could not look_                                                                              |
 
 The shape cases `unknown` also rides, each with the `satisfied` the shape established:
 
-- an identity whose bytes could not be read — `None` (`firmware-unreadable`);
 - a directory where the core reads a file — `None` (`firmware-path-obstructed`);
 - a file where the core lists a folder — `False`: the wrong shape, so nothing inside it is reachable;
 - a listed folder — the verdict on what it holds, `True`, `False` or `None` (see "What a listed folder holds" above).

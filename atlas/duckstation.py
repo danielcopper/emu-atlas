@@ -427,10 +427,16 @@ class BiosCandidate:
     The first is a read failure and settles nothing; the second is a verdict
     about content that was actually seen. Both leave ``image`` at ``None``,
     which is why the flag is here rather than being inferred from it.
+
+    ``size`` is the accepted size this file was kept at — one of
+    :attr:`BiosTable.sizes`, carried from the stat that kept it rather than
+    read a second time, because the table pins no size per row and an identity
+    built from one needs the size class the bytes were seen at.
     """
 
     path: str
     image: BiosImage | None
+    size: int
     unreadable: bool = False
 
 
