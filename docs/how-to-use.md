@@ -1027,9 +1027,12 @@ then read the key. A test holds this: every `(code, key)` in the conformance cor
 
 - **a string** — one value, e.g. `dir`, `core`, `count`;
 - **a list** — several values, in the order this answer states them;
-- **an object** — a tally of strings, at two pairs and only there: `per-game-alternative-emulator`'s `emulators` (each
-  selected emulator label to how many games select it) and `core-mode-unestablished`'s `options` (each option key to the
-  value read for it).
+- **an object** — one string said about each of several subjects, at five pairs and only there:
+  `per-game-alternative-emulator`'s `emulators` (each selected emulator label to how many games select it),
+  `core-mode-unestablished`'s `options` (each option key to the value read for it), and `firmware-search-candidates`'s
+  `readings`, `images` and `image_regions`, each keyed by the path of a file the BIOS search kept. That last key is not
+  spelled `regions` precisely because three codes already spell `regions` as a list, and one key name never carries two
+  shapes.
 
 A list is a JSON array, never a string you split on `", "`, and a one-element list is still an array — MAME's
 `per-game-layer-unread.key` names a single ini setting and spells it `["state_directory"]`, because its siblings under
@@ -2141,6 +2144,17 @@ emulator keeps whichever one the directory hands it last, and no read reproduces
 reference machine, so the file named is one of them rather than the one that boots. An image the table does not know is
 not a fault either: DuckStation boots it with a warning, so it is stated as the pick with
 `firmware-content-unidentified` beside it.
+
+**One more code names every file the search kept**, so a client showing the directory can say which file is which.
+`firmware-search-candidates` rides beside the pick under `verify` and carries `dir`, `token` and three objects keyed by
+path. `readings` holds every kept file: `identified` where a row of the emulator's own table holds those bytes,
+`unrecognised` where the bytes came back and no row holds them, `unreadable` where they did not come back at all.
+`images` and `image_regions` hold only the files a row names, so a path missing from them is the table holding no row —
+there is no placeholder to mistake for a name, and a client reads each fact by the path it is about rather than by
+counting along a list. Read two paths mapped to one `images` value as **one image the directory holds twice**, not as
+two images: the emulator recognises a BIOS by hashing it, so one dump saved under a second name is the same row reached
+twice, which is what makes "which of these may I delete" answerable. Without `verify` nothing was hashed, so the code is
+absent and `firmware-search-unverified` carries the count instead.
 
 **The requirement carries that reading, not just the caveat.** The pick is made by hashing, so where the table knows the
 bytes the requirement answers `checked: "verified"` with an `identity` built from the row — `md5` as the table pins it,

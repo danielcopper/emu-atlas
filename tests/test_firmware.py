@@ -132,7 +132,15 @@ from atlas.machine import (
     ReadResult,
     WhdloadSlaveResult,
 )
-from atlas.placement import CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR, CAVEAT_SYSTEM_DIRECTORY_CLEARED, Caveat
+from atlas.placement import (
+    CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
+    CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+    CAVEAT_SYSTEM_DIRECTORY_CLEARED,
+    READING_IDENTIFIED,
+    READING_UNREADABLE,
+    READING_UNRECOGNISED,
+    Caveat,
+)
 from atlas.system_firmware import (
     EVIDENCE_DERIVED,
     EVIDENCE_LEVELS,
@@ -4795,6 +4803,85 @@ class TestAnIdentifiedImageIsVerified:
         # The same machine asked without a content check: nothing was hashed,
         # so nothing is claimed and nothing is denied either.
         assert self._core(states["an image the table knows"], verify=False).requirements_met is None
+
+    # --- every file the search kept, not only the one the ranking reached ---
+
+    def _listing(self, core: CoreFirmware) -> Caveat:
+        """The one caveat that names every file the search kept."""
+        codes = self._codes(core)
+        assert codes.count(CAVEAT_FIRMWARE_SEARCH_CANDIDATES) == 1, codes
+        return next(c for c in core.caveats if c.code == CAVEAT_FIRMWARE_SEARCH_CANDIDATES)
+
+    def test_every_kept_file_is_listed_with_what_the_table_makes_of_it(self):
+        # One dump under two names beside a file no row holds. Three keys in
+        # the reading, and the two copies map to one image name — which is
+        # what the emulator sees: one image the directory holds twice.
+        core = self._core(
+            self._machine(
+                {
+                    f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501),
+                    f"{self.BIOS}/psx-ntscu.bin": self._image(self.SCPH5501),
+                    f"{self.BIOS}/mpr-17933.bin": self._image(self.SATURN),
+                }
+            )
+        )
+        data = self._listing(core).data
+        assert data["dir"] == self.BIOS
+        assert data["token"] == "DUCKSTATION"
+        assert data["readings"] == {
+            f"{self.BIOS}/mpr-17933.bin": READING_UNRECOGNISED,
+            f"{self.BIOS}/psx-ntscu.bin": READING_IDENTIFIED,
+            f"{self.BIOS}/scph5501.bin": READING_IDENTIFIED,
+        }
+        # The name is the one the pick's own caveat states, so the listing and
+        # the identification cannot drift into two spellings of one row — and
+        # the file no row holds is absent rather than carrying a placeholder.
+        named = next(c for c in core.caveats if c.code == CAVEAT_FIRMWARE_IMAGE_IDENTIFIED)
+        assert data["images"] == {
+            f"{self.BIOS}/psx-ntscu.bin": named.data["image"],
+            f"{self.BIOS}/scph5501.bin": named.data["image"],
+        }
+        assert data["image_regions"] == {
+            f"{self.BIOS}/psx-ntscu.bin": named.data["region"],
+            f"{self.BIOS}/scph5501.bin": named.data["region"],
+        }
+
+    def test_a_candidate_whose_bytes_did_not_come_back_is_listed_as_unreadable(self):
+        # A read failure is not the verdict "the table does not know these
+        # bytes": the listing says so in its own word, and the file is absent
+        # from the two mappings that say what a file is.
+        core = self._core(
+            self._machine(
+                {
+                    f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501),
+                    f"{self.BIOS}/broken.bin": {"status": "unreadable", "size": self.PS1_SIZE},
+                }
+            )
+        )
+        data = self._listing(core).data
+        assert data["readings"] == {
+            f"{self.BIOS}/broken.bin": READING_UNREADABLE,
+            f"{self.BIOS}/scph5501.bin": READING_IDENTIFIED,
+        }
+        assert f"{self.BIOS}/broken.bin" not in data["images"]
+        assert f"{self.BIOS}/broken.bin" not in data["image_regions"]
+        named = next(c for c in core.caveats if c.code == CAVEAT_FIRMWARE_IMAGE_IDENTIFIED)
+        assert data["images"] == {f"{self.BIOS}/scph5501.bin": named.data["image"]}
+        assert data["image_regions"] == {f"{self.BIOS}/scph5501.bin": named.data["region"]}
+
+    def test_without_a_content_check_there_is_nothing_to_list(self):
+        # The listing is the hashing written down, and no hashing happened —
+        # the count of files of an accepted size rides
+        # firmware-search-unverified, which is what that state does say.
+        core = self._core(
+            self._machine({f"{self.BIOS}/scph5501.bin": self._image(self.SCPH5501)}),
+            verify=False,
+        )
+        assert CAVEAT_FIRMWARE_SEARCH_CANDIDATES not in self._codes(core)
+
+    def test_a_directory_holding_no_file_of_an_accepted_size_lists_none(self):
+        core = self._core(self._machine({}))
+        assert CAVEAT_FIRMWARE_SEARCH_CANDIDATES not in self._codes(core)
 
     # --- the same table, reached by a region key that names a file ----------
 

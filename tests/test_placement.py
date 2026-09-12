@@ -7,10 +7,12 @@ import pytest
 from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+    CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CORE_MODE_UNESTABLISHED_REASONS,
     ENUMERATED_DATA,
+    FIRMWARE_SEARCH_READINGS,
     REASON_ACTIVE_USER_UNRECORDED,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
@@ -490,6 +492,24 @@ class TestAnEnumeratedValueIsRefusedAtConstruction:
                 "a message",
                 {"reason": "/dev_hdd0/ is unread"},
             )
+
+    def test_a_reading_inside_the_listing_mapping_outside_the_vocabulary_raises(self):
+        # The registered pair whose value is a MAPPING. The words sit in its
+        # VALUES, so a check that read the mapping itself — or its keys, which
+        # are paths — would refuse every listing there is, or none of them.
+        with pytest.raises(ValueError, match="firmware-search-candidates.readings"):
+            Caveat(
+                CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
+                "a message",
+                {"readings": {"/mnt/sd/retrodeck/bios/scph5501.bin": "bogus"}},
+            )
+
+    def test_a_listing_mapping_of_real_readings_is_accepted(self):
+        # And the other direction, so the check above cannot pass by refusing
+        # mappings as such: every word of the vocabulary, keyed by a path.
+        listing = {f"/bios/{word}.bin": word for word in FIRMWARE_SEARCH_READINGS}
+        caveat = Caveat(CAVEAT_FIRMWARE_SEARCH_CANDIDATES, "a message", {"readings": listing})
+        assert caveat.data["readings"] == listing
 
     def test_every_member_of_a_vocabulary_is_accepted(self):
         for reason in CORE_MODE_UNESTABLISHED_REASONS:

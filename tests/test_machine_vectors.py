@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Iterator, cast
+from typing import Any, Iterator, Mapping, Sequence, cast
 from pathlib import Path
 
 import pytest
@@ -519,6 +519,18 @@ class TestUnknownNoLongerCarriesAReadFailure:
         assert {option["declared_kind"] for _, option in remaining} == {"file"}
 
 
+def _slugs(value: "str | Sequence[str] | Mapping[str, str]") -> list[str]:
+    """The slugs one enumerated data value states.
+
+    A string states itself, a list one per entry, and an object one per key —
+    its values, since an object's keys are the subjects the slugs are said
+    about. The same three readings ``atlas.placement`` makes at construction.
+    """
+    if isinstance(value, str):
+        return [value]
+    return list(value.values()) if isinstance(value, Mapping) else list(value)
+
+
 class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
     """A ``data`` value a client branches on is a slug from a named tuple.
 
@@ -585,17 +597,24 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
         ("filenames-content-conditional", "files_established_for"): (
             atlas.FILES_ESTABLISHED_FOR_TOKENS
         ),
+        ("firmware-search-candidates", "readings"): atlas.FIRMWARE_SEARCH_READINGS,
         ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
         ("system-firmware-world-knowledge", "evidence"): atlas.STATED_EVIDENCE_WORDS,
     }
 
     def _values_in_corpus(self) -> dict[tuple[str, str], set[str]]:
+        """Every value the corpus states at an enumerated pair, list-valued ones unpacked.
+
+        A pair whose value is an object or a list states several slugs, so it
+        is read word by word — the way the constructor checks it. Taking the
+        shape itself would put an unhashable value in the set and, once past
+        that, compare a whole object against the vocabulary.
+        """
         found: dict[tuple[str, str], set[str]] = {pair: set() for pair in self.VOCABULARIES}
         for _, expected in expected_blocks():
             for code, data in caveat_blocks(expected):
-                for pair in self.VOCABULARIES:
-                    if pair[0] == code and pair[1] in data:
-                        found[pair].add(data[pair[1]])
+                for pair in [p for p in self.VOCABULARIES if p[0] == code and p[1] in data]:
+                    found[pair].update(_slugs(data[pair[1]]))
         return found
 
     def test_the_corpus_shows_no_value_outside_its_vocabulary(self):
@@ -644,6 +663,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
                 ),
             ),
             (placement, "ESTABLISHED_FOR_", atlas.FILES_ESTABLISHED_FOR_TOKENS),
+            (placement, "READING_", atlas.FIRMWARE_SEARCH_READINGS),
             (retroarch_cfg, "CFG_LAYER_", atlas.CFG_LAYER_KINDS),
         ):
             declared = {
@@ -656,7 +676,11 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
     def test_every_slug_constant_is_also_exported(self):
         # And the package exports each, since the guide tells clients to
         # compare against the names rather than against string literals.
-        for module, prefix in ((placement, "REASON_"), (placement, "ESTABLISHED_FOR_")):
+        for module, prefix in (
+            (placement, "REASON_"),
+            (placement, "ESTABLISHED_FOR_"),
+            (placement, "READING_"),
+        ):
             for name, value in vars(module).items():
                 if name.startswith(prefix) and isinstance(value, str):
                     assert name in atlas.__all__, name
