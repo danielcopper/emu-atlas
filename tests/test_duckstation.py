@@ -411,6 +411,21 @@ class TestTheLoaderRefusesAMalformedTable:
 
     ROW = {"name": "x", "region": "pal", "md5": "a", "priority": 1, "fast_boot_patch": "y"}
 
+    def test_a_size_class_this_atlas_names_no_system_for_is_refused(self):
+        # The class names the console whose BIOS is that long, and what the
+        # answer says about which machine bytes belong to comes from it — so a
+        # fourth class stops the load rather than answering that with silence.
+        text = json.dumps(
+            {
+                "sizes": {"ps1": 1, "ps4": 2},
+                "images": [self.ROW],
+                "openbios": {"signature": "OpenBIOS", "offset": 120},
+                "_meta": {"revision": "r"},
+            }
+        )
+        with pytest.raises(ValueError, match=r"\['ps4'\]"):
+            duckstation.load_bios_table(text)
+
     def test_a_table_without_the_openbios_block_is_refused(self):
         # The offset speaks in a caveat's sentence; a silent default would
         # ship "offset None" instead of failing the load.

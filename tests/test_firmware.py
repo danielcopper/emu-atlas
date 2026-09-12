@@ -35,6 +35,7 @@ from atlas.firmware import (
     SYSTEM_FIRMWARE_OPEN,
     SYSTEM_FIRMWARE_RUNS_WITHOUT,
     system_firmware_system,
+    CAVEAT_EMULATOR_CATALOGUE_SEALED,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
     CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
@@ -95,6 +96,7 @@ from atlas.firmware import (
     SYSTEMS_WITHOUT_CATALOGUE_ID,
     Catalogue,
     CatalogueEntry,
+    Concern,
     CoreDeclarations,
     CoreFirmware,
     DeclaredDirectory,
@@ -104,7 +106,11 @@ from atlas.firmware import (
     FirmwareContext,
     FirmwareIdentity,
     FirmwareRequirement,
+    InventoryCatalogue,
+    RELATION_DECLARES,
+    RELATION_RECOGNISES,
     SuppliedBy,
+    UnclaimedFile,
     declared_directory_of,
     declared_kind_of,
     destination_under,
@@ -1548,7 +1554,7 @@ class TestADeclarationStatesItsOwnShape:
         }
         assert answer.caveats[0].message.startswith(f"one file in {LRPS2_FOLDER} is of a size")
         # Read, found to be no BIOS, and nobody's: the unclaimed scan may list it.
-        assert answer.cores[0].folder_claims == ()
+        assert answer.cores[0].claims == ()
 
     def test_a_right_sized_file_the_table_does_not_list_is_an_image_by_its_header(self):
         """The table is a subset of what the core accepts; the header is the core's own test."""
@@ -1566,7 +1572,7 @@ class TestADeclarationStatesItsOwnShape:
             "table": "0",
             "core_so": LRPS2_SO,
         }
-        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+        assert answer.cores[0].claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
 
     def test_the_description_reproduces_the_cores_own_format_string_byte_for_byte(self):
         """``description`` is prose the CORE composes, and its columns are load-bearing.
@@ -1619,7 +1625,7 @@ class TestADeclarationStatesItsOwnShape:
         assert "could not be hashed" in answer.caveats[0].message
         assert answer.caveats[1].data == {"path": f"{LRPS2_FOLDER}/scph39001.bin"}
         assert "beside a header that came back" in answer.caveats[1].message
-        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+        assert answer.cores[0].claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
 
     def test_a_rejected_candidate_whose_digest_could_not_be_taken_is_still_no_image(self):
         """The header's verdict stands; the digest that was never taken is stated, and reopens nothing."""
@@ -1638,7 +1644,7 @@ class TestADeclarationStatesItsOwnShape:
         assert answer.caveats[1].data["paths"] == (f"{LRPS2_FOLDER}/scph39001.bin",)
         # Stated here, so the unclaimed scan — which hashes what it lists and
         # would state the same failure — must not state it again.
-        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
+        assert answer.cores[0].claims == (f"{LRPS2_FOLDER}/scph39001.bin",)
 
     def test_the_inventory_does_not_restate_a_rejected_candidates_untaken_digest(self):
         machine = _machine(
@@ -1677,7 +1683,7 @@ class TestADeclarationStatesItsOwnShape:
             "table_version": FIRMWARE_DECLARED_DIRECTORY_VERSION,
         }
         # Stated here, so the unclaimed scan must not state it again as an identified file.
-        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
+        assert answer.cores[0].claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
 
     def test_an_image_beside_a_contradiction_still_satisfies(self):
         answer, folder = self._lrps2(
@@ -1705,7 +1711,7 @@ class TestADeclarationStatesItsOwnShape:
         assert folder.satisfied is None
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_UNREADABLE]
         assert answer.caveats[0].data == {"path": f"{LRPS2_FOLDER}/scph70004.bin"}
-        assert answer.cores[0].folder_claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
+        assert answer.cores[0].claims == (f"{LRPS2_FOLDER}/scph70004.bin",)
 
     def test_a_listed_file_with_no_header_answer_is_a_read_that_did_not_happen(self):
         """A fixture that forgot the key proves nothing about the file, and says so as unread."""
@@ -1888,7 +1894,7 @@ class TestADeclarationStatesItsOwnShape:
             (CAVEAT_FIRMWARE_UNREADABLE, f"{BIOS_DIR}/locked.bin"),
         ]
         lrps2 = next(c for c in answer.cores if c.core_so == LRPS2_SO)
-        assert lrps2.folder_claims == (f"{BIOS_DIR}/store/locked.bin", f"{BIOS_DIR}/store/scph70004.bin")
+        assert lrps2.claims == (f"{BIOS_DIR}/store/locked.bin", f"{BIOS_DIR}/store/scph70004.bin")
         assert [f.path for f in answer.unclaimed] == [f"{BIOS_DIR}/other.bin"]
 
     def test_a_catalogue_that_lists_the_core_twice_reads_the_folder_once(self):
@@ -5010,6 +5016,456 @@ class TestAnIdentifiedImageIsVerified:
                 assert [o for o in options if o.checked == CHECKED_REFUSED] == []
                 assert CAVEAT_FIRMWARE_IMAGE_REFUSED not in self._codes(core)
 
+
+class TestTheInventoryCarriesTheCardsAndSaysWhatAFileConcerns:
+    """The two defects of an inventory computed from the libretro cores alone.
+
+    It ran no standalone card, so a BIOS image a card's own search collects was
+    that card's satisfied requirement in ``firmware_for_system`` and a file
+    nobody asks for in ``firmware_inventory`` at the same time. And it looked a
+    file nobody declared up in the libretro table only, so a PlayStation dump
+    filed by hand under a name no ``.info`` declares came back unidentified
+    while the packaged DuckStation table knew those bytes exactly.
+
+    Both halves are held here over one arrangement, because they are one
+    reading: the carded emulators are entries, what their own reads looked at
+    is theirs, and what is left is identified against every packaged table
+    atlas carries.
+    """
+
+    # Rows of DuckStation's shipped table, so a test that stops agreeing with
+    # the packaged data fails rather than passing against an invention.
+    SCPH5501 = "490f666e1afb15b7362b406ed1cea246"
+    # A row no libretro name holds: the table's development-kit image, which is
+    # what makes "identified by the emulator's own table alone" testable.
+    DEVKIT = "ca5cfc321f916756e3f0effbfaeba13b"
+    DEVKIT_NAME = "DTL-H1100 (v2.2 03-06-96 D)"
+    PS1_SIZE = 524288
+    SEARCH = f"{BIOS_DIR}/duckstation"
+    DATA_HOME = "/home/deck/.local/share"
+    CONFIG_HOME = "/home/deck/.config"
+    KEYS = f"{DATA_HOME}/Cemu/keys.txt"
+    # A libretro table naming the PlayStation image under two names and the GBA
+    # one under a single name whose size no emulator table accepts. The first
+    # md5 is DuckStation's own, which is the point of it: one content, two
+    # tables.
+    TABLE = json.dumps(
+        {
+            "_meta": {"generated_from": "test", "version": "0", "generated_at": "2026-01-01"},
+            "files": {
+                "scph5501.bin": {"md5": SCPH5501, "sha1": "bb" * 20, "size": PS1_SIZE, "kind": "file"},
+                "scph7003.bin": {"md5": SCPH5501, "sha1": "bb" * 20, "size": PS1_SIZE, "kind": "file"},
+                "gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6, "kind": "file"},
+                # Keyed by a RELATIVE PATH, which 91 of the packaged table's
+                # own entries are: the name a declaration carries is not the
+                # key, and the reading that relates the two is for_path.
+                "dc/dc_boot.bin": {"md5": "33" * 16, "sha1": "44" * 20, "size": 7, "kind": "file"},
+            },
+        }
+    )
+    PS1_DUMP: dict[str, str | int] = {"md5": SCPH5501, "sha1": "bb" * 20, "size": PS1_SIZE}
+    DC_DUMP: dict[str, str | int] = {"md5": "33" * 16, "sha1": "44" * 20, "size": 7}
+    DEVKIT_DUMP: dict[str, str | int] = {"md5": DEVKIT, "sha1": "cc" * 20, "size": PS1_SIZE}
+    GBA_DUMP: dict[str, str | int] = {"md5": "11" * 16, "sha1": "22" * 20, "size": 6}
+    # Two cores declaring one file name that carries no per-file rule, under
+    # two systemnames: the shape the console rule refuses to pick a winner in.
+    GBA_ONLY_INFO = """
+systemname = "Nintendo - Game Boy Advance"
+firmware_count = 1
+firmware0_desc = "gba_bios.bin"
+firmware0_path = "gba_bios.bin"
+firmware0_opt = "true"
+"""
+    DC_INFO = """
+systemname = "Sega - Dreamcast"
+firmware_count = 1
+firmware0_desc = "dc/dc_boot.bin (Dreamcast BIOS)"
+firmware0_path = "dc/dc_boot.bin"
+firmware0_opt = "false"
+"""
+    NDS_TOO_INFO = """
+systemname = "Nintendo - Nintendo DS"
+firmware_count = 1
+firmware0_desc = "gba_bios.bin"
+firmware0_path = "gba_bios.bin"
+firmware0_opt = "true"
+"""
+    # A core whose only declaration names a place outside the firmware root:
+    # atlas refuses it, so the core declares something and requires nothing.
+    REFUSED_INFO = """
+systemname = "Sony - PlayStation"
+firmware_count = 1
+firmware0_desc = "outside"
+firmware0_path = "../outside.bin"
+firmware0_opt = "false"
+"""
+    PSX_CORE = "mednafen_psx_libretro.so"
+    DUCKSTATION = CatalogueEntry(
+        label="DuckStation (Legacy) (Standalone)",
+        kind="standalone",
+        core_so=None,
+        emulator="DUCKSTATION",
+        declared_index=0,
+        standalone_token="DUCKSTATION",
+    )
+    CEMU = CatalogueEntry(
+        label="Cemu (Standalone)",
+        kind="standalone",
+        core_so=None,
+        emulator="CEMU",
+        declared_index=0,
+        standalone_token="CEMU",
+    )
+    CATALOGUE = InventoryCatalogue(
+        by_system={"psx": Catalogue((DUCKSTATION,)), "wiiu": Catalogue((CEMU,))}
+    )
+
+    def _machine(
+        self,
+        files: Mapping[str, FixtureFileSpec],
+        *,
+        search: str = BIOS_DIR,
+        infos: Mapping[str, str] | None = None,
+        symlinks: Mapping[str, str] | None = None,
+        dirs: tuple[str, ...] = (),
+    ) -> FixtureMachine:
+        """A machine whose psx row is DuckStation and whose wiiu row is Cemu.
+
+        *search* is ``[BIOS] SearchDirectory``: the firmware root by default,
+        which is the value RetroDECK ships — the emulator searches the very
+        tree this answer is otherwise about — while a directory of its own is
+        what tells a claim by the search apart from a claim by the table.
+        *infos* replaces the installed cores, which decides what declares a
+        name the packaged table knows.
+        """
+        declared = {self.PSX_CORE: PSX_INFO} if infos is None else dict(infos)
+        tree: dict[str, FixtureFileSpec] = {
+            f"{self.CONFIG_HOME}/duckstation/settings.ini": (
+                f"[BIOS]\nSearchDirectory = {search}\nPathNTSCU = \nPathNTSCJ = \nPathPAL = \n"
+            )
+        }
+        for core_so, info in declared.items():
+            stem = core_so.removesuffix(".so")
+            tree[f"{INFO_DIR}/{stem}.info"] = info
+            tree[f"{INFO_DIR}/{stem}.so"] = {"status": "invalid-text"}
+        tree.update(files)
+        return FixtureMachine(
+            tree,  # type: ignore[arg-type]
+            symlinks=symlinks,
+            dirs=[BIOS_DIR, INFO_DIR, self.SEARCH, *dirs],
+        )
+
+    def _context(self, machine: FixtureMachine) -> FirmwareContext:
+        return FirmwareContext(
+            root=BIOS_DIR,
+            cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
+            hashes=load_hashes(self.TABLE),
+            standalone_data_home=self.DATA_HOME,
+            standalone_config_home=self.CONFIG_HOME,
+        )
+
+    def _answer(
+        self,
+        files: Mapping[str, FixtureFileSpec],
+        *,
+        verify: bool = True,
+        catalogue: InventoryCatalogue | None = None,
+        search: str = BIOS_DIR,
+        infos: Mapping[str, str] | None = None,
+        symlinks: Mapping[str, str] | None = None,
+    ) -> FirmwareAnswer:
+        machine = self._machine(files, search=search, infos=infos, symlinks=symlinks)
+        return firmware_inventory(
+            machine,
+            self._context(machine),
+            catalogue=self.CATALOGUE if catalogue is None else catalogue,
+            verify=verify,
+        )
+
+    def _found(self, answer: FirmwareAnswer, name: str) -> UnclaimedFile:
+        return next(f for f in answer.unclaimed if f.path.endswith(name))
+
+    def test_the_carded_emulators_are_entries_after_the_cores_in_catalogue_order(self):
+        answer = self._answer({})
+        assert [core.emulator for core in answer.cores] == [self.PSX_CORE, "DUCKSTATION", "CEMU"]
+        assert [core.declaration for core in answer.cores[1:]] == [
+            DECLARATION_PACKAGED,
+            DECLARATION_PACKAGED,
+        ]
+
+    def test_with_no_catalogue_at_all_the_answer_is_the_installed_cores_alone(self):
+        # A bare RetroArch, and the behaviour this answer had before cards
+        # reached it: nothing enumerates a standalone emulator there.
+        machine = self._machine({})
+        answer = firmware_inventory(machine, self._context(machine), verify=True)
+        assert [core.emulator for core in answer.cores] == [self.PSX_CORE]
+
+    def test_an_uncarded_standalone_emulator_is_not_an_entry(self):
+        # Its unsupported statement is firmware_for_system's to make, once per
+        # system it launches; repeating it here would add rows that say nothing
+        # about the tree this answer is about.
+        rpcs3 = CatalogueEntry(label="RPCS3 (Standalone)", kind="standalone", core_so=None)
+        answer = self._answer(
+            {}, catalogue=InventoryCatalogue(by_system={"ps3": Catalogue((rpcs3,))})
+        )
+        assert [core.emulator for core in answer.cores] == [self.PSX_CORE]
+
+    def test_a_file_the_search_kept_is_that_entrys_answer_and_not_unclaimed(self):
+        # The first defect itself: DuckStation's search directory is the
+        # firmware root on RetroDECK, so this dump was the card's satisfied
+        # requirement and a file nobody asks for in one and the same reading.
+        answer = self._answer({f"{BIOS_DIR}/playstation-us.bin": self.PS1_DUMP})
+        assert [f.path for f in answer.unclaimed] == []
+        duckstation = next(c for c in answer.cores if c.emulator == "DUCKSTATION")
+        assert duckstation.requirements_met is True
+
+    def test_a_file_of_a_size_the_search_skips_is_still_unclaimed(self):
+        # The claim is the set the emulator's own recognition runs over, not
+        # the directory: a file its size gate drops was never looked at.
+        answer = self._answer({f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP})
+        assert [f.path for f in answer.unclaimed] == [f"{BIOS_DIR}/handheld.rom"]
+
+    def test_a_card_destination_reached_through_a_link_is_claimed_by_its_target(self):
+        # RetroDECK stages Cemu's keys file in the firmware tree and links it to
+        # the path the emulator probes, so the claim has to be by resolved path.
+        answer = self._answer(
+            {f"{BIOS_DIR}/keys.txt": "# add keys below\n"},
+            symlinks={self.KEYS: f"{BIOS_DIR}/keys.txt"},
+        )
+        assert [f.path for f in answer.unclaimed] == []
+        cemu = next(c for c in answer.cores if c.emulator == "CEMU")
+        assert cemu.requirements_met is True
+
+    def test_an_unclaimed_file_the_emulators_own_table_knows_names_that_emulator(self):
+        # Identified by the packaged DuckStation table alone: no libretro name
+        # holds these bytes and the search is looking elsewhere, so nothing
+        # about a declaration or a destination could have reached this answer.
+        answer = self._answer({f"{BIOS_DIR}/devkit.bin": self.DEVKIT_DUMP}, search=self.SEARCH)
+        found = self._found(answer, "devkit.bin")
+        assert found.identity is not None
+        assert found.identity.md5 == self.DEVKIT
+        # The table pins no sha1 and names no file, so both stay empty.
+        assert found.identity.sha1 is None
+        assert found.known_as == ()
+        assert found.description == self.DEVKIT_NAME
+        assert found.console == "psx"
+        assert found.concerns == (Concern(emulator="DUCKSTATION", relation=RELATION_RECOGNISES),)
+
+    def test_bytes_both_tables_know_carry_the_libretro_identity_and_both_concerns(self):
+        answer = self._answer(
+            {f"{BIOS_DIR}/playstation-us.bin": self.PS1_DUMP}, search=self.SEARCH
+        )
+        found = self._found(answer, "playstation-us.bin")
+        assert found.identity is not None
+        # The libretro identity, because it pins a sha1 and the names the
+        # content goes by and a content-keyed emulator table pins neither.
+        assert found.identity.sha1 == "bb" * 20
+        assert found.known_as == ("scph5501.bin", "scph7003.bin")
+        assert found.description == "scph5501.bin, scph7003.bin"
+        assert found.console == "psx"
+        assert found.concerns == (
+            Concern(emulator="DUCKSTATION", relation=RELATION_RECOGNISES),
+            Concern(emulator=self.PSX_CORE, relation=RELATION_DECLARES),
+        )
+
+    def test_bytes_only_the_libretro_table_knows_state_the_declaring_core_alone(self):
+        answer = self._answer(
+            {f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP},
+            search=self.SEARCH,
+            infos={"mgba_libretro.so": self.GBA_ONLY_INFO},
+        )
+        found = self._found(answer, "handheld.rom")
+        assert found.description == "gba_bios.bin"
+        assert found.console == "gba"
+        assert found.concerns == (
+            Concern(emulator="mgba_libretro.so", relation=RELATION_DECLARES),
+        )
+
+    def test_a_declaration_the_table_keys_by_path_still_states_its_concern(self):
+        # The match is what the table pins for the declared path, not the
+        # declaration's file name against the table's keys: Flycast declares
+        # dc/dc_boot.bin, which is how the table holds it, while the file name
+        # alone (dc_boot.bin) matches no key at all.
+        answer = self._answer(
+            {f"{BIOS_DIR}/boot.bin": self.DC_DUMP},
+            search=self.SEARCH,
+            infos={"flycast_libretro.so": self.DC_INFO},
+        )
+        found = self._found(answer, "/boot.bin")
+        assert found.known_as == ("dc/dc_boot.bin",)
+        assert found.console == "dreamcast"
+        assert found.concerns == (
+            Concern(emulator="flycast_libretro.so", relation=RELATION_DECLARES),
+        )
+
+    def test_two_systems_declaring_one_content_state_no_console(self):
+        answer = self._answer(
+            {f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP},
+            search=self.SEARCH,
+            infos={"mgba_libretro.so": self.GBA_ONLY_INFO, "skyemu_libretro.so": self.NDS_TOO_INFO},
+        )
+        found = self._found(answer, "handheld.rom")
+        # A file two machines claim is not a file one of them owns, and both
+        # cores still state their concern.
+        assert found.console is None
+        assert [concern.emulator for concern in found.concerns] == [
+            "mgba_libretro.so",
+            "skyemu_libretro.so",
+        ]
+
+    def test_a_core_that_states_no_system_of_its_own_states_no_console(self):
+        # _unknown marks a core whose .info names no systemname at all, which
+        # is a fact about that core rather than a machine these bytes belong to.
+        answer = self._answer(
+            {f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP},
+            search=self.SEARCH,
+            infos={"skyemu_libretro.so": SKYEMU_INFO},
+        )
+        found = self._found(answer, "handheld.rom")
+        assert found.console is None
+        assert found.concerns == (
+            Concern(emulator="skyemu_libretro.so", relation=RELATION_DECLARES),
+        )
+
+    def test_without_verification_the_three_fields_say_nothing(self):
+        answer = self._answer(
+            {f"{BIOS_DIR}/playstation-us.bin": self.PS1_DUMP}, search=self.SEARCH, verify=False
+        )
+        found = self._found(answer, "playstation-us.bin")
+        assert found.identity is None
+        assert found.description is None
+        assert found.console is None
+        assert found.concerns == ()
+
+    def test_an_unclaimed_entry_satisfies_nothing(self):
+        # The dump sits under a name nobody declared, so the core that wants
+        # scph5501.bin is still missing its file — the concern is about the
+        # bytes and moves no verdict.
+        answer = self._answer(
+            {f"{BIOS_DIR}/playstation-us.bin": self.PS1_DUMP}, search=self.SEARCH
+        )
+        core = next(c for c in answer.cores if c.emulator == self.PSX_CORE)
+        assert core.requirements_met is False
+        assert [r.present for r in _plain_requirements(core)] == [False, False]
+
+    def test_a_carded_entry_is_a_declaration_so_no_absence_is_established(self):
+        # The card names a search and found no image, so it states no
+        # requirement — and "no installed core declares any firmware" would
+        # still be the wrong sentence: a packaged declaration was read.
+        answer = self._answer({}, search=self.SEARCH, infos={})
+        assert [core.declaration for core in answer.cores] == [
+            DECLARATION_PACKAGED,
+            DECLARATION_PACKAGED,
+        ]
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in [c.code for c in answer.caveats]
+
+    def test_with_no_carded_entry_the_established_absence_still_stands(self):
+        answer = self._answer({}, infos={}, catalogue=InventoryCatalogue())
+        assert answer.cores == ()
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in answer.caveats]
+
+    def test_a_catalogue_that_could_not_be_read_says_so_and_establishes_nothing(self):
+        # The other empty: no card entry, and not because the frontend
+        # declares none. Answering as a bare RetroArch would state an absence
+        # over a catalogue nobody could consult.
+        answer = self._answer({}, infos={}, catalogue=InventoryCatalogue(read=False))
+        assert answer.cores == ()
+        codes = [c.code for c in answer.caveats]
+        assert codes == [CAVEAT_EMULATOR_CATALOGUE_UNREADABLE, CAVEAT_FIRMWARE_DECLARATION_UNKNOWN]
+
+    def test_a_hole_that_reached_no_card_is_stated_and_establishes_nothing(self):
+        # EmuDeck's sealed layer: the readable part declares no carded
+        # emulator, and the declaration may sit in the part nobody could open.
+        hole = Caveat(CAVEAT_EMULATOR_CATALOGUE_SEALED, "the bundled layer is sealed", {})
+        answer = self._answer({}, infos={}, catalogue=InventoryCatalogue(hole=hole))
+        assert answer.cores == ()
+        codes = [c.code for c in answer.caveats]
+        assert codes == [CAVEAT_EMULATOR_CATALOGUE_SEALED, CAVEAT_FIRMWARE_DECLARATION_UNKNOWN]
+
+    def test_a_hole_whose_readable_part_named_a_card_still_enumerated(self):
+        # The readable part is authoritative for what it declares, so a card
+        # it named is an enumeration that happened — the hole is still stated.
+        hole = Caveat(CAVEAT_EMULATOR_CATALOGUE_SEALED, "the bundled layer is sealed", {})
+        answer = self._answer(
+            {},
+            infos={},
+            search=self.SEARCH,
+            catalogue=InventoryCatalogue(
+                by_system={"psx": Catalogue((self.DUCKSTATION,))}, hole=hole
+            ),
+        )
+        assert [core.emulator for core in answer.cores] == ["DUCKSTATION"]
+        codes = [c.code for c in answer.caveats]
+        assert codes[0] == CAVEAT_EMULATOR_CATALOGUE_SEALED
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN not in codes
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_a_read_that_did_not_happen_is_still_stated_beside_a_card(self):
+        # Only ONE of the three empties is a sentence a card contradicts. A
+        # core whose .info could not be read leaves what it declares unknown,
+        # and a packaged declaration beside it does not answer that question —
+        # so the statement stands, over an answer where nothing named a file.
+        answer = self._answer(
+            {
+                f"{INFO_DIR}/broken_libretro.info": {"status": "invalid-text"},
+                f"{INFO_DIR}/broken_libretro.so": {"status": "invalid-text"},
+            },
+            search=self.SEARCH,
+            infos={},
+            catalogue=InventoryCatalogue(by_system={"psx": Catalogue((self.DUCKSTATION,))}),
+        )
+        assert [core.declaration for core in answer.cores] == [
+            DECLARATION_UNREADABLE,
+            DECLARATION_PACKAGED,
+        ]
+        assert [core.requirements for core in answer.cores] == [(), ()]
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in [c.code for c in answer.caveats]
+
+    def test_one_requirement_anywhere_silences_every_empty_answer_code(self):
+        # The refused declaration is the only one this core makes, so nothing
+        # it declares became a requirement — while both carded entries produced
+        # one: DuckStation found its dump, and Cemu names a keys file that is
+        # missing. "Nothing that declares any firmware produced a requirement"
+        # is then false, and no code in that family may be stated.
+        answer = self._answer(
+            {f"{BIOS_DIR}/playstation-us.bin": self.PS1_DUMP},
+            infos={"refuser_libretro.so": self.REFUSED_INFO},
+        )
+        assert [len(core.requirements) for core in answer.cores] == [0, 1, 1]
+        assert answer.cores[0].refused
+        assert [c.code for c in answer.caveats] == []
+
+    def test_the_caveats_walk_the_entries_in_the_order_the_entries_are_in(self):
+        # Three groups, and a client reading cores and caveats side by side
+        # walks them together: the catalogue's own health, then what the
+        # installed cores observed, then what the carded entries observed —
+        # the order ``cores`` itself puts them in. Held over a fixture where
+        # each half observes something of its own: Flycast's declared BIOS
+        # cannot be read, and a directory sits where Cemu opens its keys file.
+        hole = Caveat(CAVEAT_EMULATOR_CATALOGUE_SEALED, "the bundled layer is sealed", {})
+        machine = self._machine(
+            {f"{BIOS_DIR}/dc/dc_boot.bin": {"status": "unreadable", "size": 7}},
+            infos={"flycast_libretro.so": self.DC_INFO},
+            dirs=(self.KEYS,),
+        )
+        answer = firmware_inventory(
+            machine,
+            self._context(machine),
+            catalogue=InventoryCatalogue(
+                by_system={"wiiu": Catalogue((self.CEMU,))}, hole=hole
+            ),
+            verify=True,
+        )
+        assert [core.emulator for core in answer.cores] == ["flycast_libretro.so", "CEMU"]
+        assert [(c.code, c.data.get("path", "")) for c in answer.caveats] == [
+            (CAVEAT_EMULATOR_CATALOGUE_SEALED, ""),
+            (CAVEAT_FIRMWARE_UNREADABLE, f"{BIOS_DIR}/dc/dc_boot.bin"),
+            (CAVEAT_FIRMWARE_PATH_OBSTRUCTED, self.KEYS),
+        ]
+
+    def test_a_concern_outside_the_vocabulary_is_refused(self):
+        with pytest.raises(ValueError, match="relation must be one of"):
+            Concern(emulator="DUCKSTATION", relation="knows")  # type: ignore[arg-type]
 
 class TestAnAnswerStatesAnObservationOnce:
     """Two caveats with one code and one data are one statement, and the first stays.

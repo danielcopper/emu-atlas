@@ -138,6 +138,7 @@ from .contract import (
     unresolved_contract,
 )
 from .firmware import (
+    Concern,
     CoreFirmware,
     FirmwareAlternatives,
     FirmwareAnswer,
@@ -292,6 +293,8 @@ from .firmware import (
     IDENTITY_FILE,
     NEED_OPTIONAL,
     NEED_REQUIRED,
+    RELATION_DECLARES,
+    RELATION_RECOGNISES,
     SOURCE_CARD,
     SOURCE_NONE,
     SOURCE_OVERRIDE,
@@ -631,6 +634,7 @@ __all__ = [
     "FirmwareIdentity",
     "SuppliedBy",
     "UnclaimedFile",
+    "Concern",
     "RefusedDeclaration",
     "Caveat",
     # Serializers — one per answer type, the same code the vectors assert
@@ -710,6 +714,8 @@ __all__ = [
     "CHECKED_UNRECOGNISED",
     "CHECKED_REFUSED",
     "CHECKED_UNREAD",
+    "RELATION_RECOGNISES",
+    "RELATION_DECLARES",
     "IDENTITY_FILE",
     "IDENTITY_ARCHIVE",
     "ARCHIVE_ROMSET",

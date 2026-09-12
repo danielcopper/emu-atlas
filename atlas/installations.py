@@ -99,7 +99,9 @@ from .firmware import (
     FirmwareContext,
     FirmwareIdentification,
     SandboxTranslation,
+    InventoryCatalogue,
     SYSTEMS_WITHOUT_CATALOGUE_ID,
+    carded_systems,
     load_hashes,
     read_core_declarations,
     xemu_file_value,
@@ -13411,13 +13413,13 @@ class _FirmwareQueries:
         return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
 
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
-        """Every installed core's firmware, plus what is lying around unclaimed.
+        """Every installed emulator's firmware, plus what is lying around unclaimed.
 
-        The installed cores are the whole enumeration: a standalone emulator has
-        no core, so its firmware is never an entry here. Where a frontend
-        catalogue enumerates a system's emulators, :meth:`firmware_for_system`
-        states it instead; where none does, that route is derived from the
-        installed cores too and no route reaches it.
+        The installed cores are the whole enumeration on an arrangement with no
+        frontend catalogue: a standalone emulator declares no ``.info``, so
+        nothing enumerates it here. A handle whose catalogue can enumerate a
+        system's emulators overrides this to pass it, and then the standalone
+        emulators atlas carries a firmware card for are entries too.
         """
         return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
 
@@ -14733,6 +14735,41 @@ def _firmware_catalogue_entries(
             )
         )
     return tuple(shaped)
+
+
+# What a gamelist states when there is none to read, and what the inventory
+# hands the assembly on purpose. A gamelist promotes one row of a system to the
+# front; the inventory names no content, renders no list and carries each row's
+# own ``declared_index``, so the promotion could only reorder its entries —
+# while reading one file per system to learn that order is a cost the answer
+# gets nothing for. The entries themselves, and their positions, are the same
+# either way.
+_NO_GAMELIST_SELECTIONS = GamelistSelections(system_label=None, per_game={})
+
+
+def _firmware_catalogues(
+    host: "_CatalogueHost", by_system: Mapping[str, SystemDeclaration]
+) -> dict[str, Catalogue]:
+    """The catalogue an inventory is informed by: one enumeration per system it can use.
+
+    Only the systems a packaged standalone card answers for
+    (:func:`atlas.firmware.carded_systems`), because those are the only ones
+    the inventory reads an entry out of — the libretro half of that answer is
+    the installed cores themselves, enumerated without any catalogue at all.
+    Module-level beside :func:`_firmware_catalogue_entries` and for the same
+    reason: both ES-DE-driven handles hand their firmware route the same
+    projection, and a second copy is how the two drift apart.
+    """
+    wanted = carded_systems()
+    return {
+        system: Catalogue(
+            entries=_firmware_catalogue_entries(
+                host, by_system, system, _NO_GAMELIST_SELECTIONS
+            )
+        )
+        for system in by_system
+        if system in wanted
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -17008,6 +17045,47 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             (*answer.caveats[:index], *status, *answer.caveats[index:]),
         )
 
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+        """Every installed emulator's firmware here, plus what is lying around unclaimed.
+
+        RetroDECK's catalogue is what makes the standalone emulators entries:
+        the ES-DE layers declare which of them launch which system, and the
+        ones atlas carries a firmware card for answer here exactly as they do
+        for :meth:`firmware_for_system` — with their own reads claiming what
+        they looked at, so a BIOS image DuckStation's search collects is that
+        entry's answer instead of a file nobody asks for.
+
+        Assembled from this query's own snapshot, the way that route is: the
+        marker and both catalogue layers are read once here and handed on. A
+        catalogue that could not be read is handed over as such rather than
+        withheld: this answer then names no standalone emulator and states
+        ``emulator-catalogue-unreadable``, because "the frontend declares
+        none" and "atlas could not ask" are two different answers.
+
+        Every statement about that catalogue's own health rides here too, the
+        same ones :meth:`firmware_for_system` rides and in the same order — a
+        layer ES-DE refuses wholesale, a custom layer that declared itself
+        exclusive — and each carries no system, because this answer is about
+        none of them.
+        """
+        config, marker_issues = self._read_marker()
+        root = self._config_path(config, "rd_home_path", "")[0]
+        by_system, read, exclusive, invalid = self._read_catalogue(root)
+        context = self._stated(self._firmware_context_from(config, marker_issues))
+        return _resolve_inventory(
+            self._machine,
+            context,
+            catalogue=InventoryCatalogue(
+                by_system=_firmware_catalogues(self, by_system) if read else {},
+                read=read,
+                findings=(
+                    *(() if invalid is None else (invalid,)),
+                    *(self._catalogue_exclusive(root) if exclusive else ()),
+                ),
+            ),
+            verify=verify,
+        )
+
     def _entry_caveats_for(
         self,
         config: dict[str, Any],
@@ -17703,10 +17781,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """The statements that ride beside the catalogue status, in the pinned order.
 
         The relocation suspicion first, then the marker cross-check — one
-        builder, consumed by :meth:`_esde_snapshot`'s tail and by the firmware
-        route, so the two can never spell the order apart. The relocation read
-        happens only while an ES-DE is present: with none on disk there is
-        nothing a ``portable.txt`` could move out from under.
+        builder, consumed by :meth:`_esde_snapshot`'s tail, by
+        :meth:`firmware_for_system` and by :meth:`firmware_inventory`, so the
+        three can never spell the order apart. The relocation read happens
+        only while an ES-DE is present: with none on disk there is nothing a
+        ``portable.txt`` could move out from under.
         """
         cross_check = self._frontend_marker_caveat(settings, present)
         mismatch = () if cross_check is None else (cross_check,)
@@ -19282,6 +19361,47 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return _firmware_with_caveats(
             answer, (*answer.caveats[:index], *inserted, *answer.caveats[index:])
         )
+
+    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+        """Every installed emulator's firmware here, plus what is lying around unclaimed.
+
+        RetroDECK's route mirrored over this arrangement's sources: the ES-DE on
+        disk declares which standalone emulators launch which system, and the
+        ones atlas carries a firmware card for answer here as they do for
+        :meth:`firmware_for_system`. With no ES-DE on this disk at all nothing
+        enumerates a standalone emulator and this answer is the installed cores
+        alone; a resource shadow that could not be read is the opposite state
+        and says so, the unreadable catalogue.
+
+        The entries are the readable layers', which on this arrangement is
+        ordinarily all of them minus the one sealed inside the AppImage — and
+        that limit is stated here as it is there, once on the answer rather
+        than once per system: a card only the sealed layer declares is not
+        reached, and ``emulator-catalogue-sealed`` says so. Beside it ride the
+        same further statements :meth:`firmware_for_system` rides, in the same
+        order: a layer ES-DE refuses wholesale, an exclusive custom layer, and
+        the two that qualify which ES-DE was read at all — the relocation
+        suspicion and the marker cross-check.
+        """
+        settings, marker_issues = self._read_marker()
+        cfg = self._machine.read_text(self._companion_cfg_path())
+        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg))
+        if not self._esde_present() or context.root is None:
+            return _resolve_inventory(self._machine, context, verify=verify)
+        by_system, complete, shadow_broken, exclusive, invalid = self._read_esde_catalogue()
+        findings = (
+            *(() if invalid is None else (invalid,)),
+            *(self._catalogue_exclusive() if exclusive else ()),
+            *self._riders(settings, True),
+        )
+        if shadow_broken:
+            catalogue = InventoryCatalogue(read=False, findings=findings)
+        else:
+            hole = None if complete else self._catalogue_sealed_caveat()
+            catalogue = InventoryCatalogue(
+                by_system=_firmware_catalogues(self, by_system), hole=hole, findings=findings
+            )
+        return _resolve_inventory(self._machine, context, catalogue=catalogue, verify=verify)
 
 
 class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):

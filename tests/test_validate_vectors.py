@@ -124,6 +124,31 @@ def _identity(**overrides) -> Vector:
     return {"md5": "0" * 32, "sha1": "1" * 40, "size": 256, "kind": "file", **overrides}
 
 
+def _unclaimed(**overrides) -> Vector:
+    """One unclaimed entry, unidentified — the shape every field-level case starts from."""
+    return {
+        "path": f"{BIOS}/x.bin",
+        "identity": None,
+        "known_as": [],
+        "description": None,
+        "console": None,
+        "concerns": [],
+        **overrides,
+    }
+
+
+def _named(**overrides) -> Vector:
+    """One unclaimed entry the libretro table identified — identity, name and description."""
+    return _unclaimed(
+        **{
+            "identity": _identity(),
+            "known_as": ["gb_bios.bin"],
+            "description": "gb_bios.bin",
+            **overrides,
+        }
+    )
+
+
 def _supplied(**overrides) -> Vector:
     return {
         "distribution": "retrodeck",
@@ -1244,18 +1269,44 @@ ALTERNATIVES_CASES = [
 UNCLAIMED_CASES = [
     case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": None}]),
          "each unclaimed file must be exactly the fields", id="unclaimed-missing-field"),
-    case(_base_firmware(unclaimed=[{"path": "/elsewhere/x.bin", "identity": None, "known_as": []}]),
+    case(_base_firmware(unclaimed=[_unclaimed(path="/elsewhere/x.bin")]),
          "an unclaimed file's path must be absolute under the root", id="unclaimed-outside-root"),
-    case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": None, "known_as": ""}]),
+    case(_base_firmware(unclaimed=[_unclaimed(known_as="")]),
          "unclaimed known_as must be a list", id="unclaimed-known-as-type"),
-    case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": None, "known_as": ["gb_bios.bin"]}]),
+    case(_base_firmware(unclaimed=[_unclaimed(known_as=["gb_bios.bin"])]),
          "an unrecognised file is known as nothing", id="unclaimed-unidentified-but-named"),
     case(_base_firmware(hash_checked=True,
-                        unclaimed=[{"path": f"{BIOS}/x.bin", "identity": _identity(), "known_as": []}]),
+                        unclaimed=[_named(known_as=[])]),
          "recognised content is known under at least the name", id="unclaimed-identified-unnamed"),
-    case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": _identity(),
-                                    "known_as": ["gb_bios.bin"]}]),
+    case(_base_firmware(unclaimed=[_named()]),
          "impossible without hash checking", id="unclaimed-identified-without-hashing"),
+    case(_base_firmware(hash_checked=True, unclaimed=[_named(description=None)]),
+         "identified content carries the table's own name", id="unclaimed-identified-undescribed"),
+    case(_base_firmware(hash_checked=True, unclaimed=[_named(description=7)]),
+         "as a non-empty string", id="unclaimed-description-not-a-string"),
+    case(_base_firmware(unclaimed=[_unclaimed(console="psx")]),
+         "an unidentified file says nothing about itself", id="unclaimed-unidentified-with-a-console"),
+    case(_base_firmware(unclaimed=[_unclaimed(concerns=[{"emulator": "x", "relation": "declares"}])]),
+         "an unidentified file says nothing about itself", id="unclaimed-unidentified-with-a-concern"),
+    case(_base_firmware(unclaimed=[_unclaimed(console="")]),
+         "console must be a non-empty system id or null", id="unclaimed-empty-console"),
+    case(_base_firmware(hash_checked=True,
+                        unclaimed=[_named(concerns=[{"emulator": "x"}])]),
+         "each unclaimed concern must be exactly the fields", id="unclaimed-concern-missing-field"),
+    case(_base_firmware(hash_checked=True,
+                        unclaimed=[_named(concerns=[{"emulator": "x", "relation": "knows"}])]),
+         "a concern's relation must be one of", id="unclaimed-concern-unknown-relation"),
+    case(_base_firmware(hash_checked=True,
+                        unclaimed=[_named(concerns=[{"emulator": "", "relation": "declares"}])]),
+         "a concern names the emulator it is about", id="unclaimed-concern-unnamed-emulator"),
+    case(_base_firmware(hash_checked=True,
+                        unclaimed=[_named(concerns=[{"emulator": "a", "relation": "declares"},
+                                                    {"emulator": "a", "relation": "declares"}])]),
+         "one emulator states one concern of a kind", id="unclaimed-concern-stated-twice"),
+    case(_base_firmware(hash_checked=True,
+                        unclaimed=[_named(concerns=[{"emulator": "b", "relation": "declares"},
+                                                    {"emulator": "a", "relation": "declares"}])]),
+         "unclaimed concerns are sorted", id="unclaimed-concerns-unsorted"),
 ]
 
 IDENTIFICATION_CASES = [
@@ -1489,10 +1540,16 @@ ACCEPTED_CASES = [
                                              requirements=[], requirements_met=None,
                                              caveats=[{"code": "firmware-path-escapes-root", "data": {}}])]),
                  id="a-refused-declaration-stated-as-a-caveat"),
-    pytest.param(_base_firmware(hash_checked=True,
-                                unclaimed=[{"path": f"{BIOS}/x.bin", "identity": _identity(),
-                                            "known_as": ["gb_bios.bin"]}]),
+    pytest.param(_base_firmware(hash_checked=True, unclaimed=[_named()]),
                  id="an-unclaimed-file-identified-by-content"),
+    # A content-keyed emulator table names no file and pins no sha1, so the
+    # entry it identifies carries a description and no name at all.
+    pytest.param(_base_firmware(
+        hash_checked=True,
+        unclaimed=[_named(identity=_identity(sha1=None), known_as=[], console="psx",
+                          description="SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)",
+                          concerns=[{"emulator": "DUCKSTATION", "relation": "recognises"}])],
+    ), id="an-unclaimed-file-a-content-keyed-table-identified"),
     pytest.param(_base_firmware(cores=[_core(declaration="unreadable", requirements=[], requirements_met=None,
                                              caveats=[{"code": "firmware-declaration-unread", "data": {}}])],
                                 caveats=[{"code": "no-firmware-declaration", "data": {}}]),

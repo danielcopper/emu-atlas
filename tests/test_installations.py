@@ -83,6 +83,17 @@ class TestABrokenCatalogueEmptiesTheFrontend:
         rd = self._rd("<systemList><system><name>gb</name>")
         assert atlas.HEALTH_ISSUE_CATALOGUE_INVALID in [c.code for c in rd.health().issues]
 
+    def test_the_inventory_states_the_refusal_it_answers_empty_under(self):
+        # The catalogue in force is EMPTY when ES-DE refuses a layer, so the
+        # inventory names no standalone emulator — and the finding that says
+        # why rides the answer, once and with no system in its data. Without it
+        # the empty list reads as a frontend that declares none.
+        rd = self._rd("<systemList><system><name>gb</name>")
+        answer = rd.firmware_inventory()
+        stated = [c for c in answer.caveats if c.code == atlas.HEALTH_ISSUE_CATALOGUE_INVALID]
+        assert len(stated) == 1
+        assert stated[0].data == {"path": RD_OVERLAY, "problem": "parse-error"}
+
     def test_an_empty_systemlist_stays_healthy(self):
         # The healthy stub shape: parses, declares nothing, ES-DE moves on.
         rd = self._rd('<?xml version="1.0"?>\n<systemList>\n<!-- stub -->\n</systemList>\n')
@@ -5938,6 +5949,47 @@ class TestEmuDeckEsdeCatalogue:
         assert codes[status + 1] == atlas.CAVEAT_CONFIG_HOME_RELOCATED
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
+
+    def test_the_inventory_states_the_sealed_layer_once(self):
+        # The inventory is about no single system, so the hole rides it once
+        # with no system in its data — and it is the reason this answer may
+        # name no standalone emulator without that being a fact about the
+        # machine: a card the sealed layer alone declares was never reached.
+        ed = self._emudeck({f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY})
+        answer = ed.firmware_inventory()
+        sealed = [c for c in answer.caveats if c.code == atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED]
+        assert len(sealed) == 1
+        assert sealed[0].data == {}
+        assert atlas.CAVEAT_NO_FIRMWARE_DECLARATION not in self._codes(answer)
+
+    def test_the_inventory_reads_the_broken_shadow_as_unreadable(self):
+        # The same reading the per-system route makes of the same file: the
+        # bundled layer on disk that cannot be read is the unreadable
+        # catalogue, never the sealed one.
+        ed = self._emudeck(
+            {f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": {"status": "unreadable"}}
+        )
+        codes = self._codes(ed.firmware_inventory())
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE in codes
+        assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
+        assert atlas.CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+
+    def test_the_inventory_carries_the_riders_in_the_order_they_are_pinned(self):
+        # The per-system route's rider order, on the answer about no single
+        # system: the catalogue's own status leads, then the relocation
+        # suspicion, then the marker cross-check. One builder states them for
+        # both routes, so a reordering there has to fail here too.
+        ed = self._emudeck(
+            {
+                EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
+                f"{HOME}/Applications/portable.txt": "",
+            }
+        )
+        codes = self._codes(ed.firmware_inventory())
+        sealed = codes.index(atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED)
+        assert codes[sealed + 1] == atlas.CAVEAT_CONFIG_HOME_RELOCATED
+        assert codes[sealed + 2] == atlas.CAVEAT_FRONTEND_MARKER_MISMATCH
 
     def test_the_firmware_route_reads_the_readable_shadow_as_the_whole_catalogue(self):
         # A readable resource shadow IS the bundled layer, on disk: nothing is
