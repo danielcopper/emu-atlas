@@ -469,6 +469,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-image-contradicted",
     "firmware-image-ambiguous",
     "firmware-search-unverified",
+    "firmware-search-candidates",
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
     "save-dir-launch-dependent",
@@ -1234,19 +1235,24 @@ def _validate_caveats(name: str, caveats: Any) -> None:
         ):
             fail(
                 f"{name}: caveat data values must each be a string, a list of strings, or one "
-                f"of the two documented tally objects, got {data!r}"
+                f"of the documented objects of strings, got {data!r}"
             )
 
 
 # The only places a data value is an OBJECT of strings rather than a string or
-# a list of them. Two, and each is keyed to its own code so an object can never
-# turn up where a client does not expect one: the alternative-emulator tally,
-# which maps an emulator label to how many games select it, and the card-image
-# index options a Beetle PSX card refuses on, which map an option key to the
-# value read for it.
+# a list of them. Each is keyed to its own code, so an object can never turn up
+# where a client does not expect one. Two are about a configuration: the
+# alternative-emulator tally, which maps an emulator label to how many games
+# select it, and the card-image index options a Beetle PSX card refuses on,
+# which map an option key to the value read for it. Three are the BIOS search's
+# listing, which says one thing about each of several files, keyed by the path
+# it is about.
 OBJECT_VALUED_KEYS = {
     ("per-game-alternative-emulator", "emulators"),
     ("core-mode-unestablished", "options"),
+    ("firmware-search-candidates", "readings"),
+    ("firmware-search-candidates", "images"),
+    ("firmware-search-candidates", "image_regions"),
 }
 
 
@@ -1254,8 +1260,9 @@ def _is_caveat_value(code: str, key: str, value: Any) -> bool:
     """The three shapes a caveat data value may have, and no fourth.
 
     A string is one value; a list of strings is several, in the emitter's own
-    order (the file, key, region and format lists); and an object of strings is
-    a tally, allowed only at the pairs :data:`OBJECT_VALUED_KEYS` names.
+    order (the file, key, region and format lists); and an object of strings
+    maps a subject to what is said about it — a tally, or one word per file —
+    allowed only at the pairs :data:`OBJECT_VALUED_KEYS` names.
     """
     if isinstance(value, str):
         return True
@@ -1474,7 +1481,7 @@ def _validate_unresolved(name: str, outcome: Any, what: str) -> bool:
     ):
         fail(
             f"{name}: {what}.unresolved data values must each be a string, a list of strings, "
-            f"or one of the two documented tally objects, got {data!r}"
+            f"or one of the documented objects of strings, got {data!r}"
         )
     return True
 

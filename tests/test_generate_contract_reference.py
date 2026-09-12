@@ -1328,6 +1328,7 @@ class TestTheDataRegistryReading:
             ("filenames-content-conditional", "files_established_for"): (
                 "FILES_ESTABLISHED_FOR_TOKENS"
             ),
+            ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
             # Built by splat from REFUSAL_CODES, so no literal tuple in the
@@ -1447,6 +1448,29 @@ class TestTheTwoCorpusGates:
         assert "core-mode-unestablished.reason" in failures[0]
         assert outsider in failures[0]
         assert "CORE_MODE_UNESTABLISHED_REASONS" in failures[0]
+
+    def test_a_word_inside_a_mapping_the_registry_would_refuse_stops_the_generation(
+        self,
+    ) -> None:
+        # The registered pair whose value is an OBJECT, which the string case
+        # above cannot reach: were the mapping branch to state no words, the
+        # whole pair would be checked by nothing and this gate would stay
+        # silent over a vocabulary the page publishes as closed.
+        outsider = "a word the vocabulary never held"
+
+        def flip_one(code: str, data: dict[str, object]) -> int:
+            value = data.get("readings")
+            if code == "firmware-search-candidates" and isinstance(value, dict) and value:
+                data["readings"] = {**value, next(iter(value)): outsider}
+                return 1
+            return 0
+
+        witnessed = self._corpus_with(flip_one)
+        failures = reference.registry_disagreements(witnessed, reference.registered_enumerations())
+        assert len(failures) == 1
+        assert "firmware-search-candidates.readings" in failures[0]
+        assert outsider in failures[0]
+        assert "FIRMWARE_SEARCH_READINGS" in failures[0]
 
     def test_the_untouched_corpus_carries_no_value_the_registry_refuses(self) -> None:
         witnessed = {}

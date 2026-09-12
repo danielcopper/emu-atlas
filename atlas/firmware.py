@@ -121,8 +121,13 @@ from .standalone_firmware import (
 )
 from .placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+    READING_IDENTIFIED,
+    READING_UNREADABLE,
+    READING_UNRECOGNISED,
     REASON_REGION_DECIDED_BY_DISC,
+    SearchReading,
     HOLE_CWD,
     ROOT_SYSTEM_DIRECTORY,
     TEMPLATE_CWD,
@@ -4080,8 +4085,9 @@ def _requirements_of(cores: tuple[CoreFirmware, ...]) -> tuple[FirmwareRequireme
 # What tells two caveats apart when an answer is assembled: the code and the
 # data, flattened. A data value is a string, a sequence (the file, key and
 # region lists) or a read-only mapping (the tally the alternative-emulator
-# code carries under ``emulators``); neither of the last two is hashable as it
-# stands, so each is spelled out — the mapping as its sorted items, the
+# code carries under ``emulators``, and the BIOS search's listing, which keys
+# what it found by the path it found it at); neither of the last two is
+# hashable as it stands, so each is spelled out — the mapping as its sorted
 # sequence as its own tuple, because its ORDER is part of the contract and two
 # caveats naming the same files in different orders are not the same statement.
 _FlatValue: TypeAlias = "str | tuple[str, ...] | tuple[tuple[str, str], ...]"
@@ -4137,11 +4143,12 @@ def stated_once(caveats: Iterable[Caveat]) -> tuple[Caveat, ...]:
     :func:`_unread_candidate` and :func:`_unclaimed_identity` each spell
     :data:`CAVEAT_FIRMWARE_UNREADABLE` in their own sentence — and keeping the
     first keeps the sentence of the reader that observed it first. A data
-    value can be a read-only mapping — the type permits one, and
-    :data:`~atlas.placement.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR` carries a
-    tally under ``emulators``, though no firmware caveat carries one today —
-    which no set can hold, so the key spells a mapping out as its sorted
-    items rather than hashing ``data.items()``.
+    value can be a read-only mapping — the alternative-emulator code carries a
+    tally under ``emulators``, and
+    :data:`~atlas.placement.CAVEAT_FIRMWARE_SEARCH_CANDIDATES`, a firmware
+    code, keys a word per candidate by its path — which no set can hold, so
+    the key spells a mapping out as its sorted items rather than hashing
+    ``data.items()``.
     """
     seen: set[_CaveatKey] = set()
     kept: list[Caveat] = []
@@ -5845,6 +5852,67 @@ def _duckstation_identity(
     )
 
 
+def _duckstation_reading(candidate: duckstation.BiosCandidate) -> SearchReading:
+    """What the search's own hashing established about one candidate's bytes.
+
+    The three states :class:`~atlas.duckstation.BiosCandidate` already keeps
+    apart, as the one word a client branches on: a read failure settles
+    nothing and is never the verdict "the table does not know these bytes",
+    which is why the flag is tested before the row.
+    """
+    if candidate.unreadable:
+        return READING_UNREADABLE
+    return READING_IDENTIFIED if candidate.image is not None else READING_UNRECOGNISED
+
+
+def _duckstation_candidate_listing(
+    candidates: tuple[duckstation.BiosCandidate, ...],
+    *,
+    bios_dir: str,
+    card: StandaloneFirmwareCard,
+) -> Caveat:
+    """Every file the search kept, beside what the emulator's table made of its bytes.
+
+    The pick names one file, and what stands beside it is stated about that
+    file or about the ranking that reached it; this states the set those were
+    made from, so a client listing the directory can say which file is which.
+    It adds no read of its own — the search hashed every candidate to rank
+    them, and this is that reading written down.
+
+    Three mappings keyed by path, which is the shape that cannot be read out
+    of step: ``readings`` holds every kept file, and ``images`` and
+    ``image_regions`` hold only the files a row of the table names, so a path
+    missing from them IS the table holding no row for those bytes — there is
+    no placeholder to mistake for a name. Two paths mapped to one ``images`` value are one image
+    the directory holds twice, which is what the emulator sees: it recognises
+    a BIOS by hashing it, so a second copy under another name is that same row
+    reached again.
+    """
+    listed = sorted(candidates, key=lambda candidate: candidate.path)
+    named = [
+        (candidate.path, candidate.image) for candidate in listed if candidate.image is not None
+    ]
+    kept = "one file" if len(listed) == 1 else f"{len(listed)} files"
+    return Caveat(
+        CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
+        f"{bios_dir} holds {kept} of a size this emulator accepts, listed here by path with "
+        "what DuckStation's own table makes of each one's bytes — two paths under one image "
+        "name are one image the directory holds twice, not two images",
+        {
+            "dir": bios_dir,
+            "token": card.token,
+            "readings": {
+                candidate.path: _duckstation_reading(candidate) for candidate in listed
+            },
+            "images": {path: image.name for path, image in named},
+            # Not ``regions``: three codes already spell that key as a list of
+            # the regions an answer speaks for, and one key name may not carry
+            # two shapes. This one is a region per image, keyed by its path.
+            "image_regions": {path: image.region for path, image in named},
+        },
+    )
+
+
 def _duckstation_region_caveats(
     candidates: tuple[duckstation.BiosCandidate, ...],
     *,
@@ -6309,6 +6377,9 @@ def _duckstation_search(
     candidates = _duckstation_candidates(machine, table, kept)
     pick = table.pick(candidates, _DUCKSTATION_ANY_REGION)
     assert pick is not None  # kept is non-empty
+    # Every kept file first, then what the pick is and what it leaves open:
+    # the listing is the set those statements are made out of.
+    caveats.append(_duckstation_candidate_listing(candidates, bios_dir=bios_dir, card=card))
     caveats.extend(
         _duckstation_search_caveats(
             entry, card, bios_dir=bios_dir, pick=pick, candidates=candidates, table=table

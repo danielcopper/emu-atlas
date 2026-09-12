@@ -2033,14 +2033,35 @@ def registry_disagreements(
     closed set that is not closed. Nothing should reach here — the constructor
     raises first — so this fires only if the registry and the corpus were built
     from different revisions.
+
+    A registered pair whose value is an object or a list is read word by
+    word, the way the constructor reads it: taking the whole shape as one
+    value would leave those pairs checked by nothing while the page still
+    published their tuples as closed.
     """
     found: list[str] = []
     for (code, key), name in sorted(registered.items()):
         allowed = set(atlas.ENUMERATED_DATA[(code, key)])
-        for value in witnessed.get(code, WitnessedCode()).keys.get(key, []):
-            if isinstance(value, str) and value not in allowed:
-                found.append(f"{code}.{key}: the corpus carries {value!r}, which `{name}` does not hold")
+        witnessed_here = witnessed.get(code, WitnessedCode()).keys.get(key, [])
+        for one in [word for value in witnessed_here for word in stated_words(value)]:
+            if one not in allowed:
+                found.append(f"{code}.{key}: the corpus carries {one!r}, which `{name}` does not hold")
     return found
+
+
+def stated_words(value: Any) -> list[str]:
+    """The vocabulary words one witnessed data value states.
+
+    A string states itself, a list states one word per entry, and an object
+    states one per key — its VALUES, because an object's keys are the subjects
+    the words are said about, which is how ``atlas.placement`` checks the same
+    shapes at construction. Anything else states none.
+    """
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [word for word in value.values() if isinstance(word, str)]
+    return [word for word in value if isinstance(word, str)] if isinstance(value, list) else []
 
 
 @dataclasses.dataclass(frozen=True)

@@ -73,10 +73,11 @@ def data_contract(data: Mapping[str, "str | Sequence[str] | Mapping[str, str]"])
     """The one rule for serializing a ``data`` block, caveat or refusal alike.
 
     Three shapes, one each: a string stays a string, a sequence of strings
-    becomes a JSON array in the emitter's own order, and a mapping — a tally,
-    at the two keys the guide documents — becomes a plain object. Written once
-    because both callers below and the generated contract reference must agree
-    literally — a second copy is a second answer waiting to happen.
+    becomes a JSON array in the emitter's own order, and a mapping — one value
+    per subject, at the keys the guide documents — becomes a plain object.
+    Written once because both callers below and the generated contract
+    reference must agree literally — a second copy is a second answer waiting
+    to happen.
     """
     out: dict[str, Any] = {}
     for key, value in data.items():
