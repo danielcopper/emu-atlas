@@ -766,16 +766,58 @@ def _validate_aggregate_query(name: str, query: Any) -> None:
     _validate_aggregate_question(name, query)
 
 
+def _scoped_digest_field(key: Any) -> tuple[str, int] | None:
+    """``"md5:524288"`` read as its algorithm and its scope, or ``None``.
+
+    The blob key an emulator that hashes a fixed prefix needs: the digest of
+    the file's first N bytes, which is a fact about different bytes from the
+    file's own digest. One spelling per state, so the scope is written in
+    decimal with no leading zero and must be at least one byte — a zero-byte
+    scope is the digest of nothing, and ``042`` would be a second spelling of
+    ``42``.
+    """
+    if not isinstance(key, str):
+        return None
+    algorithm, separator, scope = key.partition(":")
+    if not separator or algorithm not in ("md5", "sha1") or not scope.isdigit():
+        return None
+    if scope != str(int(scope)) or int(scope) < 1:
+        return None
+    return algorithm, int(scope)
+
+
+def _validate_scoped_digest(name: str, path: str, key: str, scope: int, size: Any) -> None:
+    """One scoped digest key, against the size the same blob states.
+
+    A scope at least the file's own length answers what the whole-file digest
+    answers, so stating it separately is one fact written twice — refused here
+    rather than resolved, because the two spellings can disagree and the
+    machine reads only one of them.
+    """
+    if isinstance(size, int) and size <= scope:
+        fail(
+            f"{name}: input.files[{path!r}].{key} scopes a digest to {scope} bytes over a file "
+            f"of {size} — that read yields the whole file, so the bare algorithm states it"
+        )
+
+
 def _validate_blob_spec(name: str, path: str, spec: Any) -> None:
     # A binary blob: it exists, reads as invalid-text, and answers the
     # declared identity for file_size / file_digest.
-    if not set(spec) or not set(spec) <= BLOB_FIELDS:
-        fail(f"{name}: input.files[{path!r}] blob spec keys must be a non-empty subset of {sorted(BLOB_FIELDS)}")
-    for key in ("md5", "sha1"):
-        if key in spec and (not isinstance(spec[key], str) or not spec[key]):
-            fail(f"{name}: input.files[{path!r}].{key} must be a non-empty string")
+    unknown = sorted(key for key in spec if key not in BLOB_FIELDS and _scoped_digest_field(key) is None)
+    if not set(spec) or unknown:
+        fail(
+            f"{name}: input.files[{path!r}] blob spec keys must be non-empty and each one of "
+            f"{sorted(BLOB_FIELDS)} or a scoped digest 'md5:<bytes>' / 'sha1:<bytes>' — got {unknown}"
+        )
     if "size" in spec and (not isinstance(spec["size"], int) or spec["size"] < 0):
         fail(f"{name}: input.files[{path!r}].size must be a non-negative integer")
+    for key in spec:
+        scoped = _scoped_digest_field(key)
+        if key != "size" and (not isinstance(spec[key], str) or not spec[key]):
+            fail(f"{name}: input.files[{path!r}].{key} must be a non-empty string")
+        if scoped is not None:
+            _validate_scoped_digest(name, path, key, scoped[1], spec.get("size"))
 
 
 def _validate_status_spec(name: str, path: str, spec: dict[str, Any]) -> None:

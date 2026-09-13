@@ -36,9 +36,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Literal
+from types import MappingProxyType
+from typing import Any, Literal, Mapping
 
 from ._data import packaged_text
+from .bios_table import UNKNOWN_POLICIES
 from .standalone_firmware import StandaloneFirmwareCard
 
 CORE_FIRMWARE_SCHEMA = 1
@@ -99,6 +101,73 @@ class CoreFirmwareBuild:
 
 
 @dataclass(frozen=True, slots=True)
+class CoreFirmwareRegionOption:
+    """The core option that pins which console region a launch is, and what its values mean.
+
+    ``values`` maps each value the option takes to the region token it pins,
+    and to ``None`` where it pins none: SwanStation's ``Auto`` is the running
+    disc's own region, which no configuration records, so an answer under it
+    speaks for every region rather than for one. The tokens are the ones the
+    packaged standalone cards already use (``ntsc-u``, ``ntsc-j``, ``pal``), so
+    a region reads the same whichever emulator stated it.
+
+    ``default`` is what the core declares for the option, which is what
+    RetroArch answers with wherever its options file holds no entry for the
+    key — so the pair is a complete reading of the option even on a machine
+    whose options file has never mentioned it.
+    """
+
+    key: str
+    default: str
+    values: Mapping[str, str | None]
+    citation: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", MappingProxyType(dict(self.values)))
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareRegionKey:
+    """One region's name option: which key names the image, and what the core defaults it to."""
+
+    region: str
+    key: str
+    default: str
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareNameRoute:
+    """The first door: the options that decide which name a launch opens.
+
+    One option pins the console region and one option per region names the
+    image that region's launch opens, so reading them in that order is reading
+    the same two settings the core reads.
+    """
+
+    region_option: CoreFirmwareRegionOption
+    region_keys: tuple[CoreFirmwareRegionKey, ...]
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareContentRoute:
+    """The second door: the table the search recognises a directory's files by.
+
+    ``table`` is the packaged data file name (:func:`atlas.bios_table.packaged_bios_table`).
+    ``hash_scope`` and ``unknown`` are stated here as well because they are
+    read out of the **core's** source and cited to it — the table states them
+    too, and the resolver holds the two against each other rather than
+    trusting either alone: a table regenerated from a build that changed
+    either one would otherwise be read under this entry's citation.
+    """
+
+    table: str
+    hash_scope: int
+    unknown: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class CoreFirmwareCard:
     """What is established about one libretro core's firmware door.
 
@@ -114,6 +183,16 @@ class CoreFirmwareCard:
     locating: CoreFirmwareLocatingFact
     build: CoreFirmwareBuild
     provenance: str
+    name_route: CoreFirmwareNameRoute | None = None
+    """The options a ``by-name-then-content`` core reads to compose the name it opens first.
+
+    Present exactly on that word and refused on every other, because the two
+    routes are what the word names: a card that said ``by-name-then-content``
+    and carried no route would state a door with nothing behind it, and a
+    ``by-name`` card carrying one would state a search its core never runs.
+    """
+    content_route: CoreFirmwareContentRoute | None = None
+    """The table and the reading rule behind the search that follows a name that will not load."""
 
     @property
     def so_name(self) -> str:
@@ -161,18 +240,148 @@ def _build(key: str, entry: Any) -> CoreFirmwareBuild:
     )
 
 
+def _region_option(where: str, entry: Any) -> CoreFirmwareRegionOption:
+    where = f"{where}.region_option"
+    if not isinstance(entry, dict) or set(entry) != {"key", "default", "values", "citation"}:
+        raise ValueError(f"{where}: expected exactly key/default/values/citation, got {entry!r}")
+    values = entry["values"]
+    if not isinstance(values, dict) or not values:
+        raise ValueError(f"{where}.values must be a non-empty object, got {values!r}")
+    for value, region in values.items():
+        if region is not None:
+            _expect_str(region, f"{where}.values[{value!r}]")
+    default = _expect_str(entry["default"], f"{where}.default")
+    if default not in values:
+        raise ValueError(
+            f"{where}.default is {default!r}, which {where}.values does not map — the value the "
+            "core falls back to is the one reading that must never be missing"
+        )
+    return CoreFirmwareRegionOption(
+        key=_expect_str(entry["key"], f"{where}.key"),
+        default=default,
+        values=dict(values),
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
+def _region_keys(where: str, entry: Any) -> tuple[CoreFirmwareRegionKey, ...]:
+    where = f"{where}.region_keys"
+    if not isinstance(entry, list) or not entry:
+        raise ValueError(f"{where} must be a non-empty list, got {entry!r}")
+    keys = []
+    for index, row in enumerate(entry):
+        at = f"{where}[{index}]"
+        if not isinstance(row, dict) or set(row) != {"region", "key", "default"}:
+            raise ValueError(f"{at}: expected exactly region/key/default, got {row!r}")
+        keys.append(
+            CoreFirmwareRegionKey(
+                region=_expect_str(row["region"], f"{at}.region"),
+                key=_expect_str(row["key"], f"{at}.key"),
+                default=_expect_str(row["default"], f"{at}.default"),
+            )
+        )
+    regions = [row.region for row in keys]
+    if len(set(regions)) != len(regions):
+        raise ValueError(f"{where}: one region, one key — {sorted(regions)} repeats one")
+    return tuple(keys)
+
+
+def _name_route(key: str, entry: Any) -> CoreFirmwareNameRoute:
+    where = f"core firmware card {key!r}: name_route"
+    if not isinstance(entry, dict) or set(entry) != {"region_option", "region_keys", "citation"}:
+        raise ValueError(
+            f"{where}: expected exactly region_option/region_keys/citation, got {entry!r}"
+        )
+    option = _region_option(where, entry["region_option"])
+    keys = _region_keys(where, entry["region_keys"])
+    # Every region the option can pin has to have a key that names its image,
+    # or a launch this option pins is one the route can say nothing about —
+    # which is the hole the two halves exist to close together.
+    named = {row.region for row in keys}
+    unnamed = sorted({region for region in option.values.values() if region is not None} - named)
+    if unnamed:
+        raise ValueError(
+            f"{where}: region_option pins {unnamed} and region_keys names no key for those regions"
+        )
+    return CoreFirmwareNameRoute(
+        region_option=option,
+        region_keys=keys,
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
+def _content_route(key: str, entry: Any) -> CoreFirmwareContentRoute:
+    where = f"core firmware card {key!r}: content_route"
+    if not isinstance(entry, dict) or set(entry) != {"table", "hash_scope", "unknown", "citation"}:
+        raise ValueError(
+            f"{where}: expected exactly table/hash_scope/unknown/citation, got {entry!r}"
+        )
+    table = _expect_str(entry["table"], f"{where}.table")
+    if "/" in table or not table.endswith(".json"):
+        raise ValueError(
+            f"{where}.table is {table!r} and must name one packaged data file — a bare "
+            "<name>.json beside the others, never a path"
+        )
+    scope = entry["hash_scope"]
+    if not isinstance(scope, int) or isinstance(scope, bool) or scope < 1:
+        raise ValueError(f"{where}.hash_scope must be a positive number of bytes, got {scope!r}")
+    unknown = _expect_str(entry["unknown"], f"{where}.unknown")
+    if unknown not in UNKNOWN_POLICIES:
+        raise ValueError(f"{where}.unknown must be one of {list(UNKNOWN_POLICIES)}, got {unknown!r}")
+    return CoreFirmwareContentRoute(
+        table=table,
+        hash_scope=scope,
+        unknown=unknown,
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
+def _routes(
+    key: str, mode: FirmwareLocating, entry: dict[str, Any]
+) -> tuple[CoreFirmwareNameRoute | None, CoreFirmwareContentRoute | None]:
+    """The two route blocks, required and refused by the word the entry states.
+
+    ``by-name-then-content`` is a claim about two doors, and an entry stating
+    it without saying what either one reads would leave the resolver to guess
+    the option keys and the table — which is the guess this file exists to
+    replace. The converse refusal matters as much: a ``by-name`` entry
+    carrying a search would describe a door its core has not got.
+    """
+    where = f"core firmware card {key!r}"
+    stated = {block for block in ("name_route", "content_route") if block in entry}
+    if mode == LOCATING_BY_NAME_THEN_CONTENT and stated != {"name_route", "content_route"}:
+        raise ValueError(
+            f"{where}: {mode!r} names two doors and this entry states {sorted(stated)} — both "
+            "name_route and content_route are what the word claims"
+        )
+    if mode != LOCATING_BY_NAME_THEN_CONTENT and stated:
+        raise ValueError(
+            f"{where}: {mode!r} opens one door and this entry states {sorted(stated)}"
+        )
+    if not stated:
+        return None, None
+    return _name_route(key, entry["name_route"]), _content_route(key, entry["content_route"])
+
+
 def _card(key: str, entry: Any) -> CoreFirmwareCard:
     where = f"core firmware card {key!r}"
-    if not isinstance(entry, dict) or set(entry) != {"locating", "build", "provenance"}:
-        raise ValueError(f"{where}: expected exactly locating/build/provenance, got {entry!r}")
+    if not isinstance(entry, dict) or not {"locating", "build", "provenance"} <= set(entry):
+        raise ValueError(f"{where}: expected at least locating/build/provenance, got {entry!r}")
+    stray = sorted(set(entry) - {"locating", "build", "provenance", "name_route", "content_route"})
+    if stray:
+        raise ValueError(f"{where}: states {stray}, which nothing here reads")
     provenance = entry["provenance"]
     if not isinstance(provenance, dict):
         raise ValueError(f"{where}: expected a 'provenance' object, got {provenance!r}")
+    locating = _locating(key, entry["locating"])
+    name_route, content_route = _routes(key, locating.mode, entry)
     return CoreFirmwareCard(
         key=key,
-        locating=_locating(key, entry["locating"]),
+        locating=locating,
         build=_build(key, entry["build"]),
         provenance=_expect_str(provenance.get("source"), f"{where}: provenance.source"),
+        name_route=name_route,
+        content_route=content_route,
     )
 
 

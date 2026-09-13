@@ -16867,10 +16867,104 @@
                   "checked": null,
                   "satisfied": false,
                   "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ]
                 }
               ],
               "refused": [],
               "caveats": [
+                {
+                  "code": "core-unqueryable",
+                  "data": {
+                    "core_so": "swanstation_libretro.so"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "need": "required",
+                    "candidates": "0",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
                 {
                   "code": "system-firmware-world-knowledge",
                   "data": {
@@ -17807,6 +17901,2321 @@
                 "key": "doInstallESDE",
                 "stated": "false",
                 "observed": "present"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-boots-the-image-its-own-table-knows-under-any-name",
+      "rationale": "The second door. Every per-region option holds the core's own default and none of those three files is there, so the launch falls through to the directory search — which recognises a BIOS by hashing it, not by its name, and the one file in the directory is called nothing the core would ever open. The option it answers carries all three regions, because the row it matched is a region-any row and nothing distinguishes the three launches over it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/a-playstation-bios": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "a-playstation-bios",
+                      "path": "/home/deck/.config/retroarch/system/a-playstation-bios",
+                      "declared": "a-playstation-bios",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "ntsc-u",
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "ntsc-u"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/a-playstation-bios",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-refuses-a-named-image-of-the-wrong-size-and-searches",
+      "rationale": "The size gate is the core's own first test and a stat settles it, so a named file of another length is refused before a byte of it is read and the region falls to the search. The refusal rides the core and the option is what the directory answered — which is the file the launch really opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
+            "sha1": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+            "size": 1024
+          },
+          "/home/deck/.config/retroarch/system/elsewhere.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "mismatch",
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "elsewhere.bin",
+                      "path": "/home/deck/.config/retroarch/system/elsewhere.bin",
+                      "declared": "elsewhere.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "ntsc-u",
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-image-refused",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "core_so": "swanstation_libretro.so",
+                    "size": "1024",
+                    "accepted": [
+                      "524288",
+                      "4089584",
+                      "4194304"
+                    ]
+                  }
+                },
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/elsewhere.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/elsewhere.bin": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/elsewhere.bin": "ntsc-u"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/elsewhere.bin",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-refuses-every-image-its-table-does-not-know",
+      "rationale": "A directory of files of an accepted size whose bytes are in no row of the core's table: its search hands back nothing for them, so every region's option is the name that is not there and the listing states each candidate as read and unrecognised. The other emulator with a table of this shape boots such an image with a warning — the difference is the table's own unknown policy, not a rule of the resolver's.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/mystery.bin": {
+            "md5": "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+            "sha1": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/mystery.bin": "unrecognised"
+                    },
+                    "images": {},
+                    "image_regions": {}
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "need": "required",
+                    "candidates": "1",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-with-a-region-pinned-needs-one-image-and-not-three",
+      "rationale": "With the console region pinned by the core option, one launch is every launch: the answer is a single unconditional requirement rather than an alternatives group, and nothing states that a disc decides the region.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5502.bin": {
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "sha1": "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+            "size": 524288
+          },
+          "/home/deck/.config/retroarch/retroarch-core-options.cfg": "swanstation_Console_Region = \"PAL\"\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": null,
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-boots-an-image-of-another-region-and-says-which",
+      "rationale": "The directory holds one image the table knows and it is a European one, while the console is pinned to NTSC-U. Upstream boots it with a possibly-incompatible warning, so it is the pick rather than a failure — and the statement beside it carries the region the row is for, which is the mismatch a client has to see.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/europe.bin": {
+            "md5": "32736f17079d0b2b7024407c39bd3050",
+            "sha1": "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+            "size": 524288
+          },
+          "/home/deck/.config/retroarch/retroarch-core-options.cfg": "swanstation_Console_Region = \"NTSC-U\"\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "europe.bin",
+                  "path": "/home/deck/.config/retroarch/system/europe.bin",
+                  "declared": "europe.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": null,
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/europe.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/europe.bin": "SCPH-5502, 5552 (v3.0 01-06-97 E)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/europe.bin": "pal"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/europe.bin",
+                    "image": "SCPH-5502, 5552 (v3.0 01-06-97 E)",
+                    "region": "pal",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-u"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-recognises-a-four-megabyte-image-over-its-first-512-kib",
+      "rationale": "The core allocates a BIOS_SIZE image and reads that many bytes out of every candidate whatever its length, so the md5 that decides is the prefix's and not the file's. The fixture states both, and the one the answer uses is the scoped one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/ps3-image.bin": {
+            "md5": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+            "md5:524288": "c02a6fbb1b27359f84e92fae8bc21316",
+            "size": 4089584
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "ps3-image.bin",
+                      "path": "/home/deck/.config/retroarch/system/ps3-image.bin",
+                      "declared": "ps3-image.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "c02a6fbb1b27359f84e92fae8bc21316",
+                        "sha1": null,
+                        "size": 4089584,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "ntsc-u",
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/ps3-image.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/ps3-image.bin": "PS3 (v5.0 06-23-03 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/ps3-image.bin": "any"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/ps3-image.bin",
+                    "image": "PS3 (v5.0 06-23-03 A)",
+                    "region": "any",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-without-a-content-check-states-the-search-and-picks-nothing",
+      "rationale": "Files of a size the core accepts and nobody asked to hash them: which of them it would boot is a question about their bytes, so the regions the search speaks for get no option at all rather than one claiming an absence over files nobody read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/a-playstation-bios": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": false
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-unverified",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "candidates": "1",
+                    "need": "required",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-reads-the-per-core-options-file-over-the-global-one",
+      "rationale": "RetroArch's own priority for a core option: with global_core_options off — its shipped state — the per-core .opt is the governing file and the global one is never consulted for this core. The directory that file sits in is named for the core's library_name, which lives in the binary and is read by loading it, so a machine whose core answers is what this needs.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/psxonpsp660.bin": {
+            "md5": "c53ca5908936d412331790f4426c6c33",
+            "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+            "size": 524288
+          },
+          "/home/deck/.config/retroarch/retroarch-core-options.cfg": "swanstation_BIOS_PathNTSCU = \"scph5501.bin\"\n",
+          "/home/deck/.config/retroarch/config/SwanStation/SwanStation.opt": "swanstation_BIOS_PathNTSCU = \"psxonpsp660.bin\"\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "psxonpsp660.bin",
+                      "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                      "declared": "psxonpsp660.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "c53ca5908936d412331790f4426c6c33",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "psxonpsp660.bin",
+                      "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                      "declared": "psxonpsp660.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "c53ca5908936d412331790f4426c6c33",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/psxonpsp660.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/psxonpsp660.bin": "PSP, SCPH-1000R (v4.5 05-25-00 J)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/psxonpsp660.bin": "any"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                    "image": "PSP, SCPH-1000R (v4.5 05-25-00 J)",
+                    "region": "any",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-a-named-image-whose-bytes-will-not-read-is-unread-and-searched",
+      "rationale": "A failed read is upstream's own fallthrough — the load returns nothing and the directory search runs — so the directory is read and stated here. What the region opens stays the named file all the same, carrying unread: the read that failed is atlas's, and naming the searched image instead would state an open nobody watched as having failed. Both files are in the listing, because both are of a size this core accepts and both sit in the directory it would search.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "status": "unreadable",
+            "size": 524288
+          },
+          "/home/deck/.config/retroarch/system/a-playstation-bios": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unread",
+                  "satisfied": null,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "a-playstation-bios",
+                      "path": "/home/deck/.config/retroarch/system/a-playstation-bios",
+                      "declared": "a-playstation-bios",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unread",
+                      "satisfied": null,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-unreadable",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "core_so": "swanstation_libretro.so"
+                  }
+                },
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "identified",
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "unreadable"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/a-playstation-bios": "ntsc-u"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-unreadable",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so"
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/a-playstation-bios",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-unreadable",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/scph5501.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-a-candidate-whose-bytes-will-not-read-can-still-be-the-pick",
+      "rationale": "The unknown-image policy refuses a file whose bytes were READ and are in no row; a file whose bytes did not come back is neither, so it stays in the ranking and the option it becomes carries unread rather than a verdict about content nobody saw.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/maybe.bin": {
+            "status": "unreadable",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "maybe.bin",
+                      "path": "/home/deck/.config/retroarch/system/maybe.bin",
+                      "declared": "maybe.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unread",
+                      "satisfied": null,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "ntsc-u",
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/maybe.bin": "unreadable"
+                    },
+                    "images": {},
+                    "image_regions": {}
+                  }
+                },
+                {
+                  "code": "firmware-unreadable",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/maybe.bin",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-a-directory-that-will-not-list-leaves-two-regions-unstated",
+      "rationale": "The one way to a partial group under a content check. One region's named file is there and of a size the core accepts, so that region is settled without any directory being read; what the other two would find is a question the failed listing did not answer, so they get no option at all rather than one claiming an absence. The statement about which option a disc selects therefore names only the region the group carries, and the incomplete-scan statement beside it carries every region the listing left open.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        },
+        "unlistable": [
+          "/home/deck/.config/retroarch/system"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-scan-incomplete",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "unreadable": [
+                      "/home/deck/.config/retroarch/system"
+                    ],
+                    "core_so": "swanstation_libretro.so",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-u"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-a-name-that-climbs-out-over-an-empty-root-leaves-its-region-without-an-option",
+      "rationale": "Both halves of one region's route yield nothing: a configured name that would leave the firmware root is refused before anything is opened, so there is no destination to keep, and the settled search over an empty directory finds nothing to pick. The other two regions keep their named defaults as missing options. The refusal is the one reason that names no region — it names the key and the value — so the statement about which option a disc selects carries only the two regions the group holds and names the third in its sentence, and the empty-directory statement carries every region the search was asked for.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/retroarch-core-options.cfg": "swanstation_BIOS_PathNTSCU = \"../escape.bin\"\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-path-escapes-root",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "declared": "../escape.bin",
+                    "key": "swanstation_BIOS_PathNTSCU"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "need": "required",
+                    "candidates": "0",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
               }
             }
           ]

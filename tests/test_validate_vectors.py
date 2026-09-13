@@ -490,6 +490,19 @@ INPUT_FILE_CASES = [
          "md5 must be a non-empty string", id="blob-md5-empty"),
     case({"name": "s", "input": {"home": HOME, "files": {"/a": {"size": -1}}}, "expected": {"installations": []}},
          "size must be a non-negative integer", id="blob-size-negative"),
+    # A scoped digest — the first N bytes, which an emulator reading a
+    # fixed-length image hashes. One spelling per state, and never a second
+    # name for a digest the file's own size already answers.
+    case({"name": "s", "input": {"home": HOME, "files": {"/a": {"md5:0": "x"}}},
+          "expected": {"installations": []}}, "blob spec keys must be", id="blob-scope-zero"),
+    case({"name": "s", "input": {"home": HOME, "files": {"/a": {"md5:0524288": "x"}}},
+          "expected": {"installations": []}}, "blob spec keys must be", id="blob-scope-leading-zero"),
+    case({"name": "s", "input": {"home": HOME, "files": {"/a": {"sha256:512": "x"}}},
+          "expected": {"installations": []}}, "blob spec keys must be", id="blob-scope-algorithm"),
+    case({"name": "s", "input": {"home": HOME, "files": {"/a": {"md5:524288": ""}}},
+          "expected": {"installations": []}}, "must be a non-empty string", id="blob-scope-empty"),
+    case({"name": "s", "input": {"home": HOME, "files": {"/a": {"md5:524288": "x", "size": 8}}},
+          "expected": {"installations": []}}, "the bare algorithm states it", id="blob-scope-inside-the-file"),
     # Reachable only through the Python API — JSON object keys are strings by
     # construction. The rule earns its place anyway: the validator is importable,
     # and a generator building vectors in memory is exactly what would hit it.

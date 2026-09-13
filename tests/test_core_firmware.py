@@ -35,6 +35,7 @@ from atlas.firmware import (
     DECLARATION_UNREADABLE,
     Catalogue,
     CatalogueEntry,
+    FirmwareAlternatives,
     FirmwareContext,
     FirmwareRequirement,
     InventoryCatalogue,
@@ -424,8 +425,11 @@ class TestTheLoaderFailsClosed:
             load_core_firmware(bad)
 
     def test_a_stray_field_on_a_card_is_refused(self):
+        # Named, because a card now takes optional blocks beside the three
+        # required ones and "this is not the whole set" would no longer say
+        # which key nobody reads.
         bad = _doc(note="a field nobody reads")
-        with pytest.raises(ValueError, match="locating/build/provenance"):
+        with pytest.raises(ValueError, match=r"\['note'\]"):
             load_core_firmware(bad)
 
     def test_a_stray_field_inside_locating_is_refused(self):
@@ -448,6 +452,112 @@ class TestTheLoaderFailsClosed:
     def test_a_cores_key_that_is_not_an_object_is_refused(self):
         with pytest.raises(ValueError, match="expected a 'cores' object"):
             load_core_firmware('{"schema": 1, "cores": []}')
+
+
+class TestTheTwoDoorsAreStatedOrRefused:
+    """A word that names two doors has to say what each of them reads.
+
+    The route halves are what a ``by-name-then-content`` entry adds: the
+    options a name is composed out of, and the table the search recognises a
+    directory by. Both are refused on any other word and required on this one,
+    because an entry that named two doors and described neither would leave
+    the resolver guessing exactly what this file exists to state.
+    """
+
+    ROUTE = {
+        "region_option": {
+            "key": "core_Region",
+            "default": "Auto",
+            "values": {"Auto": None, "NTSC-U": "ntsc-u"},
+            "citation": "core_options.h:1",
+        },
+        "region_keys": [{"region": "ntsc-u", "key": "core_PathNTSCU", "default": "us.bin"}],
+        "citation": "host_interface.cpp:151",
+    }
+    TABLE = {
+        "table": "swanstation_bios.json",
+        "hash_scope": 524288,
+        "unknown": "refused",
+        "citation": "bios.cpp:81",
+    }
+
+    def _both(self, **overrides: object) -> str:
+        entry: dict[str, object] = {
+            "locating": {"mode": "by-name-then-content", "citation": "host_interface.cpp:151"},
+            "name_route": self.ROUTE,
+            "content_route": self.TABLE,
+        }
+        entry.update(overrides)
+        return _doc(**entry)
+
+    def test_both_routes_load(self):
+        (card,) = load_core_firmware(self._both())
+        assert card.name_route is not None
+        assert card.content_route is not None
+        assert card.name_route.region_option.values == {"Auto": None, "NTSC-U": "ntsc-u"}
+        assert [key.key for key in card.name_route.region_keys] == ["core_PathNTSCU"]
+        assert (card.content_route.hash_scope, card.content_route.unknown) == (524288, "refused")
+
+    def test_a_two_door_word_without_the_routes_is_refused(self):
+        bad = _doc(locating={"mode": "by-name-then-content", "citation": "somewhere"})
+        with pytest.raises(ValueError, match="both"):
+            load_core_firmware(bad)
+
+    def test_a_one_door_word_carrying_a_route_is_refused(self):
+        bad = _doc(name_route=self.ROUTE, content_route=self.TABLE)
+        with pytest.raises(ValueError, match="opens one door"):
+            load_core_firmware(bad)
+
+    def test_a_default_no_value_maps_is_refused(self):
+        option = {**self.ROUTE["region_option"], "default": "Elsewhere"}
+        bad = self._both(name_route={**self.ROUTE, "region_option": option})
+        with pytest.raises(ValueError, match="region_option.default"):
+            load_core_firmware(bad)
+
+    def test_a_region_the_option_pins_and_no_key_names_is_refused(self):
+        option = {
+            **self.ROUTE["region_option"],
+            "values": {"Auto": None, "NTSC-U": "ntsc-u", "PAL": "pal"},
+        }
+        bad = self._both(name_route={**self.ROUTE, "region_option": option})
+        with pytest.raises(ValueError, match=r"\['pal'\]"):
+            load_core_firmware(bad)
+
+    def test_two_keys_for_one_region_are_refused(self):
+        keys = [
+            {"region": "ntsc-u", "key": "core_PathNTSCU", "default": "us.bin"},
+            {"region": "ntsc-u", "key": "core_PathOther", "default": "other.bin"},
+        ]
+        bad = self._both(name_route={**self.ROUTE, "region_keys": keys})
+        with pytest.raises(ValueError, match="one region, one key"):
+            load_core_firmware(bad)
+
+    def test_a_stray_field_inside_a_route_is_refused(self):
+        bad = self._both(name_route={**self.ROUTE, "note": "spare"})
+        with pytest.raises(ValueError, match="region_option/region_keys/citation"):
+            load_core_firmware(bad)
+
+    def test_a_table_named_as_a_path_is_refused(self):
+        # The name addresses one packaged data file beside the others, so a
+        # path would be a read this package never makes.
+        bad = self._both(content_route={**self.TABLE, "table": "../elsewhere.json"})
+        with pytest.raises(ValueError, match="content_route.table"):
+            load_core_firmware(bad)
+
+    def test_a_hash_scope_of_no_bytes_is_refused(self):
+        bad = self._both(content_route={**self.TABLE, "hash_scope": 0})
+        with pytest.raises(ValueError, match="hash_scope"):
+            load_core_firmware(bad)
+
+    def test_an_unknown_policy_outside_the_vocabulary_is_refused(self):
+        bad = self._both(content_route={**self.TABLE, "unknown": "ignored"})
+        with pytest.raises(ValueError, match="content_route.unknown"):
+            load_core_firmware(bad)
+
+    def test_an_empty_citation_inside_a_route_is_refused(self):
+        bad = self._both(content_route={**self.TABLE, "citation": "  "})
+        with pytest.raises(ValueError, match="content_route.citation"):
+            load_core_firmware(bad)
 
 
 class TestTheWordMovesNoVerdict:
@@ -480,10 +590,16 @@ class TestTheWordMovesNoVerdict:
             )
             for core in answers.values()
         } == {((f"{BIOS_DIR}/demo.bin", "required", False),)}
-        assert all(
-            all(isinstance(r, FirmwareRequirement) for r in core.requirements)
-            for core in answers.values()
-        )
+        # One of the three carries a second entry, and that is the word doing
+        # its work rather than moving a verdict: a core read to open a name
+        # and then search a directory has its own route answered beside the
+        # declaration (#466), and the two cores with no second door have
+        # nothing but the declaration. The verdict above is equal across all
+        # three all the same.
+        assert {
+            stem: any(isinstance(r, FirmwareAlternatives) for r in core.requirements)
+            for stem, core in answers.items()
+        } == {"demo": False, "swanstation": True, "mednafen_psx_hw": False}
 
 
 class TestTheWordIsStatedAtTwoSeamsAndNowhereElse:

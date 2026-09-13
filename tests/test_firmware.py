@@ -126,7 +126,10 @@ from atlas.firmware import (
     system_decision,
     system_for,
 )
+from atlas.core_firmware import lookup_core_firmware
+from atlas.core_options import CoreOptionsChain
 from atlas.machine import (
+    KIND_MISSING,
     AppImageReadResult,
     CoreInfo,
     FixtureFileSpec,
@@ -139,6 +142,12 @@ from atlas.machine import (
     WhdloadSlaveResult,
 )
 from atlas.placement import (
+    CAVEAT_CFG_LINE_DROPPED,
+    CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_CORE_UNQUERYABLE,
+    CAVEAT_UNKNOWN_OPTION_VALUE,
+    REASON_REGION_DECIDED_BY_DISC,
+    DataValue,
     CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
     CAVEAT_SYSTEM_DIRECTORY_CLEARED,
@@ -401,6 +410,7 @@ def _context(
     root: str | None = BIOS_DIR,
     core_dir: str | None = INFO_DIR,
     system_firmware: Mapping[str, SystemFirmware] | None = None,
+    core_options: CoreOptionsChain | None = None,
 ):
     # `system_firmware` defaults to the shipped table, the way `hashes` would
     # if it had a default: a test names one only to ask what an answer does
@@ -410,6 +420,7 @@ def _context(
         cores=read_core_declarations(machine, INFO_DIR, core_dir=core_dir).cores,
         hashes=load_hashes(TABLE),
         system_firmware=_shipped_system_firmware() if system_firmware is None else system_firmware,
+        core_options=core_options,
     )
 
 
@@ -2372,6 +2383,29 @@ firmware1_opt = "true"
 # carries its own HLE BIOS, so all-optional is what it should say.
 REARMED_INFO = SWANSTATION_INFO
 
+# The same declaration again under a stem no packaged knowledge entry names, so
+# the core it stands for answers ``locating: unestablished`` and nothing but
+# that declaration is read for it. It is the vehicle for every test about what
+# a declaration leaves unsaid, because the deployed core this shape was read
+# off now answers a route of its own that reads sizes and bytes (#466) — and a
+# second reader in a test about the first one makes its fixtures say something
+# they were never about. Not ``pcsx_rearmed``: the packaged system table
+# excuses that core by name, which is a different case with its own test.
+UNDERSTATER_SO = "understater_libretro.so"
+
+# A PlayStation BIOS image the size SwanStation accepts, and the md5 its own
+# packaged table pins for the PSP image — a row of region ``any``, so the
+# search picks it whichever region a launch is. Both are needed together: the
+# size is what the core's first filter reads off the stat, and the md5 is what
+# its search recognises the bytes by. Only the tests about that route use
+# these: a test about a declaration takes the vehicle above, whose answer
+# reads no bytes at all.
+PSX_IMAGE_SIZE = 524288
+PSX_ANY_REGION_IMAGE: dict[str, str | int] = {
+    "md5": "c53ca5908936d412331790f4426c6c33",
+    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+    "size": PSX_IMAGE_SIZE,
+}
 # An all-optional core of a system the table records as open — nobody has
 # established whether a Saturn starts with no firmware present.
 SATURN_INFO = """
@@ -2392,12 +2426,535 @@ firmware0_opt = "true"
 """
 
 
+# Real rows of SwanStation's own packaged table (atlas/data/swanstation_bios.json),
+# which is what its search recognises an image by — an invented md5 would be a
+# file it refuses, which is a different case and has its own test below.
+SWAN_US_IMAGE: dict[str, str | int] = {
+    "md5": "490f666e1afb15b7362b406ed1cea246",
+    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+    "size": PSX_IMAGE_SIZE,
+}
+SWAN_JP_IMAGE: dict[str, str | int] = {
+    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+    "sha1": "13" * 20,
+    "size": PSX_IMAGE_SIZE,
+}
+SWAN_PAL_IMAGE: dict[str, str | int] = {
+    "md5": "32736f17079d0b2b7024407c39bd3050",
+    "sha1": "12" * 20,
+    "size": PSX_IMAGE_SIZE,
+}
+# A file of an accepted size no row of that table holds.
+SWAN_UNKNOWN_IMAGE: dict[str, str | int] = {"md5": "00" * 16, "sha1": "01" * 20, "size": PSX_IMAGE_SIZE}
+# The PS3-sized image: 0x3E66F0 bytes, recognised over its FIRST 512 KiB, which
+# is why the blob states a scoped digest and the whole-file one is a different
+# number. It is one of the three rows this table has and DuckStation's has not.
+SWAN_PS3_SIZE = 4089584
+SWAN_PS3_IMAGE: dict[str, str | int] = {
+    "md5": "ff" * 16,
+    "sha1": "fe" * 20,
+    "md5:524288": "c02a6fbb1b27359f84e92fae8bc21316",
+    "size": SWAN_PS3_SIZE,
+}
+
+
+class TestACoreThatOpensANameAndThenSearches:
+    """SwanStation's route: the configured name first, the directory by content after.
+
+    Its ``.info`` lists two optional images and its code opens neither unless
+    an option names it. What a launch really opens is one of three per-region
+    settings, and where that file cannot be loaded the core hashes every file
+    of an accepted size in the system directory against its own table. Both
+    doors are packaged knowledge (``atlas/data/core_firmware.json``), so these
+    tests are about the resolver reading them, never about a name.
+    """
+
+    OPTIONS = "/config/retroarch-core-options.cfg"
+    OPT_DIR = "/config/config"
+
+    def _machine(
+        self,
+        bios: Mapping[str, FixtureFileSpec] | None = None,
+        *,
+        options: str | None = None,
+        per_core: str | None = None,
+        core: Mapping[str, object] | None = None,
+        unlistable: bool = False,
+    ) -> FixtureMachine:
+        files: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/swanstation_libretro.info": SWANSTATION_INFO,
+            f"{INFO_DIR}/swanstation_libretro.so": {"status": "invalid-text"},
+            **(bios or {}),
+        }
+        if options is not None:
+            files[self.OPTIONS] = options
+        if per_core is not None:
+            files[f"{self.OPT_DIR}/SwanStation/SwanStation.opt"] = per_core
+        return FixtureMachine(
+            files,  # type: ignore[arg-type]
+            dirs=[BIOS_DIR],
+            # A directory that IS one and whose contents cannot be read, which
+            # is the state a search reaches after passing its own "is this a
+            # directory" check — a file inside it that atlas already knows
+            # still stats, exactly as a mode-111 directory behaves.
+            unlistable=[BIOS_DIR] if unlistable else None,
+            cores={f"{INFO_DIR}/swanstation_libretro.so": core} if core is not None else None,
+        )
+
+    def _core(
+        self, machine: FixtureMachine, *, verify: bool = False, per_core_options: bool = False
+    ) -> CoreFirmware:
+        context = _context(
+            machine,
+            core_options=CoreOptionsChain(
+                global_file=self.OPTIONS,
+                override_config_dir=self.OPT_DIR,
+                per_core_options=per_core_options,
+                core_dir=INFO_DIR,
+            ),
+        )
+        return firmware_for_core(
+            machine, context, core_so=SWANSTATION_SO, verify=verify
+        ).cores[0]
+
+    def _group(self, core: CoreFirmware) -> FirmwareAlternatives:
+        (group,) = [r for r in core.requirements if isinstance(r, FirmwareAlternatives)]
+        return group
+
+    def _option(self, core: CoreFirmware, region: str) -> FirmwareRequirement:
+        """The group's option a launch of *region* needs.
+
+        By region rather than by position, because two regions whose launches
+        open the same file under the same reading are ONE option carrying both
+        — which is what a search find usually is.
+        """
+        (option,) = [o for o in self._group(core).options if region in (o.regions or ())]
+        return option
+
+    def _route(self, core: CoreFirmware) -> FirmwareRequirement:
+        """The one unconditional requirement this core's own route added."""
+        (requirement,) = [
+            r
+            for r in core.requirements
+            if isinstance(r, FirmwareRequirement) and r.need == NEED_REQUIRED
+        ]
+        return requirement
+
+    def _codes(self, core: CoreFirmware) -> list[str]:
+        return [caveat.code for caveat in core.caveats]
+
+    def _data(self, core: CoreFirmware, code: str) -> Mapping[str, "DataValue"]:
+        (caveat,) = [c for c in core.caveats if c.code == code]
+        return caveat.data
+
+    def _regions(self, core: CoreFirmware, code: str) -> list[str]:
+        stated = self._data(core, code)["regions"]
+        assert not isinstance(stated, str)
+        return list(stated)
+
+    # --- the named door ------------------------------------------------------
+
+    def test_the_named_default_that_is_there_is_what_that_region_opens(self):
+        # No options file at all, so every key answers with the core's own
+        # declared default — and the US default is the file that is there.
+        core = self._core(
+            self._machine({f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE}), verify=True
+        )
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.declared) == (f"{BIOS_DIR}/scph5501.bin", "scph5501.bin")
+        assert (option.checked, option.satisfied) == (CHECKED_VERIFIED, True)
+        assert option.identity is not None
+        assert option.identity.md5 == SWAN_US_IMAGE["md5"]
+
+    def test_a_named_file_of_a_size_the_core_refuses_hands_the_region_to_the_search(self):
+        # The size gate is the core's own first test and a stat settles it, so
+        # the refusal needs no content check to be stated — and the region
+        # falls through to the directory, which holds the image under another
+        # name entirely.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/scph5501.bin": {"md5": "cd" * 16, "sha1": "ce" * 20, "size": 1024},
+                f"{BIOS_DIR}/anything.bin": SWAN_US_IMAGE,
+            }
+        )
+        core = self._core(machine, verify=True)
+        refused = self._data(core, CAVEAT_FIRMWARE_IMAGE_REFUSED)
+        assert refused["path"] == f"{BIOS_DIR}/scph5501.bin"
+        assert refused["size"] == "1024"
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked, option.satisfied) == (
+            f"{BIOS_DIR}/anything.bin",
+            CHECKED_VERIFIED,
+            True,
+        )
+
+    def test_a_name_that_climbs_out_of_the_firmware_root_is_refused_and_searched(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/anything.bin": SWAN_US_IMAGE},
+            options='swanstation_BIOS_PathNTSCU = "../escape.bin"\n',
+        )
+        core = self._core(machine, verify=True)
+        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT in self._codes(core)
+        assert self._option(core, "ntsc-u").path == f"{BIOS_DIR}/anything.bin"
+
+    def test_a_name_that_climbs_out_over_an_empty_root_leaves_its_region_without_an_option(self):
+        # Both halves of one region's route yield nothing: the refused name gives
+        # no destination to keep, and the settled search finds nothing to pick.
+        # The refusal is the one reason that names no region — it names the key
+        # and the value — so the disc-decides statement names the region in its
+        # sentence and its ``regions`` carry only what the group holds.
+        machine = self._machine({}, options='swanstation_BIOS_PathNTSCU = "../escape.bin"\n')
+        core = self._core(machine, verify=True)
+        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT in self._codes(core)
+        assert "regions" not in self._data(core, CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT)
+        assert [o.regions for o in self._group(core).options] == [("ntsc-j",), ("pal",)]
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED) == ["ntsc-j", "pal"]
+        (undecided,) = [c for c in core.caveats if c.code == CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert "ntsc-u" in undecided.message
+
+    # --- the search door -----------------------------------------------------
+
+    def test_the_search_finds_the_image_under_a_name_no_option_knows(self):
+        # The whole point of the second door: the file is named nothing the
+        # core would ever open, and it boots because its bytes are a row.
+        machine = self._machine({f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE})
+        core = self._core(machine, verify=True)
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked, option.satisfied) == (
+            f"{BIOS_DIR}/a-us-bios",
+            CHECKED_VERIFIED,
+            True,
+        )
+        listing = self._data(core, CAVEAT_FIRMWARE_SEARCH_CANDIDATES)
+        assert listing["readings"] == {f"{BIOS_DIR}/a-us-bios": READING_IDENTIFIED}
+        assert listing["image_regions"] == {f"{BIOS_DIR}/a-us-bios": "ntsc-u"}
+
+    def test_a_directory_of_unrecognised_images_boots_nothing(self):
+        # The core's search refuses a file its table does not know, so a
+        # directory of them is a directory with no image in it — and the
+        # listing says of each one that its bytes were read and not known.
+        machine = self._machine({f"{BIOS_DIR}/mystery.bin": SWAN_UNKNOWN_IMAGE})
+        core = self._core(machine, verify=True)
+        assert {option.satisfied for option in self._group(core).options} == {False}
+        assert {option.found for option in self._group(core).options} == {KIND_MISSING}
+        listing = self._data(core, CAVEAT_FIRMWARE_SEARCH_CANDIDATES)
+        assert listing["readings"] == {f"{BIOS_DIR}/mystery.bin": READING_UNRECOGNISED}
+        assert self._data(core, CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE)["candidates"] == "1"
+
+    def test_an_image_of_another_region_is_the_pick_and_says_which_region(self):
+        # Upstream boots it with a "possibly-incompatible" warning, so it is a
+        # pick rather than a failure — and the row's own region rides the
+        # statement, because that is the mismatch a client has to see.
+        machine = self._machine(
+            {f"{BIOS_DIR}/europe.bin": SWAN_PAL_IMAGE},
+            options='swanstation_Console_Region = "NTSC-U"\n',
+        )
+        core = self._core(machine, verify=True)
+        requirement = self._route(core)
+        assert requirement.path == f"{BIOS_DIR}/europe.bin"
+        assert requirement.checked == CHECKED_VERIFIED
+        identified = self._data(core, CAVEAT_FIRMWARE_IMAGE_IDENTIFIED)
+        assert identified["region"] == "pal"
+        assert self._regions(core, CAVEAT_FIRMWARE_IMAGE_IDENTIFIED) == ["ntsc-u"]
+
+    def test_two_region_valid_images_are_a_tie_the_directory_would_decide(self):
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/one.bin": SWAN_US_IMAGE,
+                f"{BIOS_DIR}/two.bin": PSX_ANY_REGION_IMAGE,
+            },
+            options='swanstation_Console_Region = "NTSC-U"\n',
+        )
+        core = self._core(machine, verify=True)
+        assert self._data(core, CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS)["tied"] == "2"
+
+    def test_a_four_megabyte_image_is_recognised_over_its_first_512_kib(self):
+        # The scope is the whole reason this table exists beside DuckStation's:
+        # the core reads BIOS_SIZE bytes out of every candidate whatever its
+        # length, so the md5 that decides is the prefix's and not the file's.
+        machine = self._machine({f"{BIOS_DIR}/ps3.bin": SWAN_PS3_IMAGE})
+        core = self._core(machine, verify=True)
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked) == (f"{BIOS_DIR}/ps3.bin", CHECKED_VERIFIED)
+        assert option.identity is not None
+        assert option.identity.md5 == "c02a6fbb1b27359f84e92fae8bc21316"
+        assert option.identity.size == SWAN_PS3_SIZE
+
+    # --- the region the option pins, and the one nothing pins ----------------
+
+    def test_a_pinned_region_is_one_unconditional_requirement(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/scph5502.bin": SWAN_PAL_IMAGE},
+            options='swanstation_Console_Region = "PAL"\n',
+        )
+        core = self._core(machine, verify=True)
+        assert not [r for r in core.requirements if isinstance(r, FirmwareAlternatives)]
+        assert CAVEAT_CORE_MODE_UNESTABLISHED not in self._codes(core)
+        pinned = self._route(core)
+        assert (pinned.declared, pinned.regions, pinned.checked) == (
+            "scph5502.bin",
+            None,
+            CHECKED_VERIFIED,
+        )
+
+    def test_a_region_value_the_core_does_not_declare_pins_nothing(self):
+        machine = self._machine(options='swanstation_Console_Region = "NTSC-KR"\n')
+        core = self._core(machine)
+        assert self._data(core, CAVEAT_UNKNOWN_OPTION_VALUE)["value"] == "NTSC-KR"
+        # Three options, one per region, because each region's key names its
+        # own default and an empty directory leaves each of them the answer.
+        assert {option.regions for option in self._group(core).options} == {
+            ("ntsc-j",),
+            ("ntsc-u",),
+            ("pal",),
+        }
+
+    def test_an_undecided_region_states_the_disc_decides(self):
+        core = self._core(self._machine())
+        assert self._data(core, CAVEAT_CORE_MODE_UNESTABLISHED)["reason"] == (
+            REASON_REGION_DECIDED_BY_DISC
+        )
+
+    # --- what a query without a content check may say ------------------------
+
+    def test_without_a_content_check_the_named_file_is_unchecked(self):
+        core = self._core(self._machine({f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE}))
+        option = self._option(core, "ntsc-u")
+        assert (option.checked, option.satisfied) == (CHECKED_UNCHECKED, None)
+
+    def test_without_a_content_check_the_search_states_itself_and_picks_nothing(self):
+        # Files of an accepted size and nobody asked to hash them: the regions
+        # the search speaks for get no option at all, because "no image for
+        # this region" would be a claim about bytes nobody read.
+        core = self._core(self._machine({f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE}))
+        assert not [r for r in core.requirements if isinstance(r, FirmwareAlternatives)]
+        unverified = self._data(core, CAVEAT_FIRMWARE_SEARCH_UNVERIFIED)
+        assert unverified["candidates"] == "1"
+        assert self._regions(core, CAVEAT_FIRMWARE_SEARCH_UNVERIFIED) == ["ntsc-j", "ntsc-u", "pal"]
+
+    # --- which options file governs -----------------------------------------
+
+    def test_a_per_core_options_file_outranks_the_global_one(self):
+        # RetroArch's own priority: with global_core_options off, the per-core
+        # .opt is the governing file and the global one is never consulted for
+        # this core. The directory it names is the core's library_name, which
+        # lives in the binary and costs a probe.
+        machine = self._machine(
+            {f"{BIOS_DIR}/psxonpsp660.bin": PSX_ANY_REGION_IMAGE},
+            options='swanstation_BIOS_PathNTSCU = "scph5501.bin"\n',
+            per_core='swanstation_BIOS_PathNTSCU = "psxonpsp660.bin"\n',
+            core={"library_name": "SwanStation"},
+        )
+        core = self._core(machine, verify=True, per_core_options=True)
+        option = self._option(core, "ntsc-u")
+        assert option.declared == "psxonpsp660.bin"
+        assert (option.checked, option.satisfied) == (CHECKED_VERIFIED, True)
+
+    def test_a_core_that_cannot_be_queried_reads_the_global_file_and_says_so(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/psxonpsp660.bin": PSX_ANY_REGION_IMAGE},
+            options='swanstation_BIOS_PathNTSCU = "psxonpsp660.bin"\n',
+            per_core='swanstation_BIOS_PathNTSCU = "scph5501.bin"\n',
+        )
+        core = self._core(machine, verify=True, per_core_options=True)
+        assert self._data(core, CAVEAT_CORE_UNQUERYABLE)["core_so"] == SWANSTATION_SO
+        assert self._option(core, "ntsc-u").declared == "psxonpsp660.bin"
+
+    # --- what a read that did not come back leaves open ----------------------
+
+    def test_a_named_image_whose_bytes_will_not_read_is_unread_and_the_search_runs(self):
+        # Upstream falls through on a failed read like any other (bios.cpp:98-102
+        # returns nothing, host_interface.cpp:178-179 searches), so the
+        # directory is read and stated. The region keeps the named file all the
+        # same: atlas's read failing is no evidence the launch's does, so
+        # naming the searched image would state an open nobody watched as
+        # having failed.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/scph5501.bin": {"status": "unreadable", "size": PSX_IMAGE_SIZE},
+                f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE,
+            }
+        )
+        core = self._core(machine, verify=True)
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked, option.satisfied) == (
+            f"{BIOS_DIR}/scph5501.bin",
+            CHECKED_UNREAD,
+            None,
+        )
+        assert CAVEAT_FIRMWARE_UNREADABLE in self._codes(core)
+        # The search ran and said what the directory holds, which is the half
+        # that used to be skipped entirely. The named file is in that listing
+        # too, because it is a file of an accepted size sitting in the
+        # directory the core would search — read there as unreadable for the
+        # same reason it is unread above.
+        listing = self._data(core, CAVEAT_FIRMWARE_SEARCH_CANDIDATES)
+        assert listing["readings"] == {
+            f"{BIOS_DIR}/a-us-bios": READING_IDENTIFIED,
+            f"{BIOS_DIR}/scph5501.bin": READING_UNREADABLE,
+        }
+
+    def test_a_candidate_whose_bytes_will_not_read_can_still_be_the_pick(self):
+        # A read failure is atlas's and not the table's refusal, so the file
+        # stays in the ranking and the option it becomes carries `unread`
+        # rather than a verdict about content nobody saw.
+        machine = self._machine(
+            {f"{BIOS_DIR}/maybe.bin": {"status": "unreadable", "size": PSX_IMAGE_SIZE}}
+        )
+        core = self._core(machine, verify=True)
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked, option.satisfied) == (
+            f"{BIOS_DIR}/maybe.bin",
+            CHECKED_UNREAD,
+            None,
+        )
+        assert self._data(core, CAVEAT_FIRMWARE_UNREADABLE)["path"] == f"{BIOS_DIR}/maybe.bin"
+        assert self._data(core, CAVEAT_FIRMWARE_SEARCH_CANDIDATES)["readings"] == {
+            f"{BIOS_DIR}/maybe.bin": READING_UNREADABLE
+        }
+
+    def test_a_directory_that_will_not_list_leaves_the_regions_it_answers_for_unstated(self):
+        # The one way to a PARTIAL group under a content check: one region's
+        # named file is there and boots, and what the other two would find is a
+        # question the failed listing did not answer — so they get no option,
+        # the statement about which option a disc selects names only the
+        # region the group carries, and the incomplete-scan statement names
+        # the two regions whose answer rested on the listing, not the one a
+        # named file settled without it.
+        machine = self._machine(
+            {f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE},
+            unlistable=True,
+        )
+        core = self._core(machine, verify=True)
+        assert [o.regions for o in self._group(core).options] == [("ntsc-u",)]
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED) == ["ntsc-u"]
+        incomplete = self._data(core, CAVEAT_FIRMWARE_SCAN_INCOMPLETE)
+        assert incomplete["dir"] == BIOS_DIR
+        assert self._regions(core, CAVEAT_FIRMWARE_SCAN_INCOMPLETE) == ["ntsc-j", "pal"]
+
+    def test_the_disc_decides_statement_rides_no_answer_without_a_group(self):
+        # It explains which of a group's options a launch needs, and with no
+        # option anywhere there is no group for it to explain.
+        core = self._core(self._machine({f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE}))
+        assert not [r for r in core.requirements if isinstance(r, FirmwareAlternatives)]
+        assert CAVEAT_CORE_MODE_UNESTABLISHED not in self._codes(core)
+
+    # --- where this route meets the verdict about the system -----------------
+
+    def test_an_all_optional_declaration_is_answered_by_what_the_search_finds(self):
+        # The two halves meeting. This core's .info marks every image
+        # optional, so the declaration alone leaves nothing unmet over a
+        # machine that will not boot; the packaged system table says a
+        # PlayStation needs an image; and the image its own search found is
+        # what answers that need — for every region at once, because the row
+        # it matched carries none of its own.
+        core = self._core(self._machine({f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE}), verify=True)
+        assert [r.need for r in core.requirements if isinstance(r, FirmwareRequirement)] == [
+            "optional",
+            "optional",
+        ]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.system_firmware_needs == ("psx",)
+        option = self._option(core, "ntsc-u")
+        assert (option.need, option.system, option.satisfied) == (NEED_REQUIRED, "psx", True)
+        assert core.requirements_met is True
+
+    def test_the_same_declaration_over_an_empty_directory_is_not_green(self):
+        # The other side of the same seam, and the one the declaration could
+        # never reach on its own: nothing is unmet in what the file states,
+        # the directory holds no image, and the answer is false because the
+        # route demonstrated that no region has one.
+        core = self._core(self._machine(), verify=True)
+        assert [r for r in core.unmet if r.regions is None] == []
+        assert {o.satisfied for o in self._group(core).options} == {False}
+        assert core.requirements_met is False
+
+    # --- what the core claims, and what the knowledge must agree on ----------
+
+    def test_a_named_image_the_core_refused_is_still_this_cores_claim(self):
+        # The route composed that path, stat'ed it and states a caveat naming
+        # it — so it is a file this entry accounted for, even though the search
+        # then answered the region and the answer names another file. A path a
+        # caveat names must not come back as one nobody asks for.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/scph5501.bin": {"md5": "cd" * 16, "sha1": "ce" * 20, "size": 1024},
+                f"{BIOS_DIR}/anything.bin": SWAN_US_IMAGE,
+            }
+        )
+        answer = firmware_inventory(machine, _context(machine), verify=True)
+        (core,) = answer.cores
+        assert self._data(core, CAVEAT_FIRMWARE_IMAGE_REFUSED)["path"] == f"{BIOS_DIR}/scph5501.bin"
+        assert {f"{BIOS_DIR}/scph5501.bin", f"{BIOS_DIR}/anything.bin"} <= set(core.claims)
+        assert answer.unclaimed == ()
+
+    def test_every_file_the_search_ran_over_is_this_cores_claim(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE, f"{BIOS_DIR}/mystery.bin": SWAN_UNKNOWN_IMAGE}
+        )
+        core = self._core(machine, verify=True)
+        assert set(core.claims) >= {f"{BIOS_DIR}/a-us-bios", f"{BIOS_DIR}/mystery.bin"}
+
+    def test_what_resolving_the_options_chain_cost_reaches_the_answer(self):
+        # A line RetroArch's parser refused while resolving the options file
+        # is a degradation of every value read through it, and this is the
+        # answer that reads one — so it is stated here rather than swallowed
+        # where the chain was assembled.
+        machine = self._machine()
+        chain = CoreOptionsChain(
+            global_file=self.OPTIONS,
+            override_config_dir=self.OPT_DIR,
+            per_core_options=False,
+            caveats=(Caveat(CAVEAT_CFG_LINE_DROPPED, "a line the parser refused", {"key": "x"}),),
+        )
+        answer = firmware_for_core(
+            machine, _context(machine, core_options=chain), core_so=SWANSTATION_SO
+        )
+        assert CAVEAT_CFG_LINE_DROPPED in [caveat.code for caveat in answer.caveats]
+
+    def test_an_unclaimed_image_this_cores_own_table_knows_names_the_core(self):
+        # Every region's named default is in place, so the core reads no
+        # directory and claims nothing in one — and the file beside them is
+        # one nobody declared whose bytes its table holds. That is a concern
+        # about this core, and it is stated because the core is installed.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/scph5500.bin": SWAN_JP_IMAGE,
+                f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE,
+                f"{BIOS_DIR}/scph5502.bin": SWAN_PAL_IMAGE,
+                f"{BIOS_DIR}/spare.bin": SWAN_PS3_IMAGE,
+            }
+        )
+        answer = firmware_inventory(machine, _context(machine), verify=True)
+        (spare,) = [f for f in answer.unclaimed if f.path == f"{BIOS_DIR}/spare.bin"]
+        assert spare.concerns == (
+            Concern(emulator=SWANSTATION_SO, relation=RELATION_RECOGNISES),
+        )
+        # Read over the table's own scope, which is why the identity is the
+        # prefix's md5 and not the file's.
+        assert spare.identity is not None
+        assert spare.identity.md5 == "c02a6fbb1b27359f84e92fae8bc21316"
+        assert spare.console == "ps3"
+
+    def test_a_table_that_moved_away_from_the_entry_stops_the_answer(self):
+        # Two sources for the hash scope and the unknown policy — the entry
+        # cites the core's source, the table carries what the generator read —
+        # and a disagreement is a table regenerated from another build.
+        card = lookup_core_firmware(SWANSTATION_SO)
+        assert card is not None
+        assert card.content_route is not None
+        moved = replace(card, content_route=replace(card.content_route, hash_scope=1024))
+        content_table = getattr(atlas.firmware, "_content_table")
+        with pytest.raises(ValueError, match="shipped out of step"):
+            content_table(moved)
+
+
 class TestTheSystemBehindTheCoreReachesTheAnswer:
     """A ``.info`` cannot say "this machine does not start without one of these".
 
     So a core that knows its system needs a BIOS has two lossy moves, and the
     deployed catalogue takes both: Beetle PSX marks its region image required,
-    SwanStation marks every image optional. Read on its own, SwanStation's
+    SwanStation marks every image optional. Read on its own, the all-optional
     declaration says nothing is missing over a PlayStation that will not boot.
 
     The missing half is packaged world knowledge about the SYSTEM
@@ -2405,13 +2962,24 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     it must do and the one thing it must not: ``system_firmware`` states what
     is recorded, ``requirements_met`` stops being green where the system
     cannot run — and every ``need`` stays exactly what the core declared.
+
+    The all-optional core here is :data:`UNDERSTATER_SO`, which carries
+    SwanStation's declaration under a stem no packaged entry names — so it
+    answers ``locating: unestablished`` and its whole answer is that
+    declaration. The deployed core the shape was read off finds its firmware
+    by a route of its own that reads the size and the bytes of what it finds
+    (#466), and a test about what a DECLARATION leaves unsaid must not have a
+    second reader in it: with SwanStation as the vehicle, a fixture would have
+    to be a plausible BIOS for these assertions to mean what they say.
+    ``TestACoreThatOpensANameAndThenSearches`` is where that route meets this
+    verdict.
     """
 
     def _psx_machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
         return _machine(
             {
-                f"{INFO_DIR}/{SWANSTATION_SO[: -len('.so')]}.info": SWANSTATION_INFO,
-                f"{INFO_DIR}/{SWANSTATION_SO}": {"status": "invalid-text"},
+                f"{INFO_DIR}/{UNDERSTATER_SO[: -len('.so')]}.info": SWANSTATION_INFO,
+                f"{INFO_DIR}/{UNDERSTATER_SO}": {"status": "invalid-text"},
                 f"{INFO_DIR}/{REARMED_SO[: -len('.so')]}.info": REARMED_INFO,
                 f"{INFO_DIR}/{REARMED_SO}": {"status": "invalid-text"},
                 **(bios or {}),
@@ -2429,7 +2997,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     def test_the_core_that_understates_its_system_is_no_longer_green(self):
         # The defect this whole thing exists for: five (here two) optional
         # images, nothing unmet, and a machine that will not boot.
-        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        core = self._core(self._psx_machine(), UNDERSTATER_SO)
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
         assert core.requirements_met is False
         assert core.unmet == ()
@@ -2452,7 +3020,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # The declaration is the emulator's statement, reproduced. SwanStation
         # says optional and keeps saying optional; the verdict beside it is
         # atlas's own and is a different field.
-        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        core = self._core(self._psx_machine(), UNDERSTATER_SO)
         assert [r.need for r in _plain_requirements(core)] == ["optional", "optional"]
 
     # --- an open system, and a system nobody recorded ------------------------
@@ -2504,7 +3072,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         machine = self._psx_machine(
             bios={f"{BIOS_DIR}/scph5501.bin": {"md5": "aa" * 16, "sha1": "bb" * 20, "size": 8}}
         )
-        core = self._core(machine, SWANSTATION_SO, verify=True)
+        core = self._core(machine, UNDERSTATER_SO, verify=True)
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
         assert core.requirements_met is True
 
@@ -2513,7 +3081,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # so `false` would claim atlas knows the core will not run. It does
         # not, and `None` is the honest word.
         machine = self._psx_machine(bios={f"{BIOS_DIR}/scph5501.bin": "whatever"})
-        core = self._core(machine, SWANSTATION_SO)
+        core = self._core(machine, UNDERSTATER_SO)
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
         assert core.requirements_met is None
 
@@ -2546,11 +3114,11 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # about a system nobody established.
         machine = _machine(
             {
-                f"{INFO_DIR}/{SWANSTATION_SO[: -len('.so')]}.info": {"status": "unreadable"},
-                f"{INFO_DIR}/{SWANSTATION_SO}": {"status": "invalid-text"},
+                f"{INFO_DIR}/{UNDERSTATER_SO[: -len('.so')]}.info": {"status": "unreadable"},
+                f"{INFO_DIR}/{UNDERSTATER_SO}": {"status": "invalid-text"},
             }
         )
-        core = self._core(machine, SWANSTATION_SO)
+        core = self._core(machine, UNDERSTATER_SO)
         assert core.declaration == DECLARATION_UNREADABLE
         assert core.system_firmware is None
         assert core.requirements_met is None
@@ -2568,21 +3136,21 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # would turn a false into a true right here.
         machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
         answer = firmware_inventory(machine, _context(machine))
-        assert [core.core_so for core in answer.cores] == [BEETLE_PSX_SO, REARMED_SO, SWANSTATION_SO]
+        assert [core.core_so for core in answer.cores] == [BEETLE_PSX_SO, REARMED_SO, UNDERSTATER_SO]
         for core in answer.cores:
             unaided = replace(core, system_firmware=None)
             assert core.requirements_met is not True or unaided.requirements_met is True
         # And the state the machine is actually in, so the guard above cannot
         # go vacuous by every core answering the same thing.
         met = {core.core_so: core.requirements_met for core in answer.cores}
-        assert met == {BEETLE_PSX_SO: False, REARMED_SO: True, SWANSTATION_SO: True}
+        assert met == {BEETLE_PSX_SO: False, REARMED_SO: True, UNDERSTATER_SO: True}
 
     def test_one_image_of_the_set_is_what_the_system_asked_for(self):
         # The disjunction over a whole machine rather than one core: the
         # PlayStation needs an image, psxonpsp660.bin is one, and SwanStation
         # is green over it even though the region image beside it is missing.
         machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
-        core = self._core(machine, SWANSTATION_SO)
+        core = self._core(machine, UNDERSTATER_SO)
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
         assert [(r.file_name, r.satisfied) for r in _plain_requirements(core)] == [
             ("psxonpsp660.bin", True),
@@ -2593,7 +3161,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     # --- the mark that says where the second source came from ---------------
 
     def test_the_mark_carries_the_system_and_the_evidence_level(self):
-        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        core = self._core(self._psx_machine(), UNDERSTATER_SO)
         (mark,) = self._marks(core)
         assert mark.data == {"system": "psx", "evidence": EVIDENCE_WORD_VERIFIED}
 
@@ -2602,7 +3170,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # level; the contract is the public surface and spells it. The two
         # spellings are one scale, joined by a map that is total over the
         # markers, so nothing can reach a client unspelled.
-        core = self._core(self._psx_machine(), SWANSTATION_SO)
+        core = self._core(self._psx_machine(), UNDERSTATER_SO)
         (mark,) = self._marks(core)
         assert mark.data["evidence"] == "verified"
         assert mark.data["evidence"] not in EVIDENCE_LEVELS
@@ -2877,7 +3445,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # system the table speaks about, so the scoped set is every image it
         # declares and the answer is the one this reading always gave.
         machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
-        core = self._core(machine, SWANSTATION_SO)
+        core = self._core(machine, UNDERSTATER_SO)
         assert core.system_firmware_needs == ("psx",)
         assert {r.system for r in _plain_requirements(core)} == {"psx"}
         assert core.requirements_met is True
@@ -2914,7 +3482,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         assert states == {
             BEETLE_PSX_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
             REARMED_SO: SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
-            SWANSTATION_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+            UNDERSTATER_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
         }
 
     def _demo_machine(self) -> FixtureMachine:
@@ -3079,7 +3647,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
             ),
         }
         core = firmware_for_core(
-            machine, _context(machine, system_firmware=same), core_so=SWANSTATION_SO
+            machine, _context(machine, system_firmware=same), core_so=UNDERSTATER_SO
         ).cores[0]
         assert [m.data["evidence"] for m in self._marks(core)] == [EVIDENCE_WORD_VERIFIED]
 
@@ -3092,7 +3660,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
             alternatives=(),
         )
         core = firmware_for_core(
-            machine, _context(machine, system_firmware=differing), core_so=SWANSTATION_SO
+            machine, _context(machine, system_firmware=differing), core_so=UNDERSTATER_SO
         ).cores[0]
         assert [m.data["evidence"] for m in self._marks(core)] == [
             EVIDENCE_WORD_VERIFIED,
@@ -3966,9 +4534,9 @@ class _CountingMachine:
         self._count("file_size")
         return self._inner.file_size(path)
 
-    def file_digest(self, path: str, algorithm: str) -> str | None:
+    def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None:
         self._count("file_digest")
-        return self._inner.file_digest(path, algorithm)
+        return self._inner.file_digest(path, algorithm, first_bytes=first_bytes)
 
 
 def _gb_machine(files: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
