@@ -315,6 +315,18 @@ from .firmware import (
     SystemSource,
 )
 
+# How each emulator finds the firmware it boots, as the CONTRACT spells it: the
+# word `cores[].locating` carries, and the closed list a client branches on. The
+# knowledge file behind it and the two rules that read it stay inside the
+# package — a client acts on the word, never on the citation.
+from .core_firmware import (
+    FIRMWARE_LOCATING,
+    LOCATING_BY_NAME,
+    LOCATING_BY_NAME_THEN_CONTENT,
+    LOCATING_UNESTABLISHED,
+    FirmwareLocating,
+)
+
 # The evidence scale the world-knowledge mark's `evidence` comes from, as the
 # CONTRACT spells it. The bracket forms beside these in `atlas.system_firmware`
 # ([V], [D], [O]) are this repository's documentation notation and stay inside
@@ -677,6 +689,7 @@ __all__ = [
     "ArchiveReason",
     "CoreDeclarationState",
     "CoreSystemFirmware",
+    "FirmwareLocating",
     "SystemSource",
     # Vocabulary values — path kinds and read statuses (answers carry both)
     "KIND_FILE",
@@ -725,6 +738,10 @@ __all__ = [
     "DECLARATION_ABSENT",
     "DECLARATION_PACKAGED",
     "DECLARATION_UNSUPPORTED",
+    "LOCATING_BY_NAME",
+    "LOCATING_BY_NAME_THEN_CONTENT",
+    "LOCATING_UNESTABLISHED",
+    "FIRMWARE_LOCATING",
     "SOURCE_OVERRIDE",
     "SOURCE_SYSTEMNAME",
     "SOURCE_SLUG",

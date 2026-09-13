@@ -177,6 +177,7 @@ FIRMWARE_CORE_FIELDS = {
     DECLARED_INDEX,
     "label",
     "declaration",
+    "locating",
     "requirements_met",
     "system_firmware",
     "requirements",
@@ -256,6 +257,15 @@ KNOWN_SYSTEM_FIRMWARE_STATES = {
     "core-supplies-an-alternative",
     "runs-without-firmware",
     "open",
+}
+# Which door an emulator opens to find firmware — world knowledge like the
+# states above, and unlike them never null: an emulator nobody read a source
+# for states `unestablished`, which is a claim about atlas rather than an
+# absence of one.
+KNOWN_LOCATING = {
+    "by-name",
+    "by-name-then-content",
+    "unestablished",
 }
 UNCLAIMED_FIELDS = {"path", "identity", "known_as", "description", "console", "concerns"}
 CONCERN_FIELDS = {"emulator", "relation"}
@@ -2243,6 +2253,11 @@ def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bo
     met = core["requirements_met"]
     if met is not None and not isinstance(met, bool):
         fail(f"{name}: firmware core requirements_met must be true, false, or null")
+    if core["locating"] not in KNOWN_LOCATING:
+        fail(
+            f"{name}: firmware core locating must be one of {sorted(KNOWN_LOCATING)}, "
+            f"got {core['locating']!r} — the field is never null"
+        )
     state = core["system_firmware"]
     if state is not None and state not in KNOWN_SYSTEM_FIRMWARE_STATES:
         fail(

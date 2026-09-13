@@ -81,6 +81,13 @@ from glob import escape as _glob_escape
 from typing import Any, Iterable, Literal, Mapping, Protocol, Sequence, TypeAlias, cast
 
 from ._data import packaged_text
+from .core_firmware import (
+    FIRMWARE_LOCATING,
+    LOCATING_UNESTABLISHED,
+    FirmwareLocating,
+    locating_of_card,
+    locating_of_core,
+)
 from .core_info import (
     UNREAD_EMPTY,
     UNREAD_NO_SLOT,
@@ -2384,6 +2391,32 @@ class CoreFirmware:
     ``<command>`` elements, it may skip a position, and it is not an index
     into any list a client holds.
     """
+    locating: FirmwareLocating = LOCATING_UNESTABLISHED
+    """Which door this emulator opens to find firmware — world knowledge, never a reading
+    of this machine, and never ``null``: an emulator that is uninstalled or whose
+    declaration could not be read is still the emulator the knowledge describes.
+
+    It is the qualifier :attr:`requirements` has always needed and could not
+    carry. A declaration is a list of names, and whether those names are what
+    the launch opens is a property of the core's code that no ``.info`` states.
+    Under ``by-name`` the list is the whole answer and a name is what a consumer
+    must get right; under ``by-name-then-content`` a missing named file is not
+    yet a failure, because a search by content may still answer it.
+
+    ``unestablished`` is the third value and it is a statement about atlas: no
+    source was read for this emulator, so the requirement list beside it is a
+    lower bound of unknown kind. It is the default rather than an omission,
+    because a core nobody looked at must not read as one that opens the names
+    it declares. For a libretro core the word comes from
+    ``atlas/data/core_firmware.json`` keyed by the ``.so`` short name
+    (:func:`~atlas.core_firmware.locating_of_core`); for a carded standalone
+    emulator it comes from the shape of that card
+    (:func:`~atlas.core_firmware.locating_of_card`).
+
+    It moves no verdict. ``requirements_met`` is unchanged by this field in
+    either direction — the two answer different questions, and a word about how
+    a file is found can neither satisfy a requirement nor fail one.
+    """
     system_firmware: CoreSystemFirmware | None = None
     """What is recorded about the SYSTEM this core declares firmware for — world
     knowledge, not a reading of this machine; ``null`` means nothing is recorded about
@@ -2481,10 +2514,41 @@ class CoreFirmware:
     consumer acts on.
     """
 
+    def _check_no_plain_entry_is_region_scoped(self) -> None:
+        """A region-scoped requirement stands only inside an alternatives group.
+
+        Out of ``__post_init__`` rather than inline for two reasons, and the
+        second one is load-bearing. It is the one rule there that walks the
+        requirement list rather than reading a field, so it is a different kind
+        of check; and a rule that IS a field's closed vocabulary could not be
+        moved out the way this one is, because
+        ``scripts/generate_contract_reference.py`` learns which tuple a field's
+        values come from by reading that method's ``not in`` comparisons.
+
+        What it follows from there is narrow, and **arity is not what decides
+        it**: the helper table is built from the module's own top-level
+        functions, so a check moved into a *method* is not read at all, whether
+        or not the method is handed the attribute — and this one is a method.
+        Only a module-level function the ``__post_init__`` passes the attribute
+        to as an argument is followed, one hop. So a vocabulary check lifted
+        out of ``__post_init__`` into a method drops its tuple's name from the
+        published page while every gate stays green.
+        """
+        for entry in self.requirements:
+            if isinstance(entry, FirmwareRequirement) and entry.regions is not None:
+                raise ValueError(
+                    "CoreFirmware: a region-scoped requirement stands only inside a FirmwareAlternatives "
+                    "group — a plain entry carrying regions would smuggle a condition into the conjunction"
+                )
+
     def __post_init__(self) -> None:
         if self.declaration not in CORE_DECLARATION_STATES:
             raise ValueError(
                 f"CoreFirmware: declaration must be one of {CORE_DECLARATION_STATES}, got {self.declaration!r}"
+            )
+        if self.locating not in FIRMWARE_LOCATING:
+            raise ValueError(
+                f"CoreFirmware: locating must be one of {FIRMWARE_LOCATING}, got {self.locating!r}"
             )
         if self.declaration not in (DECLARATION_READ, DECLARATION_PACKAGED) and self.requirements:
             raise ValueError(
@@ -2508,12 +2572,7 @@ class CoreFirmware:
                 "without them the images that would answer the need cannot be told from the ones "
                 "filed under another system"
             )
-        for entry in self.requirements:
-            if isinstance(entry, FirmwareRequirement) and entry.regions is not None:
-                raise ValueError(
-                    "CoreFirmware: a region-scoped requirement stands only inside a FirmwareAlternatives "
-                    "group — a plain entry carrying regions would smuggle a condition into the conjunction"
-                )
+        self._check_no_plain_entry_is_region_scoped()
 
     @property
     def unmet(self) -> tuple[FirmwareRequirement, ...]:
@@ -4786,7 +4845,7 @@ def _system_firmware_state(
 def _stating_system_firmware(
     cores: tuple[CoreFirmware, ...], recorded: "Mapping[str, SystemFirmware]"
 ) -> tuple[CoreFirmware, ...]:
-    """Every core with what the packaged table adds to it, and the mark that it did.
+    """Every core with what the packaged tables add to it, and the mark that they did.
 
     The one place world knowledge enters a firmware answer. Every route that
     builds a :class:`FirmwareAnswer` with cores passes through here, so the
@@ -4796,21 +4855,36 @@ def _stating_system_firmware(
     core. A test reads this module's own source to hold that
     (``tests/test_firmware.py::TestTheSystemBehindTheCoreReachesTheAnswer``).
 
-    *recorded* is the context's snapshot of the packaged table, so one answer
-    can never mix two revisions of it.
+    Two tables are read here, and they answer about different things. The
+    system verdict is about the **machine** the core emulates and carries a
+    mark wherever it stated something; :attr:`CoreFirmware.locating` is about
+    the **core's own code** — which door it opens to find firmware — and
+    carries none, because it degrades no answer and moves no verdict. The
+    locating word is stated for a libretro core alone, identified by its
+    ``.so``; a carded standalone emulator has no ``.so``, and its word came
+    from its card at :func:`_carded_standalone_core`, which is the one door
+    every carded answer leaves through.
+
+    *recorded* is the context's snapshot of the packaged system table, so one
+    answer can never mix two revisions of it.
     """
     table = _recorded_by_system(recorded)
     stated: list[CoreFirmware] = []
     for core in cores:
-        state, needs, caveats = _system_firmware_state(core, table)
-        stated.append(
+        located = (
             core
+            if core.core_so is None
+            else replace(core, locating=locating_of_core(core.core_so))
+        )
+        state, needs, caveats = _system_firmware_state(located, table)
+        stated.append(
+            located
             if state is None
             else replace(
-                core,
+                located,
                 system_firmware=state,
                 system_firmware_needs=needs,
-                caveats=(*core.caveats, *caveats),
+                caveats=(*located.caveats, *caveats),
             )
         )
     return tuple(stated)
@@ -6672,10 +6746,15 @@ def _carded_standalone_core(
     registered beside them; a ``files`` card names its paths outright and the
     one packaged route serves it.
 
-    Whatever the shape, the answer leaves here claiming what it read
-    (:func:`_claiming_what_it_read`) — the one place every carded answer comes
-    through, so the inventory's scan reads one attribute for a folder read, a
-    search and a named destination alike.
+    Whatever the shape, the answer leaves here through one exit, claiming what
+    it read (:func:`_claiming_what_it_read`) and stating how its emulator
+    locates firmware (:func:`~atlas.core_firmware.locating_of_card`). Both are
+    the same statement for every resolver, and both are read off the card or
+    the answer rather than decided per emulator, so neither can be carried at
+    four sites and forgotten at the fifth — a claim that goes missing turns a
+    file nobody asks for into an unclaimed one, and a locating word that goes
+    missing reads as an emulator nobody established, which is exactly the state
+    a card refutes.
     """
     if not card.config_files and card.search is None:
         core, observed = _packaged_standalone_core(
@@ -6687,31 +6766,32 @@ def _carded_standalone_core(
             config_home=config_home,
             verify=verify,
         )
-        return _claiming_what_it_read(machine, core), observed
-    resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
-    if resolver is None:
-        shape = "config_files" if card.config_files else "search"
-        raise ValueError(
-            f"standalone firmware card {card.token!r} states {shape} but has no "
-            "resolver registered — the card and the code shipped out of step"
+    else:
+        resolver = _STANDALONE_CONFIG_RESOLVERS.get(card.token)
+        if resolver is None:
+            shape = "config_files" if card.config_files else "search"
+            raise ValueError(
+                f"standalone firmware card {card.token!r} states {shape} but has no "
+                "resolver registered — the card and the code shipped out of step"
+            )
+        # Both bases go to every resolver: which one an emulator keeps its
+        # settings under is the emulator's business, not the route's — xemu's
+        # live under the data home while melonDS's and PCSX2's live under the
+        # config one.
+        core, observed = resolver(
+            machine,
+            entry,
+            card,
+            system,
+            data_home=data_home,
+            config_home=config_home,
+            flatpak=flatpak,
+            sandbox=sandbox,
+            xdg_pinned=xdg_pinned,
+            verify=verify,
         )
-    # Both bases go to every resolver: which one an emulator keeps its
-    # settings under is the emulator's business, not the route's — xemu's live
-    # under the data home while melonDS's and PCSX2's live under the config
-    # one.
-    core, observed = resolver(
-        machine,
-        entry,
-        card,
-        system,
-        data_home=data_home,
-        config_home=config_home,
-        flatpak=flatpak,
-        sandbox=sandbox,
-        xdg_pinned=xdg_pinned,
-        verify=verify,
-    )
-    return _claiming_what_it_read(machine, core), observed
+    located = cast(CoreFirmware, replace(core, locating=locating_of_card(card)))
+    return _claiming_what_it_read(machine, located), observed
 
 
 def _standalone_entry_core(

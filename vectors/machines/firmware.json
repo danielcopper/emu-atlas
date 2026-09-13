@@ -46,6 +46,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [],
@@ -107,6 +108,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "absent",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -188,6 +190,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -304,6 +307,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -359,6 +363,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -540,6 +545,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -634,6 +640,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -746,6 +753,7 @@
               "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -801,6 +809,7 @@
               "declared_index": 1,
               "label": "TGB Dual",
               "declaration": "absent",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -821,6 +830,7 @@
               "declared_index": 2,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -945,6 +955,7 @@
               "declared_index": 0,
               "label": "TGB Dual",
               "declaration": "absent",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -1014,6 +1025,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -1135,6 +1147,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -1239,6 +1252,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -1374,6 +1388,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -1484,6 +1499,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -1603,6 +1619,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -1711,6 +1728,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -1806,6 +1824,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -1901,6 +1920,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -1987,6 +2007,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -2082,6 +2103,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -2183,6 +2205,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -2279,6 +2302,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -2373,6 +2397,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -2476,6 +2501,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -2581,6 +2607,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -2683,6 +2710,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -2786,6 +2814,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -2874,6 +2903,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -2991,6 +3021,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -3123,6 +3154,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "unreadable",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -3143,6 +3175,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "unreadable",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -3163,6 +3196,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -3276,6 +3310,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -3448,6 +3483,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -3539,6 +3575,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -3618,6 +3655,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -3712,6 +3750,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -3829,6 +3868,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -3938,6 +3978,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -4048,6 +4089,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -4138,6 +4180,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -4230,6 +4273,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -4321,6 +4365,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -4410,6 +4455,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -4499,6 +4545,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -4593,6 +4640,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -4697,6 +4745,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -4796,6 +4845,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -4899,6 +4949,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -4993,6 +5044,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -5082,6 +5134,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -5171,6 +5224,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -5361,6 +5415,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -5441,6 +5496,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -5523,6 +5579,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -5597,6 +5654,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -5700,6 +5758,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -5820,6 +5879,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -5923,6 +5983,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -6037,6 +6098,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -6185,6 +6247,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -6301,6 +6364,7 @@
               "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -6330,6 +6394,7 @@
               "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [
@@ -6424,6 +6489,7 @@
               "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -6453,6 +6519,7 @@
               "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -6554,6 +6621,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -6649,6 +6717,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -6753,6 +6822,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "open",
               "requirements": [
@@ -6853,6 +6923,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -6962,6 +7033,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [],
@@ -7041,6 +7113,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7148,6 +7221,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7255,6 +7329,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7362,6 +7437,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7467,6 +7543,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [],
@@ -7573,6 +7650,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7670,6 +7748,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7763,6 +7842,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7850,6 +7930,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -7943,6 +8024,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -8045,6 +8127,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -8130,6 +8213,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -8296,6 +8380,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [],
@@ -8504,6 +8589,7 @@
               "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -8715,6 +8801,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
               "requirements": [
@@ -8798,6 +8885,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "open",
               "requirements": [
@@ -8883,6 +8971,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -9032,6 +9121,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9127,6 +9217,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9222,6 +9313,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9311,6 +9403,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -9460,6 +9553,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9581,6 +9675,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9678,6 +9773,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -9775,6 +9871,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9872,6 +9969,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -9963,6 +10061,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -10076,6 +10175,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -10227,6 +10327,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -10399,6 +10500,7 @@
               "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -10454,6 +10556,7 @@
               "declared_index": 1,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -10593,6 +10696,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -10707,6 +10811,7 @@
               "declared_index": 0,
               "label": "Gambatte",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -10762,6 +10867,7 @@
               "declared_index": 1,
               "label": "SameBoy (Standalone)",
               "declaration": "unsupported",
+              "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -10920,6 +11026,7 @@
               "declared_index": 0,
               "label": "Cemu (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -11020,6 +11127,7 @@
               "declared_index": 0,
               "label": "Cemu (Native)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -11118,6 +11226,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -11242,6 +11351,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -11332,6 +11442,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -11464,6 +11575,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -11583,6 +11695,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "unreadable",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -11666,6 +11779,7 @@
               "declared_index": 0,
               "label": "melonDS (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -11754,6 +11868,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -11846,6 +11961,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -11940,6 +12056,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -12032,6 +12149,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -12121,6 +12239,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -12213,6 +12332,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -12306,6 +12426,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "unreadable",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -12388,6 +12509,7 @@
               "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -12511,6 +12633,7 @@
               "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -12621,6 +12744,7 @@
               "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "unreadable",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -12705,6 +12829,7 @@
               "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -12836,6 +12961,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -12971,6 +13097,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -13098,6 +13225,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -13264,6 +13392,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -13415,6 +13544,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -13556,6 +13686,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -13653,6 +13784,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -13753,6 +13885,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -13854,6 +13987,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14015,6 +14149,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14147,6 +14282,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14339,6 +14475,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14506,6 +14643,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14626,6 +14764,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14755,6 +14894,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -14903,6 +15043,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -15009,6 +15150,7 @@
               "declared_index": 0,
               "label": "DuckStation (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -15139,6 +15281,7 @@
               "declared_index": 0,
               "label": "xemu (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -15266,6 +15409,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -15429,6 +15573,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -15524,6 +15669,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -15634,6 +15780,7 @@
               "declared_index": 0,
               "label": "PCSX2 (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -15732,6 +15879,7 @@
               "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -15774,6 +15922,7 @@
               "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -15869,6 +16018,7 @@
               "declared_index": 0,
               "label": "LRPS2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -15898,6 +16048,7 @@
               "declared_index": 1,
               "label": "PCSX2",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
               "requirements": [
@@ -15983,6 +16134,7 @@
               "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16025,6 +16177,7 @@
               "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16120,6 +16273,7 @@
               "declared_index": 0,
               "label": "Beetle PSX",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16162,6 +16316,7 @@
               "declared_index": 1,
               "label": "Beetle PSX (again)",
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16261,6 +16416,7 @@
               "declared_index": 0,
               "label": "Flycast",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -16295,6 +16451,7 @@
               "declared_index": 1,
               "label": "Flycast (again)",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -16393,6 +16550,7 @@
               "declared_index": 0,
               "label": "Dolphin",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -16435,6 +16593,7 @@
               "declared_index": 1,
               "label": "Dolphin (again)",
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -16535,6 +16694,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16598,6 +16758,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "core-supplies-an-alternative",
               "requirements": [
@@ -16661,6 +16822,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -16782,6 +16944,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -16816,6 +16979,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -16905,6 +17069,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -17008,6 +17173,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
               "requirements": [
@@ -17144,6 +17310,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [
@@ -17191,6 +17358,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
               "requirements": [
@@ -17457,6 +17625,7 @@
               "declared_index": 0,
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
+              "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
               "requirements": [],
@@ -17569,6 +17738,7 @@
               "declared_index": null,
               "label": null,
               "declaration": "read",
+              "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
               "requirements": [

@@ -47,6 +47,14 @@ firmware" has its own sibling document, `docs/research/system-firmware.md`: why 
 core's options answers it alone, how `tests/test_system_firmware_tripwire.py` derives the open cases from the deployed
 cores, and what a verdict in `atlas/data/system_firmware.json` must cite.
 
+A third question about the same declaration has a third sibling, `docs/research/core-firmware-locating.md`: **how** a
+core goes looking for the firmware it boots — by the names it was given, or a name first with a search by content as the
+fallback. A `.info` cannot state it, so it is packaged per core in `atlas/data/core_firmware.json` with a citation per
+fact at a pinned upstream revision, and a core with no entry answers `unestablished` rather than being assumed to open
+the names it declares. Because the fact is a property of one build, `tests/test_core_firmware_tripwire.py` asks each
+deployed core for its own version string and fails when the entry's pinned revision is not in it — an upgrade that
+changes the route turns red instead of being described by stale source.
+
 ## The generated contract reference
 
 `docs/contract-reference.md` is the per-question lookup table for what a serialized answer carries: its fields, their
@@ -63,9 +71,10 @@ or nothing per vocabulary, and a meaning written under a value constant that not
 belongs to is declared by no module and its own module declares no list holding that value either. Regenerate after
 touching anything those six readings read, which is more than the obvious ones: an annotation, a `__post_init__` check,
 a module-level tuple, a `from .sibling import NAME` line — it decides whether a tuple composed by splatting that name
-resolves, and so whether its vocabulary is declared at all — an entry in `ENUMERATED_DATA`, `atlas.__all__`, a class
-docstring, an attribute docstring, a sentence under a value constant and a serializer all move the page. A test fails
-when the committed page is not what the generator produces.
+resolves, and so whether its vocabulary is declared at all, and separately whether a `__post_init__` check written
+against that name names its tuple beside the field's annotation — an entry in `ENUMERATED_DATA`, `atlas.__all__`, a
+class docstring, an attribute docstring, a sentence under a value constant and a serializer all move the page. A test
+fails when the committed page is not what the generator produces.
 
 ```bash
 python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md
