@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.0](https://github.com/danielcopper/emu-atlas/compare/v0.18.0...v0.19.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** the inventory carries the cards, and an unclaimed file says which emulators it concerns ([#472](https://github.com/danielcopper/emu-atlas/issues/472))
+* **duckstation:** the search lists every candidate beside what the table says it is ([#470](https://github.com/danielcopper/emu-atlas/issues/470))
+
+### Features
+
+* **duckstation:** the search lists every candidate beside what the table says it is ([#470](https://github.com/danielcopper/emu-atlas/issues/470)) ([53869e6](https://github.com/danielcopper/emu-atlas/commit/53869e6fbcf9ade88749bee64cb20ae4955808cf)), closes [#467](https://github.com/danielcopper/emu-atlas/issues/467)
+* **firmware:** the inventory carries the cards, and an unclaimed file says which emulators it concerns ([#472](https://github.com/danielcopper/emu-atlas/issues/472)) ([1db54db](https://github.com/danielcopper/emu-atlas/commit/1db54db277fd980c2072d72e40d120a16beb8119)), closes [#468](https://github.com/danielcopper/emu-atlas/issues/468)
+
 ## [0.18.0](https://github.com/danielcopper/emu-atlas/compare/v0.17.2...v0.18.0) (2026-09-11)
 
 
