@@ -104,7 +104,9 @@ measures them — so a clean Sonar page does not mean a green gate.
   shell cwd resets between Bash calls: start commands with an explicit `cd` into the worktree.
 - The `machines` vector family (schema 4) models whole machines: `files` (string content, or
   `{"status": "unreadable"|"invalid-text"}` for read failures, optionally with a `size` — the chmod-000 file stats fine
-  and only its bytes fail), `dirs` (explicit empty directories), `symlinks` (dead links included), `cores` (`null` =
+  and only its bytes fail, or a blob `{"md5", "sha1", "size"}` plus `"<algorithm>:<bytes>"` for the digest of a file's
+  first N bytes, which an emulator that reads a fixed-length image hashes and which is needed only where the file is
+  longer than that scope), `dirs` (explicit empty directories), `symlinks` (dead links included), `cores` (`null` =
   present but unloadable), `appimages` (modeled at the seam: entry paths to text, or a whole-archive state
   `"unreadable"|"not-appimage"|"capability-missing"` — never a binary, so vectors stay codec- and version-independent),
   `ps2_bios_headers` (the ROMDIR read at the seam: a declared file's path to its `romver` (14 characters) and `serial`

@@ -49,6 +49,7 @@ from .content_path import (
     split_content_path,
 )
 from .content_tree_wiring import WiringRow, lookup_content_tree_wiring
+from .core_options import CoreOptionsChain, core_options_value
 from .core_info import parse_core_info
 from .esde import (
     INVALID_PARSE,
@@ -981,131 +982,6 @@ def _global_options_file(
     return (
         configured.path if configured.path is not None else configured.configured,
         (*caveats, *configured.caveats),
-    )
-
-
-def _option_file_candidates(
-    *,
-    override_config_dir: str,
-    global_file: str,
-    library_name: str | None,
-    content_dir_name: str | None,
-    rom_stem: str | None,
-    game_specific_options: bool,
-    per_core_options: bool,
-) -> list[str]:
-    """The options files that could govern an option, in RetroArch's priority order.
-
-    Game ``.opt``, folder ``.opt``, per-core ``.opt`` (when
-    ``global_core_options`` is off), then the global options file — the same
-    order ``validate_per_core_options`` walks.
-
-    Every path but the global file is keyed by ``library_name``, so an unknown
-    one leaves only the global file to read. That is not a degradation this
-    function has to state any more: ``library_name`` is unknown exactly when the
-    core could not be queried, and :func:`_select_card` does not let a card
-    reach this code path at all in that case.
-    """
-    candidates: list[str] = []
-    if library_name and game_specific_options:
-        if rom_stem:
-            candidates.append(os.path.join(override_config_dir, library_name, f"{rom_stem}.opt"))
-        if content_dir_name:
-            candidates.append(os.path.join(override_config_dir, library_name, f"{content_dir_name}.opt"))
-    if library_name and per_core_options:
-        candidates.append(os.path.join(override_config_dir, library_name, f"{library_name}.opt"))
-    candidates.append(global_file)
-    return candidates
-
-
-def _core_options_value(
-    machine: Machine,
-    *,
-    override_config_dir: str,
-    global_file: str,
-    library_name: str | None,
-    content_dir_name: str | None,
-    rom_stem: str | None,
-    option_key: str,
-    option_default: str | None,
-    game_specific_options: bool,
-    per_core_options: bool,
-    retired: tuple[RetiredOption, ...] = (),
-) -> tuple[str | None, str, str, tuple[tuple[RetiredOption, str], ...]]:
-    """Read a core option the way RetroArch does — first existing file is THE source.
-
-    Priority (``runloop.c`` ``validate_per_core_options``): game ``.opt``,
-    folder ``.opt``, per-core ``.opt`` (when ``global_core_options`` is off),
-    then *global_file*. A key absent from the governing file falls back to the
-    core default — it does not fall through to another file.
-
-    Returns ``(value, provenance, options_file, retired_found)``, where
-    ``options_file`` is the file a caller would edit to change the option. The
-    value is ``None`` when the governing file states none and *option_default*
-    is ``None`` too: the core itself did not state a default and none is
-    recorded, so what governs here was never established. Substituting the
-    empty string would put a value nobody read into the answer's own
-    provenance.
-
-    ``retired_found`` are the entries of *retired* the governing file carries,
-    with the value each states — read off the same parse the value lookup
-    already made, so stating them costs no second read of anything. Only the
-    governing file is checked: a stale entry in a file RetroArch would not
-    read for this core is dead twice over, and naming it would tell a caller
-    to prune a file that decides nothing here.
-    """
-    candidates = _option_file_candidates(
-        override_config_dir=override_config_dir,
-        global_file=global_file,
-        library_name=library_name,
-        content_dir_name=content_dir_name,
-        rom_stem=rom_stem,
-        game_specific_options=game_specific_options,
-        per_core_options=per_core_options,
-    )
-
-    for path in candidates:
-        text = machine.read_text(path).text
-        if text is None:
-            continue
-        parsed = parse_cfg_text(text)
-        retired_found = tuple(
-            (option, parsed[option.key]) for option in retired if option.key in parsed
-        )
-        if option_key in parsed:
-            return (
-                parsed[option_key],
-                f'{os.path.basename(path)}: {option_key} = "{parsed[option_key]}"',
-                path,
-                retired_found,
-            )
-        if option_default is None:
-            return (
-                None,
-                f"{os.path.basename(path)} has no entry for {option_key} and no default for it was "
-                "established — the installed core states none and none is recorded",
-                path,
-                retired_found,
-            )
-        return (
-            option_default,
-            f'core default: {option_key} = "{option_default}" ({os.path.basename(path)} has no entry)',
-            path,
-            retired_found,
-        )
-    if option_default is None:
-        return (
-            None,
-            f"no options file states {option_key} and no default for it was established — the "
-            "installed core states none and none is recorded",
-            global_file,
-            (),
-        )
-    return (
-        option_default,
-        f'core default: {option_key} = "{option_default}" (no options file present)',
-        global_file,
-        (),
     )
 
 
@@ -2165,7 +2041,7 @@ def _apply_card(
     option_gates = _option_gates(
         layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir
     )
-    opt_value, opt_source, options_file, retired_found = _core_options_value(
+    opt_value, opt_source, options_file, retired_found = core_options_value(
         machine,
         override_config_dir=gates.override_config_dir,
         global_file=option_gates.global_file,
@@ -2209,7 +2085,7 @@ def _apply_card(
 
         def _read_gate_option(key: str) -> OptionReading:
             live = (live_options or {}).get(key)
-            value, source, gate_file, _ = _core_options_value(
+            value, source, gate_file, _ = core_options_value(
                 machine,
                 override_config_dir=gates.override_config_dir,
                 global_file=option_gates.global_file,
@@ -2308,7 +2184,7 @@ def _rule_option_readings(
     for key in card.rule_options or ():
         live = (live_options or {}).get(key)
         default = live.default if live is not None else None
-        value, source, options_file, retired_found = _core_options_value(
+        value, source, options_file, retired_found = core_options_value(
             machine,
             override_config_dir=gates.override_config_dir,
             global_file=option_gates.global_file,
@@ -5342,7 +5218,7 @@ def _texture_enabled(
     option_gates = _option_gates(
         chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
     )
-    value, provenance, _, _ = _core_options_value(
+    value, provenance, _, _ = core_options_value(
         machine,
         override_config_dir=chain.gates.override_config_dir,
         global_file=option_gates.global_file,
@@ -12412,7 +12288,7 @@ def _mod_enabled(
     option_gates = _option_gates(
         chain.layers, sandbox=query.sandbox, retroarch_config_dir=chain.retroarch_config_dir
     )
-    value, provenance, _, _ = _core_options_value(
+    value, provenance, _, _ = core_options_value(
         machine,
         override_config_dir=chain.gates.override_config_dir,
         global_file=option_gates.global_file,
@@ -13213,7 +13089,9 @@ def _retroarch_firmware_context(
     )
     caveats.extend(root_caveats)
     sources.extend(root_sources)
-    cores, cores_read, core_caveats, core_sources = _firmware_core_declarations(sandbox, parsed)
+    cores, cores_read, core_caveats, core_sources, core_dir = _firmware_core_declarations(
+        sandbox, parsed
+    )
     caveats.extend(core_caveats)
     sources.extend(core_sources)
 
@@ -13221,6 +13099,13 @@ def _retroarch_firmware_context(
         root=root,
         cores=cores,
         hashes=load_hashes(),
+        core_options=_firmware_core_options(
+            sandbox,
+            global_text,
+            cfg_label=cfg_label,
+            retroarch_config_dir=retroarch_config_dir,
+            core_dir=core_dir,
+        ),
         cores_read=cores_read,
         sources=tuple(sources),
         caveats=tuple(caveats),
@@ -13297,9 +13182,55 @@ def _firmware_root(
     return root, caveats, sources
 
 
+def _firmware_core_options(
+    sandbox: _Sandbox,
+    global_text: str | None,
+    *,
+    cfg_label: str,
+    retroarch_config_dir: str,
+    core_dir: str | None,
+) -> CoreOptionsChain:
+    """Where a core option would be read on this installation — resolved once, here.
+
+    The firmware route asks about the options a core composes a firmware name
+    out of, and it must walk the files RetroArch walks. Which files those are
+    is a property of the configuration this context was already read from, so
+    they are resolved at this one seam: reading them again inside the route
+    would let one answer rest on two revisions of the same cfg.
+
+    The chain is the **global cfg alone**, and that is narrower than the save
+    route's on purpose. An override ``.cfg`` is keyed by a core's
+    ``library_name`` and a content path, and a firmware question names
+    neither — nothing has been launched — so the layers that a launch would
+    merge do not exist to read. The same fact bounds the options files
+    themselves: the game and folder ``.opt`` layers are keyed by content, so
+    what governs here is the per-core ``.opt`` (unless ``global_core_options``
+    switched it off) and then the global options file, which is exactly the
+    tail of RetroArch's own priority order.
+    """
+    layers: list[_CfgLayer] = (
+        [(CfgSource(CFG_LAYER_GLOBAL, cfg_label), global_text)] if global_text is not None else []
+    )
+    override_dir, _, override_caveats = _override_directory(
+        layers,
+        sandbox=sandbox,
+        cfg_label=cfg_label,
+        override_config_dir=os.path.join(retroarch_config_dir, "config"),
+        config_file_dir=retroarch_config_dir,
+    )
+    gates = _option_gates(layers, sandbox=sandbox, retroarch_config_dir=retroarch_config_dir)
+    return CoreOptionsChain(
+        global_file=gates.global_file,
+        override_config_dir=override_dir,
+        per_core_options=gates.per_core_options,
+        core_dir=core_dir,
+        caveats=(*override_caveats, *gates.caveats),
+    )
+
+
 def _firmware_core_declarations(
     sandbox: _Sandbox, parsed: Mapping[str, str]
-) -> tuple[tuple[CoreDeclarations, ...], bool, list[Caveat], list[str]]:
+) -> tuple[tuple[CoreDeclarations, ...], bool, list[Caveat], list[str], str | None]:
     """What the installed cores declare they want, and whether that could be read.
 
     Two keys, read independently and free to point anywhere:
@@ -13358,7 +13289,13 @@ def _firmware_core_declarations(
     # installation that ships no cores could never say so — and the case it
     # protected against, a directory that resolves but cannot be listed, is
     # stated above by its own caveat.
-    return cores, info_dir is not None and cores_listed, caveats, sources
+    #
+    # ``core_dir`` rides back out because the binaries in it answer a question
+    # no .info does: a core's ``library_name``, which names the directory its
+    # per-core options file sits in. It is the same directory the enumeration
+    # was limited to, so a route that probes one of these cores probes the
+    # build this answer is about.
+    return cores, info_dir is not None and cores_listed, caveats, sources, core_dir
 
 
 class _FirmwareQueries:

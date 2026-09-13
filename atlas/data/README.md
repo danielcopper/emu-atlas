@@ -1363,6 +1363,24 @@ Shape:
   "cores": {
     "swanstation": {
       "locating": { "mode": "by-name-then-content", "citation": "src/core/host_interface.cpp:151-180 ..." },
+      "name_route": {
+        "region_option": {
+          "key": "swanstation_Console_Region",
+          "default": "Auto",
+          "values": { "Auto": null, "NTSC-J": "ntsc-j", "NTSC-U": "ntsc-u", "PAL": "pal" },
+          "citation": "src/libretro/libretro_core_options.h:82-95 ..."
+        },
+        "region_keys": [
+          { "region": "ntsc-u", "key": "swanstation_BIOS_PathNTSCU", "default": "scph5501.bin" }
+        ],
+        "citation": "src/core/host_interface.cpp:155-169 ..."
+      },
+      "content_route": {
+        "table": "swanstation_bios.json",
+        "hash_scope": 524288,
+        "unknown": "refused",
+        "citation": "src/core/bios.cpp:81-105 ..."
+      },
       "build": { "revision": "4d309c0", "citation": "the deployed build answers '1.0.0 4d309c0' ..." },
       "provenance": { "source": "libretro/swanstation at 4d309c05f ..." }
     }
@@ -1379,6 +1397,19 @@ Shape:
   `retro_get_system_info`, and how that was read. This is what makes the entry checkable: **the word is a property of
   one build, not of an emulator.** Beetle PSX is the case it was written for — upstream grew a SHA1 directory search
   after the pinned commit, which would turn a `by-name` core into a `by-name-then-content` one.
+- `name_route` / `content_route` — what the two doors read, and **present on `by-name-then-content` and refused on every
+  other word**: a word that names two doors and describes neither would leave the resolver guessing exactly what this
+  file exists to replace. `name_route.region_option` is the option that pins the console region, with every value it
+  takes mapped to a region token — `null` for a value that pins none, which is SwanStation's `Auto`, the running disc's
+  own region — and `region_keys` is the option that names the image per region with the default the core declares, so
+  the pair reads fully even on a machine whose options file has never mentioned either. Every region the option can pin
+  needs a key, or a launch it pins is one the route says nothing about. `content_route` names the packaged table the
+  search recognises a directory by (a bare file name beside the others, never a path), the number of leading bytes the
+  core hashes, and what it does with an image no row holds (`atlas.bios_table.UNKNOWN_POLICIES`).
+- **The scope and the policy are stated twice on purpose.** The table carries them as the generator read them out of
+  upstream; the entry carries them with a citation into the core's own source; and the resolver holds the two against
+  each other, so a table regenerated from a build that moved either one stops the answer rather than being read under a
+  citation that no longer describes it.
 - `provenance.source` — which tree at which commit, and what was done to reach the citations.
 - Every string is refused **blank** as well as empty. A citation of spaces reads as filled in to anything that only
   checks for emptiness, and this file's entire value is that it does not guess.
@@ -1390,12 +1421,32 @@ Shape:
   `standalone_firmware.json` card — a `search` card is `by-name-then-content`, a `files` or `config_files` card is
   `by-name` — because the shape already is the statement.
 
-## `duckstation_bios.json` — what a PlayStation BIOS _is_, by content
+## `duckstation_bios.json` and `swanstation_bios.json` — what a PlayStation BIOS _is_, by content
 
-The other half of the emulator that names no file. DuckStation identifies a BIOS by hashing it against a table compiled
-into its binary, so answering "is one here" at all means carrying that table: **104 images**, each with the md5 of the
-whole file, the console region it belongs to, and the priority upstream ranks it by. Read by
-`atlas.duckstation.bios_table`.
+The other half of an emulator that recognises firmware rather than naming it. DuckStation identifies a BIOS by hashing
+it against a table compiled into its binary, so answering "is one here" at all means carrying that table: **104
+images**, each with the md5 of the whole file, the console region it belongs to, and the priority upstream ranks it by.
+Read by `atlas.duckstation.bios_table`.
+
+`swanstation_bios.json` is the same artifact for the libretro core that forked that emulator, and both are read by one
+class (`atlas.bios_table.BiosTable`): **27 images** at `libretro/swanstation@4d309c0`, `{name, region, md5}` per row and
+nothing else. That fork's rows carry no priority at all, so every row ranks alike, which is what its search does; and
+where DuckStation names a fast-boot patch variant, theirs carry a `patch_compatible` flag, which says whether an image
+may be patched rather than which variant it takes and gates patching an image the core has already loaded rather than
+recognising one — so it is not generated into the table, and the loader would refuse it as a column nothing here reads.
+Two blocks say what its emulator does with what it keeps, and they are why one table cannot stand in for the other:
+
+- `hash_scope: 524288` — the core allocates an image of `BIOS_SIZE` and reads that many bytes out of every candidate
+  whatever its length, so over a PS2- or PS3-sized file the md5 that decides is the **prefix's**, not the file's. Three
+  of its 27 rows are md5s the DuckStation table does not carry at all, which is consistent with the scopes differing and
+  is not proven by it: neither table's rows were measured against the other's bytes. A table stating no scope is hashed
+  whole, which is DuckStation's.
+- `unknown: "refused"` — its search returns nothing for a file of an accepted size whose bytes no row holds, where
+  DuckStation boots one with a warning. A table stating no policy boots such an image
+  (`atlas.bios_table.UNKNOWN_POLICIES`).
+
+Both are stated again in that core's `core_firmware.json` entry with citations into its source, and the resolver holds
+the two against each other.
 
 The hashes cannot be read off the shipped binary. They are `constexpr` in upstream's source and compile down to byte
 arrays, so a strings scan finds the descriptions beside them (`SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)`) and nothing else
@@ -1423,7 +1474,10 @@ Shape:
 - `openbios` is the one image with no hash at all: the free replacement BIOS is recognised by an eight-byte signature at
   offset `0x78`. No read through atlas's seam reaches an arbitrary offset, so it is recorded as the limit it is and
   named in the caveat an unidentified image carries.
-- The table ages with the emulator. It is pinned to the revision it was read at, and a build that ships a longer table
+- `priority` and `fast_boot_patch` are one emulator's own columns, and a table that states neither leaves every row at 0
+  and at the empty string. Which of them a table states is read off the table — every row of one file must state the
+  same keys, and a key nothing here reads stops the load, so a column that appeared upstream cannot ship unnoticed.
+- A table ages with its emulator. Each is pinned to the revision it was read at, and a build that ships a longer table
   recognises images this one does not — which is a stated limit of the answer, not a silent one.
 
 ## `firmware_hashes.json`
@@ -1529,18 +1583,22 @@ identity change in beside it; new or changed identities from upstream are a `--d
 carried through by a restamp — no upstream data was read, so a fresh date would be a claim about where the identities
 came from.
 
-`duckstation_bios.json` is generated the same way, from the emulator's own source at the revision its card pins:
+The two BIOS recognition tables are generated the same way, from each emulator's own source at the revision that reads
+it — one script, because they are the same artifact read out of two forks of one file, and `--emulator` selects the row
+shape and the output:
 
 ```sh
 git clone https://github.com/stenzek/duckstation ~/src/duckstation
+git clone https://github.com/libretro/swanstation ~/src/swanstation
 
-python scripts/generate_duckstation_bios.py --source ~/src/duckstation --revision 64655818e
+python scripts/generate_bios_table.py --emulator duckstation --source ~/src/duckstation --revision 64655818e
+python scripts/generate_bios_table.py --emulator swanstation --source ~/src/swanstation --revision 4d309c0
 ```
 
 The firmware-hash generator takes `-o <path>` to write elsewhere; with no `-o`, each output goes to its sibling beside
-this file, resolved relative to the repo root so the command works from any working directory. The DuckStation one takes
-no destination at all: it produces exactly one packaged file, and a writable destination would put a filesystem write in
-the hands of whoever composed the command line rather than in the package layout.
+this file, resolved relative to the repo root so the command works from any working directory. The BIOS-table one takes
+no destination at all: `--emulator` decides which packaged file it produces, and a writable destination would put a
+filesystem write in the hands of whoever composed the command line rather than in the package layout.
 
 ## Update discipline
 

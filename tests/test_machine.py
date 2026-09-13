@@ -221,6 +221,57 @@ class TestFixtureIdentity:
         assert m.file_digest("/a/f.txt", "sha256") is None
 
 
+class TestAScopedDigest:
+    """The digest of a file's first N bytes — what an emulator that reads a fixed image asks for.
+
+    SwanStation reads BIOS_SIZE bytes out of every BIOS candidate whatever its
+    length and hashes exactly that, so over a longer image the md5 that decides
+    is the prefix's. It is a different fact from the file's own digest and has
+    its own key on a blob, because the two are different numbers over the same
+    file and a fixture that stated one under the other's name would describe a
+    machine nobody has.
+    """
+
+    def test_string_content_is_hashed_over_the_scope(self):
+        m = FixtureMachine({"/a/f.txt": "hello world"})
+        assert m.file_digest("/a/f.txt", "md5", first_bytes=5) == hashlib.md5(b"hello").hexdigest()
+
+    def test_a_blob_answers_the_scoped_digest_it_declares(self):
+        m = FixtureMachine({"/bios/ps3.bin": {"md5": "whole", "md5:524288": "prefix", "size": 4089584}})
+        assert m.file_digest("/bios/ps3.bin", "md5") == "whole"
+        assert m.file_digest("/bios/ps3.bin", "md5", first_bytes=524288) == "prefix"
+
+    def test_a_scope_the_file_fits_inside_answers_the_whole_file_digest(self):
+        # Arithmetic rather than a fallback: the read yields the whole file, so
+        # the two digests are over the same bytes — and stating the same hex
+        # twice is the only other way to spell it.
+        m = FixtureMachine({"/bios/ps1.bin": {"md5": "whole", "size": 524288}})
+        assert m.file_digest("/bios/ps1.bin", "md5", first_bytes=524288) == "whole"
+
+    def test_a_longer_blob_that_declares_no_scoped_digest_answers_nothing(self):
+        m = FixtureMachine({"/bios/ps3.bin": {"md5": "whole", "size": 4089584}})
+        assert m.file_digest("/bios/ps3.bin", "md5", first_bytes=524288) is None
+
+    def test_a_scope_of_no_bytes_is_refused_the_way_an_unknown_algorithm_is(self):
+        m = FixtureMachine({"/a/f.txt": "hello"})
+        assert m.file_digest("/a/f.txt", "md5", first_bytes=0) is None
+
+    def test_an_unreadable_blob_may_not_declare_one(self):
+        with pytest.raises(ValueError, match="unreadable file states no digest"):
+            FixtureMachine({"/a/x": {"status": "unreadable", "md5:524288": "prefix"}})
+
+    def test_the_real_machine_answers_the_same(self, tmp_path):
+        target = tmp_path / "image.bin"
+        target.write_bytes(b"A" * 600 + b"B" * 400)
+        real = RealMachine()
+        fixture = FixtureMachine({str(target): "A" * 600 + "B" * 400})
+        for scope in (None, 1, 600, 1000, 4096):
+            assert real.file_digest(str(target), "md5", first_bytes=scope) == fixture.file_digest(
+                str(target), "md5", first_bytes=scope
+            ), scope
+        assert real.file_digest(str(target), "md5", first_bytes=600) == hashlib.md5(b"A" * 600).hexdigest()
+
+
 class TestGlobOutcome:
     """"Nothing there" and "could not look" stop being the same empty list.
 

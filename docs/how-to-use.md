@@ -2124,8 +2124,10 @@ it is by hashing it against a table compiled into its binary. That is how it beh
 carries is `locating: "by-name-then-content"` all the same: the three region keys are read **first**, and it is only
 because they ship empty that the search is what answers. The word describes the emulator's **code**, not the arrangement
 that happens to leave the keys blank — fill one in and the named half answers. See
-[How the emulator finds it](#how-the-emulator-finds-it--locating). Atlas carries that table, so the answer can name the
-image; what it will not do is claim one without reading the bytes:
+[How the emulator finds it](#how-the-emulator-finds-it--locating). The same search now answers for a libretro core too:
+SwanStation is a fork of this emulator and reads a directory the same way, against its own older table and over the
+first 512 KiB of each candidate, so one piece of machinery serves both and what differs between them rides on the table.
+Atlas carries both tables, so the answer can name the image; what it will not do is claim one without reading the bytes:
 
 ```python
 answer = inst.firmware_for_system("psx")             # no verify: presence is not the question here
@@ -2606,17 +2608,48 @@ emulator read to search a directory while naming no file whatsoever would be the
 
 SwanStation is the libretro example of `by-name-then-content`, and the one the field was written for. Its deployed
 `.info` declares five images and marks every one optional (counting rule: `atlas.core_info.enumerate_firmware` over the
-shipped file), so on the declaration alone the answer reads as a core with nothing required; the field says why that
-list is not the shape of the question. The core opens one name per console region from its own options — the defaults
-are `scph5500.bin`, `scph5501.bin` and `scph5502.bin` — under the frontend's system directory, and accepts whatever sits
-there if its size is one of three, consulting no table at all. Only when that file is absent or refused does it list the
-directory and recognise what it holds against a table of its own compiled into the binary. So a SwanStation that will
-not boot is not answered by "one of these five names is missing", and one that does boot may be booting a file none of
-them names. The readings behind that, and behind both Beetle PSX builds, are in
+shipped file), so on the declaration alone the answer reads as a core with nothing required. The core opens one name per
+console region from its own options — the defaults are `scph5500.bin`, `scph5501.bin` and `scph5502.bin` — under the
+frontend's system directory, and accepts whatever sits there if its size is one of three, consulting no table at all.
+Only when that file is absent or refused does it list the directory and recognise what it holds against a table of its
+own compiled into the binary. So a SwanStation that will not boot is not answered by "one of these five names is
+missing", and one that does boot may be booting a file none of them names.
+
+**The answer says so rather than leaving it to the word.** Beside the declared rows — reproduced exactly as the file
+states them, `optional` and all — the core carries one further entry for the route itself. The console region decides
+which image a launch opens and the shipped `Auto` takes it from the disc, so that entry is an alternatives group with
+one option per region, and a launch needs the option whose `regions` contain its own:
+
+```python
+answer = inst.firmware_for_system("psx", verify=True)
+core = next(c for c in answer.cores if c.core_so == "swanstation_libretro.so")
+core.locating                                         # 'by-name-then-content'
+[type(r).__name__ for r in core.requirements]         # [..., 'FirmwareAlternatives'] — the declared rows, then the route
+group = core.requirements[-1]
+[(o.regions, o.file_name, o.checked) for o in group.options]
+# [(('ntsc-j', 'ntsc-u', 'pal'), 'a-playstation-bios', 'verified')]
+[c.code for c in core.caveats]
+# [..., 'firmware-search-candidates', 'firmware-image-identified', 'core-mode-unestablished']
+```
+
+Two regions whose launches open the same file under the same reading are **one** option carrying both, which is what a
+search find usually is: the directory answers every region it was asked about. Where the region option pins a region
+instead, one launch is every launch and the entry is a single unconditional requirement with no `regions` and no
+`core-mode-unestablished` beside it. A region has **no option** exactly when both halves of its route yielded nothing:
+the named path gave no destination — a configured name that would climb out of the firmware root is refused, and the
+refusal names the key and the value — and the search did not answer for it either, because files of an accepted size
+were not hashed (`firmware-search-unverified`) or the directory would not list (`firmware-scan-incomplete`), each naming
+the regions whose answer rested on that read. Either half alone still leaves an option: a region whose named file is
+absent and whose settled search found nothing keeps the name the core opens, with `firmware-path-names-no-file` saying
+the directory holds no image it would take; and a region whose name was refused takes the search's find where there is
+one. `core-mode-unestablished` names only the regions the group actually carries an option for, and its sentence names
+the rest — so where no option was reached at all there is no group and no statement about which of them a disc selects.
+The readings behind all of it, and behind both Beetle PSX builds, are in
 [how a core locates firmware](research/core-firmware-locating.md).
 
-It moves no verdict. `requirements_met` is what it was before the field existed, in both directions: a word about how a
-file is found can neither satisfy a requirement nor fail one.
+The word itself moves no verdict: `requirements_met` answers to the requirement list, and a word about how a file is
+found can neither satisfy a requirement nor fail one. What the group in that list does is the ordinary thing an
+alternatives group does — it folds into `requirements_met` the way DuckStation's always has.
 
 ### What a listed folder holds
 

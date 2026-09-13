@@ -33,6 +33,17 @@ most mismatches before any bytes are hashed; ``file_digest`` is the paid
 answer. Both return ``None`` for *cannot tell* — never a sentinel that a caller
 could mistake for a real value.
 
+``file_digest`` takes ``first_bytes`` because an emulator's own recognition
+does: SwanStation reads a fixed 512 KiB out of every BIOS candidate and hashes
+exactly that, whatever the file's length (``Image ret(BIOS_SIZE)`` then one
+read of ``ret.size()``, src/core/bios.cpp:81-105 at libretro/swanstation@4d309c0,
+with the hash over ``image.size()`` at :72-79). Over a 4 MiB image that digest
+is not the file's, so answering "what a launch recognises" needs the prefix as
+its own question rather than a whole-file digest a caller truncates — there is
+nothing to truncate. The scope bounds a read rather than demanding one: where
+the file ends first, the digest is over what the read yielded, which is the
+whole file.
+
 Path resolution (normative, for ports): a path is walked component by component
 from ``/``, the way ``path_resolution(7)`` describes and the kernel was observed
 to behave. ``.`` and repeated separators are transparent; ``..`` is applied to
@@ -815,6 +826,12 @@ class Machine(Protocol):
     ``file_size`` and ``file_digest`` answer for regular files only and return
     ``None`` whenever the answer cannot be determined (missing, unreadable, not
     a regular file, or an algorithm outside :data:`DIGEST_ALGORITHMS`).
+    ``file_digest``'s ``first_bytes`` scopes the hash to the file's leading
+    bytes — ``None`` is the whole file — and a scope at least the file's length
+    answers what the whole file answers, because the read yields the same
+    bytes. A scope below 1 is refused the way an unknown algorithm is
+    (``None``): zero bytes is the digest of nothing, which no emulator's
+    recognition ever asks for.
     """
 
     def read_text(self, path: str) -> ReadResult: ...
@@ -837,7 +854,7 @@ class Machine(Protocol):
 
     def file_size(self, path: str) -> int | None: ...
 
-    def file_digest(self, path: str, algorithm: str) -> str | None: ...
+    def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None: ...
 
 
 class RealMachine:
@@ -1070,8 +1087,8 @@ class RealMachine:
             return None
         return st.st_size if _stat.S_ISREG(st.st_mode) else None
 
-    def file_digest(self, path: str, algorithm: str) -> str | None:
-        if algorithm not in DIGEST_ALGORITHMS:
+    def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None:
+        if algorithm not in DIGEST_ALGORITHMS or (first_bytes is not None and first_bytes < 1):
             return None
         # Regular files only, checked BEFORE opening: reading a FIFO or a
         # character device blocks forever, and this runs inside a library entry
@@ -1084,10 +1101,20 @@ class RealMachine:
         if not _stat.S_ISREG(st.st_mode):
             return None
         digest = hashlib.new(algorithm)
+        # What is left of the scope, so the loop stops reading once the
+        # emulator's own read would have: a scoped digest over a 4 MiB image
+        # must not pay for the 3.5 MiB nobody hashes.
+        remaining = first_bytes
         try:
             with open(path, "rb") as f:
-                while chunk := f.read(_DIGEST_CHUNK_BYTES):
+                while remaining is None or remaining > 0:
+                    want = _DIGEST_CHUNK_BYTES if remaining is None else min(_DIGEST_CHUNK_BYTES, remaining)
+                    chunk = f.read(want)
+                    if not chunk:
+                        break
                     digest.update(chunk)
+                    if remaining is not None:
+                        remaining -= len(chunk)
         except OSError:
             # Unreadable, or an I/O failure mid-read: the identity cannot be
             # stated. (A path that stopped being a regular file between the
@@ -1458,16 +1485,37 @@ FixtureFileSpec = str | Mapping[str, str | int]
 _BLOB_KEYS = ("size", *DIGEST_ALGORITHMS)
 
 
+def scoped_digest_key(key: str) -> tuple[str, int] | None:
+    """``"md5:524288"`` read as the algorithm and the scope, or ``None`` for anything else.
+
+    The spelling a blob states a **scoped** digest under — the digest of the
+    file's first N bytes, which is a different fact about different bytes and
+    so belongs under a different key. A whole-file digest keeps the bare
+    algorithm name, so every fixture written before an emulator hashed a prefix
+    still states exactly what it stated.
+    """
+    algorithm, separator, scope = key.partition(":")
+    if not separator or algorithm not in DIGEST_ALGORITHMS or not scope.isdigit() or int(scope) < 1:
+        return None
+    return algorithm, int(scope)
+
+
 def _file_identity(path: str, spec: Mapping[str, str | int]) -> dict[str, str | int]:
     """The identity fields of one object spec — size from the stat, digests from the bytes.
 
     A digest alongside ``unreadable`` is refused rather than ignored: the bytes
     are precisely what cannot be read there, a real one answers ``None`` for
     ``file_digest``, and a fixture stating one would make a vector assert a
-    ``checked`` verdict the machine it models never reaches.
+    ``checked`` verdict the machine it models never reaches. A scoped digest
+    falls under the same refusal and by the same reading: it comes out of those
+    same bytes, so only ``size`` survives, because it comes from the stat.
     """
-    identity = {key: spec[key] for key in _BLOB_KEYS if key in spec}
-    if spec.get("status") == READ_UNREADABLE and any(key in identity for key in DIGEST_ALGORITHMS):
+    identity = {
+        key: value
+        for key, value in spec.items()
+        if key in _BLOB_KEYS or scoped_digest_key(key) is not None
+    }
+    if spec.get("status") == READ_UNREADABLE and any(key != "size" for key in identity):
         raise ValueError(
             f"fixture file {path!r}: an unreadable file states no digest — its bytes are what cannot "
             "be read, so a real one answers None; only 'size' survives, because it comes from the stat"
@@ -1845,7 +1893,13 @@ class FixtureMachine:
     ``{"status": "unreadable"}`` / ``{"status": "invalid-text"}`` is a file
     that exists but yields that read outcome; ``{"md5": ..., "sha1": ...,
     "size": ...}`` is a binary blob that exists, reads as ``invalid-text``, and
-    answers those values for ``file_digest`` / ``file_size``. A ``size`` may
+    answers those values for ``file_digest`` / ``file_size``. A blob states a
+    **scoped** digest under ``"<algorithm>:<bytes>"`` (``"md5:524288"``) — the
+    digest of the file's first N bytes, which an emulator that hashes a fixed
+    prefix asks for and which is a different fact from the file's own digest.
+    It is needed only where the file is longer than the scope: inside it the
+    read yields the whole file, so the whole-file digest answers both. A
+    ``size`` may
     join a ``status``, because the two come from different reads on a real
     machine: ``{"status": "unreadable", "size": N}`` is the chmod-000 file,
     whose ``stat`` succeeds while its bytes do not. ``dirs`` lists directories
@@ -2228,19 +2282,35 @@ class FixtureMachine:
         text = self._files.get(resolved, (READ_MISSING, None))[1]
         return len(text.encode("utf-8")) if text is not None else None
 
-    def file_digest(self, path: str, algorithm: str) -> str | None:
-        if algorithm not in DIGEST_ALGORITHMS or self._is_inaccessible(path):
+    def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None:
+        if algorithm not in DIGEST_ALGORITHMS or (first_bytes is not None and first_bytes < 1):
+            return None
+        if self._is_inaccessible(path):
             return None
         resolved = self._resolve(path).path
         if resolved is None:
             return None
-        declared = self._blobs.get(resolved, {}).get(algorithm)
-        if isinstance(declared, str):
-            return declared
+        # String content is hashed from the bytes, scope and all, so fixture and
+        # real machine agree by construction. A blob has no bytes to read, so the
+        # scoped digest is the one it declares — except where its declared size
+        # is inside the scope, and then the emulator's read yields the whole file
+        # and the whole-file digest IS the scoped one. Stating the same hex twice
+        # is the only other way to spell that, and two spellings of one fact can
+        # disagree.
+        blob = self._blobs.get(resolved, {})
         text = self._files.get(resolved, (READ_MISSING, None))[1]
-        if text is None:
-            return None
-        return hashlib.new(algorithm, text.encode("utf-8")).hexdigest()
+        if text is not None:
+            data = text.encode("utf-8")
+            return hashlib.new(algorithm, data if first_bytes is None else data[:first_bytes]).hexdigest()
+        if first_bytes is not None:
+            scoped = blob.get(f"{algorithm}:{first_bytes}")
+            if isinstance(scoped, str):
+                return scoped
+            size = blob.get("size")
+            if not isinstance(size, int) or size > first_bytes:
+                return None
+        declared = blob.get(algorithm)
+        return declared if isinstance(declared, str) else None
 
     def query_core(self, so_path: str) -> CoreInfo | None:
         resolved = self._resolve(so_path).path

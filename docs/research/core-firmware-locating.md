@@ -134,10 +134,19 @@ Nothing returned means the launch stops: `Failed to load %s BIOS.` and `Shutdown
 27 rows the regex finds, and no row matched an md5 under a different region. The three it does not share are consistent
 with the hash scopes differing — SwanStation digests the first 512 KiB, while the DuckStation table is recorded as being
 over the whole file (`atlas/data/README.md`, `duckstation_bios.json`) — so recognising a SwanStation search needs a
-table of SwanStation's own, generated at this revision with this scope. **[O]** No such table is packaged and no route
-reads one, so which file a SwanStation search would pick on any given directory is unestablished here. It is a separate
-change; the word on the answer is stated now because it is true now, and it is true whether or not anything reads a
-table.
+table of SwanStation's own, generated at this revision with this scope.
+
+**[V] That table is packaged.** `atlas/data/swanstation_bios.json`, generated from `src/core/bios.cpp` and
+`src/core/bios.h` at this revision by `scripts/generate_bios_table.py --emulator swanstation`: 27 rows of
+`{name, region, md5}`, the three accepted sizes, `hash_scope: 524288` and `unknown: "refused"`. The row shape is what
+the recognition reads and nothing else — upstream's fourth column is `patch_compatible` (`src/core/bios.h:26`), which
+gates patching an image the core has already loaded rather than recognising one, and there is no priority column here at
+all, so every row ranks alike and the directory's own order is the tie-break the core applies. The scope and the refusal
+are read off the code rather than off the table: the core allocates an image of `BIOS_SIZE` and reads that many bytes
+into it (`src/core/bios.cpp:83`, `:98`), and its search returns nothing for a candidate no row holds (`:237-238` of
+`host_interface.cpp`). Both are stated a second time in the core's knowledge entry with those citations, and the
+resolver holds the two against each other — a table regenerated from a build that moved either one stops the answer
+rather than being read under a citation that no longer describes it.
 
 ## Beetle PSX — names, and only names
 
@@ -171,14 +180,26 @@ tripwire above is what turns a future upgrade into a red test rather than a wron
 
 ## What a verdict here must cite
 
-An entry in `atlas/data/core_firmware.json` carries three fields — `locating`, `build` and `provenance` — and the loader
-refuses it with any of them missing, with a stray field beside them, or with any part of one left blank
-(`atlas/core_firmware.py`, `tests/test_core_firmware.py`):
+An entry in `atlas/data/core_firmware.json` carries three fields always — `locating`, `build` and `provenance` — and two
+more where its word names two doors. The loader refuses an entry with any of the three missing, with a field beside them
+that nothing here reads, or with any part of one left blank (`atlas/core_firmware.py`, `tests/test_core_firmware.py`):
 
 - `locating.mode` — one word from the closed vocabulary, and **never** `unestablished`. That value is what a core with
   no entry already answers; an entry stating it would be a citation for having read nothing.
 - `locating.citation` — the `file:line` readings the word rests on, at a revision the entry names. Not a summary: the
   branch that picks the name, the branch that opens it, and the branch that does anything else.
+- `name_route` — **required on `by-name-then-content` and refused on every other word**, because a word naming two doors
+  and describing neither leaves the resolver guessing what this file exists to state. It carries `region_option` (the
+  key that pins the console region, its declared default, and every value it takes mapped to a region token — `null` for
+  a value that pins none) and `region_keys` (the key that names the image per region, with the default the core
+  declares). Every region the option can pin needs a key, or a launch it pins is one the route says nothing about. Its
+  citation covers the branch that reads the region and the branch that reads the name, and marks as `[D]` anything that
+  rests on what the FRONTEND answers rather than on the core's own code.
+- `content_route` — required and refused the same way. It names the packaged table the search recognises a directory by
+  (a bare file name beside the others, never a path), the number of leading bytes the core hashes, and what it does with
+  an image no row holds. Its citation reads those out of the core's source; the table states the last two as the
+  generator read them, and the resolver holds the two against each other, so a table regenerated from another build
+  stops the answer rather than being read under a citation that no longer describes it.
 - `build.revision` and `build.citation` — the short hash the deployed binary reports and how that was read, so the
   tripwire has something to compare and a later reader can repeat the measurement.
 - `provenance.source` — which tree at which commit, and what was done to reach the citations.
@@ -196,9 +217,9 @@ read with per-region keys in front of it, which is `by-name-then-content`, and a
 
 **The vocabulary carries only the words a producer exists for.** Three of them, and each is reachable: two rules put a
 word on an answer — the packaged entry a `.so` reaches, and the shape of a standalone card — and `unestablished` is what
-a core neither of them describes takes. Over the 180 `cores[]` blocks the vector corpus holds, the words come out 119
-`unestablished`, 38 `by-name` and 23 `by-name-then-content` (counting rule: the serialized `locating` of every core
-block the runner produces for every vector, tallied by value).
+a core neither of them describes takes. Over the 192 `cores[]` blocks the vector corpus holds, the words come out 119
+`unestablished`, 38 `by-name` and 35 `by-name-then-content` (counting rule: the serialized `locating` of every core
+block in every `expected` tree under `vectors/machines/`, tallied by value).
 
 A value nothing produces would be a claim with no mechanism behind it, and a branch a consumer could write and never
 enter. So the list grows with the readings rather than ahead of them, which costs nothing: adding a value is a

@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from atlas import duckstation
+from atlas import bios_table, duckstation
 from atlas.machine import FixtureMachine
 
 HOME = "/home/deck"
@@ -34,7 +34,7 @@ def _read(files=None, **kwargs):
 
 def _candidate(md5: str | None, path: str = "/bios/image.bin"):
     table = duckstation.bios_table()
-    return duckstation.BiosCandidate(
+    return bios_table.BiosCandidate(
         path=path,
         image=None if md5 is None else table.identify(md5),
         # The size the search kept the file at. The ranking never reads it —

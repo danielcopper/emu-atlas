@@ -6858,8 +6858,8 @@ class _CountingMachine:
     def file_size(self, path):
         return self._inner.file_size(path)
 
-    def file_digest(self, path, algorithm):
-        return self._inner.file_digest(path, algorithm)
+    def file_digest(self, path, algorithm, *, first_bytes=None):
+        return self._inner.file_digest(path, algorithm, first_bytes=first_bytes)
 
     def repeats(self) -> dict[str, int]:
         return {path: count for path, count in self.reads.items() if count > 1}
