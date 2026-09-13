@@ -1340,6 +1340,56 @@ Shape:
 - No answer reads a verdict yet. The module is deliberately not exported from `atlas`, no field is added and no caveat
   is emitted; the table and its guard exist so the answer that reads them has something to read.
 
+## `core_firmware.json` — how each core goes looking for firmware
+
+The other half a libretro `.info` cannot state. A declaration is a list of names, and nothing in the format says whether
+those names are what the core opens. A core that opens a configured name and nothing else is answered by that name; one
+that lists a directory and recognises what it holds by hashing it may boot from a file no declaration mentions. Read as
+an instruction, one list serves both and misleads over the second.
+
+Each entry states one word for one core — `by-name` or `by-name-then-content` — keyed by the `.so` short name the way
+`core_audit.json` is (`swanstation`, not a nickname). A core with **no** entry answers `unestablished`, which reaches
+the answer as `cores[].locating` and is a claim about atlas rather than about the core: the requirement list beside that
+word is a lower bound of unknown kind. Read by `atlas.core_firmware.load_core_firmware`. The method, the readings and
+what the word cannot see are in
+[`docs/research/core-firmware-locating.md`](../../docs/research/core-firmware-locating.md).
+
+Shape:
+
+```json
+{
+  "schema": 1,
+  "spec": "...",
+  "cores": {
+    "swanstation": {
+      "locating": { "mode": "by-name-then-content", "citation": "src/core/host_interface.cpp:151-180 ..." },
+      "build": { "revision": "4d309c0", "citation": "the deployed build answers '1.0.0 4d309c0' ..." },
+      "provenance": { "source": "libretro/swanstation at 4d309c05f ..." }
+    }
+  }
+}
+```
+
+- `locating.mode` — one word from `atlas.FIRMWARE_LOCATING`, and **never `unestablished`**. That value is what a core
+  with no entry already answers, so an entry stating it would be a citation for having read nothing; the loader refuses
+  it.
+- `locating.citation` — the `file:line` readings the word rests on, at the revision `provenance` names. The branch that
+  picks a name, the branch that opens it, and the branch that does anything else — not a summary of them.
+- `build.revision` / `build.citation` — the short commit hash the deployed binary reports through
+  `retro_get_system_info`, and how that was read. This is what makes the entry checkable: **the word is a property of
+  one build, not of an emulator.** Beetle PSX is the case it was written for — upstream grew a SHA1 directory search
+  after the pinned commit, which would turn a `by-name` core into a `by-name-then-content` one.
+- `provenance.source` — which tree at which commit, and what was done to reach the citations.
+- Every string is refused **blank** as well as empty. A citation of spaces reads as filled in to anything that only
+  checks for emptiness, and this file's entire value is that it does not guess.
+- **`tests/test_core_firmware_tripwire.py` is what keeps the file honest.** Where an entered core is deployed it asks
+  the binary for its version string and fails when the entry's pinned revision is not in it. Machine-bound, so an
+  ordinary CI run skips it and the weekly canary is where an upgrade surfaces. A floor, not a proof: a revision can move
+  without a version string moving.
+- The carded standalone emulators need no entry here. Their word comes from the shape of their own
+  `standalone_firmware.json` card — a `search` card is `by-name-then-content`, a `files` or `config_files` card is
+  `by-name` — because the shape already is the statement.
+
 ## `duckstation_bios.json` — what a PlayStation BIOS _is_, by content
 
 The other half of the emulator that names no file. DuckStation identifies a BIOS by hashing it against a table compiled

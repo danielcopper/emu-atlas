@@ -866,6 +866,86 @@ class TestWhatEachValueOfAClosedVocabularyMeans:
         guide = first_column_of(guide_page(), "| value ")
         assert guide - {"null"} == set(subsection_values(generated, "CORE_SYSTEM_FIRMWARE_STATES"))
 
+    def test_the_guide_and_the_page_name_the_same_locating_values(self, generated: str) -> None:
+        # The third such pair, and the reason its guide table is headed with
+        # the field name rather than `value`: `first_column_of` finds a table by
+        # its header and refuses a header that heads two, so a second `| value `
+        # table would have made both comparisons ambiguous. No `null` row to
+        # drop here — the field is never null.
+        guide = first_column_of(guide_page(), "| `locating` ")
+        assert guide == set(subsection_values(generated, "FIRMWARE_LOCATING"))
+
+
+class TestAPostInitCheckAgainstAnImportedTupleNamesIt:
+    """A field held to a tuple a sibling module declares names that tuple too.
+
+    The reading that turns ``self.x not in NAME`` into a field's closed
+    vocabulary looked the name up only among the tuples the module *assigns*,
+    so a check written against an imported one resolved to nothing — and the
+    row still rendered, naming the annotation alone. That is the failure this
+    class exists for: a source silently missing from a row nobody can see is
+    wrong.
+    """
+
+    def test_a_check_against_a_local_tuple_resolves(self) -> None:
+        tree = ast.parse(
+            "WORDS = (\"a\", \"b\")\n"
+            "class C:\n"
+            "    def __post_init__(self):\n"
+            "        if self.x not in WORDS:\n"
+            "            raise ValueError\n"
+        )
+        assert reference.module_post_init_checks(tree)["C"]["x"].name == "WORDS"
+
+    def test_a_check_against_an_imported_tuple_resolves_only_when_it_is_carried(self) -> None:
+        tree = ast.parse(
+            "from .sibling import WORDS\n"
+            "class C:\n"
+            "    def __post_init__(self):\n"
+            "        if self.x not in WORDS:\n"
+            "            raise ValueError\n"
+        )
+        assert reference.module_post_init_checks(tree) == {}
+        stated = reference.module_post_init_checks(tree, {"WORDS": ("a", "b")})["C"]["x"]
+        assert (stated.name, stated.values) == ("WORDS", ("a", "b"))
+
+    def test_a_tuple_the_module_assigns_wins_over_the_import_of_that_name(self) -> None:
+        # The same shadowing `module_string_tuples` resolves, held here because
+        # this reading merges the two dictionaries itself.
+        tree = ast.parse(
+            "from .sibling import WORDS\n"
+            "WORDS = (\"local\",)\n"
+            "class C:\n"
+            "    def __post_init__(self):\n"
+            "        if self.x not in WORDS:\n"
+            "            raise ValueError\n"
+        )
+        stated = reference.module_post_init_checks(tree, {"WORDS": ("imported",)})["C"]["x"]
+        assert stated.values == ("local",)
+
+    def test_the_locating_row_names_its_tuple_the_way_its_neighbours_do(
+        self, generated: str
+    ) -> None:
+        # The live case: `FIRMWARE_LOCATING` is declared in `atlas.core_firmware`
+        # and the check that holds the field to it stands in `atlas.firmware`.
+        # Its row must name the tuple beside the annotation, exactly as the two
+        # rows above it do for vocabularies declared where they are checked.
+        # A cell may hold an escaped pipe (`str \| None`), so the split is on
+        # unescaped ones alone — splitting naively puts the union's halves in
+        # two cells and shifts every column after it.
+        rows = {}
+        for line in generated.splitlines():
+            if not line.startswith("| `cores[]."):
+                continue
+            cells = [
+                cell.replace("\0", "|").strip()
+                for cell in line.strip().strip("|").replace("\\|", "\0").split("|")
+            ]
+            rows[cells[0].strip(" `")] = cells[6]
+        assert "`FIRMWARE_LOCATING`" in rows["cores[].locating"], rows["cores[].locating"]
+        assert "`CORE_DECLARATION_STATES`" in rows["cores[].declaration"]
+        assert "`CORE_SYSTEM_FIRMWARE_STATES`" in rows["cores[].system_firmware"]
+
 
 class TestATupleComposedFromAnotherStatesItsValues:
     """``(*REFUSAL_CODES, REASON_KEY_UNREAD)`` is a vocabulary, not an expression.

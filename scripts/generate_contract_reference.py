@@ -538,10 +538,21 @@ def post_init_vocabularies() -> dict[str, dict[str, Vocabulary]]:
     a decision some method takes, not a statement about what the attribute
     admits, and the page says ``__post_init__`` — so the scan is what the page
     says rather than something wider that happens to agree today.
+
+    Each module is read with the tuples its ``from .sibling import NAME`` lines
+    carry in, which is the same resolution :func:`package_string_tuples` makes
+    for the vocabulary index. Without it a check written against an imported
+    name resolves to nothing and the field's row names only its annotation —
+    silently, because a row naming one source instead of two still renders.
     """
+    literal = _literal_string_tuples()
     found: dict[str, dict[str, Vocabulary]] = {}
-    for _, tree in package_modules():
-        for owner, checks in module_post_init_checks(tree).items():
+    for path, tree in package_modules():
+        imported = {
+            name: carried.values
+            for name, carried in imported_string_tuples(path, tree, literal).items()
+        }
+        for owner, checks in module_post_init_checks(tree, imported).items():
             found.setdefault(owner, {}).update(checks)
     return found
 
@@ -592,7 +603,9 @@ def _parameter_checks(function: ast.FunctionDef) -> dict[str, set[str]]:
     return found
 
 
-def module_post_init_checks(tree: ast.Module) -> dict[str, dict[str, Vocabulary]]:
+def module_post_init_checks(
+    tree: ast.Module, imported: Mapping[str, tuple[str, ...]] | None = None
+) -> dict[str, dict[str, Vocabulary]]:
     """One module's ``self.x not in NAME`` checks, ``__post_init__`` only.
 
     A ``__post_init__`` that hands its attributes to a module-level helper —
@@ -607,8 +620,17 @@ def module_post_init_checks(tree: ast.Module) -> dict[str, dict[str, Vocabulary]
     neither. One tuple, whether the check stands at the top of the body or
     inside the branch that reaches it, is the whole of what the attribute
     admits besides ``None``, which the nullability column states separately.
+
+    *imported* is what this module's sibling imports carry in, so a check
+    written against a tuple another module declares resolves to that tuple
+    rather than to nothing. It is merged *under* what the module assigns
+    itself, so a local tuple still wins — the same shadowing
+    :func:`module_string_tuples` resolves the same way round. Merging is what
+    the reading needs and passing alone is not: the ``imported`` parameter of
+    :func:`module_string_tuples` only lets a splat resolve, and a name this
+    module never assigns is absent from what it returns.
     """
-    tuples = module_string_tuples(tree)
+    tuples = {**(imported or {}), **module_string_tuples(tree, imported)}
     helpers = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
     found: dict[str, dict[str, Vocabulary]] = {}
     for owner, member in _post_init_methods(tree):

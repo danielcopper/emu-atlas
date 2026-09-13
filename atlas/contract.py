@@ -581,6 +581,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "declared_index": core.declared_index,
                 "label": core.label,
                 "declaration": core.declaration,
+                "locating": core.locating,
                 "requirements_met": core.requirements_met,
                 "system_firmware": core.system_firmware,
                 "requirements": [_requirement_entry_contract(r) for r in core.requirements],

@@ -2120,7 +2120,11 @@ it was started, so it has no destination this answer could state — the file dr
 **DuckStation names no file at all**, which is the third way a card can state its probes and the one that changes what
 `verify` means. `[BIOS] SearchDirectory` names a directory, three per-region keys may name an image inside it, and where
 they are empty — the state both arrangements ship — the emulator keeps every file of an accepted size and works out what
-it is by hashing it against a table compiled into its binary. Atlas carries that table, so the answer can name the
+it is by hashing it against a table compiled into its binary. That is how it behaves as shipped, and the word its entry
+carries is `locating: "by-name-then-content"` all the same: the three region keys are read **first**, and it is only
+because they ship empty that the search is what answers. The word describes the emulator's **code**, not the arrangement
+that happens to leave the keys blank — fill one in and the named half answers. See
+[How the emulator finds it](#how-the-emulator-finds-it--locating). Atlas carries that table, so the answer can name the
 image; what it will not do is claim one without reading the bytes:
 
 ```python
@@ -2403,6 +2407,8 @@ for core in answer.cores:
     core.emulator                  # the identity — the same word the catalogue entry carries, or None
     core.declared_index            # the catalogue row it was built from, or None (no row behind it)
     core.declaration               # 'read' | 'absent' (not installed) | 'unreadable' | 'unsupported' — four empties
+    core.locating                  # 'by-name' | 'by-name-then-content' | 'unestablished'
+                                   #   which door the emulator opens to find firmware — never null (see below)
     core.requirements_met          # True | False | None — THE field to render (see below)
     core.system_firmware           # what is RECORDED about this core's system — world knowledge (see below)
     for entry in core.requirements:
@@ -2567,6 +2573,50 @@ about such a declaration — and what it buys you is that a declaration with no 
 table existed. The mirror image of the wrong-shape case is `firmware-path-obstructed`: a directory sitting where a
 **file** declaration points, which establishes nothing either way and is still not a missing file. It rides every route,
 not just the `.info` one, so its message says what was read rather than what the table holds.
+
+### How the emulator finds it — `locating`
+
+`requirements` says which files an emulator wants. `locating` says how it goes looking for them, and the two together
+are what a client needs before it can turn a missing file into an instruction. It is world knowledge — read out of the
+emulator's own source at a pinned revision, packaged in `atlas/data/core_firmware.json` with a citation per fact, and
+never derived from this machine — and it is never `null`: an emulator that is not installed, or whose declaration could
+not be read, is still the emulator the knowledge describes.
+
+| `locating`             | what it says                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `by-name`              | the emulator opens files by name — the declared or configured names are what it reads             |
+| `by-name-then-content` | a configured name is opened first, and a search by content follows only where that file cannot be |
+| `unestablished`        | no source was read for this emulator, so which door it uses is unknown                            |
+
+`unestablished` is a claim about atlas, not about the emulator. Something finds the firmware; nobody here has
+established what. The requirement list beside that word is a **lower bound of unknown kind** — the declaration,
+faithfully reproduced, with no statement about whether those names are what the launch opens.
+
+What it changes for a client is the sentence beside a missing file. Under `by-name` the name is the whole answer: put a
+file of that name in that place and the emulator finds it, and no other file will do however right its bytes are. Under
+`by-name-then-content` a missing named file is not yet a failure, because the search by content may still answer it —
+which is also why a DuckStation requirement reads "found by the search, not named by any setting": its per-region keys
+ship empty, so the half that actually answers is the search, and the requirement names what the search found rather than
+what a setting asked for.
+
+The list is three words because three is what something here produces. A value no packaged entry states and no rule
+returns would be a branch you could write and never enter, so it is not published — and a word is added the day a
+reading needs it, which is a compatible change, rather than kept in reserve, which is not the same thing at all. An
+emulator read to search a directory while naming no file whatsoever would be the next word.
+
+SwanStation is the libretro example of `by-name-then-content`, and the one the field was written for. Its deployed
+`.info` declares five images and marks every one optional (counting rule: `atlas.core_info.enumerate_firmware` over the
+shipped file), so on the declaration alone the answer reads as a core with nothing required; the field says why that
+list is not the shape of the question. The core opens one name per console region from its own options — the defaults
+are `scph5500.bin`, `scph5501.bin` and `scph5502.bin` — under the frontend's system directory, and accepts whatever sits
+there if its size is one of three, consulting no table at all. Only when that file is absent or refused does it list the
+directory and recognise what it holds against a table of its own compiled into the binary. So a SwanStation that will
+not boot is not answered by "one of these five names is missing", and one that does boot may be booting a file none of
+them names. The readings behind that, and behind both Beetle PSX builds, are in
+[how a core locates firmware](research/core-firmware-locating.md).
+
+It moves no verdict. `requirements_met` is what it was before the field existed, in both directions: a word about how a
+file is found can neither satisfy a requirement nor fail one.
 
 ### What a listed folder holds
 

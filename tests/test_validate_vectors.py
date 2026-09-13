@@ -186,6 +186,7 @@ def _core(**overrides) -> Vector:
         "declared_index": None,
         "label": None,
         "declaration": "read",
+        "locating": "unestablished",
         "requirements_met": False,
         "system_firmware": None,
         "requirements": [_requirement()],
@@ -994,6 +995,13 @@ FIRMWARE_CORE_CASES = [
          "an emulator with neither a core nor a catalogue label", id="core-unidentifiable"),
     case(_base_firmware(cores=[_core(declaration="nope")]),
          "firmware core declaration must be one of", id="core-declaration-unknown"),
+    case(_base_firmware(cores=[_core(locating="by-vibes")]),
+         "firmware core locating must be one of", id="core-locating-unknown"),
+    # The one closed vocabulary on a core with no null in it: `unestablished`
+    # is how "nobody read a source" is stated, so a null here would be a second
+    # spelling of it that no answer produces.
+    case(_base_firmware(cores=[_core(locating=None)]),
+         "the field is never null", id="core-locating-null"),
     case(_base_firmware(cores=[_core(requirements={})]),
          "firmware core requirements must be a list", id="core-requirements-not-list"),
     case(_base_firmware(cores=[_core(declaration="absent", requirements_met=None)]),
