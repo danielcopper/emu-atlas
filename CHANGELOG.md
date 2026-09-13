@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.0](https://github.com/danielcopper/emu-atlas/compare/v0.19.0...v0.20.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** every core states how it locates firmware ([#473](https://github.com/danielcopper/emu-atlas/issues/473))
+
+### Features
+
+* **firmware:** every core states how it locates firmware ([#473](https://github.com/danielcopper/emu-atlas/issues/473)) ([9af423e](https://github.com/danielcopper/emu-atlas/commit/9af423e5e7d1ece16b1ae71ad1206b734510a37c)), closes [#466](https://github.com/danielcopper/emu-atlas/issues/466)
+
 ## [0.19.0](https://github.com/danielcopper/emu-atlas/compare/v0.18.0...v0.19.0) (2026-09-13)
 
 
