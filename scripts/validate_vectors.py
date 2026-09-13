@@ -257,7 +257,12 @@ KNOWN_SYSTEM_FIRMWARE_STATES = {
     "runs-without-firmware",
     "open",
 }
-UNCLAIMED_FIELDS = {"path", "identity", "known_as"}
+UNCLAIMED_FIELDS = {"path", "identity", "known_as", "description", "console", "concerns"}
+CONCERN_FIELDS = {"emulator", "relation"}
+# How an installed emulator is concerned with a file nobody declared: its own
+# recognition table holds the bytes, or its .info declares a name the packaged
+# table pins them for. Neither is a requirement.
+KNOWN_CONCERN_RELATIONS = {"recognises", "declares"}
 IDENTIFICATION_FIELDS = {"identity", "known_as", "requirements", "caveats"}
 IDENTITY_FIELDS = {"md5", "sha1", "size", "kind"}
 # What kind of thing a packaged identity is. It decides what a difference
@@ -2264,15 +2269,77 @@ def _validate_unclaimed(name: str, entry: Any, *, root: str, hash_checked: bool)
     known_as = entry["known_as"]
     if not isinstance(known_as, list) or not all(isinstance(n, str) and n for n in known_as):
         fail(f"{name}: unclaimed known_as must be a list of non-empty names")
+    _validate_concerns(name, entry["concerns"])
+    if not isinstance(entry["console"], (str, type(None))) or entry["console"] == "":
+        fail(f"{name}: an unclaimed file's console must be a non-empty system id or null")
     if identity is None:
-        if known_as:
-            fail(f"{name}: an unrecognised file is known as nothing — known_as must be empty")
+        _validate_unidentified(name, entry)
     else:
-        _validate_identity(name, identity, "an unclaimed file's identity")
-        if not known_as:
-            fail(f"{name}: recognised content is known under at least the name it was matched by")
-        if not hash_checked:
-            fail(f"{name}: an unclaimed file is identified by content — impossible without hash checking")
+        _validate_identified(name, entry, hash_checked=hash_checked)
+
+
+def _validate_unidentified(name: str, entry: Any) -> None:
+    """What an entry no table knew may say: its path, and nothing more.
+
+    All four follow from the identity — no table knew these bytes, so none
+    named them, no size class placed them and no emulator's table holds them.
+    """
+    if entry["known_as"]:
+        fail(f"{name}: an unrecognised file is known as nothing — known_as must be empty")
+    if entry["description"] is not None or entry["console"] is not None or entry["concerns"]:
+        fail(
+            f"{name}: an unidentified file says nothing about itself — description, console "
+            "and concerns all follow from a table knowing the bytes"
+        )
+
+
+def _validate_identified(name: str, entry: Any, *, hash_checked: bool) -> None:
+    """What an entry a packaged table knew must carry, and what it need not.
+
+    A table that pins a sha1 is one keyed by name, and then the name it was
+    matched under is the least it is known by. A content-keyed emulator table
+    pins no sha1 and names no file at all, so an empty ``known_as`` is its
+    honest answer — while its own name for the content is not optional either
+    way.
+    """
+    identity = entry["identity"]
+    _validate_identity(name, identity, "an unclaimed file's identity")
+    if not entry["known_as"] and identity["sha1"] is not None:
+        fail(
+            f"{name}: recognised content is known under at least the name it was matched by, "
+            "unless the table that named it pins no sha1 and so names no file"
+        )
+    if not isinstance(entry["description"], str) or not entry["description"]:
+        fail(f"{name}: identified content carries the table's own name for it, as a non-empty string")
+    if not hash_checked:
+        fail(f"{name}: an unclaimed file is identified by content — impossible without hash checking")
+
+
+def _validate_concerns(name: str, concerns: Any) -> None:
+    """The emulators a file nobody declared concerns — sorted, and each stated once.
+
+    The order is the contract's, not the emitter's convenience: a client that
+    diffs two answers over one machine compares lists, and two orderings of one
+    set would read as a change. Sorted by the pair, which is how the resolver
+    sorts it.
+    """
+    if not isinstance(concerns, list):
+        fail(f"{name}: unclaimed concerns must be a list")
+    seen = []
+    for concern in concerns:
+        _require_exact(name, concern, CONCERN_FIELDS, "each unclaimed concern")
+        if not isinstance(concern["emulator"], str) or not concern["emulator"]:
+            fail(f"{name}: a concern names the emulator it is about")
+        if concern["relation"] not in KNOWN_CONCERN_RELATIONS:
+            fail(
+                f"{name}: a concern's relation must be one of "
+                f"{sorted(KNOWN_CONCERN_RELATIONS)}, got {concern['relation']!r}"
+            )
+        seen.append((concern["emulator"], concern["relation"]))
+    if len(set(seen)) != len(seen):
+        fail(f"{name}: one emulator states one concern of a kind, not two")
+    if seen != sorted(seen):
+        fail(f"{name}: unclaimed concerns are sorted by emulator and relation")
 
 
 def _validate_firmware_coverage(name: str, firmware: Any, cores: Any) -> None:

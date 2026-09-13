@@ -2356,7 +2356,7 @@ Four questions, verification strictly opt-in. The first three share one answer s
 ```python
 inst.firmware_for_core("mgba_libretro.so")                  # what does this core want, and where?
 inst.firmware_for_system("gba")                             # which cores run this system, what does each want?
-inst.firmware_inventory(verify=True)                        # every installed core, plus what nothing claims
+inst.firmware_inventory(verify=True)                        # every installed emulator, plus what nothing claims
 inst.identify_firmware(md5="32fbbd84…")                     # this content: what is it, where does it go?
 ```
 
@@ -2369,9 +2369,30 @@ and `emulator-catalogue-unavailable` says so. An id the readable layers of a sea
 empty with `firmware-declaration-unknown` — a look that failed, never `system-unknown` — because the declaration may sit
 in the layer nobody could read.
 
-`firmware_inventory` enumerates the installed cores, and only those: a standalone emulator has no core to enumerate, so
-it is never an entry there. Where a frontend catalogue is the enumeration, `firmware_for_system` states it beside the
-libretro ones; where the enumeration is derived from the installed cores instead, no question reaches it at all.
+`firmware_inventory` enumerates the installed cores and, where a frontend catalogue declares which emulators launch
+which system, the standalone emulators atlas carries a firmware card for: Cemu, PCSX2, melonDS, xemu and DuckStation
+today. Their entries come after the libretro ones, in catalogue order, and carry `declaration: "packaged"` with
+`core_so: null` — the same answer `firmware_for_system` gives for the same emulator. A standalone emulator atlas has no
+card for is not an entry here: that its rules are outside the resolver's coverage is a statement `firmware_for_system`
+makes per catalogue row, and repeating it would add rows that say nothing about the tree this answer is about.
+
+Three arrangements, three different answers about the standalone half. On a bare RetroArch no frontend enumerates
+anything and the answer is the installed cores alone. Where the catalogue **could not be read** the answer names no
+standalone emulator either — and says so: `emulator-catalogue-unreadable` rides it, and an empty answer reports
+`firmware-declaration-unknown` rather than the established `no-firmware-declaration`, because whether a card would have
+been declared is exactly what nobody could ask. Where part of it could not be consulted — EmuDeck's bundled
+`es_systems.xml`, sealed inside the AppImage — `emulator-catalogue-sealed` rides it once, with no system in its data,
+and the readable layers answer. Every further statement about that catalogue's own health rides too, the same ones
+`firmware_for_system` carries and in the same order: a layer ES-DE refuses wholesale (`catalogue-invalid`), a custom
+layer that declared itself exclusive, and on EmuDeck the two that qualify which ES-DE was read at all.
+
+Carrying the cards is what stops one file being two answers. A card's own read claims what it looked at, the way a
+listed folder's read does: every file a DuckStation search kept (its size gate's survivors, the set the emulator's own
+recognition runs over) and every destination a card names. Those files leave `unclaimed`, because on RetroDECK
+DuckStation's search directory _is_ the firmware root — so a BIOS image there was that card's satisfied requirement in
+`firmware_for_system` and a file nobody asks for in `firmware_inventory` at the same time. The claim is by resolved
+path, so a card destination an arrangement links into the firmware tree claims its target; a destination outside the
+root claims nothing there, since the scan never looks outside it.
 
 Reading a `FirmwareAnswer`:
 
@@ -2402,16 +2423,24 @@ for core in answer.cores:
                                        #   over a folder the core lists, the verdict about what it holds
             req.supplied_by            # the distribution's own copy, or None — see below
     core.refused                   # declarations atlas would not follow, each with the reason it was refused
-answer.unclaimed                   # files in the firmware tree that no installed core declares, identified by content
+for file in answer.unclaimed:      # in the tree, asked for or claimed by no installed emulator
+    file.path                      # the absolute resolved path
+    file.identity, file.known_as   # what the bytes are, by CONTENT — None/() without verify
+    file.description               # the table's own name for the content, or None
+    file.console                   # the system the bytes belong to, or None — never from the file name
+    for concern in file.concerns:  # the installed emulators these bytes concern
+        concern.emulator           # the identity, the same word core.emulator carries
+        concern.relation           # 'recognises' (its own table holds them) | 'declares' (its .info names them)
 ```
 
 **Joining a firmware answer back to the entry the user picked: `(core.emulator, core.declared_index)`.** Both are the
 catalogue entry's own fields, under the same names and with the same values. The identity is the core file's basename
 for a libretro core and the launch command's own word for a standalone one, `null` where no command identified an
 emulator; the position is the shipped place of the catalogue row this answer was built from, `null` where no catalogue
-row was behind it at all — the inventory, `firmware_for_core`, a derived enumeration. `label` does not join: it is a
-display name, and on a derived enumeration the firmware core carries none at all while its identity stands. `core_so`
-does not join either, because a standalone emulator has none.
+row was behind it at all — the inventory's libretro entries, `firmware_for_core`, a derived enumeration (the inventory's
+carded standalone entries were built from a catalogue row and carry one). `label` does not join: it is a display name,
+and on a derived enumeration the firmware core carries none at all while its identity stands. `core_so` does not join
+either, because a standalone emulator has none.
 
 So a client that asked `emulators_for(system)`, let the user pick a row, and now wants that row's firmware matches the
 pair. Neither half carries it alone. The identity is not enough where two rows launch one emulator, because both cores
@@ -2613,12 +2642,55 @@ check denies, or one whose bytes it could not read — is claimed by that declar
 once by the read that saw it. The claim is by resolved path, so a listed entry that is a link into another directory
 claims its target, while the caveat names the entry the listing saw — the name the core lists and opens through the
 link. A candidate that fails the check and matches nothing under the row's prefix is claimed by nobody, so the unclaimed
-scan states it wherever that scan reaches, and identifies it against the whole packaged table, which may know it under
-another prefix.
+scan states it wherever that scan reaches — and identifies it against the whole of each packaged table, which may know
+it under another prefix.
 
 `unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
 requirement: declarations are resolved, never globbed).
+
+### What an unclaimed file says about itself
+
+With `verify`, each entry's bytes are looked up in **every packaged table atlas carries** — the libretro `System.dat`
+table and DuckStation's own BIOS table — in one pass over the tree. Where both know them the `identity` is the libretro
+one, because that table pins a `sha1` and the names the content goes by while a content-keyed emulator table pins
+neither; the other table's reading is not lost, it states its own `concerns` entry. DuckStation's table is consulted
+only for a file whose size is one of the three the emulator accepts, which is its own first filter — and no second hash
+is paid for it, since the md5 the libretro lookup needs is the md5 that table matches on.
+
+Three fields carry what was found, and all three are `None`/empty without `verify` and for bytes no table knows:
+
+- **`description`** — the table's own name for the content, for a person to read. One rule, the identity's: the table
+  that states the identity states this too. The libretro table's is the names the content goes by joined with `", "`
+  (`"scph5501.bin, scph7003.bin"`); DuckStation's is the row's own description (`"DTL-H1100 (v2.2 03-06-96 D)"`), which
+  names no file, because that emulator names none.
+- **`console`** — the system the bytes belong to, **never inferred from the file name**, which is the one thing not to
+  be trusted about a file nobody declared. Two sources state it: an emulator table's size class, which is a console (of
+  DuckStation's three, 512 KiB is `psx`, 4 MiB is `ps2` and 3.9 MiB is `ps3`), and the system attribution of the
+  declarations that name the content — every installed core whose own declared path the table pins these bytes for,
+  which is the same path-then-base-name reading the requirement route makes of that declaration. Exactly one system has
+  to result. Two or more make it `null`, because a file two machines claim is not a file one of them owns, and a core
+  whose `.info` states no `systemname` at all contributes none (`_unknown` is a fact about that core, not a machine).
+- **`concerns`** — the installed emulators these bytes matter to, sorted, without duplicates. `recognises` means the
+  emulator's own recognition table holds them, so it would know the file by content wherever its search reaches
+  (DuckStation). `declares` means a libretro core's `.info` declares a name the packaged table pins these bytes for, so
+  the bytes are what that declaration asks for. An emulator whose card carries no table of its own never appears — Cemu,
+  PCSX2, melonDS and xemu name their files outright, and what they want is stated by their own entries.
+
+**An entry here states what is known about a file and satisfies nothing.** No requirement is answered by it and no
+`requirements_met` moves: the file carries a name nobody declared, which is what puts it in this list, and a `declares`
+concern is a statement about the bytes rather than about a core having what it needs. So a PlayStation dump filed by
+hand reads:
+
+```python
+UnclaimedFile(
+    path="/mnt/sd/retrodeck/bios/psx-devkit.bin",
+    identity=FirmwareIdentity(md5="ca5cfc...", sha1=None, size=524288, kind="file"),
+    description="DTL-H1100 (v2.2 03-06-96 D)",
+    console="psx",
+    concerns=(Concern(emulator="DUCKSTATION", relation="recognises"),),
+)
+```
 
 A core's requirement list is what its `.info`'s own `firmware_count` enumerates — RetroArch reads `firmware0_…` up to
 `firmware<count-1>_…` and nothing else, so a `.info` without a readable count declares no firmware at all however many
