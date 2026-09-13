@@ -1334,18 +1334,20 @@ both frontends start a game — or `user-auto-connect` is on; that list comes fr
 same way, so the check is the emulator's own rather than a guess from directory names. So where that listing completed
 and holds the recorded id, a frontend launch reopens exactly that user, and **the answer's `dir` names its tree** —
 composed from the identity, which the first save creates where no directory of that name exists yet. **Every user Vita3K
-itself would list is a group of its own** — a directory without a `user.xml`, or with one that does not parse, is no
-user the emulator opens and is stated under `skipped` instead — with the recorded id beside them as a `user-id` reading
-and as `configured_user` in the `core-mode-unestablished` caveat, whose `reason` says which case this machine is: the
-recorded user's tree is the one named; the recorded user is not set up here (its directory exists, but no `user.xml`
-lists it as that user — the player picks); the recorded user has no tree here at all; whether it is set up could not be
-read (a `user.xml` atlas could not read, stated under `unestablished`); no user the emulator would list was found at all
-(the directories found are all skipped, and `users` names the stand-in); whether the emulator would list a user account
-here was not established (at least one entry found is one atlas could not decide and none is listed, whatever else was
-skipped); or the tree could not be listed, in which case `dir` names the stand-in tree whatever the short listing handed
-back, the directories it did reach stay groups of their own, and a `save-dir-unlistable` caveat states the listing as
-short. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is recorded — the
-headline follows the launch a frontend makes.
+itself would list is a group of its own** where every entry found was decided, the reopening above being withdrawn on a
+narrower condition of its own, that an entry found can end the emulator's walk, as the walk paragraph below sets out — a
+directory without a `user.xml`, or with one that does not parse, is no user the emulator opens and is stated under
+`skipped` instead — with the recorded id beside those groups as a `user-id` reading and as `configured_user` in the
+`core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded user's tree is the one
+named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as that user — the player
+picks); the recorded user has no tree here at all; whether it is set up could not be read (a `user.xml` atlas could not
+read, stated under `unestablished`); no user the emulator would list was found at all (the directories found are all
+skipped, and `users` names the stand-in); whether the emulator would list a user account here was not established (at
+least one entry found is one atlas could not decide and none is listed, whatever else was skipped); or the tree could
+not be listed, in which case `dir` names the stand-in tree whatever the short listing handed back, the directories it
+did reach stay groups of their own, and a `save-dir-unlistable` caveat states the listing as short. A plain launch of
+the emulator without `user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a
+frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
@@ -1389,14 +1391,23 @@ a reason the library settles rather than leaves open: `get_users_list` tests `fs
 only where that kind is absent (directory.hpp:544-547, directory.cpp:413-450 at the bundled Boost 1.89, which the build
 uses when no system Boost 1.81 or newer is found, and which 1.81 reads alike) — so such an entry passes the directory
 test and stands or falls on its `user.xml` like any other, is skipped, or ends the listing with a thrown
-`filesystem_error`, by a `d_type` atlas does not read. The stem that keys an id-less `user.xml` is boost::filesystem's
-`path::stem`, mirrored here as the name cut at the rightmost period unless that period leads it — `.hidden.bak` keys
-`.hidden`, `..bak` keys `.`. **Vita3K compiles `stem_v3`, and that mirror is known to differ from it for one shape of
-name.** `path::stem` dispatches on `BOOST_FILESYSTEM_VERSION`, which boost defaults to 3 for a consumer that does not
-set it, and Vita3K's tree sets it nowhere; `stem_v3` cuts at the rightmost period even where that period leads the name
-(path.cpp:824-834), while `stem_v4` leaves it alone (:836-846), and both leave `.` and `..` whole. So a name that is a
-leading period followed by more, with no later period — `.hidden` — keys the empty string in the emulator and `.hidden`
-here. Every other shape agrees. This is a known difference, not a change this release makes.
+`filesystem_error`, by a `d_type` atlas does not read. That third road is why the sentence beside a Vita3K answer says
+**every user Vita3K itself would list is stated only where every entry found was decided**: with an entry whose own
+`stat` failed beside them, it says instead that the users stated are the ones established here and that the emulator's
+own listing can end at such an entry — at any of them, since one throw ends the one walk — leaving whatever it had not
+reached by then unlisted. The sentence that answers a recorded user the listing does hold hedges its head for the same
+reason: a walk that ends before reaching that user leaves `gui.users` without it and opens the user manager, so there
+the answer says the user is among the ones listed here and that a launch reopens it where Vita3K's own listing reached
+it. The other way an entry goes undecided — a `user.xml` atlas could not read — ends nothing, so there the sentence
+drops the full-list claim without naming an early end. The stem that keys an id-less `user.xml` is boost::filesystem's
+`path::stem`, and which of its two stems runs is the caller's: `BOOST_FILESYSTEM_VERSION` stands at 3 for anyone who
+does not set it, and Vita3K's tree sets it nowhere, so the emulator compiles **`stem_v3`, the name cut at the rightmost
+period wherever that period falls** (path.cpp:824-834), where `stem_v4` guards a period at position 0 (:836-846); both
+leave `.` and `..` whole. atlas mirrors `stem_v3`: `.hidden.bak` keys `.hidden` and `..bak` keys `.`, as they do under
+either stem, and `.hidden` — a leading period with no later one — keys the **empty string**. That is a key and not a
+hole: `gui.users` is a `std::map<std::string, User>`, so the directory is listed and stated as a tree of its own, while
+a `user-id` of `.hidden` matches nothing, because `init_home` asks `gui.users.contains`. A directory the emulator itself
+wrote never reaches the stem at all — `save_user` stamps an explicit `id` equal to the directory name.
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's

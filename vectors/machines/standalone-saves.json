@@ -5185,6 +5185,112 @@
       }
     },
     {
+      "name": "vita3k-a-leading-period-user-directory-is-listed-under-the-empty-id",
+      "rationale": "The same directory with an id-less user.xml. get_users_list keys such a directory by path.stem() (user_management.cpp:97), which for a leading period with no later one is the empty string: the build compiles boost's stem_v3, erasing from the rightmost period wherever it falls (path.cpp:824-834), since BOOST_FILESYSTEM_VERSION stands at 3 for a caller that does not set it (config.hpp:27-32) and Vita3K sets it nowhere. The empty key is a key — gui.users is a std::map<std::string, User> (state.h:304) — so .hidden is listed and keeps a tree of its own; what it is not is a user answering to \".hidden\", so the recorded user-id matches nothing (init_home, gui.cpp:689), moves no headline, and the answer names the first listed tree instead.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/.hidden/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "core": "VITA3K",
+                "reason": "configured-user-not-set-up",
+                "users": [
+                  ".hidden",
+                  "00"
+                ],
+                "configured_user": ".hidden"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": ".hidden",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "vita3k-a-leading-period-directory-without-user-xml-is-not-a-set-up-user",
       "rationale": "The directory the recorded id names starts with a period and holds no user.xml, so get_users_list skips it (user_management.cpp:89 at cb1f592c) and the launch opens the user manager (init_home, gui.cpp:688-696): the caveat says the recorded user is not set up here, the directory is stated under skipped rather than as a group, and the headline is the first listed tree, 00. The point of the fixture is that the survey reaches the directory at all: a listing that never saw it would have said the recorded user has no tree here, which is a different fact.",
       "input": {
@@ -5287,7 +5393,7 @@
     },
     {
       "name": "vita3k-a-leading-period-stem-keeps-the-period-and-cuts-at-the-later-one",
-      "rationale": "An id-less user.xml keys the user by the directory name's stem (get_users_list, user_management.cpp:97 at cb1f592c), and that stem is boost::filesystem's path::stem — fs is boost (util/fs.h:20,30). atlas mirrors stem_v4, which cuts at the rightmost period unless that period leads the name (path.cpp:836-846): .hidden.bak stems to .hidden, its leading period kept, and it stems the same under stem_v3 (:824-834) because the cut falls at the later period. With user-id .hidden recorded that directory answers to the recorded id, so the headline composes from the identity — ux0/user/.hidden/savedata, a tree the first save creates — while the group stays the directory found.",
+      "rationale": "An id-less user.xml keys the user by the directory name's stem (get_users_list, user_management.cpp:97 at cb1f592c), and that stem is boost::filesystem's path::stem — fs is boost (util/fs.h:20,30). atlas mirrors stem_v3, the stem this build compiles, which cuts at the rightmost period wherever that period falls (path.cpp:824-834): .hidden.bak stems to .hidden, its leading period kept because the cut falls at the later one, and it stems the same under stem_v4 (:836-846), whose guard on a period at position 0 this name never trips. With user-id .hidden recorded that directory answers to the recorded id, so the headline composes from the identity — ux0/user/.hidden/savedata, a tree the first save creates — while the group stays the directory found.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5687,7 +5793,7 @@
     },
     {
       "name": "vita3k-a-user-root-entry-whose-own-stat-fails-is-stated-not-dropped",
-      "rationale": "01 is a name the walk of ux0/user handed back and whose own stat failed. Vita3K reaches such an entry as a boost::filesystem::directory_entry, whose is_directory answers from the kind readdir handed the walk and stats only where that kind is absent (directory.hpp:544-547, directory.cpp:413-450 at the bundled Boost 1.89, which the build uses when no system Boost 1.81 or newer is found, and which 1.81 reads alike) — so the entry passes the directory test and stands or falls on its user.xml like any other, is skipped, or throws out of the listing, by a d_type atlas does not read. Not established, stated as that beside the user that did list, and no group names its savedata.",
+      "rationale": "01 is a name the walk of ux0/user handed back and whose own stat failed. Vita3K reaches such an entry as a boost::filesystem::directory_entry, whose is_directory answers from the kind readdir handed the walk and stats only where that kind is absent (directory.hpp:544-547, directory.cpp:413-450 at the bundled Boost 1.89, which the build uses when no system Boost 1.81 or newer is found, and which 1.81 reads alike) — so the entry passes the directory test and stands or falls on its user.xml like any other, is skipped, or throws out of the listing, by a d_type atlas does not read. Not established, stated as that beside the user that did list, and no group names its savedata. It is also the shape in which the answer cannot claim the whole list: the third road throws out of gui::init with gui.users already cleared (operations.cpp:571-581; gui.cpp:914), so the emulator's own list is whatever prefix its walk had reached, and the sentence says the users stated are the ones established here and that the listing can end at 01 — prose, and so outside this expected block, which carries the shape it rests on: a listed user and an unestablished entry side by side.",
       "input": {
         "home": "/home/deck",
         "files": {
