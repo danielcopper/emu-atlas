@@ -4591,10 +4591,13 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/..bak/savedata"]
 
     def test_vita3k_a_leading_period_stem_keeps_the_period(self):
-        # A period that leads the name is not an extension cut: .hidden.bak
-        # stems to .hidden (fs_path.cc:1885-1887 — rfind(dot) at a non-zero
-        # position), and .hidden alone stems to itself. Recorded .hidden is
-        # therefore listed by both, and the headline composes from the id.
+        # .hidden.bak stems to .hidden under either of boost's stems, because
+        # the cut falls at a period that does not lead the name: stem_v3 erases
+        # from the rightmost period (path.cpp:824-834) and stem_v4 erases from
+        # the same one, guarding only a period at position 0 (:836-846). So the
+        # recorded .hidden is listed here whichever the emulator compiles, and
+        # the headline composes from the id. The name where they part is
+        # .hidden, which the test below holds.
         p = self._answer(
             "psvita",
             files={
@@ -4609,14 +4612,18 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["reason"] == VITA3K_TREE_NAMED
         assert [g.dir for g in p.file_set.groups] == ["/mnt/sd/vita/ux0/user/.hidden.bak/savedata"]
 
-    def test_vita3k_a_leading_period_user_directory_is_reached_and_listed(self):
+    def test_vita3k_a_leading_period_user_directory_is_listed_under_the_empty_id(self):
         # directory_iterator returns .hidden like any other name (get_users_list,
-        # user_management.cpp:87), and an id-less user.xml keys it by its stem —
-        # the whole name under the stem rule atlas mirrors. [D] The emulator's
-        # own build compiles boost's stem_v3, which keys this one shape as the
-        # empty string; that divergence is documented at `_vita3k_stem` and is
-        # not what this test decides. A survey that globbed "*" alone never saw
-        # the directory and read the recorded user as having no tree here.
+        # user_management.cpp:87), and an id-less user.xml keys it by its stem
+        # (:97) — which for this one shape, a leading period with no later one,
+        # is the empty string: the build compiles stem_v3, which erases from
+        # the rightmost period wherever it falls (path.cpp:824-834). The
+        # directory is listed all the same, under that key — gui.users is a
+        # std::map<std::string, User> (state.h:304) and :100 takes the empty
+        # string like any other — so it stays a group of its own. What it is
+        # not is a user answering to ".hidden": init_home asks
+        # gui.users.contains(cfg.user_id) (gui.cpp:689), and no key spells
+        # that, so the record moves nothing and the user manager opens.
         p = self._answer(
             "psvita",
             files={
@@ -4627,10 +4634,34 @@ class TestTheUserAPerUserTreeWouldOpen:
             dirs=["/mnt/sd/vita/ux0/user/.hidden", "/mnt/sd/vita/ux0/user/00"],
         )
         assert not isinstance(p, atlas.Unresolved)
+        # The first listed tree, which is what a headline-less answer names —
+        # not the recorded user's, which is what it named while the mirror was
+        # stem_v4 and the same directory answered to ".hidden".
         assert p.dir == VITA3K_HIDDEN_SAVEDATA
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == VITA3K_TREE_NAMED
+        assert caveat.data["reason"] == VITA3K_NOT_SET_UP
+        assert "it answers to the empty id instead" in caveat.message
         assert caveat.data["users"] == (".hidden", "00")
+
+    def test_vita3k_an_id_attribute_stated_empty_is_a_key_and_not_a_missing_one(self):
+        # The second road to the empty id, and the one that did not wait for
+        # stem_v3: pugixml's attribute test asks whether the attribute exists,
+        # not whether it says anything (user_management.cpp:94-95), so
+        # <user id=""/> keys the empty string and the directory is listed under
+        # it. A record naming the directory misses it exactly as above.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                VITA3K_USER_00_XML: '<?xml version="1.0"?>\n<user id=""/>\n',
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_NOT_SET_UP
+        assert "it answers to the empty id instead" in caveat.message
+        assert caveat.data["users"] == ("00",)
 
     def test_vita3k_a_leading_period_directory_without_user_xml_is_not_set_up(self):
         # Reached, and then skipped by the emulator's own rule — the same
@@ -5344,6 +5375,175 @@ class TestTheUserAPerUserTreeWouldOpen:
             "whether Vita3K lists 01 is not established — nothing about it could be looked at"
             in caveat.message
         )
+
+    def test_vita3k_a_listed_user_beside_an_entry_that_can_end_the_walk_says_where(self):
+        # 00 is listed and stated, and the claim beside it is no longer "every
+        # user Vita3K itself would list": 01 is an entry whose own stat failed,
+        # which the walk may hand back as DT_UNKNOWN or DT_LNK, and that road's
+        # deferred stat throws out of gui::init with gui.users cleared already
+        # (operations.cpp:571-581; gui.cpp:914) — so the emulator's own list is
+        # whatever prefix its walk had reached, and 00 standing in this answer
+        # says nothing about 00 standing in that one.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert (
+            "the users stated are the ones established here, since Vita3K's own listing can "
+            "end at 01, leaving whatever its walk had not reached by then unlisted"
+            in caveat.message
+        )
+        assert "every user Vita3K itself would list is stated" not in caveat.message
+
+    def test_vita3k_a_listed_user_beside_an_unreadable_user_xml_claims_no_full_list(self):
+        # The other way to be unestablished ends nothing: load_file decides that
+        # one directory and the walk goes on (user_management.cpp:89). So the
+        # claim drops the universal — 01 may well be a user the emulator lists,
+        # which is exactly what is unsettled — without naming an early end the
+        # evidence does not support.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": {"status": "unreadable"},
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert caveat.data["unestablished"] == ("01",)
+        assert (
+            "the users stated are the ones established here rather than every user Vita3K "
+            "itself would list" in caveat.message
+        )
+        assert "listing can end at" not in caveat.message
+
+    def test_vita3k_a_survey_that_decided_every_entry_states_the_whole_list(self):
+        # The universal is this answer's to make where it holds: 01 has no
+        # user.xml, which is the emulator's own skip rather than something left
+        # open, so every entry found was decided and the users stated are the
+        # emulator's own list.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00",)
+        assert caveat.data["skipped"] == ("01",)
+        assert "unestablished" not in caveat.data
+        assert "every user Vita3K itself would list is stated" in caveat.message
+
+    def test_vita3k_the_recorded_users_own_sentence_drops_the_full_list_claim_too(self):
+        # The claim rides the sentence that answers a recorded user the listing
+        # holds as well, because that sentence made it too: naming 00's tree
+        # rests on 00 being listed, and says nothing about the entry the walk
+        # may have stopped at before reaching anything else.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_TREE_NAMED
+        assert "Vita3K's own listing can end at 01" in caveat.message
+        assert "every user Vita3K itself would list is stated" not in caveat.message
+        # The head of that sentence is hedged to match: a walk that throws at
+        # 01 before reaching 00 leaves gui.users without 00 and opens the user
+        # manager (gui.cpp:689), so the sentence may not say the emulator's own
+        # list holds this user, nor that a launch reopens it outright.
+        assert "among the ones listed here" in caveat.message
+        assert "reopens that user where Vita3K's own listing reached it" in caveat.message
+        assert "among the ones Vita3K itself would list" not in caveat.message
+        assert "reopens exactly that user" not in caveat.message
+
+    def test_vita3k_the_recorded_users_sentence_keeps_its_head_where_nothing_truncates(self):
+        # The same state with every entry decided: nothing can end the walk
+        # early, so the head is the unhedged one and the full-list claim stands.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_TREE_NAMED
+        assert caveat.data["skipped"] == ("01",)
+        assert "among the ones Vita3K itself would list" in caveat.message
+        assert "reopens exactly that user" in caveat.message
+        assert "every user Vita3K itself would list is stated" in caveat.message
+        assert "listing can end at" not in caveat.message
+
+    def test_vita3k_an_undecided_entry_that_cannot_end_the_walk_leaves_the_head_alone(self):
+        # The case that separates the two conditions, and the one an answer
+        # keyed on "is anything undecided?" would get wrong. 01's user.xml
+        # could not be read, so the survey leaves 01 undecided and the stated
+        # users are not claimed to be the whole list — but load_file failing on
+        # 01 ends nothing (user_management.cpp:89), so the walk still reaches
+        # 00, gui.users holds it, and the head keeps both of its claims.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": {"status": "unreadable"},
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_TREE_NAMED
+        assert caveat.data["unestablished"] == ("01",)
+        assert "among the ones Vita3K itself would list" in caveat.message
+        assert "reopens exactly that user" in caveat.message
+        # The claim beside that head is still the short one: 01 may be a user
+        # the emulator lists, so the stated users are not its whole list.
+        assert (
+            "the users stated are the ones established here rather than every user Vita3K "
+            "itself would list" in caveat.message
+        )
+        assert "every user Vita3K itself would list is stated" not in caveat.message
+        assert "listing can end at" not in caveat.message
+
+    def test_vita3k_two_entries_that_can_end_the_walk_are_one_ending_not_two(self):
+        # The walk ends at whichever such entry it reaches first and throws on,
+        # which is one ending however many entries could be it — so the clause
+        # says "any of" rather than naming a series of endings.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01", "/mnt/sd/vita/ux0/user/02"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["unestablished"] == ("01", "02")
+        assert "Vita3K's own listing can end at any of 01 and 02" in caveat.message
 
     def test_the_listing_is_complete_only_when_both_globs_are(self):
         # The two globs share one walk on both machines, so nothing in the

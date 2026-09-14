@@ -9853,7 +9853,9 @@ def _rpcs3_savefile_placement(
 # tree. ``pref-path`` in config.yml, and everything the emulator keeps hangs
 # off it as ``ux0/…``; saves are ``ux0/user/<user id>/savedata/<title id>``
 # (io.cpp:136-143). Same user-account shape as RPCS3, and the same answer to
-# it: every user directory the emulator itself would list is stated.
+# it: every user directory the emulator itself would list is stated — a claim
+# the answer makes only where every entry found was decided, because this walk
+# can also end early (see ``_vita3k_listing_claim``).
 # ---------------------------------------------------------------------------
 
 _VITA3K_PREF_PATH_KEY = "pref-path"
@@ -9930,7 +9932,10 @@ class _Vita3kListedUser:
     ``id`` attribute where its root ``<user>`` element carries one (present
     but empty counts as present, matching pugixml's attribute test), and the
     directory name's stem otherwise — or ``None`` when the directory yields
-    no user at all, or when whether it does could not be read.
+    no user at all, or when whether it does could not be read. The empty
+    string is one of those keys rather than a missing one: both roads reach it
+    — an ``id`` attribute stated empty, and a name :func:`_vita3k_stem` cuts
+    away entirely — and the map the emulator fills takes it (state.h:304).
     """
 
     directory: str
@@ -9939,37 +9944,50 @@ class _Vita3kListedUser:
 
 
 def _vita3k_stem(name: str) -> str:
-    """``path::stem`` of a name — boost::filesystem's, since ``fs`` is boost.
+    """``path::stem`` of a name — the ``stem_v3`` Vita3K's own build compiles.
 
-    What this mirrors: the name cut at the rightmost period, left whole where
-    that period leads it or the name is ``.`` or ``..`` — so ``01.bak`` stems
-    to ``01`` and ``..bak`` to ``.``, while ``.hidden`` keeps its period. That
-    is ``stem_v4``'s rule (path.cpp:836-846). Neither stdlib spelling is that
-    mirror: ``os.path.splitext`` skips a leading run of periods and
-    ``PurePath.stem`` keeps a trailing one.
+    What this mirrors: the name cut at the rightmost period wherever that
+    period falls, left whole only where the name is ``.`` or ``..`` — so
+    ``01.bak`` stems to ``01``, ``..bak`` to ``.``, ``.hidden.bak`` to
+    ``.hidden``, and ``.hidden``, a leading period with no later one, to the
+    empty string. Neither stdlib spelling is that mirror: ``os.path.splitext``
+    skips a leading run of periods and ``PurePath.stem`` keeps a trailing one.
 
-    [D] Vita3K compiles ``stem_v3``, and this mirror is known to differ from it
-    for one shape of name. ``path::stem`` dispatches on
-    ``BOOST_FILESYSTEM_VERSION`` (path.hpp:1596-1599 through
-    ``BOOST_FILESYSTEM_VERSIONED_SYM``, config.hpp:34), which boost defaults to
-    3 for any consumer that does not set it (config.hpp:27-32) — and an
-    unfiltered scan of Vita3K's own tree at cb1f592c finds the macro nowhere,
-    nor ``BOOST_FILESYSTEM_SOURCE``. ``stem_v3`` cuts at the rightmost period
-    even where that period leads the name (path.cpp:824-834), while ``stem_v4``
-    leaves it alone (:836-846); both leave ``.`` and ``..`` whole. So a name
-    that is a leading period followed by more, with no later period
-    (``.hidden``), keys the empty string there and ``.hidden`` here. Every
-    other shape agrees, ``.hidden.bak`` and ``..bak`` included, because their
-    cut falls at a period that does not lead the name.
+    [V] Which of boost's two stems runs is the consumer's choice, not the
+    library's: ``path::stem`` dispatches on ``BOOST_FILESYSTEM_VERSION``
+    (path.hpp:1596-1599 through ``BOOST_FILESYSTEM_VERSIONED_SYM``,
+    config.hpp:34), which boost defines as 4 only while the library itself is
+    built and as 3 for every other consumer that does not set it
+    (config.hpp:27-32). A byte-level scan of every file Vita3K tracks at
+    cb1f592c — the 916 regular files among the 947 entries ``git ls-files``
+    names, read as bytes, no filter and no exclusion — finds neither
+    ``BOOST_FILESYSTEM_VERSION`` nor ``BOOST_FILESYSTEM_SOURCE``, so the
+    translation unit that calls ``path.stem()`` compiles ``stem_v3``: the
+    rightmost period erased whatever its position (path.cpp:824-834), where
+    ``stem_v4`` guards ``pos != 0`` and leaves a leading period alone
+    (:836-846). Both leave ``.`` and ``..`` whole. Read at the Boost the build
+    bundles, Vita3K/ext-boost@ff5f55bd, which is 1.89 (version.hpp:22); the
+    oldest it accepts instead, a system Boost 1.81 (CMakeLists.txt:170-193,
+    which names no upper bound), reads alike — the same default
+    (config.hpp:27-32), the same dispatch (path.hpp:974) and the same two
+    bodies (path.cpp:472-494) — so the oldest accepted and the bundled key a
+    name identically.
 
-    This commit does not change that: the v4 answer is what one test here
-    encodes (no vector reaches the shape), so moving the mirror is a behaviour
-    change of its own and belongs to its own review.
+    This mirrored ``stem_v4`` until that reading, a [D] claim then, and it
+    keyed ``.hidden`` as itself. That was the one shape the two stems disagree
+    on: every other name agrees under both, ``.hidden.bak`` and ``..bak``
+    included, because their cut falls at a period that does not lead the name.
+
+    An empty key is a key, not a hole. ``gui.users`` is a
+    ``std::map<std::string, User>`` (state.h:304) and ``gui.users[user_id]``
+    takes the empty string like any other (user_management.cpp:97,100), so such
+    a directory is listed, under the empty id — see
+    :func:`_vita3k_recorded_user_state` for what that leaves a recorded id.
     """
     if name in (".", ".."):
         return name
-    i = name.rfind(".")
-    return name[:i] if i > 0 else name
+    cut = name.rfind(".")
+    return name if cut < 0 else name[:cut]
 
 
 def _vita3k_listed_user(machine: Machine, user_root: str, user: str) -> _Vita3kListedUser:
@@ -10077,7 +10095,62 @@ def _vita3k_survey(homes: tuple[_Vita3kListedUser, ...]) -> _PerUserSurvey:
     )
 
 
-def _vita3k_survey_tail(survey: _PerUserSurvey) -> str:
+def _vita3k_truncating(homes: tuple[_Vita3kListedUser, ...]) -> tuple[str, ...]:
+    """The entries found here at which the emulator's own listing can stop.
+
+    Of the two fates that leave an entry unestablished, one can cut the listing
+    short and the other cannot, so they are not one list here. An entry whose
+    own ``stat`` failed is one the walk may hand ``get_users_list`` as
+    DT_UNKNOWN or DT_LNK, and that road runs a deferred stat that throws
+    ``filesystem_error`` out of ``gui::init`` with ``gui.users`` cleared
+    already, so the emulator's list is then whatever prefix the walk had
+    reached — ``_VITA3K_WALK_CITATION`` traces all three roads such an entry
+    can take. A user.xml atlas could not read cuts nothing: the emulator's own
+    ``load_file`` decides that one directory and the walk goes on
+    (user_management.cpp:89).
+    """
+    return tuple(sorted(h.directory for h in homes if h.fate == _VITA3K_USER_STAT_FAILED))
+
+
+def _vita3k_listing_claim(survey: _PerUserSurvey, truncating: tuple[str, ...]) -> str:
+    """How far the users stated here are the users the emulator would list.
+
+    Three claims over two readings — the survey's own state, and whether what
+    it left undecided can end the walk — because the survey alone cannot say
+    the second: ``_PerUserSurvey`` flattens both undecided fates into one
+    ``unestablished`` tuple, which is why ``truncating`` arrives beside it. The
+    one this answer used to make in every state was the first of the three.
+    Where every entry found was decided, the list is the emulator's own and the
+    answer says so.
+    Where one was not, it is not: an undecided entry may be a directory
+    ``get_users_list`` keeps, so claiming every user it would list is stated
+    claims of that entry exactly what is unsettled. And where an undecided
+    entry is one that can end the walk, the shortfall is not bounded by the
+    entry itself — see :func:`_vita3k_truncating` — so the claim says where the
+    listing can stop rather than only that it is short. Where several entries
+    could end it, the listing ends at whichever of them its walk reaches first
+    and throws on, which is one ending and not one per entry, so the clause
+    says "any of" rather than naming them as a series of endings.
+
+    The clause carries no aside: each sentence that takes it appends
+    ``survey.aside``, which names every undecided entry and why it is one.
+    """
+    if not survey.unestablished:
+        return "every user Vita3K itself would list is stated"
+    if truncating:
+        named = _series(list(truncating))
+        where = named if len(truncating) == 1 else f"any of {named}"
+        return (
+            "the users stated are the ones established here, since Vita3K's own listing can "
+            f"end at {where}, leaving whatever its walk had not reached by then unlisted"
+        )
+    return (
+        "the users stated are the ones established here rather than every user Vita3K "
+        "itself would list"
+    )
+
+
+def _vita3k_survey_tail(survey: _PerUserSurvey, claim: str) -> str:
     """How a sentence ends where the headline does not follow the record.
 
     Where a user is listed the headline is the first listed tree; where none
@@ -10086,12 +10159,13 @@ def _vita3k_survey_tail(survey: _PerUserSurvey) -> str:
     endings reach a message only where the listing completed: a short one is
     answered by :func:`_per_user_state`'s own sentence, and the tree it names
     is the stand-in whatever was listed.
+
+    ``claim`` is :func:`_vita3k_listing_claim`'s — how completely the listed
+    users are the emulator's own list, which only the first ending states,
+    because the other two claim no list at all.
     """
     if survey.listed:
-        return (
-            "the tree named is the first user listed, and every user Vita3K itself would "
-            f"list is stated{survey.aside}"
-        )
+        return f"the tree named is the first user listed, and {claim}{survey.aside}"
     if survey.unestablished:
         # At least one entry found here is one atlas could not decide —
         # the ending cannot assert "no directory is a user Vita3K would list"
@@ -10131,6 +10205,8 @@ def _vita3k_recorded_user_state(
     homes: tuple[_Vita3kListedUser, ...],
     user_root: str,
     survey: _PerUserSurvey,
+    claim: str,
+    truncating: tuple[str, ...],
 ) -> tuple[str | None, str, str]:
     """The recorded user held against the emulator's own listing — four states.
 
@@ -10141,23 +10217,42 @@ def _vita3k_recorded_user_state(
     user — not set up; or nothing here answers to the id at all — no tree.
     ``homes`` is every directory found, whatever its fate, because the third
     state is about a directory the emulator does not list.
+
+    ``claim`` is :func:`_vita3k_listing_claim`'s, and the first state ends on
+    it for the same reason the tail does: the recorded id being among the
+    listed ones says nothing about the entries that were never decided.
+    ``truncating`` is what that first state needs beyond the clause — its head
+    otherwise asserts what the clause takes back, because a listing that ends
+    before the recorded user is reached leaves ``gui.users`` without it and
+    opens the user manager (gui.cpp:689).
     """
     identities = tuple(u.identity for u in homes if u.identity is not None)
     own = next((u for u in homes if u.directory == configured), None)
     if configured in identities:
+        if truncating:
+            # This read found the user; the emulator's own list is a claim
+            # about a walk that can end before reaching it, so the head states
+            # the finding and makes the reopening conditional on the same
+            # thing. Only the prose moves: the headline is still this user's
+            # tree, which is the state's whole point and its own question.
+            among = "among the ones listed here"
+            reopens = "reopens that user where Vita3K's own listing reached it"
+        else:
+            among = "among the ones Vita3K itself would list"
+            reopens = "reopens exactly that user"
         sentence = (
             f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is "
-            "among the ones Vita3K itself would list — the directories under ux0/user "
+            f"{among} — the directories under ux0/user "
             "whose user.xml loads, keyed by the file's id or the directory name's stem "
             "(get_users_list, user_management.cpp:83-97), read here the same way — so "
-            "a frontend launch, naming an app on the command line, reopens exactly "
-            "that user (init_home, gui.cpp:688-696) and the tree named is its, created "
+            f"a frontend launch, naming an app on the command line, {reopens} "
+            "(init_home, gui.cpp:688-696) and the tree named is its, created "
             "on the first save where no directory of that name exists yet; a plain "
-            "launch without user-auto-connect opens the user manager instead — every "
-            f"user Vita3K itself would list is stated{survey.aside}"
+            f"launch without user-auto-connect opens the user manager instead — {claim}"
+            f"{survey.aside}"
         )
         return configured, sentence, REASON_CONFIGURED_USER_TREE_NAMED
-    tail = _vita3k_survey_tail(survey)
+    tail = _vita3k_survey_tail(survey, claim)
     if survey.unestablished:
         # Reason-neutral on purpose: the entries reach this state by more than
         # one route — a user.xml that could not be read, an entry whose own
@@ -10176,11 +10271,18 @@ def _vita3k_recorded_user_state(
             detail = "the directory has no user.xml"
         elif own.fate == _VITA3K_USER_XML_INVALID:
             detail = "its user.xml does not parse"
-        else:
+        elif own.identity:
             # "it" is the directory: the id may come from the user.xml's
             # own attribute or from the directory name's stem, and the
             # sentence must not claim the file states what the stem does.
             detail = f'it answers to id "{own.identity}" instead'
+        else:
+            # The same fact for the key that has no spelling to quote: an id
+            # attribute stated empty, or a name ``stem_v3`` cuts away whole.
+            # Quoting it as `id ""` reads as a missing value, which is the one
+            # thing it is not — the emulator holds the directory under that
+            # key, and a record naming anything else misses it.
+            detail = "it answers to the empty id instead"
         sentence = (
             f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory "
             f"exists, but no user.xml here lists it as that user — {detail} — so "
@@ -10233,17 +10335,22 @@ def _vita3k_user(
     configured = None if unread else (read.get(_VITA3K_USER_ID_KEY) or None)
     auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
     headline = None
+    # How completely the listed users are the emulator's own list — read off
+    # the survey once, here, and handed to whichever sentence is earned, so the
+    # sentences that state it cannot drift into separate accounts of one fact.
+    truncating = _vita3k_truncating(homes)
+    claim = _vita3k_listing_claim(survey, truncating)
     if unread:
         sentence = (
             f"config.yml states {_VITA3K_USER_ID_KEY} as a construct atlas does not read, so "
-            f"which user it preselects is unread here — {_vita3k_survey_tail(survey)}"
+            f"which user it preselects is unread here — {_vita3k_survey_tail(survey, claim)}"
         )
         reason = REASON_CONFIGURED_USER_ID_UNREAD
     elif configured is None:
         sentence = (
             f"config.yml records no {_VITA3K_USER_ID_KEY}, so nothing preselects a user and "
             "the user manager opens for the player to pick (init_home, gui.cpp:688-696) — "
-            f"{_vita3k_survey_tail(survey)}"
+            f"{_vita3k_survey_tail(survey, claim)}"
         )
         reason = REASON_NO_USER_PRESELECTED
     else:
@@ -10270,7 +10377,7 @@ def _vita3k_user(
         # itself true to what it means here — a user the read did not settle
         # is not one this answer records.
         headline, sentence, reason = _vita3k_recorded_user_state(
-            configured, homes, user_root, survey
+            configured, homes, user_root, survey, claim, truncating
         )
         if listing.status != GLOB_COMPLETE:
             headline = None
