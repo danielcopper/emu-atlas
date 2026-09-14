@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.21.0](https://github.com/danielcopper/emu-atlas/compare/v0.20.0...v0.21.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480))
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477))
+
+### Features
+
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480)) ([a06e7b2](https://github.com/danielcopper/emu-atlas/commit/a06e7b22a621ff2f35a01fedd33689f0cfd078b8)), closes [#446](https://github.com/danielcopper/emu-atlas/issues/446)
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477)) ([e1eafec](https://github.com/danielcopper/emu-atlas/commit/e1eafec758298f79bccc8b4d5bde3df5737ed7fe)), closes [#466](https://github.com/danielcopper/emu-atlas/issues/466)
+
+
+### Bug Fixes
+
+* **vita3k:** the user listing keys like the emulator's boost and says where it can end ([#479](https://github.com/danielcopper/emu-atlas/issues/479)) ([149f1f3](https://github.com/danielcopper/emu-atlas/commit/149f1f326371b2610a3c3401675cbb4d067ec2bc)), closes [#459](https://github.com/danielcopper/emu-atlas/issues/459) [#460](https://github.com/danielcopper/emu-atlas/issues/460)
+
 ## [0.20.0](https://github.com/danielcopper/emu-atlas/compare/v0.19.0...v0.20.0) (2026-09-13)
 
 
