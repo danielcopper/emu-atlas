@@ -947,6 +947,76 @@ class TestAPostInitCheckAgainstAnImportedTupleNamesIt:
         assert "`CORE_SYSTEM_FIRMWARE_STATES`" in rows["cores[].system_firmware"]
 
 
+class TestAFieldRowNamesTheTupleAConsumerImports:
+    """A `Literal` on a property has no `__post_init__`, and the tuple is still the cell's job.
+
+    `EmulatorEntry.kind` is a property, so nothing holds it to a tuple in a
+    `__post_init__` and the row named the annotation alone — while the
+    vocabulary index below the tables named `CATALOGUE_KINDS` for the same
+    values. One page naming one list two ways is the failure this class is
+    about.
+    """
+
+    @staticmethod
+    def _vocabulary_cells(generated: str, prefix: str) -> dict[str, str]:
+        rows: dict[str, str] = {}
+        for line in generated.splitlines():
+            if not line.startswith(prefix):
+                continue
+            cells = [
+                cell.replace("\0", "|").strip()
+                for cell in line.strip().strip("|").replace("\\|", "\0").split("|")
+            ]
+            rows[cells[0].strip(" `")] = cells[6]
+        return rows
+
+    def test_the_exported_tuple_is_named_beside_the_annotation(self, generated: str) -> None:
+        cell = self._vocabulary_cells(generated, "| `entries[].kind`")["entries[].kind"]
+        assert "`CATALOGUE_KINDS`" in cell
+        assert "`Literal[EmulatorEntry.kind]`" in cell
+
+    def test_the_same_field_reads_the_same_way_wherever_it_is_serialized(
+        self, generated: str
+    ) -> None:
+        catalogue = self._vocabulary_cells(generated, "| `entries[].kind`")["entries[].kind"]
+        launchable = self._vocabulary_cells(generated, "| `entry.kind`")["entry.kind"]
+        assert catalogue == launchable
+
+    def test_a_private_name_no_export_resolves_is_not_cited(self) -> None:
+        # `FIRMWARE_NEEDS` and `_FILE_NEEDS` are both ('required', 'optional')
+        # and neither is exported, so contents alone cannot say which a cell
+        # means — the reading takes exported names only, and names neither.
+        assert reference.exported_tuple_names().get(("required", "optional")) is None
+        assert sorted(reference.vocabulary_names()[("required", "optional")]) == [
+            "FIRMWARE_NEEDS",
+            "_FILE_NEEDS",
+        ]
+
+    def test_a_field_with_no_reference_states_no_vocabulary(self) -> None:
+        assert reference.vocabulary_cell(None) == ""
+
+    def test_one_list_two_exported_names_stops_the_generation(self) -> None:
+        # Contents do not identify a name, so a cell that cites an exported one
+        # is only unambiguous while the exports are. The gate is what keeps it
+        # that way the day a second export of the same tuple lands.
+        stated = reference.ambiguous_exported_tuple_names(
+            {("a", "b"): ["FIRST_WORDS", "SECOND_WORDS"], ("c",): ["ONLY"]}
+        )
+        assert len(stated) == 1
+        assert "`FIRST_WORDS`, `SECOND_WORDS`" in stated[0]
+        assert "ONLY" not in stated[0]
+
+    def test_the_package_states_no_such_pair_today(self) -> None:
+        assert reference.ambiguous_exported_tuple_names(reference.exported_tuple_names()) == []
+
+    def test_the_gate_runs_in_the_build(self) -> None:
+        # The gate is only a gate if `build` reads it: a failure list nothing
+        # collects is a check that never fires.
+        source = (reference.REPO_ROOT / "scripts/generate_contract_reference.py").read_text()
+        build = source.split("def build()")[1].split("\ndef ")[0]
+        assert "ambiguous_exported_tuple_names(exported_tuple_names())" in build
+
+
 class TestATupleComposedFromAnotherStatesItsValues:
     """``(*REFUSAL_CODES, REASON_KEY_UNREAD)`` is a vocabulary, not an expression.
 

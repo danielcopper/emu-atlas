@@ -54,6 +54,9 @@ from .core_info import parse_core_info
 from .esde import (
     INVALID_PARSE,
     KIND_LIBRETRO,
+    KIND_RETROARCH_FOREIGN_CORE,
+    KIND_STANDALONE,
+    CatalogueKind,
     CatalogueLayer,
     EmulatorSpec,
     GamelistSelections,
@@ -62,6 +65,7 @@ from .esde import (
     emulator_token,
     esde_extension,
     expand_home_path,
+    foreign_core_file,
     merge_layers,
     parse_es_settings,
     parse_es_systems,
@@ -80,6 +84,7 @@ from .platforms import (
 from .systems import known_systems, vocabulary_platform_tags
 from .firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
+    CAVEAT_CORE_FILE_FOREIGN,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_CORE_INFO_UNREADABLE,
     CAVEAT_EMULATOR_CATALOGUE_EXCLUSIVE,
@@ -172,6 +177,7 @@ from .textures import (
     lookup_texture_card,
 )
 from .placement import (
+    UNRESOLVED_CORE_FILE_FOREIGN,
     UNRESOLVED_CORE_NOT_INSTALLED,
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
     CAVEAT_CFG_LINE_DROPPED,
@@ -5888,7 +5894,7 @@ def _duckstation_texture_placement(
         homes=homes,
         sandbox=sandbox,
         extra_caveats=extra_caveats,
-        reads="texture packs",
+        reads=_READS_TEXTURE_PACKS,
         named="texture",
         switch="texture replacement",
     )
@@ -13866,10 +13872,15 @@ VERDICT_NOT_ACCEPTED = "not-accepted"
 # the command per emulator, so the list can say yes while the entry that
 # actually runs loads nothing (issue #66). This verdict is that split, stated
 # only where the running entry's refusal is ESTABLISHED: a standalone whose
-# recorded loader does not read the format, or a block-extract core handed an
-# archive it does not claim. The remedies differ from not-accepted's, which
-# is why the two never collapse: unpack the container, or select an entry
-# that takes it — ``alternatives`` names the ones established to.
+# recorded loader does not read the format, a block-extract core handed an
+# archive it does not claim, and a row whose command hands RetroArch a core
+# file this host cannot load, which reads nothing at all (#446). The third is
+# established from the command rather than from a loader, and it is the one
+# where nothing about the FORMAT was weighed — its own caveat
+# (``core-file-foreign``) says so, where the other two put their reason in
+# ``sources``. The remedies differ from not-accepted's, which is why the two
+# never collapse: unpack the container, or select an entry that takes it —
+# ``alternatives`` names the ones established to.
 VERDICT_ENTRY_NOT_ACCEPTED = "entry-not-accepted"
 VERDICT_NEEDS_INSTALLATION = "needs-installation"
 VERDICT_UNKNOWN = "unknown"
@@ -13892,7 +13903,11 @@ LAUNCH_VERDICTS = (
 # (task_content.c:1325-1358 @ a79435a) — what is inside is something atlas
 # does not read. And an entry whose reading nobody established — a standalone
 # without a card, a core that could not be probed — is exactly that, never
-# "refuses".
+# "refuses". None of the three is what a row handing RetroArch a core file
+# this host cannot load states: that row refuses with no format weighed at
+# all, and says so under its own code (``core-file-foreign``), which is the
+# entry's fact wherever it is enumerated rather than a reading of this one
+# extension.
 CAVEAT_ENTRY_FORMAT_UNCLAIMED = "entry-format-unclaimed"
 CAVEAT_ARCHIVE_CONTENTS_UNREAD = "archive-contents-unread"
 CAVEAT_ENTRY_FORMAT_UNESTABLISHED = "entry-format-unestablished"
@@ -14690,6 +14705,76 @@ def _per_game_alternative_emulator_caveat(per_game: Mapping[str, str]) -> Caveat
     )
 
 
+def _foreign_core_of(kind: str, command: str) -> str | None:
+    """The core file this launch hands RetroArch, or ``None`` where it is not such an entry.
+
+    The kind and the reading in one answer. The kind is what the routes branch
+    on; the file comes from :func:`atlas.esde.foreign_core_file`, the same
+    reading that chose the kind, so a route never states a file the
+    classification did not see. ``None`` for the other two words, which is
+    exactly the "carry on as before" the callers read it as.
+    """
+    if kind != KIND_RETROARCH_FOREIGN_CORE:
+        return None
+    return foreign_core_file(command)
+
+
+def _foreign_core_caveat(label: str, system: str, core_file: str) -> Caveat:
+    """What a ``retroarch-foreign-core`` entry states about itself, wherever it is enumerated.
+
+    Rides the entry rather than the answer wherever a list of entries is the
+    answer: a system's other rows are unaffected, and the one that cannot run
+    says so beside its own label. The launchability answer is the exception
+    and states it at answer level too, because there the code is also this
+    answer's reason for its verdict. The firmware route words the same fact
+    for its own answer (:func:`atlas.firmware._foreign_core_caveat`) and both
+    carry this code with these three keys, so a client reads one rule on
+    either route.
+
+    Takes the label and the system rather than an entry, because both the
+    catalogue assembly (holding an :class:`~atlas.esde.EmulatorSpec`) and the
+    launchability route (holding an :class:`EmulatorEntry`) word it, and the
+    two shapes share nothing but these strings.
+    """
+    return Caveat(
+        CAVEAT_CORE_FILE_FOREIGN,
+        f"{label} hands RetroArch {core_file}, a core file this host cannot load — its name "
+        "carries another platform's suffix, so this entry launches neither a core nor an "
+        "emulator of its own",
+        {"core_file": core_file, "label": label, "system": system},
+    )
+
+
+# What each entry route reads from a directory, in the words its refusals and
+# its DuckStation directory reads already use — one spelling per route, so a
+# sentence about "save files" cannot drift from the route that reads them.
+_READS_SAVE_FILES = "save files"
+_READS_SAVESTATES = "savestates"
+_READS_TEXTURE_PACKS = "texture packs"
+_READS_MODS = "mods"
+
+
+def _foreign_core_unresolved(spec: EmulatorSpec, core_file: str, reads: str) -> Unresolved:
+    """The refusal every placement route answers a ``retroarch-foreign-core`` entry with.
+
+    One refusal where the standalone ones are four. Those differ because what
+    is missing differs per family — a save card, a savestate card, texture
+    wiring, mod wiring — and here nothing differs: the launch runs RetroArch
+    and RetroArch loads nothing, so no emulator of its own is running to have
+    a tree of any family. *reads* names the family so the sentence says which
+    question was asked; the code and the three data keys are the same on all
+    four.
+    """
+    return Unresolved(
+        UNRESOLVED_CORE_FILE_FOREIGN,
+        f"where {spec.label!r} ({spec.system}) reads {reads} is not a question this machine "
+        f"has: the entry hands RetroArch {core_file}, a core file this host cannot load — its "
+        "name carries another platform's suffix — so no emulator of its own is launched here "
+        "to read any",
+        {"core_file": core_file, "label": spec.label, "system": spec.system},
+    )
+
+
 def _entries_from(
     host: "_CatalogueHost",
     specs: tuple[EmulatorSpec, ...],
@@ -14733,7 +14818,23 @@ def _entries_from(
     entry_caveats: tuple[Caveat, ...] = ()
     if content_path is None and selections.per_game:
         entry_caveats = (_per_game_alternative_emulator_caveat(selections.per_game),)
-    return tuple(EmulatorEntry(host, spec, entry_caveats) for spec in specs)
+    return tuple(EmulatorEntry(host, spec, (*entry_caveats, *_own_caveats(spec))) for spec in specs)
+
+
+def _own_caveats(spec: EmulatorSpec) -> tuple[Caveat, ...]:
+    """What one entry states about itself, beside whatever the assembly states about all of them.
+
+    Empty for the two kinds that launch something: a libretro entry's core and
+    a standalone entry's emulator are both this machine's to read, degradations
+    and all, and the routes that read them carry their own caveats. Only a row
+    naming a core file of another host has a fact that belongs to the row
+    itself and to no route.
+    """
+    core_file = _foreign_core_of(spec.kind, spec.command)
+    caveats: list[Caveat] = []
+    if core_file is not None:
+        caveats.append(_foreign_core_caveat(spec.label, spec.system, core_file))
+    return tuple(caveats)
 
 
 def _firmware_catalogue_entries(
@@ -14762,7 +14863,11 @@ def _firmware_catalogue_entries(
     for entry in entries:
         token = None
         homes = None
-        if entry.kind != KIND_LIBRETRO:
+        # On the standalone word itself, not on "not libretro": the token and
+        # the homes describe an emulator the launch runs, and a row that hands
+        # RetroArch a core file of another host runs none — reading its command
+        # for one would answer with the runner's name.
+        if entry.kind == KIND_STANDALONE:
             token = host.standalone_firmware_token(entry.command)
             homes = host.standalone_firmware_homes(entry.command)
         shaped.append(
@@ -14776,6 +14881,7 @@ def _firmware_catalogue_entries(
                 standalone_data_home=homes.data if homes is not None else None,
                 standalone_config_home=homes.config if homes is not None else None,
                 standalone_flatpak=homes.flatpak if homes is not None else None,
+                foreign_core_file=_foreign_core_of(entry.kind, entry.command),
             )
         )
     return tuple(shaped)
@@ -14949,14 +15055,18 @@ class EmulatorEntry:
         return self._spec.label
 
     @property
-    def kind(self) -> str:
-        """Whether this entry launches a libretro core or a standalone emulator."""
+    def kind(self) -> CatalogueKind:
+        """What this entry launches: a libretro core, a standalone emulator, or — naming a
+        core file this host cannot load — nothing this machine can run.
+        """
         return self._spec.kind
 
     @property
     def core_so(self) -> str | None:
-        """The ``.so`` short name of the core this entry loads, and ``None`` for a standalone
-        entry, which loads none.
+        """The ``.so`` short name of the core this entry loads, and ``None`` on both other
+        kinds, which load none — a standalone entry because it runs an emulator of its own, and
+        a ``retroarch-foreign-core`` one because the file its command names is not a core this
+        host can load.
         """
         return self._spec.core_so
 
@@ -15199,19 +15309,50 @@ def _entry_reading(
 ) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
     """One entry's stance on one extension: accepts, refuses, or unestablished.
 
-    The two kinds of entry split along the boundary rule (issue #66). A
-    libretro entry's claims are read live off the installed core, and they
-    are claims: RetroArch checks nothing on a direct load, so a file outside
-    them is attempted with a statement, never refused — except an archive,
-    which runs through RetroArch's own hands (extracted and searched by the
-    claims, or handed raw to a ``block_extract`` core that never claimed
+    The two kinds of entry that launch something split along the boundary rule
+    (issue #66). A libretro entry's claims are read live off the installed
+    core, and they are claims: RetroArch checks nothing on a direct load, so a
+    file outside them is attempted with a statement, never refused — except an
+    archive, which runs through RetroArch's own hands (extracted and searched
+    by the claims, or handed raw to a ``block_extract`` core that never claimed
     it, which is the one libretro refusal this can establish). A standalone
     entry opens the file itself: its recorded loader decides, and an
     emulator without a card is an entry nobody read.
+
+    The third kind reads nothing at all, and that is a refusal rather than an
+    unestablished reading: no loader was asked and no claim was weighed
+    because the launch loads nothing, which is established from the command
+    itself. So the accept-list can say yes while this entry takes no file of
+    any format — the split :data:`VERDICT_ENTRY_NOT_ACCEPTED` exists for — and
+    the reason is stated under the entry's own code rather than under one of
+    the three format words, none of which was read.
     """
     if entry.kind == KIND_LIBRETRO:
         return _libretro_entry_reading(entry, extension=extension, info=core_info_for(entry))
+    foreign = _foreign_core_of(entry.kind, entry.command)
+    if foreign is not None:
+        return _foreign_core_entry_reading(entry, foreign)
     return _standalone_entry_reading(entry, extension=extension)
+
+
+def _foreign_core_entry_reading(
+    entry: EmulatorEntry, core_file: str
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """The third branch of :func:`_entry_reading` — nothing loads, so no file is taken.
+
+    Takes no *extension*, and that is the statement: this refusal is the same
+    whatever the file is, where the other two branches answer about the one
+    extension they were asked.
+    """
+    return (
+        _ENTRY_REFUSES,
+        (
+            f"entry {entry.label!r}: its command hands RetroArch {core_file}, a core file this "
+            "host cannot load — its name carries another platform's suffix, so RetroArch loads "
+            "no core and the entry takes no file at all",
+        ),
+        (_foreign_core_caveat(entry.label, entry.system, core_file),),
+    )
 
 
 def _libretro_entry_reading(
@@ -17186,6 +17327,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         is given, checks the gamelist for a per-game override that would launch
         a different emulator — all from one snapshot of the governing sources.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
         config, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
@@ -17242,6 +17386,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         per-game-override caveats the save twin carries, and the
         arrangement's evidence caveats.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
         config, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
@@ -17325,6 +17472,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         save routes: an entry ES-DE would not launch for this game reads no
         texture packs for it either.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_TEXTURE_PACKS)
         config, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
@@ -17369,6 +17519,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         The texture entry route's twin, down to the per-game override check: an
         entry ES-DE would not launch for this game reads no mods for it either.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_MODS)
         config, marker_issues = self._read_marker()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
@@ -18546,6 +18699,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         an established launcher leads to the same save card RetroDECK's token
         does — read against this arrangement's own config tree.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
         if spec.kind != KIND_LIBRETRO:
             return self._standalone_entry_savefile(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_savefile_location(
@@ -18926,6 +19082,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         goes through: the same variant gate, the savestate card the token
         leads to, and the same refusals where nothing is established (#225).
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
         if spec.kind != KIND_LIBRETRO:
             return self._standalone_entry_savestate(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_savestate_location(
@@ -19011,6 +19170,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         established the refusal names it, rather than answering from a tree
         the binary never reads.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_TEXTURE_PACKS)
         if spec.kind != KIND_LIBRETRO:
             return self._standalone_entry_texture(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_texture_pack_location(
@@ -19029,6 +19191,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
     ) -> ModPlacement | Unresolved:
         """The mod entry route — the texture route's twin, gate included."""
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_MODS)
         if spec.kind != KIND_LIBRETRO:
             return self._standalone_entry_mod(spec, entry_caveats, content_path=content_path)
         placement = _retroarch_mod_location(
@@ -19838,9 +20003,12 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
 
         A derived entry is always a libretro core (the enumeration is the
         cores'), so the placement is exactly what the direct question answers
-        for that ``core_so``; the guard stands for the day a spec arrives
-        from somewhere else.
+        for that ``core_so``; both guards stand for the day a spec arrives
+        from somewhere else, and each refuses in the word that spec would be.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
         if spec.kind != KIND_LIBRETRO:
             return _standalone_savefile_unresolved(spec)
         return _retroarch_savefile_location(
@@ -19862,9 +20030,12 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
     ) -> SavestatePlacement | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
-        The guard stands for the day a spec arrives from somewhere else, as on
+        The guards stand for the day a spec arrives from somewhere else, as on
         the savefile route: a derived entry is always a libretro core.
         """
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
         if spec.kind != KIND_LIBRETRO:
             return _standalone_savestate_unresolved(spec)
         return _retroarch_savestate_location(
@@ -19880,6 +20051,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
     ) -> TexturePlacement | Unresolved:
         """The texture entry route — the core question, asked by the entry."""
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_TEXTURE_PACKS)
         if spec.kind != KIND_LIBRETRO:
             return _standalone_texture_unresolved(spec)
         return _retroarch_texture_pack_location(
@@ -19895,6 +20069,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
     ) -> ModPlacement | Unresolved:
         """The mod entry route — the core question, asked by the entry."""
+        foreign = _foreign_core_of(spec.kind, spec.command)
+        if foreign is not None:
+            return _foreign_core_unresolved(spec, foreign, _READS_MODS)
         if spec.kind != KIND_LIBRETRO:
             return _standalone_mod_unresolved(spec)
         return _retroarch_mod_location(

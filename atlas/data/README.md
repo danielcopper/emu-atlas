@@ -1059,13 +1059,13 @@ own accept-list — what the catalogue declares launchable, is launchable, and t
 
 The `emulators` block is the per-entry half of the same question (issue #66): what a **standalone** launch entry's own
 loader reads, keyed by the `%EMULATOR_…%` token the way every standalone card family is. It exists because the two kinds
-of entry split along the boundary rule — a libretro entry's claims are read live off the installed core and its archives
-RetroArch opens for it, while a standalone opens the file itself and refuses what its loader does not know, and that
-knowledge is written nowhere on the machine atlas can read as text. `accepts` are extension tokens recorded lowercase
-and matched case-insensitively (the gate is the emulator's loader, not ES-DE's case-exact scan); `archives` is whether
-the loader opens containers at all — no RetroArch stands in front of a standalone to pick a file out of a zip. An
-emulator absent from the block is one whose loader nobody has read: the answer states `entry-format-unestablished`,
-never "refuses" — the same absence discipline the mods table spells out.
+of entry that launch something split along the boundary rule — a libretro entry's claims are read live off the installed
+core and its archives RetroArch opens for it, while a standalone opens the file itself and refuses what its loader does
+not know, and that knowledge is written nowhere on the machine atlas can read as text. `accepts` are extension tokens
+recorded lowercase and matched case-insensitively (the gate is the emulator's loader, not ES-DE's case-exact scan);
+`archives` is whether the loader opens containers at all — no RetroArch stands in front of a standalone to pick a file
+out of a zip. An emulator absent from the block is one whose loader nobody has read: the answer states
+`entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out.
 
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 

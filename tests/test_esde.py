@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import atlas
 from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
@@ -11,6 +13,7 @@ from atlas.esde import (
     emulator_identity,
     esde_extension,
     expand_home_path,
+    foreign_core_file,
     merge_layers,
     parse_es_settings,
     parse_es_systems,
@@ -1118,3 +1121,163 @@ class TestTheIdentityACommandSpells:
             ("PPSSPP (Standalone)", "PPSSPP"),
             ("PPSSPP", "ppsspp_libretro.so"),
         ]
+
+
+class TestARetroArchLaunchOfACoreThisHostCannotLoad:
+    """The third kind (#446): the command says RetroArch, and the core file says another host.
+
+    The rows this is about are EmuDeck's, and they are the reason the kind
+    exists: before it they landed in the standalone pot, where an answer about
+    them stated an emulator the machine does not have.
+    """
+
+    @staticmethod
+    def _entries(*commands: str) -> tuple[EmulatorSpec, ...]:
+        rows = "".join(
+            f'<command label="Row {index}">{command}</command>'
+            for index, command in enumerate(commands)
+        )
+        text = (
+            '<?xml version="1.0"?><systemList><system><name>n3ds</name>'
+            f"<path>%ROMPATH%/n3ds</path><extension>.3ds</extension>{rows}"
+            "</system></systemList>"
+        )
+        return parse_es_systems(text, provenance="test").systems["n3ds"].entries
+
+    def test_a_windows_core_file_is_its_own_kind_and_loads_nothing(self):
+        # EmuDeck's own spelling, backslash included.
+        entry = self._entries("%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra_libretro.dll %ROM%")[0]
+        assert entry.kind == atlas.KIND_RETROARCH_FOREIGN_CORE
+        assert entry.core_so is None
+        assert foreign_core_file(entry.command) == "citra_libretro.dll"
+
+    def test_a_macos_core_file_reads_the_same_way(self):
+        # No list of platforms is written anywhere: the rule is "not this
+        # host's suffix", so a .dylib is the same reading as a .dll without
+        # either being enumerated.
+        entry = self._entries("%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/citra_libretro.dylib %ROM%")[0]
+        assert entry.kind == atlas.KIND_RETROARCH_FOREIGN_CORE
+        assert foreign_core_file(entry.command) == "citra_libretro.dylib"
+
+    def test_this_hosts_core_is_still_a_libretro_entry(self):
+        entry = self._entries("%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/citra_libretro.so %ROM%")[0]
+        assert entry.kind == atlas.KIND_LIBRETRO
+        assert entry.core_so == "citra_libretro.so"
+
+    def test_a_launch_that_is_not_retroarchs_stays_standalone(self):
+        # The suffix alone decides nothing: only ES-DE's RetroArch rule hands a
+        # core file to a runner, so a .dll named by anything else is not a core
+        # this reading has an opinion about.
+        entry = self._entries("%EMULATOR_AZAHAR% --core citra_libretro.dll %ROM%")[0]
+        assert entry.kind == atlas.KIND_STANDALONE
+        assert foreign_core_file(entry.command) is None
+
+    def test_a_retroarch_launch_naming_no_core_stays_standalone(self):
+        # Nothing was named, so there is nothing this host cannot load — the
+        # answer this row always gave, and the one it keeps.
+        entry = self._entries("%EMULATOR_RETROARCH% %ROM%")[0]
+        assert entry.kind == atlas.KIND_STANDALONE
+
+    def test_a_command_naming_both_is_the_core_this_host_loads(self):
+        entry = self._entries(
+            "%EMULATOR_RETROARCH% -L citra_libretro.dll -L %CORE_RETROARCH%/citra_libretro.so %ROM%"
+        )[0]
+        assert entry.kind == atlas.KIND_LIBRETRO
+        assert entry.core_so == "citra_libretro.so"
+
+    def test_an_upper_case_so_is_not_called_another_hosts(self):
+        # A suffix does not settle what this host can open, and a file named
+        # `.SO` is one dlopen would take — so the reading stays silent about it
+        # rather than claiming a foreign core. It is a standalone row, exactly
+        # as it was before the kind existed.
+        entry = self._entries("%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/citra_libretro.SO %ROM%")[0]
+        assert entry.kind == atlas.KIND_STANDALONE
+
+    def test_es_des_android_spelling_is_not_read_as_a_foreign_core(self):
+        # The RetroDECK flatpak ships ES-DE's per-platform catalogues, and the
+        # android one names every core `<core>_libretro_android.so`: the suffix
+        # IS this host's, and the name is not one either run takes apart. Such
+        # a command is classified standalone, as it always was — the reading
+        # deliberately does not reach it.
+        command = (
+            "%EMULATOR_RETROARCH% %EXTRA_LIBRETRO%=/data/cores/citra_libretro_android.so "
+            "%EXTRA_ROM%=%ROM%"
+        )
+        entry = self._entries(command)[0]
+        assert entry.kind == atlas.KIND_STANDALONE
+        assert entry.core_so is None
+        assert foreign_core_file(command) is None
+
+    def test_the_two_rows_the_reference_overlay_declares_are_both_of_this_kind(self):
+        entries = self._entries(
+            "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra_libretro.dll %ROM%",
+            "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra2018_libretro.dll %ROM%",
+            "%EMULATOR_AZAHAR% %ROM%",
+        )
+        assert [e.kind for e in entries] == [
+            atlas.KIND_RETROARCH_FOREIGN_CORE,
+            atlas.KIND_RETROARCH_FOREIGN_CORE,
+            atlas.KIND_STANDALONE,
+        ]
+        # Two rows, two different files — the caveat on each names its own.
+        assert [foreign_core_file(e.command) for e in entries] == [
+            "citra_libretro.dll",
+            "citra2018_libretro.dll",
+            None,
+        ]
+
+
+class TestTheKindVocabularyIsClosed:
+    """`EmulatorSpec` refuses a kind nobody documents, and a core named on an entry that loads none."""
+
+    @staticmethod
+    def _spec(**overrides: object) -> EmulatorSpec:
+        fields: dict[str, object] = {
+            "system": "n64",
+            "label": "ParaLLEl N64",
+            "kind": atlas.KIND_LIBRETRO,
+            "core_so": "parallel_n64_libretro.so",
+            "command": "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%",
+            "provenance": "test",
+        }
+        fields.update(overrides)
+        return EmulatorSpec(**fields)  # pyright: ignore[reportArgumentType]
+
+    def test_the_three_words_are_the_whole_vocabulary(self):
+        assert atlas.CATALOGUE_KINDS == (
+            atlas.KIND_LIBRETRO,
+            atlas.KIND_STANDALONE,
+            atlas.KIND_RETROARCH_FOREIGN_CORE,
+        )
+
+    def test_every_word_builds(self):
+        built = [
+            self._spec(),
+            self._spec(kind=atlas.KIND_STANDALONE, core_so=None, command="%EMULATOR_AZAHAR% %ROM%"),
+            self._spec(
+                kind=atlas.KIND_RETROARCH_FOREIGN_CORE,
+                core_so=None,
+                command="%EMULATOR_RETROARCH% -L citra_libretro.dll %ROM%",
+            ),
+        ]
+        assert [spec.kind for spec in built] == list(atlas.CATALOGUE_KINDS)
+
+    def test_a_word_outside_the_vocabulary_is_refused(self):
+        with pytest.raises(ValueError, match="kind must be one of"):
+            self._spec(kind="retroarch")
+
+    def test_a_libretro_entry_without_its_core_is_refused(self):
+        with pytest.raises(ValueError, match="names the core it loads"):
+            self._spec(core_so=None)
+
+    def test_an_entry_that_loads_no_core_may_not_name_one(self):
+        with pytest.raises(ValueError, match="no launch here loads"):
+            self._spec(kind=atlas.KIND_STANDALONE, command="%EMULATOR_AZAHAR% %ROM%")
+
+    def test_the_new_word_may_not_be_put_on_a_command_that_was_never_read_that_way(self):
+        with pytest.raises(ValueError, match="states what the command was read"):
+            self._spec(
+                kind=atlas.KIND_RETROARCH_FOREIGN_CORE,
+                core_so=None,
+                command="%EMULATOR_AZAHAR% %ROM%",
+            )

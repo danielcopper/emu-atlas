@@ -2801,6 +2801,150 @@
       }
     },
     {
+      "name": "entry-route-a-foreign-core-row-refuses-before-any-card",
+      "rationale": "All four entry routes are asked of the row EmuDeck's n3ds overlay declares first, a RetroArch launch pointed at a Windows citra_libretro.dll, and all four refuse with core-file-foreign and the file's own name. The refusal is the point of the kind: the standalone dispatch these routes used to fall into looks the launch command's %EMULATOR_…% token up in the packaged cards, and the only token here is %EMULATOR_RETROARCH% — so a card found under it would answer with the trees of an emulator this row does not launch, and a card not found would say 'standalone emulator Citra is not resolvable yet' about an emulator that is not here at all. Neither is true, and the one code says what is: the entry hands RetroArch a core file this host cannot load, its name carrying another platform's suffix. Four routes and one word, where the standalone refusals are four words: what is missing there differs per family, and here nothing differs, because the launch runs RetroArch and RetroArch loads nothing, so no emulator of its own is running to have a tree of any family. The launchability answer is the same fact one question over: the system's accept-list declares .3ds on account of every row, the row that would run takes no file at all, and that split is exactly what entry-not-accepted says — with the sibling standalone row, whose own loader was read, named as the alternative.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n    <fullname>Nintendo 3DS</fullname>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .3DS .cci .CCI</extension>\n    <command label=\"Citra\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra_libretro.dll %ROM%</command>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n    <platform>n3ds</platform>\n    <theme>n3ds</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/Emulation/roms/n3ds/Game.3ds": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves"
+        ],
+        "entry_savefile_query": {
+          "installation": "emudeck",
+          "system": "n3ds",
+          "content_path": "/home/deck/Emulation/roms/n3ds/Game.3ds"
+        },
+        "entry_savestate_query": {
+          "installation": "emudeck",
+          "system": "n3ds",
+          "content_path": "/home/deck/Emulation/roms/n3ds/Game.3ds"
+        },
+        "entry_texture_query": {
+          "installation": "emudeck",
+          "system": "n3ds",
+          "content_path": "/home/deck/Emulation/roms/n3ds/Game.3ds"
+        },
+        "entry_mod_query": {
+          "installation": "emudeck",
+          "system": "n3ds",
+          "content_path": "/home/deck/Emulation/roms/n3ds/Game.3ds"
+        },
+        "launchable_query": {
+          "installation": "emudeck",
+          "system": "n3ds",
+          "content_path": "/home/deck/Emulation/roms/n3ds/Game.3ds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "core-file-foreign",
+            "data": {
+              "core_file": "citra_libretro.dll",
+              "label": "Citra",
+              "system": "n3ds"
+            }
+          }
+        },
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "core-file-foreign",
+            "data": {
+              "core_file": "citra_libretro.dll",
+              "label": "Citra",
+              "system": "n3ds"
+            }
+          }
+        },
+        "entry_texture_pack_location": {
+          "unresolved": {
+            "code": "core-file-foreign",
+            "data": {
+              "core_file": "citra_libretro.dll",
+              "label": "Citra",
+              "system": "n3ds"
+            }
+          }
+        },
+        "entry_mod_location": {
+          "unresolved": {
+            "code": "core-file-foreign",
+            "data": {
+              "core_file": "citra_libretro.dll",
+              "label": "Citra",
+              "system": "n3ds"
+            }
+          }
+        },
+        "launchable": {
+          "verdict": "entry-not-accepted",
+          "extension": ".3ds",
+          "accepted": [
+            ".3ds",
+            ".3DS",
+            ".cci",
+            ".CCI"
+          ],
+          "entry": {
+            "system": "n3ds",
+            "label": "Citra",
+            "kind": "retroarch-foreign-core",
+            "core_so": null,
+            "emulator": null,
+            "declared_index": 0,
+            "selection": null,
+            "caveats": [
+              {
+                "code": "core-file-foreign",
+                "data": {
+                  "core_file": "citra_libretro.dll",
+                  "label": "Citra",
+                  "system": "n3ds"
+                }
+              }
+            ]
+          },
+          "alternatives": [
+            "Azahar (Standalone)"
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "n3ds"
+              }
+            },
+            {
+              "code": "core-file-foreign",
+              "data": {
+                "core_file": "citra_libretro.dll",
+                "label": "Citra",
+                "system": "n3ds"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "secondary-handle-answers-its-own-config",
       "rationale": "Coexisting installations: the query names the native handle explicitly, and the answer comes from the native cfg alone — no cross-installation fall-through from the higher-priority RetroDECK.",
       "input": {
@@ -9164,7 +9308,7 @@
     },
     {
       "name": "catalogue-a-launch-that-identifies-no-emulator-says-so",
-      "rationale": "Two of the three rows EmuDeck's n3ds system declares are RetroArch launches naming a Windows .dll, and this machine keeps one of them beside the token row: nothing about such a command identifies an emulator. There is no *_libretro.so basename to read, and the only %EMULATOR_…% token is %EMULATOR_RETROARCH%, which names the runner a launch goes through rather than an emulator. The entry keeps its label and its kind and its emulator is null — atlas could not identify one, stated rather than filled with the runner's name. The sibling row in the same system is identified by its own token, so the null is this command's and not the answer's. Both questions are asked of the one machine because the identity exists to be joined across them: the firmware answer's cores carry exactly the identities the catalogue entries carry, null included. The two shapes share five field names here — emulator, declared_index, label, core_so and caveats — and the join is the first two together: the identity says which emulator, the position which row, so the unidentified row still joins to itself as (null, 0). core_so is null on every row of this system because none of them loads a core, the label is presentation, and a caveat list is neither.",
+      "rationale": "Two of the three rows EmuDeck's n3ds system declares are RetroArch launches naming a Windows .dll, and this machine keeps one of them beside the token row: nothing about such a command identifies an emulator. There is no *_libretro.so basename to read, and the only %EMULATOR_…% token is %EMULATOR_RETROARCH%, which names the runner a launch goes through rather than an emulator. The entry keeps its label, its kind states what was read of the command (retroarch-foreign-core, with the file it names in the caveat riding the entry), and its emulator is null — atlas could not identify one, stated rather than filled with the runner's name. The sibling row in the same system is identified by its own token, so the null is this command's and not the answer's. Both questions are asked of the one machine because the identity exists to be joined across them: the firmware answer's cores carry exactly the identities the catalogue entries carry, null included. The two shapes share five field names here — emulator, declared_index, label, core_so and caveats — and the join is the first two together: the identity says which emulator, the position which row, so the unidentified row still joins to itself as (null, 0). core_so is null on every row of this system because none of them loads a core, the label is presentation, and a caveat list is neither. The firmware answer states the same row as absent rather than unsupported: the coverage word is for an emulator that is here, and this command names no emulator this machine has.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -9204,12 +9348,21 @@
             {
               "system": "n3ds",
               "label": "Citra",
-              "kind": "standalone",
+              "kind": "retroarch-foreign-core",
               "core_so": null,
               "emulator": null,
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "caveats": [
+                {
+                  "code": "core-file-foreign",
+                  "data": {
+                    "core_file": "citra_libretro.dll",
+                    "label": "Citra",
+                    "system": "n3ds"
+                  }
+                }
+              ]
             },
             {
               "system": "n3ds",
@@ -9240,7 +9393,7 @@
               "emulator": null,
               "declared_index": 0,
               "label": "Citra",
-              "declaration": "unsupported",
+              "declaration": "absent",
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
@@ -9248,9 +9401,11 @@
               "refused": [],
               "caveats": [
                 {
-                  "code": "standalone-unsupported",
+                  "code": "core-file-foreign",
                   "data": {
-                    "label": "Citra"
+                    "core_file": "citra_libretro.dll",
+                    "label": "Citra",
+                    "system": "n3ds"
                   }
                 }
               ]
