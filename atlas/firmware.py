@@ -106,7 +106,7 @@ from .core_info import (
 from .core_options import CoreOptionsChain, core_options_value
 from .distribution_labels import distribution_label
 from .distribution_supplied import lookup_distribution_supplied
-from .esde import KIND_LIBRETRO
+from .esde import KIND_LIBRETRO, KIND_RETROARCH_FOREIGN_CORE, KIND_STANDALONE, CatalogueKind
 from .machine import (
     DIGEST_MD5,
     DIGEST_SHA1,
@@ -148,6 +148,7 @@ from .placement import (
     HOLE_CWD,
     ROOT_SYSTEM_DIRECTORY,
     TEMPLATE_CWD,
+    UNRESOLVED_CORE_FILE_FOREIGN,
     UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
@@ -392,6 +393,12 @@ CAVEAT_FIRMWARE_ROOT_MISSING = "firmware-root-missing"
 # the typed Unresolved outcome, this route with a caveat, and both spell it the
 # same word.
 CAVEAT_CORE_NOT_INSTALLED = UNRESOLVED_CORE_NOT_INSTALLED
+# The catalogue row hands RetroArch a core file of another host, so nothing
+# here loads it — the same two-route sharing again, with the placement routes
+# answering the fact as an outcome and this route as a caveat on an ``absent``
+# declaration. Not ``core-not-installed``: that word says a core of this host
+# was looked for and not found, and nothing was looked for here.
+CAVEAT_CORE_FILE_FOREIGN = UNRESOLVED_CORE_FILE_FOREIGN
 # One fact, one code on both routes: the placement route answers a standalone
 # emulator with the typed Unresolved outcome, the firmware route with this
 # caveat, and a client that learned the word on one route reads the other.
@@ -2220,7 +2227,17 @@ CORE_DECLARATION_STATES = ("read", "unreadable", "absent", "unsupported", "packa
 DECLARATIONS_JUDGED = (DECLARATION_READ, DECLARATION_PACKAGED)
 # Three ways to have nothing to weigh: the declaration could not be read, the
 # emulator is not installed, and atlas has no source for what it wants. None of
-# them is a statement about files on this machine.
+# them is a statement about files on this machine. ``absent`` is written at
+# three places, and the caveat beside it is what tells them apart. Two are
+# about a core of this host that is not here — one the caller named
+# (:func:`firmware_for_core`), one a catalogue row names
+# (:func:`_catalogue_entry_core`) — and each states ``core-not-installed``
+# only where the cores were enumerated, ``firmware-declaration-unknown``
+# where that enumeration never ran, because absence is a claim and a look
+# that did not happen supports none. The third is a row handing RetroArch a
+# core file this host cannot load (#446), which states ``core-file-foreign``:
+# nothing was looked for at all, the command naming no file this host could
+# open, so the word says nothing about what is installed.
 DECLARATIONS_UNJUDGED = (DECLARATION_UNREADABLE, DECLARATION_ABSENT, DECLARATION_UNSUPPORTED)
 
 
@@ -3103,10 +3120,17 @@ class CatalogueEntry:
     means this entry's launch picks a binary whose trees hang elsewhere —
     EmuDeck's flatpak variant reads ``~/.var/app/<id>``, not the host's XDG
     tree — set by the same handle for the same reason the token is.
+
+    ``foreign_core_file`` is the core file a ``retroarch-foreign-core`` row
+    hands RetroArch, carried across because this seam has no command to read it
+    out of and the caveat that states such a row names the file. Non-``None``
+    exactly on that kind, and set by the handle that read the catalogue, from
+    :func:`atlas.esde.foreign_core_file` — the same reading that chose the
+    kind.
     """
 
     label: str
-    kind: str
+    kind: CatalogueKind
     core_so: str | None
     emulator: str | None = None
     declared_index: int | None = None
@@ -3114,6 +3138,20 @@ class CatalogueEntry:
     standalone_data_home: str | None = None
     standalone_config_home: str | None = None
     standalone_flatpak: str | None = None
+    foreign_core_file: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind == KIND_RETROARCH_FOREIGN_CORE and self.foreign_core_file is None:
+            raise ValueError(
+                f"CatalogueEntry: a {KIND_RETROARCH_FOREIGN_CORE!r} row is one whose command "
+                "named a core file of another host — without that name the caveat it rides "
+                "would state nothing"
+            )
+        if self.kind != KIND_RETROARCH_FOREIGN_CORE and self.foreign_core_file is not None:
+            raise ValueError(
+                f"CatalogueEntry: a {self.kind!r} row loads what its command names, so "
+                f"{self.foreign_core_file!r} would name a file nothing here was refused over"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -7878,6 +7916,42 @@ def _standalone_entry_core(
     )
 
 
+def _foreign_core_caveat(entry: CatalogueEntry, core_file: str, system: str) -> Caveat:
+    """Why a ``retroarch-foreign-core`` row answers nothing — with the file it names.
+
+    The one place this answer words the fact, so the catalogue's own statement
+    of it and this one carry the same code and the same three keys.
+    """
+    return Caveat(
+        CAVEAT_CORE_FILE_FOREIGN,
+        f"{entry.label} hands RetroArch {core_file}, a core file this host cannot load — "
+        "its name carries another platform's suffix, so nothing here loads it, there is no "
+        "declaration to read, and the empty list means unknown rather than 'needs nothing'",
+        {"core_file": core_file, "label": entry.label, "system": system},
+    )
+
+
+def _foreign_core_entry(entry: CatalogueEntry, core_file: str, system: str) -> CoreFirmware:
+    """A row naming a core file this host cannot load: absent, and the caveat says which file.
+
+    ``absent`` rather than ``unsupported``: the coverage word is for an
+    emulator that is *here* and whose rules atlas has no source for, and
+    nothing this row names is here. Not ``core-not-installed`` either — that
+    code says a core of this host was looked for in the cores directory and
+    missed, and no directory was consulted for a file this host could not load
+    whatever it found.
+    """
+    return CoreFirmware(
+        core_so=entry.core_so,
+        label=entry.label,
+        emulator=entry.emulator,
+        declared_index=entry.declared_index,
+        declaration=DECLARATION_ABSENT,
+        requirements=(),
+        caveats=(_foreign_core_caveat(entry, core_file, system),),
+    )
+
+
 def _catalogue_entry_core(
     machine: Machine,
     context: FirmwareContext,
@@ -7890,15 +7964,23 @@ def _catalogue_entry_core(
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """One catalogue entry resolved, plus the observations it produced.
 
-    Five states, kept apart: a carded standalone emulator (packaged
+    Six states, kept apart: a carded standalone emulator (packaged
     declaration, live destinations), a standalone one outside atlas's
-    coverage, a core the catalogue names that is not installed (not here), an
-    installed core whose ``.info`` could not be read, and one that was read.
+    coverage, a row handing RetroArch a core file of another host (nothing to
+    load, nothing to read), a core the catalogue names that is not installed
+    (not here), an installed core whose ``.info`` could not be read, and one
+    that was read.
 
     *folders* is the answer's memo of folder reads: a catalogue may list one
     core under two entries, and each entry still answers its own rows, but a
     declared folder is read and its contents stated once (:data:`_FolderReads`).
     """
+    # The kind, asked through the field its own construction check holds to
+    # it: a row states a foreign core file exactly when its kind is that word,
+    # so this one test is the branch and the narrowing at once.
+    core_file = entry.foreign_core_file
+    if core_file is not None:
+        return _foreign_core_entry(entry, core_file, system), []
     if entry.kind != KIND_LIBRETRO or entry.core_so is None:
         return _standalone_entry_core(machine, context, entry, system, verify=verify)
     core = by_stem.get(entry.core_so[: -len(".so")] if entry.core_so.endswith(".so") else entry.core_so)
@@ -8585,13 +8667,19 @@ class _CardedEntries:
 def _card_of(entry: CatalogueEntry, system: str) -> StandaloneFirmwareCard | None:
     """The card this catalogue row answers under for *system*, or ``None``.
 
-    Three ways to be none of an inventory's business: a libretro row, whose
-    firmware is the installed core's own declaration; a standalone one whose
-    launch command identifies no token atlas has a card for; and one whose card
-    does not answer for the system the row was declared under, which is the
-    same gate :func:`_standalone_entry_core` applies.
+    Four ways to be none of an inventory's business: a libretro row, whose
+    firmware is the installed core's own declaration; a row handing RetroArch a
+    core file of another host, which launches no emulator whose trees a card
+    could describe; a standalone one whose launch command identifies no token
+    atlas has a card for; and one whose card does not answer for the system the
+    row was declared under, which is the same gate
+    :func:`_standalone_entry_core` applies.
+
+    The gate is on the standalone word itself rather than on "not libretro":
+    only a row that launches an emulator of its own can reach a card, and a
+    fourth kind added tomorrow would otherwise fall through into one.
     """
-    if entry.kind == KIND_LIBRETRO:
+    if entry.kind != KIND_STANDALONE:
         return None
     card = lookup_standalone_firmware_card(entry.standalone_token)
     return card if card is not None and system in card.systems else None

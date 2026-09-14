@@ -6112,3 +6112,35 @@ class TestAnAnswerStatesAnObservationOnce:
         listed = Caveat(CAVEAT_FIRMWARE_DECLARATION_UNREAD, "as a list", {"declared": ("a",)})
         joined = Caveat(CAVEAT_FIRMWARE_DECLARATION_UNREAD, "as a string", {"declared": "a"})
         assert stated_once((listed, joined)) == (listed, joined)
+
+
+class TestARowsForeignCoreFileIsHeldToItsKind:
+    """`CatalogueEntry` refuses the two pairings that would make the caveat lie (#446).
+
+    The firmware seam carries no launch command, so the file a
+    ``retroarch-foreign-core`` row names travels as a field — and a field that
+    may disagree with the kind beside it is a caveat waiting to state the wrong
+    thing, or nothing at all.
+    """
+
+    def test_the_word_without_the_file_is_refused(self):
+        with pytest.raises(ValueError, match="without that name the caveat"):
+            CatalogueEntry(label="Citra", kind=atlas.KIND_RETROARCH_FOREIGN_CORE, core_so=None)
+
+    def test_the_file_without_the_word_is_refused(self):
+        with pytest.raises(ValueError, match="nothing here was refused over"):
+            CatalogueEntry(
+                label="Citra",
+                kind=atlas.KIND_STANDALONE,
+                core_so=None,
+                foreign_core_file="citra_libretro.dll",
+            )
+
+    def test_the_pairing_builds(self):
+        entry = CatalogueEntry(
+            label="Citra",
+            kind=atlas.KIND_RETROARCH_FOREIGN_CORE,
+            core_so=None,
+            foreign_core_file="citra_libretro.dll",
+        )
+        assert entry.foreign_core_file == "citra_libretro.dll"

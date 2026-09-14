@@ -9415,3 +9415,220 @@ class TestEveryEntryCarriesTheIdentityItsCommandSpells:
         catalogue = self._identities(ed, "n3ds")
         firmware = {c.label: c.emulator for c in ed.firmware_for_system(system="n3ds").cores}
         assert firmware == catalogue == {"Citra": None, "Azahar (Standalone)": "AZAHAR"}
+
+
+class TestARowNamingACoreFileOfAnotherHost:
+    """Issue #446: EmuDeck's n3ds rows launch RetroArch with a Windows `.dll`.
+
+    Every route this row reaches must answer the fact the command states, and
+    none of them may fall into the standalone dispatch — a card looked up under
+    the launch's only `%EMULATOR_…%` token would answer with RetroArch's own
+    trees, and the refusal where none is found names an emulator that is not
+    installed here at all.
+    """
+
+    ROM = f"{HOME}/Emulation/roms/n3ds/Game.3ds"
+    FOREIGN_ROW = (
+        '    <command label="Citra">%EMULATOR_RETROARCH% -L '
+        "%CORE_RETROARCH%\\citra_libretro.dll %ROM%</command>\n"
+    )
+    AZAHAR_ROW = '    <command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command>\n'
+
+    def _emudeck(self, rows: str, gamelist: str | None = None):
+        files = {
+            EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+            STANDALONE_CFG: 'savefile_directory = "/home/deck/Emulation/saves"\n',
+            f"{HOME}/Emulation/saves/.keep": "",
+            self.ROM: "",
+            f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
+                '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'
+                "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n"
+                f"{rows}  </system>\n</systemList>\n"
+            ),
+        }
+        if gamelist is not None:
+            files[f"{HOME}/ES-DE/gamelists/n3ds/gamelist.xml"] = gamelist
+        return atlas.EmuDeck(HOME, FixtureMachine(files))
+
+    def _entry(self, rows: str = FOREIGN_ROW):
+        return self._emudeck(rows).emulators_for("n3ds").entries[0]
+
+    @staticmethod
+    def _no_card_may_be_looked_up(monkeypatch):
+        """Every packaged-card door, nailed shut — a route that opens one fails the test.
+
+        The fixture proves the claim the issue is about: not that the answers
+        read well, but that the standalone dispatch is never entered.
+        """
+
+        def refuse(*args: object, **kwargs: object):
+            raise AssertionError("a row that launches no emulator reached a standalone card")
+
+        for module, name in (
+            (atlas.installations, "lookup_standalone_save_card"),
+            (atlas.installations, "lookup_standalone_savestate_card"),
+            (atlas.installations, "lookup_standalone_texture_card"),
+            (atlas.installations, "lookup_standalone_mod_card"),
+            (atlas.installations, "lookup_standalone_launch"),
+            (atlas.firmware, "lookup_standalone_firmware_card"),
+        ):
+            monkeypatch.setattr(module, name, refuse)
+
+    def test_the_catalogue_entry_states_the_kind_and_the_file(self):
+        entry = self._entry()
+        assert entry.kind == atlas.KIND_RETROARCH_FOREIGN_CORE
+        assert entry.core_so is None
+        assert [c.code for c in entry.caveats] == [atlas.CAVEAT_CORE_FILE_FOREIGN]
+        assert entry.caveats[0].data == {
+            "core_file": "citra_libretro.dll",
+            "label": "Citra",
+            "system": "n3ds",
+        }
+
+    def test_the_sibling_standalone_row_is_untouched(self):
+        entries = self._emudeck(self.FOREIGN_ROW + self.AZAHAR_ROW).emulators_for("n3ds").entries
+        assert [(e.label, e.kind, [c.code for c in e.caveats]) for e in entries] == [
+            ("Citra", atlas.KIND_RETROARCH_FOREIGN_CORE, [atlas.CAVEAT_CORE_FILE_FOREIGN]),
+            ("Azahar (Standalone)", atlas.KIND_STANDALONE, []),
+        ]
+
+    def test_all_four_placement_routes_refuse_without_reaching_a_card(self, monkeypatch):
+        self._no_card_may_be_looked_up(monkeypatch)
+        entry = self._entry()
+        answers = [
+            entry.savefile_location(content_path=self.ROM),
+            entry.savestate_location(content_path=self.ROM),
+            entry.texture_pack_location(content_path=self.ROM),
+            entry.mod_location(content_path=self.ROM),
+        ]
+        assert [a.code for a in answers] == [atlas.UNRESOLVED_CORE_FILE_FOREIGN] * 4
+        assert [a.data for a in answers] == [
+            {"core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds"}
+        ] * 4
+
+    def test_the_firmware_answer_is_absent_rather_than_an_emulator_nobody_read(self, monkeypatch):
+        self._no_card_may_be_looked_up(monkeypatch)
+        cores = self._emudeck(self.FOREIGN_ROW).firmware_for_system(system="n3ds").cores
+        assert [(c.label, c.declaration, c.core_so) for c in cores] == [("Citra", "absent", None)]
+        assert [c.code for c in cores[0].caveats] == [atlas.CAVEAT_CORE_FILE_FOREIGN]
+        assert cores[0].caveats[0].data == {
+            "core_file": "citra_libretro.dll",
+            "label": "Citra",
+            "system": "n3ds",
+        }
+
+    def test_the_inventory_leaves_no_trace_of_such_a_row(self, monkeypatch):
+        # The inventory carries installed cores and carded standalone
+        # emulators; this row is neither, exactly as an un-carded standalone
+        # row is neither. Stating it there would add a line per system it is
+        # declared under and say nothing. The code is checked too, because
+        # "no row" and "no mention" are two claims and the guide makes both.
+        self._no_card_may_be_looked_up(monkeypatch)
+        inventory = self._emudeck(self.FOREIGN_ROW).firmware_inventory()
+        assert [c.label for c in inventory.cores] == []
+        assert atlas.CAVEAT_CORE_FILE_FOREIGN not in [c.code for c in inventory.caveats]
+
+    def test_the_entrys_own_caveat_stands_beside_the_assemblys(self):
+        # The caveat rides the entry, and the entry may already carry one: a
+        # gamelist that selects another emulator for some game puts its own
+        # caveat on every entry of the system when no content is named.
+        gamelist = (
+            '<?xml version="1.0"?>\n<gameList>\n  <game>\n'
+            "    <path>./Game.3ds</path>\n    <altemulator>Azahar (Standalone)</altemulator>\n"
+            "  </game>\n</gameList>\n"
+        )
+        install = self._emudeck(self.FOREIGN_ROW + self.AZAHAR_ROW, gamelist=gamelist)
+        entry = install.emulators_for("n3ds").entries[0]
+        assert [c.code for c in entry.caveats] == [
+            atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
+            atlas.CAVEAT_CORE_FILE_FOREIGN,
+        ]
+
+    def test_the_launchability_verdict_is_the_split_the_accept_list_cannot_see(self, monkeypatch):
+        # The system's list declares .3ds on account of every entry, and the
+        # entry that would run takes no file at all — the exact split
+        # `entry-not-accepted` exists for. The refusal is established from the
+        # command rather than from a loader, so no format word is stated: the
+        # reason is the row's own code, at answer level because it is this
+        # answer's reason, and on the entry because it is the entry's fact.
+        self._no_card_may_be_looked_up(monkeypatch)
+        answer = self._emudeck(self.FOREIGN_ROW).launchable(system="n3ds", content_path=self.ROM)
+        assert answer.verdict == "entry-not-accepted"
+        assert [c.code for c in answer.caveats] == [
+            atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED,
+            atlas.CAVEAT_CORE_FILE_FOREIGN,
+        ]
+        assert answer.entry is not None
+        assert [c.code for c in answer.entry.caveats] == [atlas.CAVEAT_CORE_FILE_FOREIGN]
+        assert answer.entry.label == "Citra"
+
+    def test_a_sibling_that_takes_the_file_is_named_as_the_alternative(self, monkeypatch):
+        # What the refusal unlocks: `entry-not-accepted` carries the remedy,
+        # and the remedy is the row beside it that was established to read the
+        # file. Only an established `accepts` counts, which is why the card
+        # this sibling has is the thing that makes it nameable.
+        answer = self._emudeck(self.FOREIGN_ROW + self.AZAHAR_ROW).launchable(
+            system="n3ds", content_path=self.ROM
+        )
+        assert answer.verdict == "entry-not-accepted"
+        assert list(answer.alternatives) == ["Azahar (Standalone)"]
+
+    def _retrodeck(self, rows: str):
+        """The same row on RetroDECK, whose overlay ES-DE reads exactly as EmuDeck's.
+
+        The routes are four separate methods per handle, so an assertion made
+        on one arrangement says nothing about another's — and RetroDECK's four
+        would have gone unexecuted.
+        """
+        return _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                RD_BUNDLED_ESDE: GB_SYSTEM,
+                RD_OVERLAY: (
+                    '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'
+                    "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n"
+                    f"{rows}  </system>\n</systemList>\n"
+                ),
+                "/mnt/sd/retrodeck/roms/n3ds/Game.3ds": "",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+
+    def test_retrodecks_four_routes_refuse_the_same_way(self, monkeypatch):
+        self._no_card_may_be_looked_up(monkeypatch)
+        entry = self._retrodeck(self.FOREIGN_ROW).emulators_for("n3ds").entries[0]
+        assert entry.kind == atlas.KIND_RETROARCH_FOREIGN_CORE
+        rom = "/mnt/sd/retrodeck/roms/n3ds/Game.3ds"
+        answers = [
+            entry.savefile_location(content_path=rom),
+            entry.savestate_location(content_path=rom),
+            entry.texture_pack_location(content_path=rom),
+            entry.mod_location(content_path=rom),
+        ]
+        assert [a.code for a in answers] == [atlas.UNRESOLVED_CORE_FILE_FOREIGN] * 4
+        assert [a.data for a in answers] == [
+            {"core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds"}
+        ] * 4
+
+    def test_a_catalogue_that_spells_its_rows_the_way_retrodeck_does_declares_no_such_row(self):
+        # RetroDECK spells its libretro rows with this host's `.so` and its
+        # standalone rows with ES-DE's own tokens, so the third word is one no
+        # row of that shape can carry.
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                RD_BUNDLED_ESDE: (
+                    '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'
+                    "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n"
+                    '    <command label="Azahar (Standalone)">%EMULATOR_AZAHAR% %ROM%</command>\n'
+                    '    <command label="Citra">%EMULATOR_RETROARCH% -L '
+                    "%CORE_RETROARCH%/citra_libretro.so %ROM%</command>\n"
+                    "  </system>\n</systemList>\n"
+                ),
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        kinds = {e.kind for e in rd.emulators_for("n3ds").entries}
+        assert kinds == {atlas.KIND_STANDALONE, atlas.KIND_LIBRETRO}

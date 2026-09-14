@@ -1900,9 +1900,9 @@ answer.sources                     # what was read to say so (prose, for debuggi
 answer.caveats                     # why there are no entries, when there are none
 
 entry = answer.entries[0]          # the effective default (per-game altemulator > per-system choice > declared order)
-entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro'
-entry.core_so                      # 'mupen64plus_next_libretro.so' — or None for a standalone emulator
-entry.emulator                     # 'mupen64plus_next_libretro.so' — the identity, on both kinds of entry
+entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro' — one of the three words below
+entry.core_so                      # 'mupen64plus_next_libretro.so' — None on the other two kinds, which load no core
+entry.emulator                     # 'mupen64plus_next_libretro.so' — the identity, on every entry that has one
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
 entry.declared_index               # 0 — where the layer that declared the system put it, promotion aside
 entry.selection                    # why it is first, when a user promoted it — None for declared order
@@ -1911,6 +1911,54 @@ entry.provenance                   # which catalogue layer declared it (prose, f
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
+
+**`kind` is one of three words** — `atlas.CATALOGUE_KINDS` — and each states what the launch command was read to say:
+
+| `kind`                   | what the command says                                                                      | `core_so`    |
+| ------------------------ | ------------------------------------------------------------------------------------------ | ------------ |
+| `libretro`               | it names a `*_libretro.so`, and RetroArch loads that core                                  | the basename |
+| `standalone`             | it launches an emulator of its own: a `%EMULATOR_X%` token, a launcher script, a bare path | `null`       |
+| `retroarch-foreign-core` | it launches RetroArch and hands it a core file this host cannot load                       | `null`       |
+
+The third word is EmuDeck's `n3ds` overlay, which declares two rows handing RetroArch a Windows `*_libretro.dll` (they
+name different files). Neither of the other two fits: nothing is loaded, so it is no libretro entry, and no emulator of
+its own is launched, so calling it standalone would name an emulator the machine does not have — which is what such a
+row used to answer. The reading is the suffix, not a list of platforms: a core file named the libretro way under
+anything but this host's `.so`, in any spelling, is one this host cannot load. Two shapes are deliberately **not** this
+— a RetroArch launch naming no core file at all (nothing was named), and ES-DE's Android spelling
+`<core>_libretro_android.so` (the suffix is this host's, and the name is not one this reading takes apart). Both stay
+standalone rows, as they always were.
+
+Such an entry carries this caveat, with the file's own name in it — beside whatever else the entry carries, so an entry
+a game's `altemulator` also speaks about carries two:
+
+```json
+{ "code": "core-file-foreign", "data": { "core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds" } }
+```
+
+Where you meet the same code, and what it replaces:
+
+- the **catalogue** answer states the row like any other, with that caveat on the entry (`entry.caveats`);
+- `firmware_for_system` states it with `declaration: "absent"` and the same code — not `standalone-unsupported` (an
+  emulator that _is_ here whose rules atlas has no source for) and not `core-not-installed` (a core of this host that
+  the cores directory was read well enough to miss). `absent` is written at three places and the caveat beside it is
+  what tells them apart: a core the **caller** named and a core a **catalogue row** names are both a core of this host
+  that is not here, and each carries `core-not-installed` where the cores were enumerated or
+  `firmware-declaration-unknown` where that enumeration never ran; this third one carries `core-file-foreign` and looked
+  for nothing at all, the command naming no file this host could open, so it says nothing about what is installed;
+- the four entry placement routes — `savefile_location`, `savestate_location`, `texture_pack_location`, `mod_location` —
+  refuse with `core-file-foreign` as the unresolved code, on every arrangement;
+- the **firmware inventory** lists no such row, and carries no caveat of that code either, so the row leaves no trace
+  there: the inventory carries installed cores and carded standalone emulators, and this is neither — exactly as an
+  un-carded standalone row is neither. Ask `firmware_for_system` for the row;
+- `launchable` answers `entry-not-accepted` and states the code: the system's accept-list is the union over every entry
+  and can say yes while the entry that would run takes no file at all, which is the split that verdict exists for. The
+  refusal is established from the command rather than from a loader, so no format word is stated, and `alternatives`
+  names the sibling rows established to read the file. This is the one answer that carries the code **twice**, in
+  `caveats` and again in `entry.caveats` with the same data, and the two are different statements about one row: at
+  answer level it is this answer's reason for its verdict — the other two refusals that verdict has put theirs in
+  `sources`, which is prose and not contractual — and on the entry it is the entry's own fact, which rides wherever
+  entries are enumerated. Read either; do not count them.
 
 **`emulator` is the identity; `label` is presentation.** The identity is the emulator the entry launches, spelled the
 way the launch command itself spells it: the core file's basename for a libretro entry (the same string `core_so`
@@ -1926,11 +1974,13 @@ One neighbour not to confuse it with: the savestate answer's stated no carries `
 emulator (`CEMU`), where this field carries the frontend's spelling of the same emulator (`cemu` on EmuDeck) — one
 emulator, two vocabularies, two field names. It is `null` where atlas could not identify an emulator from the command —
 the shape it was written for is EmuDeck's `n3ds` rows, RetroArch launches naming a Windows `.dll`, where the only
-`%EMULATOR_…%` token is `%EMULATOR_RETROARCH%`: the frontend's runner, never an emulator. **Never match on a `null`
-identity by itself** — it would collapse EmuDeck's two `n3ds` rows into one — but the pair still joins them, because
-each keeps its own `declared_index` in both answers. A `null` says atlas could not identify the emulator, never "this
-entry launches nothing"; the entry itself is as real as any other. Whether atlas holds firmware or save knowledge for
-the emulator does not enter into it — the identity is not gated on what atlas knows.
+`%EMULATOR_…%` token is `%EMULATOR_RETROARCH%`: the frontend's runner, never an emulator. Those rows carry
+`retroarch-foreign-core` as their `kind`, and the two fields say different things about them — the kind says what the
+command was read to be, the identity says atlas could name no emulator in it. **Never match on a `null` identity by
+itself** — it would collapse EmuDeck's two `n3ds` rows into one — but the pair still joins them, because each keeps its
+own `declared_index` in both answers. A `null` says atlas could not identify the emulator, never "this entry launches
+nothing"; the entry itself is as real as any other. Whether atlas holds firmware or save knowledge for the emulator does
+not enter into it — the identity is not gated on what atlas knows.
 
 **`declared_index` is the shipped order; the list is in the effective one.** It is the entry's 0-based place in the
 launch list ES-DE builds from the `<command>` elements of the layer that declared the system — the bundled

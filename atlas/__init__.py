@@ -212,7 +212,7 @@ from .placement import (
 # annotates with the type. The seam's own two (`PathKind`, `ReadStatus`) are
 # here because answers carry them — a requirement's `found` is a path kind, a
 # health finding's `status` is a read status.
-from .esde import KIND_LIBRETRO, KIND_STANDALONE
+from .esde import CATALOGUE_KINDS, KIND_LIBRETRO, KIND_RETROARCH_FOREIGN_CORE, KIND_STANDALONE
 from .retroarch_cfg import (
     CFG_LAYER_CONTENT_DIR_OVERRIDE,
     CFG_LAYER_CORE_OVERRIDE,
@@ -233,6 +233,7 @@ from .firmware import (
     CAVEAT_CORE_DIR_UNRESOLVED,
     CAVEAT_CORE_ENUMERATION_INCOMPLETE,
     CAVEAT_CORE_INFO_UNREADABLE,
+    CAVEAT_CORE_FILE_FOREIGN,
     CAVEAT_CORE_NOT_INSTALLED,
     CAVEAT_CORE_WITHOUT_SYSTEMNAME,
     CAVEAT_EMULATOR_CONFIG_UNREADABLE,
@@ -539,6 +540,7 @@ from .placement import (
     SCREENSHOT_ROOT_DIRECTORY,
     SCREENSHOT_ROOT_CONTENT_DIRECTORY,
     STATE_ROOT_KINDS,
+    UNRESOLVED_CORE_FILE_FOREIGN,
     UNRESOLVED_CORE_NOT_INSTALLED,
     UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -701,7 +703,9 @@ __all__ = [
     "READ_UNREADABLE",
     "READ_INVALID_TEXT",
     # Vocabulary values — emulator kinds, save roots, firmware axes
+    "CATALOGUE_KINDS",
     "KIND_LIBRETRO",
+    "KIND_RETROARCH_FOREIGN_CORE",
     "KIND_STANDALONE",
     "ROOT_SAVEFILE_DIRECTORY",
     "ROOT_CONTENT_DIRECTORY",
@@ -892,6 +896,7 @@ __all__ = [
     "distribution_label",
     "load_distribution_labels",
     # Typed outcome codes
+    "UNRESOLVED_CORE_FILE_FOREIGN",
     "UNRESOLVED_CORE_NOT_INSTALLED",
     "UNRESOLVED_STANDALONE",
     "UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED",
@@ -914,6 +919,7 @@ __all__ = [
     "CAVEAT_CORE_GENERATION_UNESTABLISHED",
     "CAVEAT_CORE_INFO_UNREADABLE",
     "CAVEAT_CORE_MULTI_OPTION",
+    "CAVEAT_CORE_FILE_FOREIGN",
     "CAVEAT_CORE_NOT_INSTALLED",
     "CAVEAT_CORE_MODE_UNESTABLISHED",
     "CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED",

@@ -389,7 +389,7 @@ KNOWN_GRANULARITIES = {
 }
 KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes", "unknown"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
-KNOWN_EMULATOR_KINDS = {"libretro", "standalone"}
+KNOWN_EMULATOR_KINDS = {"libretro", "standalone", "retroarch-foreign-core"}
 KNOWN_CAVEAT_CODES = {
     "no-core",
     "core-unqueryable",
@@ -442,6 +442,7 @@ KNOWN_CAVEAT_CODES = {
     "core-dir-unresolved",
     "firmware-root-missing",
     "core-not-installed",
+    "core-file-foreign",
     "standalone-unsupported",
     "emulator-catalogue-unavailable",
     "firmware-unreadable",
@@ -527,6 +528,7 @@ NOTHING_READ_CODES = {
     "firmware-declaration-unknown",
     "system-unknown",
     "core-not-installed",
+    "core-file-foreign",
 }
 # An identification without an identity says which kind of nothing it is: the
 # table does not know this content, the request contradicts itself, or it named
@@ -543,6 +545,7 @@ KNOWN_UNRESOLVED_CODES = {
     "standalone-unsupported",
     "standalone-variant-unestablished",
     "core-not-installed",
+    "core-file-foreign",
     "texture-wiring-unestablished",
     "mod-wiring-unestablished",
     "emulator-config-unreadable",

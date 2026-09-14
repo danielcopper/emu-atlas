@@ -1875,6 +1875,75 @@ def _member_of_an_array(path: str, reference: FieldRef) -> type[Any] | None:
     return member if (member.__doc__ or "").strip() else None
 
 
+def vocabulary_cell(reference: FieldRef | None) -> str:
+    """Every name this package gives the value lists one field is declared against.
+
+    The field's own declarations are the annotation's ``Literal[...]`` and the
+    tuple a ``__post_init__`` holds it to, and a field can carry one without
+    the other: a ``Literal`` on a **property** has no ``__post_init__`` to be
+    checked in, because the attribute's owner is not a dataclass. What a
+    consumer imports and branches on is still the tuple, so a name the package
+    EXPORTS for the same contents is added — which is the one reading that
+    cannot be ambiguous, because exporting is a fact about ``atlas.__all__``.
+    The AST-collected private names are deliberately not: ``FIRMWARE_NEEDS``
+    and ``_FILE_NEEDS`` are both ``('required', 'optional')`` and neither is
+    exported, so citing them would put two names for one list in a cell a
+    client reads. This is the same pair :func:`published_vocabularies` forms
+    for the vocabulary index below the tables, so a field row and that index
+    never name one list differently.
+    """
+    if reference is None:
+        return ""
+    exported = exported_tuple_names()
+    found: list[str] = []
+    for vocabulary in reference.vocabularies:
+        found.append(vocabulary.name)
+        found.extend(exported.get(vocabulary.values, []))
+    return backticked(sorted(dict.fromkeys(found)))
+
+
+@functools.cache
+def exported_tuple_names() -> dict[tuple[str, ...], list[str]]:
+    """Contents → the names ``atlas.__all__`` exports for that exact string tuple.
+
+    A list rather than a name, because contents do not identify a name on their
+    own: :func:`ambiguous_exported_tuple_names` is the gate that refuses to
+    publish a cell where more than one export claims one list.
+    """
+    found: dict[tuple[str, ...], list[str]] = {}
+    for name in sorted(atlas.__all__):
+        value = getattr(atlas, name)
+        if isinstance(value, tuple) and value and all(isinstance(item, str) for item in value):
+            found.setdefault(tuple(value), []).append(name)
+    return found
+
+
+def ambiguous_exported_tuple_names(exported: Mapping[tuple[str, ...], Sequence[str]]) -> list[str]:
+    """Value lists that more than one exported name claims.
+
+    :func:`vocabulary_cell` cites an exported name for a field's values, and
+    cites *that* reading because exporting is the one that cannot be
+    ambiguous — there is a single ``atlas.__all__`` and a client imports from
+    it. Two exports of equal contents would end that: the cell would print
+    both names for one list, and a reader could not tell which is the one to
+    import. So the same refusal :func:`ambiguous_vocabulary_names` makes for
+    the registry's tuples is made here for every exported one, rather than
+    letting a cell name two tuples and look deliberate.
+
+    The package states no such pair today, which is the point of a gate: the
+    private names already collide (``FIRMWARE_NEEDS`` and ``_FILE_NEEDS`` are
+    both ``('required', 'optional')``), so the day one of them is exported
+    beside the other this stops the page instead of publishing both.
+    """
+    return [
+        f"{backticked(sorted(names))} are exported names for one list {list(values)} — "
+        "a field row cites an exported name to say which tuple to import, and these do not "
+        "say one"
+        for values, names in sorted(exported.items())
+        if len(names) > 1
+    ]
+
+
 def field_rows(walk: ShapeWalk, sentences: Mapping[tuple[str, str], str]) -> list[list[str]]:
     rows: list[list[str]] = []
     for path in sorted(walk.paths):
@@ -1888,7 +1957,7 @@ def field_rows(walk: ShapeWalk, sentences: Mapping[tuple[str, str], str]) -> lis
                 cell(nullable_cell(reference, path in walk.ambiguous)),
                 "yes" if observation.nulls else "no",
                 f"{observation.answers}/{walk.answers}",
-                cell(backticked([v.name for v in reference.vocabularies]) if reference else ""),
+                cell(vocabulary_cell(reference)),
                 cell(meaning_cell(path, reference, sentences)),
             ]
         )
@@ -2708,6 +2777,7 @@ def build() -> tuple[list[str], list[str]]:
         *shape_disagreements(reference.witnessed),
         *registry_disagreements(reference.witnessed, reference.enumerations),
         *ambiguous_vocabulary_names(reference.enumerations),
+        *ambiguous_exported_tuple_names(exported_tuple_names()),
         *unstated_meanings(reference.walks, reference.sentences),
         *half_explained_vocabularies(reference.published),
         *ambiguous_value_meanings(reference.published),
@@ -2719,15 +2789,17 @@ def build() -> tuple[list[str], list[str]]:
 def main() -> None:
     lines, failures = build()
     if failures:
-        # Eight gates print here. The null cross-check is annotations against
+        # Nine gates print here. The null cross-check is annotations against
         # vectors, the shape and registry checks are the corpus against itself
-        # and against the registry, the naming check is the package against
-        # itself, the meaning gate is the walk against the docstrings, and the
-        # last three read one pair between them — a published vocabulary against
-        # the sentences under its own value constants — because they catch the
-        # three ways that pair fails: a list explained in part, a value two
-        # constants explain differently, and a sentence written for a list no
-        # module declares, which no reading here would ever collect.
+        # and against the registry, the two naming checks are the package
+        # against itself — one for the tuples the registry cites, one for the
+        # tuples a field row cites — the meaning gate is the walk against the
+        # docstrings, and the last three read one pair between them — a
+        # published vocabulary against the sentences under its own value
+        # constants — because they catch the three ways that pair fails: a list
+        # explained in part, a value two constants explain differently, and a
+        # sentence written for a list no module declares, which no reading here
+        # would ever collect.
         print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)

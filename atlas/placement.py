@@ -1483,6 +1483,20 @@ UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED = "standalone-variant-unestablished"
 # reads the other. Not to be confused with a core that is *there* and will not
 # load — that one still has a placement, with its generation left unestablished.
 UNRESOLVED_CORE_NOT_INSTALLED = "core-not-installed"
+# The catalogue row launches RetroArch and hands it a core file this host
+# cannot load: the name carries another platform's shared-library suffix —
+# EmuDeck's two ``n3ds`` rows each name a Windows ``*_libretro.dll`` — so
+# nothing here loads and there is no emulator whose trees could be read.
+# ``data`` names the file (``core_file``), the row (``label``) and the system,
+# because the file is the whole finding: a client renders "this entry cannot
+# run here, it names <file>" out of it. One fact, one code on every route, the
+# same sharing the two codes above have: the placement routes answer such an
+# entry with this outcome, the firmware route with the caveat of the same
+# spelling (``atlas.firmware.CAVEAT_CORE_FILE_FOREIGN``). Distinct from
+# ``core-not-installed``, which is a core of this host that the cores directory
+# was read well enough to miss, and from ``standalone-unsupported``, which is
+# an emulator that IS here and whose rules atlas has no source for.
+UNRESOLVED_CORE_FILE_FOREIGN = "core-file-foreign"
 # Nothing establishes where this emulator reads texture packs, so no directory
 # is named. A statement about atlas, never about the emulator: it does NOT say
 # the emulator has no texture-pack feature, and a client rendering it that way

@@ -1797,7 +1797,10 @@ class TestTheVocabularyIsOneVocabulary:
         assert sorted(promoted - set(atlas.__all__)) == []
 
     def test_the_emulator_kind_vocabularies_match(self):
-        assert validate_vectors.KNOWN_EMULATOR_KINDS == {atlas.KIND_LIBRETRO, atlas.KIND_STANDALONE}
+        # Against the exported tuple rather than a list spelled here: the
+        # vocabulary grew a third word (#446), and a hand-written pair would
+        # have had to be edited to keep agreeing instead of simply agreeing.
+        assert validate_vectors.KNOWN_EMULATOR_KINDS == set(atlas.CATALOGUE_KINDS)
 
     def test_the_path_kind_vocabularies_match(self):
         path_kinds = {atlas.KIND_FILE, atlas.KIND_DIRECTORY, atlas.KIND_MISSING, atlas.KIND_INACCESSIBLE}
