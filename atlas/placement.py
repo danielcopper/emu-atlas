@@ -61,6 +61,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Sequence, TypeAlias, TypeVar
 
+from .machine import CORE_UNANSWERED_STATUSES
 from .retroarch_cfg import CFG_LAYER_KINDS, RetroArchCfg
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
@@ -380,6 +381,13 @@ def _frozen_value(value: "str | Sequence[str] | Mapping[str, str]") -> "FrozenDa
 # Caveat codes — the stable, machine-readable identifiers clients branch on.
 # Part of the API contract; messages are for humans and may change freely.
 CAVEAT_NO_CORE = "no-core"
+# The core was asked what it calls itself and did not answer, so whatever the
+# answer would have used that name for is not there. ``data["reason"]`` is the
+# machine's own word for how the probe came back
+# (:data:`~atlas.machine.CORE_UNANSWERED_STATUSES`) — a fact the seam observed
+# rather than one this module could infer, which is why the key is absent on
+# the one route where no probe was made at all: a core whose location the
+# configuration never established has nothing to observe about it.
 CAVEAT_CORE_UNQUERYABLE = "core-unqueryable"
 CAVEAT_SORTED_DIR_MISSING = "sorted-dir-missing"
 # No "health" code lives here: an installation's health findings are caveats
@@ -1565,6 +1573,10 @@ SearchReading = Literal["identified", "unrecognised", "unreadable"]
 ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
     {
         (CAVEAT_CORE_MODE_UNESTABLISHED, "reason"): CORE_MODE_UNESTABLISHED_REASONS,
+        # The seam's own vocabulary, registered rather than restated: the words
+        # a probe answers with are decided in atlas/machine.py, and a second
+        # spelling here would be a place for the two to drift apart.
+        (CAVEAT_CORE_UNQUERYABLE, "reason"): CORE_UNANSWERED_STATUSES,
         (CAVEAT_FILENAMES_CONTENT_CONDITIONAL, "files_established_for"): (
             FILES_ESTABLISHED_FOR_TOKENS
         ),

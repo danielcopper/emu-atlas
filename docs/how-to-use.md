@@ -248,9 +248,9 @@ Rules that hold for every answer:
   set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
   `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Handles are live, and worth keeping.** Every query re-reads its sources — that is what makes asking twice a drift
-  check. The core probe is the one read that can be remembered instead, and only two of its outcomes are: a core that
-  answered, and a probe that hung without printing a usable line. Both are kept per machine object under the `.so`'s
-  path, mtime and size. A probe that ended on its own with nothing usable is asked again, and so is a core no
+  check. The core probe is the one read that can be remembered instead, and only two things are: a core that answered,
+  and whatever a probe that had to be killed at the timeout came back with. Both are kept per machine object under the
+  `.so`'s path, mtime and size. Every reading from a probe that ended on its own is asked again, and so is a core no
   interpreter could be launched for — on purpose, because the reason can be gone by the next question: where a placement
   carried `core-unqueryable` for want of a host library, the core answers with its `library_name` once that library is
   installed, on the same machine and without a new one. The key is metadata rather than content, so a rebuild moves the
@@ -971,7 +971,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
 | `file-set-directories-unread`     | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"          |
 | `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
-| `core-unqueryable`                | the core could not be queried, `library_name` unknown — a `<library_name>` hole may remain                |
+| `core-unqueryable`                | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                   |
 | `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
 | `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
 | `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |
@@ -1060,10 +1060,10 @@ and they do not agree: MAME's states it, `[]` there when only a failed listing i
 while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir` and `key` and no `files`. Test for the key before
 reading it.
 
-A key a client **branches** on is a value from a closed set, never a sentence. Four of them are the ones this round
-introduced, and all four are kebab-case slugs (older enumerations spell themselves their own way —
-`arrangement-unverified`'s `kind` is snake_case, and `verification`, `verdict`, `need` and `status` are closed sets
-too):
+A key a client **branches** on is a value from a closed set, never a sentence. Five of them are set out below; the two
+others the constructor closes — `firmware-search-candidates`'s `readings` and `system-firmware-world-knowledge`'s
+`evidence` — are documented with the question each rides on. (Older enumerations spell themselves their own way too:
+`arrangement-unverified`'s `kind` is snake_case, and `verification`, `verdict`, `need` and `status` are closed sets.)
 
 `core-mode-unestablished.reason` — why the card's selection rule could not decide. The sentence that used to sit here is
 in `message`, and what it embedded is a key of its own (named in the third column):
@@ -1120,6 +1120,33 @@ listing came back short the answer's own `dir` names that user's tree whatever `
 whenever the configuration records a user id, including on reasons whose name does not mention one; `skipped` names
 entries the emulator's own listing passes over, and `unestablished` those atlas could not decide — a deciding file it
 could not look at, or an entry whose own `stat` failed, which leaves not even its kind known.
+
+`core-unqueryable.reason` — how the core probe came back. atlas loads the `.so` the way RetroArch does, in a subprocess,
+and asks it what it calls itself; every way that read fails used to arrive as the same silence. The value is what the
+machine observed and nothing else, so it is the one thing that separates a broken core from a host that cannot probe at
+all:
+
+| reason                | what was observed                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `binary-inaccessible` | the `.so` did not `stat` — nothing there, or a path component that cannot be walked |
+| `no-interpreter`      | nothing here could run a probe, so no process was started                           |
+| `not-started`         | an interpreter was named and the spawn itself failed                                |
+| `unloadable`          | this process's loader would not open the `.so`                                      |
+| `crashed`             | the probe died by signal before printing the line that names the core               |
+| `timed-out`           | the probe was killed at the timeout before printing that line                       |
+| `unusable`            | the probe ended by itself and what it printed names no core                         |
+
+`no-interpreter` is the one to act on rather than investigate: a frozen host registers an interpreter
+(`register_core_probe_interpreter`) and every core answers. `unloadable` need not be about the core either — typically a
+library the core declares it needs is not resolvable from the interpreter the probe runs under, though a `.so` that
+loader can make no sense of lands there too. Either way, making the load work makes the same `.so` answer on the handle
+you already hold, because a refusal from a probe that ended on its own is asked again rather than remembered. The
+loader's own message stays at the machine seam and is in no answer, so the reason is what a client acts on. A crash or a
+hang **after** the core named itself is not here at all: the probe prints that line before it takes the risk, so the
+answer stands and no caveat rides.
+
+The key is absent on the one route where no probe was made: a core whose location the configuration never established
+has nothing observed about it, and the caveat states `core_so` alone. Test for the key before reading it.
 
 `emulator-config-unreadable.reason` — set where the read got somewhere and still could not answer. Six values are the
 scalar reader's own refusals — `second-document`, `anchor-or-alias`, `tag`, `substitution-cycle`,

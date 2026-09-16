@@ -1,6 +1,6 @@
 {
   "family": "machines",
-  "schema": 4,
+  "schema": 5,
   "spec": "DESIGN.md — installations, the machine seam, save locations",
   "description": "Whole fixture machines (files, dirs, symlinks, core answers) in; the canonical contract serializations (atlas/contract.py) out, asserted with exact equality: installations (kind, kinds, root, health issue codes) and — per query — the full SavefilePlacement (dir, root_kind, needs, fallback_dir, physical_dir, file_set incl. completeness, granularity incl. option identity and alternatives, caveat codes + data), catalogue entries, and entry-route outcomes incl. Unresolved. Prose (sources, messages) is non-contractual. Layout facts are sourced from RetroArch runloop.c/configuration.c/config.def.h and the shipped RetroDECK/EmuDeck configs; see docs/research/retrodeck-save-placement.md.",
   "vectors": [
@@ -755,12 +755,12 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "core-unqueryable",
               "data": {
-                "core_so": "applewin_libretro.so"
+                "core_so": "applewin_libretro.so",
+                "reason": "unloadable"
               }
             },
             {
@@ -769,7 +769,328 @@
                 "core": "applewin"
               }
             }
-          ]
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-no-interpreter-could-probe-states-that",
+      "rationale": "The frozen-host case: nothing on this machine could run the probe, so no process was started and no core has a library_name. The hole and the caveat are the unloadable case's, and `reason` is what tells the two apart — a client that sees this on every core is looking at its own host rather than at a broken core, and the fix is to register an interpreter. That distinction is the whole point of the key: the message cannot carry it, because the seam and not the resolver is what observed it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": "no-interpreter"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so",
+                "reason": "no-interpreter"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-whose-probe-could-not-be-spawned-states-that",
+      "rationale": "An interpreter was named here and starting it failed. Distinct from no-interpreter, because a caller acts differently: there the host registers one, here the one it registered does not run.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": "not-started"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so",
+                "reason": "not-started"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-that-crashed-before-naming-itself-states-that",
+      "rationale": "The probe died by signal before printing the line that names the core — the crash the subprocess exists to absorb, taken too early to have absorbed anything. A crash after that line is not this: the reading is the answer it already printed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": "crashed"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so",
+                "reason": "crashed"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-whose-probe-hung-states-that",
+      "rationale": "The probe was killed at the timeout with nothing usable printed. The one empty reading a machine remembers, because a core that hangs once hangs again and the retry is the only one that costs the caller the whole timeout.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": "timed-out"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so",
+                "reason": "timed-out"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "a-core-that-ran-and-named-itself-nothing-states-that",
+      "rationale": "The probe ran to an end of its own and nothing it printed names a core: the core reported no library_name, or the output holds no line a reader can use at all. What was observed is the ending, not a diagnosis — the reading says the run finished by itself and named nothing, which is what separates it from a load the loader refused, from a crash, and from a hang.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
+          "/mnt/sd/retrodeck/saves/.keep": ""
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/applewin_libretro.so": "unusable"
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/apple2/game.dsk",
+          "core_so": "applewin_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-unqueryable",
+              "data": {
+                "core_so": "applewin_libretro.so",
+                "reason": "unusable"
+              }
+            },
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "applewin"
+              }
+            }
+          ],
+          "granularity": null
         }
       }
     },
@@ -8849,12 +9170,12 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "core-unqueryable",
               "data": {
-                "core_so": "flycast_libretro.so"
+                "core_so": "flycast_libretro.so",
+                "reason": "unloadable"
               }
             },
             {
@@ -8870,7 +9191,8 @@
                 "fallback_dir": "/mnt/sd/retrodeck/saves"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },
@@ -12701,12 +13023,12 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
             {
               "code": "core-unqueryable",
               "data": {
-                "core_so": "pcsx2_libretro.so"
+                "core_so": "pcsx2_libretro.so",
+                "reason": "binary-inaccessible"
               }
             },
             {
@@ -12715,7 +13037,8 @@
                 "core": "pcsx2"
               }
             }
-          ]
+          ],
+          "granularity": null
         }
       }
     },

@@ -20,7 +20,7 @@ One family today, `machines`. Every file carries a header and its vectors:
 | key           | meaning                                                   |
 | ------------- | --------------------------------------------------------- |
 | `family`      | must match the directory (`machines`)                     |
-| `schema`      | the generation of the fixture grammar — **4** (see below) |
+| `schema`      | the generation of the fixture grammar — **5** (see below) |
 | `spec`        | which document this file's guarantees come from           |
 | `description` | what this file covers                                     |
 | `vectors`     | the vectors themselves                                    |
@@ -34,11 +34,13 @@ and part of no contract. Two uniqueness rules matter more than they look:
 
 ### Why the schema number
 
-Schema 4 asks more of a port than 3 did: a machine answers two archive reads — the member list of a zip or an LhA, and
-the WHDLoad slave inside one — and a fixture models both (`archives`, `whdload_slaves`). A port built to 3 implements
-neither, so the corpus is not the same promise — the number says so once, instead of leaving it to be discovered one
-failing vector at a time. Schema 3 was the previous such step: `glob` began reporting how much of the walk it could
-read, and a fixture could state a directory that exists and cannot be listed.
+Schema 5 asks more of a port than 4 did: a machine answers a core probe with the way it came back (`Machine.read_core`),
+a fixture states that per core (`cores`), and the `core-unqueryable` caveat carries it as `reason`. A port built to 4
+answers one unknown for every failure and states no reason, so the corpus is not the same promise — the number says so
+once, instead of leaving it to be discovered one failing vector at a time. Schema 4 was the previous such step: a
+machine answered two archive reads — the member list of a zip or an LhA, and the WHDLoad slave inside one — and a
+fixture modeled both (`archives`, `whdload_slaves`). Schema 3 was the one before: `glob` began reporting how much of the
+walk it could read, and a fixture could state a directory that exists and cannot be listed.
 
 ## `input` — a machine as plain data
 
@@ -76,10 +78,23 @@ it.
 **`symlinks`** — link path → target (absolute, or relative to the link's directory). A target that is in no other list
 is a **dead** link, which is a state the corpus deliberately covers.
 
-**`cores`** — `.so` path → what loading it answers: `{"library_name": …}`, optionally `library_version` and `options`
-(`{key: {"default": str|null, "values": [str, …]}}`). `null` means **present but unloadable**. The distinction between a
-core with no `options` key and one whose `options` is `{}` is load-bearing: the first says nothing was captured, the
-second is evidence that the core registers none.
+**`cores`** — `.so` path → what probing it answers: `{"library_name": …}`, optionally `library_version` and `options`
+(`{key: {"default": str|null, "values": [str, …]}}`). The distinction between a core with no `options` key and one whose
+`options` is `{}` is load-bearing: the first says nothing was captured, the second is evidence that the core registers
+none.
+
+A probe has more ways to come back empty than a file read has, and each is its own word, because the caller acts
+differently on each: `"unloadable"` (the loader refused the `.so`), `"unusable"` (it ran to an end of its own and named
+no core), `"crashed"` (it died by signal before naming one), `"timed-out"` (it was killed at the timeout before naming
+one), `"no-interpreter"` (nothing here could run a probe, so no process started) and `"not-started"` (the spawn itself
+failed). `null` is `"unloadable"` spelled the way it always was, and it still means exactly that.
+
+Two things are declared by not declaring. A `.so` with no entry here is the loader's refusal too — a fixture's files are
+text and blobs, never a loadable library, so what a real loader answers for those bytes is what an undeclared path
+answers. And a path with nothing at it, or one under a directory whose `stat` fails, is a binary nothing could be loaded
+from (`binary-inaccessible`), which is why that word is refused as a state string: one machine would have two spellings
+a resolver cannot tell apart. A declaration outranks what the rest of the tree says about its path, the way an
+AppImage's entries do.
 
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
 `/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or

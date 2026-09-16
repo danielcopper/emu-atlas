@@ -6991,16 +6991,16 @@ def _locating_library_name(
     chain = context.core_options
     if chain is None or not chain.per_core_options or chain.core_dir is None:
         return None, []
-    info = machine.query_core(os.path.join(chain.core_dir, core.core_so))
-    if info is not None:
-        return info.library_name, []
+    reading = machine.read_core(os.path.join(chain.core_dir, core.core_so))
+    if reading.info is not None:
+        return reading.info.library_name, []
     return None, [
         Caveat(
             CAVEAT_CORE_UNQUERYABLE,
             f"core {core.core_so!r} could not be queried — its library_name is unknown, so the "
             "per-core options file that could name another image was not read and the values "
             "below come from the global options file and this core's own defaults",
-            {"core_so": core.core_so},
+            {"core_so": core.core_so, "reason": reading.status},
         )
     ]
 

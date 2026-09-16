@@ -132,6 +132,7 @@ from atlas.machine import (
     KIND_MISSING,
     AppImageReadResult,
     CoreInfo,
+    CoreReading,
     FixtureFileSpec,
     FixtureMachine,
     GlobResult,
@@ -4529,6 +4530,10 @@ class _CountingMachine:
     def query_core(self, so_path: str) -> CoreInfo | None:
         self._count("query_core")
         return self._inner.query_core(so_path)
+
+    def read_core(self, so_path: str) -> CoreReading:
+        self._count("read_core")
+        return self._inner.read_core(so_path)
 
     def file_size(self, path: str) -> int | None:
         self._count("file_size")

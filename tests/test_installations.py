@@ -7055,6 +7055,9 @@ class _CountingMachine:
     def query_core(self, so_path):
         return self._inner.query_core(so_path)
 
+    def read_core(self, so_path):
+        return self._inner.read_core(so_path)
+
     def file_size(self, path):
         return self._inner.file_size(path)
 

@@ -1193,14 +1193,21 @@ def _identify_core(
             )
         )
     so_path = lookup.so_path
-    info = machine.query_core(so_path) if so_path else None
+    reading = machine.read_core(so_path) if so_path else None
+    info = reading.info if reading is not None else None
     if info is None:
+        # The reason is the machine's observation of the probe, so it is there
+        # whenever a probe was made. Where the configuration named no location
+        # to probe, nothing was observed and the caveat states the core alone.
+        stated: dict[str, DataValue] = {"core_so": core_so}
+        if reading is not None:
+            stated["reason"] = reading.status
         return _CoreIdentity(
             caveats=(
                 Caveat(
                     CAVEAT_CORE_UNQUERYABLE,
                     f"core {core_so!r} could not be queried — library_name unknown, per-core overrides not checked",
-                    {"core_so": core_so},
+                    stated,
                 ),
             )
         )

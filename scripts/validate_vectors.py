@@ -1,4 +1,4 @@
-"""Validate the shape of every vector file under vectors/ (schema 4). Stdlib only.
+"""Validate the shape of every vector file under vectors/ (schema 5). Stdlib only.
 
 Catches malformed vectors independently of the runner: a vector file must
 parse, carry the family header and schema matching its directory, and every
@@ -20,14 +20,16 @@ from typing import Any, NamedTuple, NoReturn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Schema 4 asks more of a port than 3 did: a machine answers two archive
-# reads — the member list of a zip or an LhA, and the WHDLoad slave inside
-# one — and a fixture models both. A port built to 3 implements neither, so
-# the corpus is not the same contract; the number says so instead of leaving
-# it to be discovered one failing vector at a time. (Schema 3 was where `glob`
-# began reporting how much of the walk it could read, and where a fixture
-# could state a directory that exists and cannot be listed.)
-SCHEMA = 4
+# Schema 5 asks more of a port than 4 did: a machine answers a core probe with
+# the way it came back, a fixture states that per core, and `core-unqueryable`
+# carries it as `reason`. A port built to 4 answers one unknown for every
+# failure, so the corpus is not the same contract; the number says so instead
+# of leaving it to be discovered one failing vector at a time. (Schema 4 was
+# where a machine answered two archive reads — the member list of a zip or an
+# LhA, and the WHDLoad slave inside one — and a fixture modeled both; schema 3
+# where `glob` began reporting how much of the walk it could read, and where a
+# fixture could state a directory that exists and cannot be listed.)
+SCHEMA = 5
 
 INPUT_FIELDS_REQUIRED = {"home", "files"}
 INPUT_FIELDS_OPTIONAL = {
@@ -907,19 +909,39 @@ def _validate_core_options(name: str, so_path: str, options: Any) -> None:
             )
 
 
+# The probe states a fixture core may declare — mirrored from FixtureMachine
+# (atlas/machine.py): every way a probe goes unanswered that a declaration can
+# state about a path it names. "binary-inaccessible" is not among them, because
+# that is what a path with nothing at it answers: a fixture states it by
+# declaring no core there, the way an absent AppImage is an undeclared path.
+CORE_STATES = {"no-interpreter", "not-started", "unloadable", "crashed", "timed-out", "unusable"}
+
+
 def _validate_input_cores(name: str, cores: Any) -> None:
     if not isinstance(cores, dict):
         fail(f"{name}: input.cores must be an object of .so paths to core answers")
     for so_path, spec in cores.items():
         if not isinstance(so_path, str):
             fail(f"{name}: input.cores keys must be strings")
-        if spec is None:
-            continue  # present but unloadable
-        if not isinstance(spec, dict) or not isinstance(spec.get("library_name"), str):
-            fail(f"{name}: input.cores[{so_path!r}] must be null or an object with a string library_name")
-        options = spec.get("options")
-        if options is not None:
-            _validate_core_options(name, so_path, options)
+        _validate_core_spec(name, so_path, spec)
+
+
+def _validate_core_spec(name: str, so_path: str, spec: Any) -> None:
+    """The three spellings one declared core may have, and no fourth."""
+    if spec is None:
+        return  # present, and the loader refuses it
+    if isinstance(spec, str):
+        if spec not in CORE_STATES:
+            fail(f"{name}: core {so_path!r} state must be one of {sorted(CORE_STATES)}, got {spec!r}")
+        return
+    if not isinstance(spec, dict) or not isinstance(spec.get("library_name"), str):
+        fail(
+            f"{name}: input.cores[{so_path!r}] must be null, one of {sorted(CORE_STATES)}, "
+            "or an object with a string library_name"
+        )
+    options = spec.get("options")
+    if options is not None:
+        _validate_core_options(name, so_path, options)
 
 
 # Which validator each optional query key goes through. Three groups, because

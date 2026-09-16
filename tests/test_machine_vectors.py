@@ -1,7 +1,7 @@
 """Run every 'machines' vector through the real detect() + resolver routes.
 
 The vectors are the artifact; this is atlas's conformance run for the machines
-family (schema 4). Each vector is a whole fixture machine — files, dirs,
+family (schema 5). Each vector is a whole fixture machine — files, dirs,
 symlinks, core answers — and detect() must find exactly the expected
 installations. Expectations are the canonical contract serializations
 (atlas.contract) asserted with EXACT equality: every stable field, including
@@ -57,7 +57,7 @@ def load_vectors():
     for path in files:
         data = json.loads(path.read_text())
         assert data["family"] == "machines"
-        assert data["schema"] == 4, f"{path}: runner speaks vector schema 4"
+        assert data["schema"] == 5, f"{path}: runner speaks vector schema 5"
         for vector in data["vectors"]:
             yield pytest.param(vector, id=f"{path.stem}:{vector['name']}")
 
@@ -593,6 +593,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
     # (code, data key) → the vocabulary its value must come from.
     VOCABULARIES = {
         ("core-mode-unestablished", "reason"): atlas.CORE_MODE_UNESTABLISHED_REASONS,
+        ("core-unqueryable", "reason"): atlas.CORE_UNANSWERED_STATUSES,
         ("emulator-config-unreadable", "reason"): atlas.EMULATOR_CONFIG_UNREADABLE_REASONS,
         ("filenames-content-conditional", "files_established_for"): (
             atlas.FILES_ESTABLISHED_FOR_TOKENS

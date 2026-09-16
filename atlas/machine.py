@@ -91,7 +91,7 @@ import sys
 import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol
+from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, TypeAlias
 
 from . import lha, ps2_bios, squashfs, whdload
 
@@ -186,6 +186,57 @@ WHDLOAD_NO_SLAVE: WhdloadSlaveStatus = "no-slave"
 WHDLOAD_AMBIGUOUS: WhdloadSlaveStatus = "ambiguous"
 WHDLOAD_SLAVE_UNREADABLE: WhdloadSlaveStatus = "slave-unreadable"
 
+# Probing a core has more ways to come back empty than reading a file has, and
+# each is a different claim about where the reading stopped. Every value is
+# decided by ONE thing the seam observed and by nothing else — never by process
+# state a resolver could read for itself, which under a fixture machine would
+# report the test host while the fixture described another machine entirely.
+# The values below say which observation decides each; the vocabulary a caveat
+# states is all of them but ``answered``, which is not a failure at all.
+CoreUnansweredStatus = Literal[
+    "binary-inaccessible",
+    "no-interpreter",
+    "not-started",
+    "unloadable",
+    "crashed",
+    "timed-out",
+    "unusable",
+]
+CoreReadStatus: TypeAlias = Literal["answered"] | CoreUnansweredStatus
+# The one status that is not a failure, and the only one carrying a CoreInfo:
+# a line naming a ``library_name`` came back. Spelled as a bare constant rather
+# than with a sentence under it because it belongs to no published vocabulary —
+# the closed list below is the failures, which is what a caveat may state.
+CORE_READ_ANSWERED: CoreReadStatus = "answered"
+CORE_READ_BINARY_INACCESSIBLE: CoreUnansweredStatus = "binary-inaccessible"
+"""The ``.so``'s own ``stat`` failed, so no loader was ever handed anything."""
+CORE_READ_NO_INTERPRETER: CoreUnansweredStatus = "no-interpreter"
+"""No interpreter to run a probe under was named here, so no process started."""
+CORE_READ_NOT_STARTED: CoreUnansweredStatus = "not-started"
+"""An interpreter was named and the spawn itself failed, so no process ran."""
+CORE_READ_UNLOADABLE: CoreUnansweredStatus = "unloadable"
+"""The loader would not open the ``.so``, so the core reported nothing."""
+CORE_READ_CRASHED: CoreUnansweredStatus = "crashed"
+"""The probe died by signal having printed no line naming the core."""
+CORE_READ_TIMED_OUT: CoreUnansweredStatus = "timed-out"
+"""The probe was killed at the timeout having printed no line naming the core."""
+CORE_READ_UNUSABLE: CoreUnansweredStatus = "unusable"
+"""The probe ended by itself and what it printed names no core."""
+# The whole vocabulary, in the order a probe reaches them: three before any
+# core is loaded — a binary that will not stat, no interpreter to launch, a
+# spawn that failed — one the loader itself decides, and three ways a running
+# probe ends without naming the core. Nothing else may appear under ``reason`` of
+# ``core-unqueryable`` — :func:`atlas.placement._check_enumerations` refuses a
+# value outside it at construction.
+CORE_UNANSWERED_STATUSES = (
+    CORE_READ_BINARY_INACCESSIBLE,
+    CORE_READ_NO_INTERPRETER,
+    CORE_READ_NOT_STARTED,
+    CORE_READ_UNLOADABLE,
+    CORE_READ_CRASHED,
+    CORE_READ_TIMED_OUT,
+    CORE_READ_UNUSABLE,
+)
 # The archive suffixes this seam reads, and which reader each takes. UAE
 # accepts both LhA spellings (sources/src/zfile.c:1483-1484 at 0043cf9), and
 # ``.7z`` is deliberately absent: no reader for it ships in a runtime atlas
@@ -412,32 +463,39 @@ class CoreInfo:
 
 @dataclass(frozen=True, slots=True)
 class CoreReading:
-    """What one probe of a ``.so`` came back with: the core's answer, or the loader's refusal.
+    """What one probe of a ``.so`` came back with, and where the reading stopped.
 
     ``query_core`` answers ``CoreInfo | None`` because that is all a resolver
     acts on — everything it cannot have is *unknown*. This is the same read
-    with the one distinction a resolver has no use for and a measurement
-    cannot do without: a core the loader would not open said nothing, and
-    "said nothing" is not "registers no options". The probe loads the binary
-    with ``ctypes``, which needs every library that core declares it needs
-    resolvable from the interpreter running the probe; where one is not, a
-    sound core reads as empty (#408). ``unloadable`` carries the loader's own
-    message then, and ``info`` is ``None``.
+    with what a resolver has no use for in the placement itself and a caller
+    diagnosing its own machine cannot do without: ``status``, one word per way
+    a probe comes back, from :data:`CoreUnansweredStatus`. A core the loader
+    would not open said nothing, and "said nothing" is not "registers no
+    options"; nor is either of them a core no process was ever started for.
 
-    ``unloadable`` is ``None`` for every other empty read — nothing at that
-    path, no interpreter to probe with, a core that crashed or hung — because
-    the loader is not what refused those, and a reading states only what was
-    observed.
+    ``info`` is set exactly when ``status`` is ``answered``. ``unloadable``
+    carries the loader's own message and is set only with the status of the
+    same name: the probe loads the binary with ``ctypes``, which needs every
+    library that core declares it needs resolvable from the interpreter
+    running the probe, and where one is not a sound core reads as refused
+    (#408). It stays ``None`` for every other empty read, because the loader
+    is not what refused those — and for a refusal no message came with, which
+    is the one a fixture machine declares.
     """
 
-    info: CoreInfo | None
+    status: CoreReadStatus
+    info: CoreInfo | None = None
     unloadable: str | None = None
 
     def __post_init__(self) -> None:
-        if self.info is not None and self.unloadable is not None:
+        if (self.info is None) == (self.status == CORE_READ_ANSWERED):
             raise ValueError(
-                "CoreReading: a core the loader refused reported nothing about itself "
-                f"(got info for {self.info.library_name!r} with {self.unloadable!r})"
+                f"CoreReading: info must be set exactly when status is 'answered' (got {self.status!r})"
+            )
+        if self.unloadable is not None and self.status != CORE_READ_UNLOADABLE:
+            raise ValueError(
+                "CoreReading: only a refused load carries the loader's message "
+                f"(got {self.unloadable!r} with status {self.status!r})"
             )
 
 
@@ -823,6 +881,10 @@ class Machine(Protocol):
     the core's self-reported info, or ``None`` whenever that info cannot be
     had — the core would not load, or nothing here could load it in the first
     place; the caller treats either as *unknown*, never as a guess.
+    ``read_core`` is the same read carrying the reason it came back empty
+    (:class:`CoreReading`) — an observation of this machine, never the
+    resolver's guess at one, which is why an answer that degrades over a core
+    can say which way the probe went unanswered.
     ``file_size`` and ``file_digest`` answer for regular files only and return
     ``None`` whenever the answer cannot be determined (missing, unreadable, not
     a regular file, or an algorithm outside :data:`DIGEST_ALGORITHMS`).
@@ -852,6 +914,8 @@ class Machine(Protocol):
 
     def query_core(self, so_path: str) -> CoreInfo | None: ...
 
+    def read_core(self, so_path: str) -> CoreReading: ...
+
     def file_size(self, path: str) -> int | None: ...
 
     def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None: ...
@@ -867,10 +931,11 @@ class RealMachine:
     a cached live read, not shipped data, keyed on the file's metadata rather
     than its content — a rebuild moves the mtime and is read again, while a
     replacement preserving mtime and size (``cp -p``, a timestamp-normalising
-    deploy) keeps the key. A probe that timed out without printing a usable
-    line is remembered too, so a hanging core costs its timeout once per
-    machine rather than once per question. That memory reaches exactly as far
-    as this object and no further, which is the part a consumer has to act on:
+    deploy) keeps the key. A probe that had to be killed at the timeout is
+    remembered too, whatever it printed first, so a hanging core costs its
+    timeout once per machine rather than once per question. That memory
+    reaches exactly as far as this object and no further, which is the part a
+    consumer has to act on:
     :func:`atlas.detect` builds a fresh machine whenever it is handed none, so
     a caller that re-detects per question pays the timeout every time, while
     one that keeps its installations, or passes its own machine, pays it once.
@@ -1126,38 +1191,55 @@ class RealMachine:
         return self.read_core(so_path).info
 
     def read_core(self, so_path: str) -> CoreReading:
-        """The whole probe reading, loader refusal included — see :class:`CoreReading`.
+        """The whole probe reading — the refusal and the way it ended, per :class:`CoreReading`.
 
-        ``query_core`` is this without the refusal, because a resolver acts on
-        the core's answer and on nothing else. A measurement that holds cards
-        against the deployed binaries needs the difference, or a core this
-        interpreter cannot open is read as one that registers nothing.
+        ``query_core`` is this without either, because a resolver acts on the
+        core's answer and on nothing else. A measurement that holds cards
+        against the deployed binaries needs the refusal, or a core this
+        interpreter cannot open is read as one that registers nothing; an
+        answer that degrades over a core needs the status, or every way of
+        going unanswered is reported as the one the prose happens to describe.
         """
         try:
             st = os.stat(so_path)
         except OSError:
-            return CoreReading(None)
+            # Nothing at that path, or a component of it that cannot be
+            # traversed: no binary was handed to a loader, and the reading
+            # says so rather than blaming a probe that never happened.
+            return CoreReading(CORE_READ_BINARY_INACCESSIBLE)
         key = (so_path, st.st_mtime_ns, st.st_size)
         if key in self._core_cache:
             return self._core_cache[key]
         reading, timed_out = self._probe(so_path)
-        # An answer is memoized, and so is the absence of one after a timeout —
-        # whatever the hung core managed to print, no usable line came out of
-        # it, or the reading would be that answer. A core that hung once hangs
-        # again, and that retry is the only empty answer costing the caller the
-        # whole _CORE_PROBE_TIMEOUT_SECONDS. Every other empty answer is asked
-        # again, because it can be transient (missing host library installed
-        # later) even while the .so is unchanged — the refused load above all,
-        # whose message often names a host library a later install would
-        # resolve, though it is also where a .so this loader can make no sense
-        # of at all lands. The memory is this object's and goes no further: a
-        # caller that builds a machine per question re-probes.
-        if reading.info is not None or timed_out:
+        # An answer is memoized, and so is every reading from a run that had to
+        # be killed. A core that hung once hangs again, and that retry is the
+        # only one costing the caller the whole _CORE_PROBE_TIMEOUT_SECONDS —
+        # which is why the ending decides this and not the status: a run killed
+        # at the timeout having printed the loader's refusal reads *unloadable*,
+        # and asking that one again would pay the timeout every time. Every
+        # reading from a run that ended by itself is asked again, because what
+        # emptied it can be transient (a missing host library installed later)
+        # even while the .so is unchanged — the refused load above all, whose
+        # message often names a host library a later install would resolve,
+        # though it is also where a .so this loader can make no sense of at all
+        # lands. The memory is this object's and goes no further: a caller that
+        # builds a machine per question re-probes.
+        if reading.status == CORE_READ_ANSWERED or timed_out:
             self._core_cache[key] = reading
         return reading
 
     @staticmethod
     def _probe(so_path: str) -> _ProbeResult:
+        """One probe run: what it read, and whether it had to be killed to end.
+
+        The status is decided here rather than in :func:`_parse_probe_output`,
+        which reads bytes and knows nothing about processes: what the probe
+        printed decides *answered* and *unloadable*, and how the run ended
+        decides which empty this is. A hang or a crash AFTER a usable line is
+        still an answer — the two-phase probe prints its base line before it
+        takes the risk that kills it — so the ending is what an empty read
+        falls back to and never what overrides a read that succeeded.
+        """
         interpreter = core_probe_interpreter()
         if interpreter is None:
             # No interpreter to run the probe under, so nothing is launched at
@@ -1167,7 +1249,7 @@ class RealMachine:
             # Unknown is the honest answer, and the caller already handles it.
             # Nothing ran, so nothing timed out: the next question asks again,
             # and it is free — an interpreter may be registered by then.
-            return _ProbeResult(CoreReading(None), timed_out=False)
+            return _ProbeResult(CoreReading(CORE_READ_NO_INTERPRETER), timed_out=False)
         try:
             proc = subprocess.run(
                 [interpreter.path, "-m", "atlas._core_probe", so_path],
@@ -1178,50 +1260,51 @@ class RealMachine:
         except subprocess.TimeoutExpired as expired:
             # A core that hangs in the option-capture phase printed its base
             # answer before it hung; the exception carries what was captured.
-            return _ProbeResult(_parse_probe_output(expired.stdout), timed_out=True)
+            return _ProbeResult(_parse_probe_output(expired.stdout, CORE_READ_TIMED_OUT), timed_out=True)
         except OSError:
-            # The probe never ran — nothing was read, nothing can be said.
-            return _ProbeResult(CoreReading(None), timed_out=False)
-        return _ProbeResult(_parse_probe_output(proc.stdout), timed_out=False)
+            # The spawn itself failed, so the probe never ran — an interpreter
+            # was named and that path could not be started.
+            return _ProbeResult(CoreReading(CORE_READ_NOT_STARTED), timed_out=False)
+        # A negative returncode is a signal: the process was killed rather than
+        # ending on its own, which is the crash the subprocess exists to absorb.
+        ended = CORE_READ_CRASHED if proc.returncode < 0 else CORE_READ_UNUSABLE
+        return _ProbeResult(_parse_probe_output(proc.stdout, ended), timed_out=False)
 
 
 class _ProbeResult(NamedTuple):
     """What one probe read, and whether the process had to be killed to end it.
 
-    Two facts, because ``read_core`` decides on both. What was read is the
-    answer; how the run ended is what tells an empty answer that will stay
-    empty from one that may not. A probe that timed out and printed no usable
-    line would hang the same way next time, so ``read_core`` remembers that
-    nothing and pays ``_CORE_PROBE_TIMEOUT_SECONDS`` once per ``.so`` for the
-    life of that :class:`RealMachine`; every other empty answer is asked again,
-    because what emptied it can be gone by the next question — a host library
-    installed, a file replaced — while the ``.so`` is unchanged.
-
-    The ending is carried here rather than folded into the answer because
-    :func:`_parse_probe_output` reads bytes and nothing else — a timeout that
-    printed a usable line still answers with it, and is remembered as the
-    success it is.
+    Two facts, because :meth:`RealMachine.read_core` decides on both. What was
+    read is the reading, status included; how the run ended is what tells a
+    reading that will not change on a retry from one that may. They are not the
+    same question, and the status alone cannot answer the second: a run killed
+    at the timeout can have printed the loader's refusal first, which reads
+    *unloadable* — a true statement about the loader, and one whose retry would
+    pay ``_CORE_PROBE_TIMEOUT_SECONDS`` all over again.
     """
 
     reading: CoreReading
     timed_out: bool
 
 
-def _parse_probe_output(stdout: bytes | None) -> CoreReading:
+def _parse_probe_output(stdout: bytes | None, ended: CoreUnansweredStatus) -> CoreReading:
     """Read the core's answer out of whatever the probe printed before it stopped.
 
     The probe prints one JSON object per line and later lines enrich earlier
     ones (two-phase design), so the last valid line wins. How the process
-    *ended* is deliberately not consulted: the subprocess exists because cores
-    crash — in ``retro_set_environment``, the option-capture phase — and by
-    then the phase-1 answer carrying ``library_name`` has already been
-    delivered. Discarding it on a non-zero exit would throw away a read that
-    succeeded. A run that printed no usable line reads as unknown, whether it
-    exited cleanly or not.
+    *ended* is deliberately not consulted for the answer: the subprocess exists
+    because cores crash — in ``retro_set_environment``, the option-capture
+    phase — and by then the phase-1 answer carrying ``library_name`` has
+    already been delivered. Discarding it on a non-zero exit would throw away a
+    read that succeeded, so a printed answer is the reading whether the process
+    ended cleanly, crashed or was killed for hanging.
 
-    One line is not an answer about the core at all: ``unloadable`` is the
-    probe stating that the loader refused the ``.so``, and it is passed on as
-    the refusal it is rather than as an empty read (:class:`CoreReading`).
+    *ended* is what a run that printed no usable line reads as — the status the
+    caller derived from how the process finished, which is the one thing about
+    the run these bytes cannot show. One line is not an answer about the core
+    at all: ``unloadable`` is the probe stating that the loader refused the
+    ``.so``, and it is passed on as the refusal it is rather than as that empty
+    (:class:`CoreReading`).
     """
     data: dict[str, object] | None = None
     for line in (stdout or b"").decode("utf-8", "replace").splitlines():
@@ -1232,15 +1315,18 @@ def _parse_probe_output(stdout: bytes | None) -> CoreReading:
         if isinstance(candidate, dict):
             data = candidate
     if data is None:
-        return CoreReading(None)
+        return CoreReading(ended)
     name = data.get("library_name")
     if not isinstance(name, str) or not name:
         unloadable = data.get("unloadable")
-        return CoreReading(None, unloadable if isinstance(unloadable, str) and unloadable else None)
+        if isinstance(unloadable, str) and unloadable:
+            return CoreReading(CORE_READ_UNLOADABLE, unloadable=unloadable)
+        return CoreReading(ended)
     version = data.get("library_version")
     extensions = data.get("valid_extensions")
     block_extract = data.get("block_extract")
     return CoreReading(
+        CORE_READ_ANSWERED,
         CoreInfo(
             library_name=name,
             library_version=version if isinstance(version, str) else None,
@@ -1622,12 +1708,74 @@ def _ancestor_dirs(paths: Iterable[str]) -> set[str]:
     return dirs
 
 
+# The probe states a fixture core may declare: every unanswered status but the
+# one a declaration cannot state about a path it names. See
+# :func:`_validate_fixture_cores`.
+_FIXTURE_CORE_STATES = frozenset(CORE_UNANSWERED_STATUSES) - {CORE_READ_BINARY_INACCESSIBLE}
+
 # The whole-archive states a fixture AppImage may declare, and the per-entry
 # ones: what RealMachine can report short of an entry's text. "missing" is not
 # among them — an absent AppImage is modeled by not declaring the path at all,
 # and an absent entry by not declaring the entry.
 _FIXTURE_APPIMAGE_STATES = ("unreadable", "not-appimage", "capability-missing")
 _FIXTURE_APPIMAGE_ENTRY_STATES = ("unreadable", "invalid-text")
+
+
+def _validate_fixture_cores(
+    cores: Mapping[str, "Mapping[str, object] | str | None"],
+) -> dict[str, "dict[str, object] | str | None"]:
+    """Hold a fixture's declared core answers to what a probe can come back with.
+
+    A state string is one of :data:`CORE_UNANSWERED_STATUSES` minus
+    ``binary-inaccessible`` — every way a probe goes unanswered that a
+    declaration can state about a path it names. That one word is refused: a
+    fixture states it by declaring no core at that path, the way an absent
+    AppImage is an undeclared path, and accepting the word as well would give
+    one machine two spellings that a resolver cannot tell apart. An answered
+    probe has no state string either, because it is the object form.
+    """
+    validated: dict[str, dict[str, object] | str | None] = {}
+    for path, spec in cores.items():
+        if isinstance(spec, str) and spec not in _FIXTURE_CORE_STATES:
+            raise ValueError(
+                f"core {path!r}: a probe state must be one of "
+                f"{sorted(_FIXTURE_CORE_STATES)}, got {spec!r}"
+            )
+        validated[path] = dict(spec) if isinstance(spec, Mapping) else spec
+    return validated
+
+
+def _fixture_core_reading(spec: "dict[str, object] | str | None") -> CoreReading:
+    """The reading one declared core answers with.
+
+    ``None`` is the refusal the declaration has always meant, spelled without
+    a message because a fixture states no loader's words. A state string is
+    that status, already held to the vocabulary at construction. An object
+    naming a ``library_name`` is the answer; one that names none is a probe
+    that ran and printed nothing a reader can use, which is what the real
+    machine calls the same shape.
+    """
+    if spec is None:
+        return CoreReading(CORE_READ_UNLOADABLE)
+    if isinstance(spec, str):
+        status: CoreUnansweredStatus = spec  # type: ignore[assignment]  # validated at construction
+        return CoreReading(status)
+    name = spec.get("library_name")
+    if not isinstance(name, str) or not name:
+        return CoreReading(CORE_READ_UNUSABLE)
+    version = spec.get("library_version")
+    extensions = spec.get("valid_extensions")
+    block_extract = spec.get("block_extract")
+    return CoreReading(
+        CORE_READ_ANSWERED,
+        CoreInfo(
+            library_name=name,
+            library_version=version if isinstance(version, str) else None,
+            valid_extensions=extensions if isinstance(extensions, str) else None,
+            options=_parse_core_options(spec.get("options")),
+            block_extract=block_extract if isinstance(block_extract, bool) else None,
+        ),
+    )
 
 
 def _validate_fixture_appimages(
@@ -1906,9 +2054,15 @@ class FixtureMachine:
     that exist explicitly (parents of every known path are directories
     implicitly — the list is how *empty* directories are stated). ``symlinks``
     maps link paths to their targets (absolute, or relative to the link's
-    directory). ``cores`` maps ``.so`` paths to core-answer objects
-    (``{"library_name": ...}``); a path mapped to ``None`` is a core that is
-    present but unloadable. ``appimages``, ``ps2_bios_headers``, ``archives``
+    directory). ``cores`` maps ``.so`` paths to what probing them answers: a
+    core-answer object (``{"library_name": ...}``), one of the state strings
+    :func:`_validate_fixture_cores` admits, or ``None``, which is the loader's
+    refusal with no message to go with it — ``"unloadable"`` spelled the way
+    it always was. An undeclared path answers from what it *is*: its ``stat``
+    would fail where nothing is there, so it reads as a binary nothing could
+    be loaded from, and everywhere else the loader refuses it, because a
+    fixture's files are text and blobs and never a library a loader opens.
+    ``appimages``, ``ps2_bios_headers``, ``archives``
     and ``whdload_slaves`` model four content reads at the seam rather than as
     bytes — see :meth:`read_appimage_text`, :meth:`read_ps2_bios_header`,
     :meth:`list_archive` and :meth:`read_whdload_slave`. The last two are a
@@ -1959,7 +2113,7 @@ class FixtureMachine:
         self,
         files: Mapping[str, FixtureFileSpec],
         symlinks: Mapping[str, str] | None = None,
-        cores: Mapping[str, Mapping[str, object] | None] | None = None,
+        cores: Mapping[str, Mapping[str, object] | str | None] | None = None,
         dirs: Iterable[str] | None = None,
         inaccessible: Iterable[str] | None = None,
         unlistable: Iterable[str] | None = None,
@@ -1970,7 +2124,7 @@ class FixtureMachine:
     ) -> None:
         self._files, self._blobs = _index_fixture_files(files)
         self._symlinks = dict(symlinks or {})
-        self._cores = dict(cores or {})
+        self._cores = _validate_fixture_cores(cores or {})
         self._appimages = _validate_fixture_appimages(appimages or {})
         self._ps2_bios_headers = _validate_fixture_ps2_bios_headers(ps2_bios_headers or {}, self._files)
         self._inaccessible = set(inaccessible or ())
@@ -2313,23 +2467,24 @@ class FixtureMachine:
         return declared if isinstance(declared, str) else None
 
     def query_core(self, so_path: str) -> CoreInfo | None:
+        return self.read_core(so_path).info
+
+    def read_core(self, so_path: str) -> CoreReading:
+        """What a probe of this path answers here, declaration first.
+
+        A path the fixture names in ``cores`` answers what it declares,
+        whatever else the tree says about that path: the declaration is the
+        seam, the way an AppImage's entries are. Everything else falls back to
+        what the path itself is — a binary nothing could be loaded from where
+        the ``stat`` would fail, and the loader's refusal where a file is
+        there and no core answer was declared for it.
+        """
         resolved = self._resolve(so_path).path
-        spec = self._cores.get(resolved) if resolved is not None else None
-        if not spec:
-            return None
-        name = spec.get("library_name")
-        if not isinstance(name, str) or not name:
-            return None
-        version = spec.get("library_version")
-        extensions = spec.get("valid_extensions")
-        block_extract = spec.get("block_extract")
-        return CoreInfo(
-            library_name=name,
-            library_version=version if isinstance(version, str) else None,
-            valid_extensions=extensions if isinstance(extensions, str) else None,
-            options=_parse_core_options(spec.get("options")),
-            block_extract=block_extract if isinstance(block_extract, bool) else None,
-        )
+        if resolved is not None and resolved in self._cores:
+            return _fixture_core_reading(self._cores[resolved])
+        if self.path_kind(so_path) in (KIND_MISSING, KIND_INACCESSIBLE):
+            return CoreReading(CORE_READ_BINARY_INACCESSIBLE)
+        return CoreReading(CORE_READ_UNLOADABLE)
 
     def glob(self, pattern: str) -> GlobResult:
         return _GlobWalk(self._list_dir, self._is_dir, self._lexists).run(pattern)

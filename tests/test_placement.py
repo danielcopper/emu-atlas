@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 
+from atlas.machine import CORE_READ_ANSWERED, CORE_UNANSWERED_STATUSES
 from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
+    CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
     CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_INVALID_SAVE_DIRECTORY,
@@ -468,6 +470,23 @@ class TestAnEnumeratedValueIsRefusedAtConstruction:
                 "a message",
                 {"reason": "the active user account is not recorded on disk"},
             )
+
+    def test_a_probe_status_outside_the_vocabulary_raises(self):
+        # The word a resolver would reach for if it described the failure in
+        # its own terms instead of stating the one the seam observed.
+        with pytest.raises(ValueError, match="core-unqueryable.reason"):
+            Caveat(CAVEAT_CORE_UNQUERYABLE, "a message", {"reason": "sandbox-only"})
+
+    def test_the_status_that_is_not_a_failure_is_refused_as_a_reason(self):
+        # ``answered`` is a status and not a reason: a caveat saying the core
+        # answered would contradict the code it rides on.
+        with pytest.raises(ValueError, match="core-unqueryable.reason"):
+            Caveat(CAVEAT_CORE_UNQUERYABLE, "a message", {"reason": CORE_READ_ANSWERED})
+
+    def test_every_probe_status_is_accepted_as_a_reason(self):
+        for status in CORE_UNANSWERED_STATUSES:
+            caveat = Caveat(CAVEAT_CORE_UNQUERYABLE, "a message", {"reason": status})
+            assert caveat.data["reason"] == status
 
     def test_a_scope_token_outside_the_vocabulary_raises(self):
         with pytest.raises(ValueError, match="filenames-content-conditional"):
