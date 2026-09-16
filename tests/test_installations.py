@@ -4869,7 +4869,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         # `path` is the key the code's other emitter uses and the guide
         # documents; a second shape for one code is a client reading nothing.
         assert stated[0].data["path"] == "/mnt/sd/hdd/home"
-        assert stated[0].data["core"] == "RPCS3"
+        assert stated[0].data["token"] == "RPCS3"
 
     @pytest.mark.parametrize(
         "system,files",

@@ -176,7 +176,7 @@ def dataroot_caveat(token: str, below: str) -> Caveat:
         "from the launch environment (XDG_CONFIG_HOME set routes it to the config side, "
         f"qthost.cpp:562-582), which no file records; {below} hangs off the "
         "environment-unset side",
-        {"core": token, "reason": REASON_DATA_ROOT_DECIDED_BY_LAUNCH},
+        {"token": token, "reason": REASON_DATA_ROOT_DECIDED_BY_LAUNCH},
     )
 
 
@@ -333,7 +333,7 @@ def per_game_unread_caveat(
         f"unknown — DuckStation layers such a file over the whole configuration while that "
         f"game runs ({_LAYER}), and the {plural} {spelled} would be read through it "
         f"({read_through}). {governs}",
-        {"core": token, "dir": directory, "key": keys},
+        {"token": token, "dir": directory, "key": keys},
     )
 
 
@@ -393,7 +393,7 @@ def per_game_caveats(
             f"({read_through}), so this answer is the one that holds for every game without "
             f"such a file. {governs}",
             {
-                "core": token,
+                "token": token,
                 "count": str(len(listing.matches)),
                 "dir": directory,
                 "key": keys,

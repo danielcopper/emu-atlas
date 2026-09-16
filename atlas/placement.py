@@ -463,7 +463,7 @@ CAVEAT_PER_GAME_OVERRIDES_PRESENT = "per-game-overrides-present"
 # caveat code is the thing a client switches on — the two facts were riding one
 # code told apart only by the shape of ``data``, and both can ride one answer
 # at once. ``per-game-overrides-present`` stays the emulators' statement (a
-# settings file layered over the very answer it rides, with ``core``, ``dir``
+# settings file layered over the very answer it rides, with ``token``, ``dir``
 # and ``key``); this one carries the total ``count`` and ``emulators``, the
 # selected emulator label mapped to how many games select it.
 CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR = "per-game-alternative-emulator"

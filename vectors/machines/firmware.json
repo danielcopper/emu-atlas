@@ -13292,7 +13292,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "DUCKSTATION",
+                    "token": "DUCKSTATION",
                     "reason": "region-decided-by-disc",
                     "dir": "/mnt/sd/retrodeck/bios",
                     "regions": [
@@ -15685,7 +15685,7 @@
                 {
                   "code": "per-game-overrides-present",
                   "data": {
-                    "core": "DUCKSTATION",
+                    "token": "DUCKSTATION",
                     "count": "2",
                     "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
                     "key": [
@@ -16955,7 +16955,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -18073,7 +18073,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -18289,7 +18289,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -18513,7 +18513,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -19032,7 +19032,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -19392,7 +19392,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -19627,7 +19627,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -19814,7 +19814,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -19996,7 +19996,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
@@ -20191,7 +20191,7 @@
                 {
                   "code": "core-mode-unestablished",
                   "data": {
-                    "core": "swanstation_libretro.so",
+                    "core_so": "swanstation_libretro.so",
                     "reason": "region-decided-by-disc",
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
