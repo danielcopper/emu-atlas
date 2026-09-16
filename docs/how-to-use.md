@@ -960,7 +960,7 @@ first, then decide whether the identifier is relevant to a filesystem operation 
 | `save-dir-unlistable`             | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"               |
 | `per-game-override`               | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`       |
 | `per-game-alternative-emulator`   | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]` |
-| `per-game-overrides-present`      | games carry emulator settings files layering over this answer (`data["core"]`, `dir`, `key`, `count`)     |
+| `per-game-overrides-present`      | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)    |
 | `per-game-layer-unread`           | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"       |
 | `per-game-build-layer-unread`     | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted          |
 | `cfg-value-rejected`              | the file sets a value the emulator cannot read, so the value it had keeps governing                       |
@@ -1011,9 +1011,9 @@ Two of those codes state per-game facts from different places, and they are dist
 `per-game-alternative-emulator` is a statement about the **frontend**: some games of this system select a different
 emulator — `data["count"]` in total, and `data["emulators"]` maps each selected emulator label to how many games select
 it, so you can tell whether this answer is even about the emulator that will run. `per-game-overrides-present` is a
-statement about the **emulator**: some games carry a settings file that layers over this very answer, with `core`, `dir`
-and `key` beside the `count`. Both can ride the same answer at once, because they come from different places — switch on
-the code.
+statement about the **emulator**: some games carry a settings file that layers over this very answer, with `token`,
+`dir` and `key` beside the `count`. Both can ride the same answer at once, because they come from different places —
+switch on the code.
 
 #### The values inside `data`
 
@@ -1056,8 +1056,8 @@ carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-a
 `core-without-systemname.database`; the ones present only when they have something to say, and simply absent otherwise,
 are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`, `unverified-version.missing` and the per-user
 `skipped` and `unestablished`. `per-game-layer-unread.files` is neither, because that code has four emulators' emitters
-and they do not agree: MAME's states it, `[]` there when only a failed listing is left to state, and states no `core`,
-while the DuckStation, PCSX2 and Dolphin emitters state `core`, `dir` and `key` and no `files`. Test for the key before
+and they do not agree: MAME's states it, `[]` there when only a failed listing is left to state, and states no `token`,
+while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir` and `key` and no `files`. Test for the key before
 reading it.
 
 A key a client **branches** on is a value from a closed set, never a sentence. Four of them are the ones this round
@@ -1580,22 +1580,24 @@ frontend's launch command uses. They agree on RetroDECK, whose commands carry th
 EmuDeck, where the entry for Cemu reports `cemu` (its launcher script) against this answer's `CEMU`. Join catalogue
 answers to firmware answers on `emulator` together with `declared_index`; read `token` as what atlas's card is called,
 except under `platform-unknown`, whose `token` is an ES-DE `<platform>` tag rather than a card. Inside a `data` mapping
-the rule that holds is the negative one: no caveat or refusal spells a card token `emulator`, so a key named `emulator`
-anywhere on the wire is always the launch identity and never the card. A card token rides caveat data as `token`, and —
-where the caveat is about the core that runs — as `core`, beside the libretro core names that key also carries; so read
-the key for what it is, and never take `emulator` for the card. Cemu 2.6 and Vita3K ship no state serializer; the
-Ryujinx lineage (Ryubing) never had one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's,
-OpenBOR's, PICO-8's and Solarus's whole serialization is their savegame/cartdata system — the **save** question's
-business, and the cards say so rather than blurring a quicksave into a machine snapshot. No tree-derived caveat ever
-rides a stated no (health findings and link walks qualify paths, and the absence names none — it answers even where the
-EmuDeck variant gate would refuse the save question). What does ride is everything that qualifies the claim itself:
-`unverified-version` with `verification: "build-unestablished"` for the emulators no arrangement ships a build of
-(Ryubing, ironwail, PICO-8 — the citation then names the release or manual the record read); the arrangement evidence
-caveats (`arrangement-unverified` / `arrangement-version-drifted`) exactly as on a placement — a stated no is world
-knowledge pinned to the build a verified arrangement ships, and an arrangement atlas has not confirmed on this version
-says so; and the entry's catalogue-status and `per-game-override` caveats, because a gamelist that would launch a
-different emulator for this game is a statement about emulator identity — "Cemu has no savestates" needs the rider that
-Cemu may not be what runs.
+each of the three words keeps to one vocabulary: no caveat or refusal spells a card token `emulator`, so a key named
+`emulator` anywhere on the wire is always the launch identity and never the card; `token` is always a card's own token,
+the same exception apart; and `core` is always a libretro core's short name (`swanstation`), never a card token and
+never the full basename of the core file, which is what `core_so` carries (`swanstation_libretro.so`). The key is what
+tells you which vocabulary you are reading, and it is the only thing that does: a core's short name can carry capitals
+(`DoubleCherryGB` is one), so the value's case says nothing. Cemu 2.6 and Vita3K ship no state serializer; the Ryujinx
+lineage (Ryubing) never had one; Ruffle's persistence is the SharedObjects tree; GZDoom's, ironwail's, OpenBOR's,
+PICO-8's and Solarus's whole serialization is their savegame/cartdata system — the **save** question's business, and the
+cards say so rather than blurring a quicksave into a machine snapshot. No tree-derived caveat ever rides a stated no
+(health findings and link walks qualify paths, and the absence names none — it answers even where the EmuDeck variant
+gate would refuse the save question). What does ride is everything that qualifies the claim itself: `unverified-version`
+with `verification: "build-unestablished"` for the emulators no arrangement ships a build of (Ryubing, ironwail, PICO-8
+— the citation then names the release or manual the record read); the arrangement evidence caveats
+(`arrangement-unverified` / `arrangement-version-drifted`) exactly as on a placement — a stated no is world knowledge
+pinned to the build a verified arrangement ships, and an arrangement atlas has not confirmed on this version says so;
+and the entry's catalogue-status and `per-game-override` caveats, because a gamelist that would launch a different
+emulator for this game is a statement about emulator identity — "Cemu has no savestates" needs the rider that Cemu may
+not be what runs.
 
 ## Where do texture packs go?
 

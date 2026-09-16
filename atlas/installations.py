@@ -5555,7 +5555,7 @@ def _pcsx2_texture_placement(
                 "because a wrongly-cased directory is warned about and left unused on a "
                 "case-sensitive filesystem",
                 {
-                    "core": card.token,
+                    "token": card.token,
                     "root": root,
                     "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                     "load_stage": _PCSX2_TEXTURE_LOAD_STAGE,
@@ -5601,7 +5601,7 @@ def _pcsx2_rejected_switch(
             "untouched when it yields nothing (INISettingsInterface.cpp:198-210), so the "
             f"compiled default {str(governing).lower()} governs; the setting does not become "
             "false because the value was unreadable",
-            {"core": token, "key": f"{switch.section}/{switch.key}", "value": raw},
+            {"token": token, "key": f"{switch.section}/{switch.key}", "value": raw},
         )
     ]
 
@@ -5743,7 +5743,7 @@ def _pcsx2_game_settings_caveats(
                     "per-game settings file is unknown — PCSX2 layers such a file over the "
                     f"whole configuration while that game runs ({_PCSX2_LAYER}), and the "
                     f"{plural} {spelled} would be read through it ({read_through}). {governs}",
-                    {"core": token, "dir": raw, "key": keys},
+                    {"token": token, "dir": raw, "key": keys},
                 ),
             ]
         directory = host.path
@@ -5758,7 +5758,7 @@ def _pcsx2_game_settings_caveats(
                 "a per-game settings file is unknown — PCSX2 layers such a file over the whole "
                 f"configuration while that game runs ({_PCSX2_LAYER}), and the {plural} "
                 f"{spelled} would be read through it ({read_through}). {governs}",
-                {"core": token, "dir": directory, "key": keys},
+                {"token": token, "dir": directory, "key": keys},
             )
         ]
     if not listing.matches:
@@ -5772,7 +5772,7 @@ def _pcsx2_game_settings_caveats(
             f"through that layer ({read_through}), so this answer is the one that holds for "
             f"every game without such a file. {governs}",
             {
-                "core": token,
+                "token": token,
                 "count": str(len(listing.matches)),
                 "dir": directory,
                 "key": keys,
@@ -6258,7 +6258,7 @@ def _dolphin_game_settings_caveats(
         f"file may set ({layer.unfiltered}), so the {plural} {spelled} — {governs} — can be "
         f"answered differently there for a game this answer cannot name; the user's own "
         f"{directory} outranks it ({layer.order})",
-        {"core": token, "key": keys, "layer": "GlobalGame"},
+        {"token": token, "key": keys, "layer": "GlobalGame"},
     )
     # What the USER's directory has to say comes first, where it says anything:
     # it is the layer that outranks the build's, so a reader meets the stronger
@@ -6277,7 +6277,7 @@ def _dolphin_game_settings_caveats(
                 f"file over the whole configuration while that game runs, above every value "
                 f"Dolphin.ini states ({layer.loader}, {layer.order} at {layer.build}), and the "
                 f"{plural} {spelled} — {governs} — would be read through it",
-                {"core": token, "dir": directory, "key": keys},
+                {"token": token, "dir": directory, "key": keys},
             )
         )
     elif listing.matches:
@@ -6291,7 +6291,7 @@ def _dolphin_game_settings_caveats(
                 f"read through that layer, so this answer is the one that holds for every game "
                 f"without such a file",
                 {
-                    "core": token,
+                    "token": token,
                     "count": str(len(listing.matches)),
                     "dir": directory,
                     "key": keys,
@@ -6586,7 +6586,7 @@ def _dolphin_slot(
                     "its saves go onto the cartridge image the emulator is configured with, which "
                     "this answer does not model; the other slot's statement stands on its own",
                     {
-                        "core": "DOLPHIN",
+                        "token": "DOLPHIN",
                         "reason": REASON_SLOT_HOLDS_AGP_DEVICE,
                         "slot": letter,
                     },
@@ -6603,7 +6603,7 @@ def _dolphin_slot(
                     f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
                     "interpret — what sits in that slot and where it saves is unestablished",
                     {
-                        "core": "DOLPHIN",
+                        "token": "DOLPHIN",
                         "reason": REASON_SLOT_DEVICE_UNINTERPRETED,
                         "slot": letter,
                         # A slot whose key is absent takes the compiled
@@ -6657,7 +6657,7 @@ def _dolphin_gc_answer(
                     "makercode, gamecode and the save's internal filename — which follow from "
                     "nothing atlas reads; back the directory up whole",
                     {
-                        "core": card.token,
+                        "token": card.token,
                         "dir": g.dir,
                         "role": g.role,
                         "citation": f"{cite('gci_names')} at {cite('build')}",
@@ -6679,7 +6679,7 @@ def _dolphin_gc_answer(
                 "no memory card sits in either slot (Dolphin.ini [Core] SlotA/SlotB) — a "
                 "GameCube game finds nowhere to save and nothing is kept; the granularity "
                 "block names the switches that would change that",
-                {"core": card.token, "mode": mode},
+                {"token": card.token, "mode": mode},
             )
         )
     physical, link_caveats = (
@@ -6852,7 +6852,7 @@ def _dolphin_wii_answer(
             "a Wii save lives in title/<title id>/data below the NAND root, and the title id "
             "is the disc's own — it follows from nothing atlas reads; back the tree up whole",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "citation": f"{cite('nand_tree')} at {cite('build')}",
@@ -6929,7 +6929,7 @@ def _dolphin_savefile_placement(
             f"Dolphin.ini carries {key}, a per-session override a movie or netplay session "
             f"sets ({cite('session_overrides')}) — while one runs, the cards live at its "
             "path, not at the answer's",
-            {"core": card.token, "reason": REASON_SESSION_OVERRIDE_SET, "key": key},
+            {"token": card.token, "reason": REASON_SESSION_OVERRIDE_SET, "key": key},
         )
         for key in ("GCIFolderAPathOverride", "GCIFolderBPathOverride")
         if _simpleini_value(values, "Core", key)[0]
@@ -6990,7 +6990,7 @@ def _ppsspp_savefile_placement(
             "from its own id and save name — it follows from nothing atlas reads; back the "
             "tree up whole",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "citation": "the game names its savedata directory; the tree is "
@@ -7042,7 +7042,7 @@ def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str
 # ---------------------------------------------------------------------------
 
 
-def _xemu_launch_dependent_caveat(core: str, key: str, value: str) -> Caveat:
+def _xemu_launch_dependent_caveat(token: str, key: str, value: str) -> Caveat:
     """The relative-value rider: xemu opens the value from the launch's own cwd.
 
     A relative ``[sys.files]`` value is composed verbatim into the QEMU machine
@@ -7062,7 +7062,7 @@ def _xemu_launch_dependent_caveat(core: str, key: str, value: str) -> Caveat:
         "fopen/access, vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — "
         "a property of the launch, not of the machine; fill 'cwd' with the launcher's "
         "working directory to complete the path",
-        {"core": core, "key": key, "path": value},
+        {"token": token, "key": key, "path": value},
     )
 
 
@@ -7072,14 +7072,14 @@ def _cwd_templated(directory: str) -> bool:
 
 
 def _xemu_group(
-    sandbox: _Sandbox, key: str, value: str, *, role: str, core: str
+    sandbox: _Sandbox, key: str, value: str, *, role: str, token: str
 ) -> tuple[FileGroup | None, tuple[Caveat, ...]]:
     if not os.path.isabs(value):
         head, name = os.path.split(value)
         directory = os.path.join(TEMPLATE_CWD, head) if head else TEMPLATE_CWD
         return (
             FileGroup(dir=directory, files=(name,), granularity=GRANULARITY_SHARED_FILE, role=role),
-            (_xemu_launch_dependent_caveat(core, key, value),),
+            (_xemu_launch_dependent_caveat(token, key, value),),
         )
     resolved = sandbox.host(key, value)
     if resolved.path is None:
@@ -7139,11 +7139,11 @@ def _xemu_disk_pieces(
                 CAVEAT_CORE_MODE_UNESTABLISHED,
                 "xemu.toml names no hard-disk image ([sys.files] hdd_path) — the machine has "
                 "no disk to save onto, and where one would be attached is unknowable here",
-                {"core": card.token, "reason": REASON_HDD_PATH_UNSET},
+                {"token": card.token, "reason": REASON_HDD_PATH_UNSET},
             ),
         )
     group, group_caveats = _xemu_group(
-        sandbox, "hdd_path", hdd, role=ROLE_BATTERY, core=card.token
+        sandbox, "hdd_path", hdd, role=ROLE_BATTERY, token=card.token
     )
     if group is None or not group.files:
         return (), group_caveats
@@ -7218,7 +7218,7 @@ def _xemu_savefile_placement(
     readings = _xemu_readings(hdd, eeprom, stated_toml)
     disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
     eeprom_group, eeprom_caveats = (
-        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, core=card.token)
+        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, token=card.token)
         if eeprom
         else (None, ())
     )
@@ -7384,7 +7384,7 @@ def _cemu_savefile_placement(
                 "the launch command carries an --mlc flag, which outranks settings.xml "
                 "(ActiveSettings.cpp:242-251 at 2.6) — the tree below may not be the one "
                 "this launch uses",
-                {"core": card.token, "reason": REASON_MLC_LAUNCH_FLAG_OUTRANKS_CONFIG},
+                {"token": card.token, "reason": REASON_MLC_LAUNCH_FLAG_OUTRANKS_CONFIG},
             )
         )
     mlc_root, reading, root_refusal = _cemu_mlc_root(doc, homes, sandbox, card.token, xml_path)
@@ -7412,7 +7412,7 @@ def _cemu_savefile_placement(
             "<save_id> with the title id, high word then low word, each 8 lowercase "
             "hex digits, as two path segments",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
@@ -7494,7 +7494,7 @@ def _azahar_virtual_sd_caveat(
         "use_virtual_sd is switched off — no SD card is emulated, so whether and where "
         "a game's save lands is not established; the tree below is where the "
         "configuration would put it",
-        {"core": card.token, "reason": REASON_VIRTUAL_SD_DISABLED},
+        {"token": card.token, "reason": REASON_VIRTUAL_SD_DISABLED},
     )
 
 
@@ -7627,7 +7627,7 @@ def _azahar_savefile_placement(
             "directory whole; fill <save_id> with the title id, high word then low word, each "
             "8 lowercase hex digits, as two path segments",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
@@ -7644,7 +7644,7 @@ def _azahar_savefile_placement(
             "title's own extdata id — an id the title id does not fill — so the tree is stated "
             "and its entries refused; back it up whole to be safe",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": extdata,
                 "role": ROLE_BATTERY,
                 "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — "
@@ -7904,7 +7904,7 @@ def _duckstation_per_game_slot(
         f"slot {n} names its card by {fill}; a running game without that fact falls back to "
         f"the shared card ({shared_fallback})",
         {
-            "core": card.token,
+            "token": card.token,
             "mode": mode,
             "files": (name,),
             "files_without_save_id": (shared_fallback,),
@@ -7969,7 +7969,7 @@ def _duckstation_slot(
                     CAVEAT_SAVE_WRITES_DISCARDED,
                     f"slot {n} holds a non-persistent card — writes into it are discarded at "
                     "shutdown and nothing is kept (MemoryCardType::NonPersistent)",
-                    {"core": card.token, "mode": f"Card{n}Type = NonPersistent"},
+                    {"token": card.token, "mode": f"Card{n}Type = NonPersistent"},
                 ),
             ),
         )
@@ -8192,7 +8192,7 @@ def _duckstation_savefile_placement(
                 "no slot keeps a card (Card1Type/Card2Type) — a game finds nowhere to save "
                 "and nothing is kept; the granularity block names the switches that would "
                 "change that",
-                {"core": card.token, "mode": mode},
+                {"token": card.token, "mode": mode},
             )
         )
     # The answer's own directory, which is the memory-card one only while no
@@ -8453,7 +8453,7 @@ def _pcsx2_slot_group(
             "as subdirectories inside, auto-managed by the emulator — so the tree is stated "
             "and its entries refused; back it up whole",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": full,
                 "role": "memory-card",
                 "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a "
@@ -8642,7 +8642,7 @@ def _pcsx2_savefile_placement(
                 "no slot holds a card (SlotN_Enable / an empty SlotN_Filename) — a game finds "
                 "nowhere to save and nothing is kept; the granularity block names the switches "
                 "that would change that",
-                {"core": card.token, "mode": mode},
+                {"token": card.token, "mode": mode},
             )
         )
     # The answer's own directory — `physical_dir` speaks for `dir`.
@@ -8905,7 +8905,7 @@ def _melonds_root(
                     "composes it verbatim, EmuInstance.cpp:445-484) — a property of the "
                     "launch, not of the machine; fill 'cwd' with the launcher's working "
                     "directory to complete the path",
-                    {"core": card.token},
+                    {"token": card.token},
                 ),
             ),
         )
@@ -8950,7 +8950,7 @@ def _melonds_files(
         CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
         sentence,
         {
-            "core": card.token,
+            "token": card.token,
             "files": (f"{TEMPLATE_ROM_STEM}.sav",),
             "rom_stem": "the loaded file's name without its last extension — for an "
             "archive, the archived file's",
@@ -9171,7 +9171,7 @@ def _per_user_state(
     else:
         sentence, reason = shape.user_sentence, shape.user_reason
     data: dict[str, DataValue] = {
-        "core": card.token,
+        "token": card.token,
         "reason": reason,
         # The users whose trees the per-user groups point at, as the list they
         # are — where none was found, the one the emulator starts with, which
@@ -9328,7 +9328,7 @@ def _per_user_savedata_placement(
             "each directory below savedata is one title's own, named by its title id and "
             "written by the game — move a directory whole rather than its files",
             {
-                "core": card.token,
+                "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "citation": shape.names_citation,
@@ -9349,7 +9349,7 @@ def _per_user_savedata_placement(
                 f"{shape.user_root} could not be listed, so which user directories are under "
                 "it is unknown — the tree this answer names is what the compiled default "
                 "names, not one this listing established",
-                {"path": shape.user_root, "core": card.token},
+                {"path": shape.user_root, "token": card.token},
             )
         )
     physical, link_caveats = _link_view(machine, directory)
@@ -9840,7 +9840,7 @@ def _rpcs3_savefile_placement(
                 "been read, so the place is stated and its contents are not; it is in "
                 "file_set.groups with its names left open",
                 {
-                    "core": card.token,
+                    "token": card.token,
                     "mode": "hdd0",
                     "dir": vmc,
                     # Not read rather than none. This key is always stated,
@@ -10703,7 +10703,7 @@ def _savestate_names_caveat(
         CAVEAT_FILE_NAMES_UNESTABLISHED,
         f"a state below {directory} is named {card.names} — {why} ({citation}) — so the "
         "tree is stated and its entries refused; back it up whole",
-        {"core": card.token, "dir": directory, "pattern": card.names, "citation": citation},
+        {"token": card.token, "dir": directory, "pattern": card.names, "citation": citation},
     )
 
 
@@ -10957,7 +10957,7 @@ def _melonds_state_files(
         CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
         sentence,
         {
-            "core": card.token,
+            "token": card.token,
             "files": (card.names,),
             "rom_stem": "the loaded file's name without its last extension — for an "
             "archive, the archived file's",
@@ -12008,7 +12008,7 @@ def _mame_root_anchor(
                 f"a relative {key} resolves against the launching process's working "
                 "directory (emu_file over the searchpath, machine.cpp:899-903), which no "
                 "read of this machine can establish",
-                {"core": card.token, "path": substituted},
+                {"token": card.token, "path": substituted},
             ),
         ),
     )

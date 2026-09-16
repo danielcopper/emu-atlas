@@ -49,7 +49,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves",
                 "pattern": "<game_id>.s<slot>",
                 "citation": "State.cpp:304-308"
@@ -108,7 +108,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves",
                 "pattern": "<game_id>.s<slot>",
                 "citation": "State.cpp:304-308"
@@ -164,7 +164,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/StateSaves",
                 "pattern": "<game_id>.s<slot>",
                 "citation": "State.cpp:943-947"
@@ -219,7 +219,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PPSSPP",
+                "token": "PPSSPP",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/PPSSPP_STATE",
                 "pattern": "<disc_id>_<disc_version>_<slot>.ppst",
                 "citation": "SaveState.cpp:324-346"
@@ -274,7 +274,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "RPCS3",
+                "token": "RPCS3",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/savestates",
                 "pattern": "<title>/<title>_<prefix>_<id>.SAVESTAT",
                 "citation": "savestate_utils.cpp:430-435"
@@ -329,7 +329,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "AZAHAR",
+                "token": "AZAHAR",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/azahar-emu/states",
                 "pattern": "<program_id>.<slot>.cst",
                 "citation": "savestate.cpp:41-48"
@@ -386,7 +386,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "dir": "/mnt/sd/retrodeck/states/ps2/pcsx2",
                 "pattern": "<serial> (<crc>).<slot>.p2s",
                 "citation": "VMManager.cpp:1790-1806 at v2.6.3"
@@ -442,7 +442,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
                 "pattern": "<serial> (<crc>).<slot>.p2s",
                 "citation": "VMManager.cpp:1790-1806 at v2.6.3"
@@ -670,7 +670,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "MELONDS",
+                "token": "MELONDS",
                 "files": [
                   "<rom_stem>.ml<slot>"
                 ],
@@ -741,7 +741,7 @@
             {
               "code": "save-dir-launch-dependent",
               "data": {
-                "core": "MELONDS"
+                "token": "MELONDS"
               }
             }
           ]
@@ -794,7 +794,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/savestates",
                 "pattern": "<serial>_<slot>.sav",
                 "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
@@ -937,7 +937,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "dir": "/home/deck/Emulation/saves/duckstation/states",
                 "pattern": "<serial>_<slot>.sav",
                 "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
@@ -1054,7 +1054,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "MELONDS",
+                "token": "MELONDS",
                 "files": [
                   "<rom_stem>.ml<slot>"
                 ],
@@ -1826,7 +1826,7 @@
             {
               "code": "save-dir-launch-dependent",
               "data": {
-                "core": "MAME",
+                "token": "MAME",
                 "path": "sta"
               }
             },
@@ -2378,7 +2378,7 @@
             {
               "code": "save-dir-launch-dependent",
               "data": {
-                "core": "XEMU",
+                "token": "XEMU",
                 "key": "hdd_path",
                 "path": "images/xbox_hdd.qcow2"
               }
@@ -2544,7 +2544,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
                 "pattern": "<serial> (<crc>).<slot>.p2s",
                 "citation": "VMManager.cpp:1790-1806 at v2.6.3"
@@ -3267,7 +3267,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "DUCKSTATION",
+                "token": "DUCKSTATION",
                 "dir": "/home/deck/.local/share/duckstation/states/deep",
                 "pattern": "<serial>_<slot>.sav",
                 "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"

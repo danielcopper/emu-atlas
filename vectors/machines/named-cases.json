@@ -9290,7 +9290,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PPSSPP",
+                "token": "PPSSPP",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA",
                 "role": "battery",
                 "citation": "the game names its savedata directory; the tree is <memstick>/PSP/SAVEDATA (PathUtil.cpp:52,:62-63 at ppsspp v1.20.4)"

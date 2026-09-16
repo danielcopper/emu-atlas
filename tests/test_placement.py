@@ -525,8 +525,8 @@ class TestAnEnumeratedValueIsRefusedAtConstruction:
         assert Caveat(
             CAVEAT_CORE_MODE_UNESTABLISHED,
             "a message",
-            {"reason": REASON_ACTIVE_USER_UNRECORDED, "core": "RPCS3"},
-        ).data["core"] == "RPCS3"
+            {"reason": REASON_ACTIVE_USER_UNRECORDED, "token": "RPCS3"},
+        ).data["token"] == "RPCS3"
 
     def test_the_registry_names_only_real_codes_and_closed_tuples(self):
         for (code, key), vocabulary in ENUMERATED_DATA.items():

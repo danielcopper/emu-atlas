@@ -6315,7 +6315,7 @@ def _duckstation_region_caveats(
             "records. The image named above is the one the ranking puts first for a console "
             "of any region; a disc of another region is served by its own",
             {
-                "core": card.token,
+                "token": card.token,
                 "reason": REASON_REGION_DECIDED_BY_DISC,
                 "dir": bios_dir,
                 "regions": regions,
@@ -7604,7 +7604,7 @@ def _undecided_region_caveat(
         "booted, a fact no configuration records — so the options below are stated per region "
         f"({', '.join(stated)}) and a launch needs the one its disc selects{left}",
         {
-            "core": core.core_so,
+            "core_so": core.core_so,
             "reason": REASON_REGION_DECIDED_BY_DISC,
             "dir": directory,
             "regions": list(stated),

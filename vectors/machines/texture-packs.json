@@ -792,7 +792,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "key": [
                   "[Dolphin.General] NANDRootPath"
                 ],
@@ -802,7 +802,7 @@
             {
               "code": "file-names-unestablished",
               "data": {
-                "core": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
                 "role": "battery",
                 "citation": "NandPaths.cpp:49-58 at shiiion/dolphin 81bfb96"
@@ -839,7 +839,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -1246,7 +1246,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1303,7 +1303,7 @@
             {
               "code": "per-game-overrides-present",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
                 "key": [
@@ -1314,7 +1314,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1373,7 +1373,7 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
                 "key": [
                   "[EmuCore/GS] LoadTextureReplacements"
@@ -1383,7 +1383,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1439,7 +1439,7 @@
             {
               "code": "cfg-value-rejected",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "key": "EmuCore/GS/LoadTextureReplacements",
                 "value": "maybe"
               }
@@ -1447,7 +1447,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1501,7 +1501,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1555,7 +1555,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/mytextures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -1619,7 +1619,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -1723,7 +1723,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/home/deck/Emulation/storage/pcsx2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2033,7 +2033,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -2096,7 +2096,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -2150,7 +2150,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/data/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2254,7 +2254,7 @@
             {
               "code": "per-game-layer-unread",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "dir": "/var/tmp/gamesettings",
                 "key": [
                   "[EmuCore/GS] LoadTextureReplacements"
@@ -2264,7 +2264,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2320,7 +2320,7 @@
             {
               "code": "per-game-overrides-present",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
                 "key": [
@@ -2331,7 +2331,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2483,7 +2483,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/var/data/pcsx2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2539,7 +2539,7 @@
             {
               "code": "per-game-overrides-present",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gs-layer",
                 "key": [
@@ -2550,7 +2550,7 @@
             {
               "code": "filenames-content-conditional",
               "data": {
-                "core": "PCSX2",
+                "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
                 "load_stage": "replacements",
@@ -2662,7 +2662,7 @@
             {
               "code": "per-game-overrides-present",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "count": "1",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
                 "key": [
@@ -2673,7 +2673,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],

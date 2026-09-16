@@ -628,7 +628,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -1092,7 +1092,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "DOLPHIN",
+                "token": "DOLPHIN",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
@@ -1160,7 +1160,7 @@
             {
               "code": "per-game-build-layer-unread",
               "data": {
-                "core": "PRIMEHACK",
+                "token": "PRIMEHACK",
                 "key": [
                   "[Dolphin.General] LoadPath"
                 ],
