@@ -555,6 +555,25 @@ CAVEAT_FIRMWARE_SEARCH_UNVERIFIED = "firmware-search-unverified"
 # the same sizes before a file becomes a candidate at all, so nothing it picks
 # can be refused for one.
 CAVEAT_FIRMWARE_IMAGE_REFUSED = "firmware-image-refused"
+# A core option names the one file inside a folder declaration that this
+# launch opens (:attr:`DeclaredDirectory.option_key`), so the requirement
+# beside it is that file rather than the folder. It states where the name came
+# from — the core, the option key, the value, and the options file the chain
+# read — because a requirement whose ``declared`` is a folder and whose
+# ``path`` is a file inside it is otherwise a shape with no explanation. It is
+# not a degradation: it is the ordinary answer on a configured machine, and
+# the folder's own verdict is what it replaces.
+CAVEAT_FIRMWARE_IMAGE_CONFIGURED = "firmware-image-configured"
+# The option names a file and nothing is at the composed path, which is the
+# state atlas can state as a search: the core searches wherever its stat
+# fails, and a path atlas could not stat is a stat that did not come back
+# rather than one that said no. So the folder verdict beside this is the
+# answer, and this says the configured name is stale. Not
+# ``firmware-path-names-no-file``: that code says NOTHING named a file — a
+# declaration ending in a directory step, a setting left empty — and here a
+# name was read and composed and only the file is absent, which is what a
+# consumer prunes the setting on.
+CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING = "firmware-configured-image-missing"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -1244,8 +1263,12 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
 # left at ``satisfied: None`` (:class:`DeclaredDirectory`). Version 3 names
 # the content read the core makes over each file the size filter kept, so a
 # candidate is judged by the core's own test and the packaged identities are
-# what names an image, not what decides it.
-FIRMWARE_DECLARED_DIRECTORY_VERSION = "3"
+# what names an image, not what decides it. Version 4 names the core option
+# whose value, where one is set, is the one file inside the folder the launch
+# opens — so the fields describing the listing answer where no name governs,
+# and a folder verdict is no longer the only answer such a declaration can
+# have.
+FIRMWARE_DECLARED_DIRECTORY_VERSION = "4"
 FIRMWARE_DECLARED_DIRECTORY_REVIEWED = "2026-09-03"
 
 # The content reads a row may name, each the seam question that performs it.
@@ -1282,12 +1305,22 @@ class DeclaredDirectory:
     a name for the bytes — it rides with an image the reader passed, and
     stands against one it denied — and an image the table misses is named by
     its own header.
+
+    ``option_key`` is the core option whose value, where one is set, is the
+    NAME of the one file inside the folder this core's launch opens — so the
+    fields above describe what the core does where no name governs, and the
+    named file is what it opens where one does. ``None`` says no option was
+    read for this core, and then the listing is the whole of what it does.
+    A stored value does not stop the listing — LRPS2 lists whenever it has
+    not read one yet, to fill the option's own values — which is why this
+    sits beside the listing's knowledge rather than replacing it.
     """
 
     identities: str
     min_size: int
     max_size: int
     reader: str
+    option_key: str | None = None
 
     def __post_init__(self) -> None:
         if self.reader not in DECLARED_DIRECTORY_READERS:
@@ -1319,7 +1352,7 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
     #     ``EnsureFoldersExist`` creates it with ``path_mkdir`` when it is not
     #     there (:1070-1073);
     #   - the image itself is a NAME inside it — ``FullpathToBios`` joins the
-    #     chosen file onto that folder (pcsx2/Pcsx2Config.cpp:994-998).
+    #     chosen file onto that folder (pcsx2/Pcsx2Config.cpp:994-1000).
     # The shipped ``pcsx2_libretro.info`` says the same in libretro's own words:
     # ``firmware0_desc = "'pcsx2/bios' folder"`` over ``firmware0_path =
     # "pcsx2/bios"``, with ``notes`` [1] "This only checks if the PCSX2 'bios'
@@ -1338,11 +1371,11 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
     #     NON-recursively,
     #     ``"*"`` with ``FILESYSTEM_FIND_FILES`` and no hidden-files flag
     #     (main.cpp:1807), where DuckStation's search asks for hidden names too
-    #     and this one does not. The option does not stop the listing: set,
-    #     ``LoadBIOS`` opens the named file rather than the first the listing
-    #     found, with no size filter (BiosTools.cpp:281-306, only
-    #     ``filesize > 0``), so the size verdict below is a verdict about the
-    #     auto-detect path;
+    #     and this one does not. A stored ``pcsx2_bios`` value does not stop
+    #     the listing — what it does instead is the section after this one —
+    #     and the file it names is opened under none of the listing's size
+    #     bounds, so the size verdict below is a verdict about the auto-detect
+    #     path;
     #   - it keeps only files with ``MIN_BIOS_SIZE <= size <= MAX_BIOS_SIZE``,
     #     4 MiB and 8 MiB (libretro/main.cpp:1810-1816; the same constants in
     #     pcsx2/ps2/BiosTools.cpp:31-32), and validates each survivor by
@@ -1357,6 +1390,33 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
     #     of region (BiosTools.cpp:241-250; the fallback :270-278). So one
     #     recognised image satisfies the declaration, and several are more
     #     choice — not a conflict, and not "better".
+    #
+    # What a STORED ``pcsx2_bios`` value does, same revision — the option the
+    # ``option_key`` field below names:
+    #   - the name it carries is what the launch opens. ``check_variables``
+    #     reads ``pcsx2_bios`` and writes it to ``Filenames/BIOS``
+    #     (main.cpp:360-365), ``FullpathToBios`` composes it onto the BIOS
+    #     folder with ``Path::Combine`` (pcsx2/Pcsx2Config.cpp:994-1000 — the
+    #     combine :func:`atlas.qt_ini.path_combine` ports), and ``LoadBIOS``
+    #     opens that one path (BiosTools.cpp:281). Its ROMDIR walk is not a
+    #     gate on it: ``LoadBiosVersion``'s result is read for the version
+    #     strings and its return is DISCARDED (:294), so the configured file
+    #     is loaded whatever its header says — what can still turn it down is
+    #     an open that fails (:281-283) or a size of zero (:286-290), and the
+    #     header has no say in either. The listing's own ``IsBIOS`` gate
+    #     (main.cpp:1818) is a gate on the LISTING and on nothing else;
+    #   - the fallback to the listing is "nothing is there": ``LoadBIOS``
+    #     searches where the composed path is empty or ``path_is_valid`` says
+    #     no (BiosTools.cpp:270-278), and that call is a ``stat``
+    #     (libretro/libretro-common/file/file_path_io.c:87-90) which answers
+    #     0 on an empty path (vfs/vfs_implementation.c:848-849) and where the
+    #     stat itself fails (:941-952) — a directory sets a separate
+    #     ``IS_DIRECTORY`` bit nobody tests here. So a directory at the
+    #     configured name stats perfectly well and is NOT searched past; it
+    #     goes to the open at :281 instead. [D] What that open then yields
+    #     for a directory is the platform's answer and not something these
+    #     lines state — atlas states the shape it found and no verdict.
+    #
     # The packaged identities under ``pcsx2/bios/`` (73 in the packaged table
     # at schema version 6.0.0, all 4194304 bytes, all ``kind`` file) are a
     # subset of what the header check accepts, so the check is the verdict
@@ -1366,8 +1426,20 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
         min_size=4 * 1024 * 1024,
         max_size=8 * 1024 * 1024,
         reader=READER_PS2_BIOS_HEADER,
+        option_key="pcsx2_bios",
     ),
 }
+
+
+def core_short_name(core_stem: str) -> str:
+    """The short name a core goes by, from the ``.so`` stem the enumeration reads.
+
+    ``pcsx2_libretro`` is ``pcsx2``: the spelling ``core_audit.json``,
+    ``core_oddities.json`` and this module's own tables are keyed by, and the
+    one a caveat's ``core`` key carries. One reader for the rule, because a
+    second place dropping the suffix is a second place to stop dropping it.
+    """
+    return core_stem.removesuffix("_libretro")
 
 
 def declared_directory_of(core_stem: str, declared: str) -> DeclaredDirectory | None:
@@ -1377,8 +1449,7 @@ def declared_directory_of(core_stem: str, declared: str) -> DeclaredDirectory | 
     (``pcsx2_libretro``); the table is keyed on the short name the rule cards
     use, so the suffix is dropped here rather than at every call site.
     """
-    short_name = core_stem.removesuffix("_libretro")
-    return FIRMWARE_DECLARED_DIRECTORY.get((short_name, declared))
+    return FIRMWARE_DECLARED_DIRECTORY.get((core_short_name(core_stem), declared))
 
 
 def declared_kind_of(core_stem: str, declared: str) -> DeclaredKind:
@@ -3334,9 +3405,9 @@ def _directory_at_the_destination(path: str, declared_kind: DeclaredKind) -> Cav
         return None
     return Caveat(
         CAVEAT_FIRMWARE_PATH_OBSTRUCTED,
-        f"a directory is at {path}, where this declaration names a file — atlas has no source-read "
-        "statement that a folder belongs here, so nothing about what is there can be established, "
-        "and it is not a missing file",
+        f"a directory is at {path}, where a file is what this core would open — atlas has no "
+        "source-read statement that a folder belongs here, so nothing about what is there can be "
+        "established, and it is not a missing file",
         {"path": path},
     )
 
@@ -3754,10 +3825,31 @@ def destination_under(machine: Machine, root: str, declared: str) -> Destination
     """
     if not os.path.isabs(root):
         return Destination(refusal=CAVEAT_FIRMWARE_ROOT_UNUSABLE)
-    if os.path.basename(declared) in ("", ".", ".."):
+    return _destination_of(machine, root, _join_under(root, declared))
+
+
+def _destination_of(machine: Machine, root: str, composed: str) -> Destination:
+    """The tail of a resolution: one already-composed path, held against *root*.
+
+    Split out because two compositions reach it and only one of them is
+    RetroArch's. :func:`destination_under` composes the way RetroArch does,
+    verbatim (:func:`_join_under`); a core option naming a file inside a folder
+    declaration composes the way that core does, which for LRPS2 is
+    ``Path::Combine`` (:func:`atlas.qt_ini.path_combine`). What happens after
+    the composition is the same question either way — does it name a file at
+    all, does it resolve, does it stay inside the firmware root — and asking it
+    in one place is what keeps the bound from drifting between the two.
+
+    The degenerate-step test reads the COMPOSED name rather than the value that
+    was appended, which is the same test for a verbatim join and the right one
+    for a combine: the combine strips its own trailing separators, so a value
+    spelled ``x/`` is ``<dir>/x`` by the time the core opens it and names a
+    file perfectly well.
+    """
+    if os.path.basename(composed) in ("", ".", ".."):
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE)
     resolved_root = resolve_links(machine, root)
-    resolved = resolve_links(machine, _join_under(root, declared))
+    resolved = resolve_links(machine, composed)
     if resolved_root is None or resolved is None:
         return Destination(refusal=CAVEAT_FIRMWARE_PATH_UNRESOLVABLE)
     if _stays_under(resolved_root, resolved):
@@ -4288,6 +4380,336 @@ def _contents_of_a_listed_folder(
     return read
 
 
+# ── The option that names one file inside a listed folder ─────────────────
+# A folder declaration says where a core looks; a curated row may also name the
+# core option whose value says which file inside it the launch opens
+# (:attr:`DeclaredDirectory.option_key`). Where that option names a file that
+# is there, the launch opens that one file and the folder's own listing is no
+# longer what the answer rests on. Where it names one that is not, the core
+# searches the folder itself and the listing answers again — and where it names
+# nothing at all, none of this happens and the folder verdict is the whole
+# answer, exactly as it was.
+
+
+@dataclass(frozen=True, slots=True)
+class _ConfiguredImage:
+    """What a core option named inside a folder declaration, and what reading it cost.
+
+    ``requirement`` is the one file the launch opens, and ``None`` where the
+    folder's own listing is still the answer: no row names an option, the
+    option states no name, the name cannot be resolved to a destination, or
+    nothing is at the one it composes and the core searches the folder itself.
+
+    ``core_caveats`` are facts about this core's configuration and belong to
+    the core, the way a refused declaration's do; ``answer_caveats`` are what
+    looking at the machine saw, which belongs to the answer.
+    """
+
+    requirement: FirmwareRequirement | None = None
+    core_caveats: tuple[Caveat, ...] = ()
+    answer_caveats: tuple[Caveat, ...] = ()
+
+
+def _configured_name(
+    machine: Machine, context: FirmwareContext, core: CoreDeclarations, row: DeclaredDirectory
+) -> tuple[str, str, list[Caveat]]:
+    """The name this row's option states, the file that states it, and what reading it cost.
+
+    The chain is the one every core-option read here walks
+    (:class:`atlas.core_options.CoreOptionsChain`): the per-core ``.opt``
+    where ``global_core_options`` is off, then the global options file. No
+    content is known — nothing has been launched — so the game and folder
+    layers keyed by a content path do not exist to read.
+
+    The empty string is "unset", and it is the same answer for a key no
+    options file states and for one stated empty. There is no default to fall
+    back on and there could not be: LRPS2 fills this option's default from the
+    folder it has just listed (libretro/main.cpp:1832-1834 at 14d19f8), which
+    makes the default a property of the machine at core load rather than a
+    value the core declares — and a value nobody stored is not a value the
+    answer may rest on.
+    """
+    assert row.option_key is not None  # the caller checked; this is the narrowing
+    library_name, caveats = _locating_library_name(
+        machine,
+        context,
+        core,
+        falls_back_to="the global options file is the whole of what was read for it",
+    )
+    chain = context.core_options or _NO_OPTIONS_FILE
+    value, _, options_file, _ = core_options_value(
+        machine,
+        override_config_dir=chain.override_config_dir,
+        global_file=chain.global_file,
+        library_name=library_name,
+        content_dir_name=None,
+        rom_stem=None,
+        option_key=row.option_key,
+        option_default=None,
+        game_specific_options=False,
+        per_core_options=chain.per_core_options,
+    )
+    return value or "", options_file, caveats
+
+
+def _configured_refusal(
+    core: CoreDeclarations, key: str, refusal: str, name: str, *, root: str
+) -> Caveat:
+    """The configured name composes a path atlas will not answer for — said, not followed."""
+    return Caveat(
+        refusal,
+        f"{core.core_so} opens {name!r} inside its folder declaration ({key}), and that path "
+        f"{_why_refused(refusal, root)} — so no destination is stated for it, and what stands "
+        "below is the folder's own listing",
+        {"core_so": core.core_so, "declared": name, "key": key},
+    )
+
+
+def _configured_image_missing(
+    core: CoreDeclarations, key: str, name: str, *, directory: str
+) -> Caveat:
+    """The configured name is stale: nothing is at it, and the core searches the folder instead."""
+    return Caveat(
+        CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING,
+        f"{core.core_so} is configured to open {name!r} ({key}) and nothing is at that name inside "
+        f"{directory} — the state this core searches the folder in, so the folder verdict beside "
+        "this is what the launch rests on and the configured name is stale",
+        {"core": core_short_name(core.stem), "key": key, "name": name, "dir": directory},
+    )
+
+
+def _configured_image_caveat(
+    core: CoreDeclarations, key: str, name: str, *, directory: str, options_file: str
+) -> Caveat:
+    """Where the named file came from — the one explanation a folder-declared file needs."""
+    return Caveat(
+        CAVEAT_FIRMWARE_IMAGE_CONFIGURED,
+        f"{core.core_so} opens {name!r} for this launch: the {key} core option names it, and "
+        f"{options_file} is the file this installation reads that option from. The core still "
+        f"lists {directory} whenever it has not read a value yet, to offer that option the names "
+        "it found — so the setting does not replace the listing — but which image the launch "
+        "opens is this setting's answer rather than the listing's, so the requirement below is "
+        "that one file and no verdict is stated over the folder",
+        {
+            "core": core_short_name(core.stem),
+            "key": key,
+            "name": name,
+            "options_file": options_file,
+        },
+    )
+
+
+def _configured_content(
+    machine: Machine, context: FirmwareContext, row: DeclaredDirectory, named: str, *, verify: bool
+) -> tuple["FirmwareIdentity | None", FirmwareChecked, _ObservedBytes, list[Caveat]]:
+    """What the configured file's bytes are, asked of the table that files this folder's images.
+
+    By CONTENT under the row's prefix and never by name: the core accepts any
+    file name inside the folder, and this one was chosen by a setting, so what
+    it is called says nothing about what it holds.
+
+    ``unrecognised`` here means: bytes the packaged table does not know, and
+    the core opens them regardless. It is no failure and no refusal. The
+    content test the core makes stands over its LISTING (``IsBIOS``,
+    libretro/main.cpp:1818) and not between it and a configured file — that
+    one is opened and loaded whatever its header reads as
+    (pcsx2/ps2/BiosTools.cpp:281, the ROMDIR walk at :294 with its own return
+    discarded). Nothing about its bytes turns it down: what can is an open
+    that fails (:281-283) or a size of zero (:286-290), neither of which the
+    table has any say in. So the table's silence leaves what the file is
+    open, which is what ``satisfied`` answering ``None`` beside that value
+    says.
+
+    The third return is what this read learned about the destination's own
+    bytes (:class:`_ObservedBytes`), so the provenance check that runs after
+    it neither hashes the same file a second time nor states a read failure
+    this one already carried.
+    """
+    if not verify:
+        return None, CHECKED_UNCHECKED, _ObservedBytes(), []
+    digest = machine.file_digest(named, DIGEST_MD5)
+    if digest is None:
+        return None, CHECKED_UNREAD, _ObservedBytes(unreadable=True), [_unreadable_bytes(named)]
+    entry = context.hashes.for_content_under(row.identities, digest)
+    seen = _ObservedBytes(md5=digest)
+    if entry is None:
+        return None, CHECKED_UNRECOGNISED, seen, []
+    return context.hashes.for_path(entry.name), CHECKED_VERIFIED, seen, []
+
+
+def _configured_requirement(
+    machine: Machine,
+    context: FirmwareContext,
+    core: CoreDeclarations,
+    declaration: FirmwareDeclaration,
+    row: DeclaredDirectory,
+    *,
+    named: str,
+    file_name: str,
+    verify: bool,
+) -> tuple[FirmwareRequirement, list[Caveat]]:
+    """The declaration answered at the file its option names, observed as a file.
+
+    ``declared`` stays the ``.info``'s folder path as the file spells it,
+    because that is still what the core declared: the name comes from a
+    setting, which is what the caveat beside this states, and rewriting the
+    declaration to the setting's value would put a string no ``.info`` carries
+    where a consumer reads what was declared. ``declared_kind`` is ``file`` for a
+    reason of the same kind — the field says what the core opens a destination
+    AT, and what it opens this one at is a file: ``LoadBIOS`` opens the
+    composed path and reads bytes from it, where the folder is a thing it
+    lists. So the shape statements a listed folder earns (a file in the
+    folder's place) are not the ones this destination earns, and the ones a
+    file earns are.
+
+    Whose file it is is asked here for the reason every other file
+    destination asks it (:func:`_supplied_by`): a silent ``None`` reads as
+    "not the distribution's", and this destination is one a distribution can
+    perfectly well have placed. It is asked only where a FILE is there, and it
+    is handed what the byte read above already learned, so the file is hashed
+    once.
+    """
+    found, checked, observed, seen = _observe(
+        machine, named, None, verify=verify, file_name=file_name
+    )
+    identity: "FirmwareIdentity | None" = None
+    caveats = [] if observed is None else [observed]
+    supplied: SuppliedBy | None = None
+    if found == KIND_FILE:
+        identity, checked, seen, unread = _configured_content(
+            machine, context, row, named, verify=verify
+        )
+        caveats.extend(unread)
+        supplied, supplied_caveat = _supplied_by(machine, context, named, seen)
+        if supplied_caveat is not None:
+            caveats.append(supplied_caveat)
+    return (
+        FirmwareRequirement(
+            core_so=core.core_so,
+            system=declaration.system,
+            system_source=declaration.system_source,
+            need=declaration.need,
+            file_name=file_name,
+            path=named,
+            declared=declaration.path,
+            description=declaration.description,
+            identity=identity,
+            found=found,
+            checked=checked,
+            declared_kind=DECLARED_FILE,
+            supplied_by=supplied,
+        ),
+        caveats,
+    )
+
+
+def _configured_image(
+    machine: Machine,
+    context: FirmwareContext,
+    core: CoreDeclarations,
+    declaration: FirmwareDeclaration,
+    *,
+    path: str,
+    found: PathKind,
+    verify: bool,
+) -> _ConfiguredImage:
+    """The file a core option names inside this declaration's folder, where one is named.
+
+    Asked only of a declaration whose curated row names an option
+    (:attr:`DeclaredDirectory.option_key`) and only where a DIRECTORY is at
+    the declared path. Two different reasons sit behind that one guard. Where
+    the destination is missing or a plain file, a name composed inside it
+    reaches nothing, and the declaration's own answer — a folder to create, a
+    file in the folder's place — is the whole of what such a machine
+    establishes. Where the destination could not be looked at, nothing about
+    it was established at all, and this route stays silent for that reason
+    rather than for the first: composing a name under a path whose own shape
+    is unknown would state a destination out of a look that did not happen.
+
+    The composition is the core's own. LRPS2 joins the value onto the folder
+    with ``Path::Combine`` (``FullpathToBios``, pcsx2/Pcsx2Config.cpp:994-1000
+    at 14d19f8), which :func:`atlas.qt_ini.path_combine` ports — so an
+    absolute value lands BELOW the folder rather than replacing it. Nothing
+    normalises: upstream resolves no ``.`` or ``..`` component either, so a
+    value carrying a separator composes literally and where it lands is the
+    kernel's answer. A value that climbs is therefore FOLLOWED where it
+    stays under the firmware root — ``path`` then names a file outside the
+    declared folder while ``declared`` stays the folder, which is what the
+    core would open — and refused only where it leaves the root, which is
+    the bound every read in this module is held to.
+
+    The core's own test for "is the configured file there" is
+    ``path_is_valid``, and that is a **stat that succeeded** and nothing more:
+    ``LoadBIOS`` searches the folder where the composed path is empty or that
+    call says no (pcsx2/ps2/BiosTools.cpp:270), the call is
+    ``retro_vfs_stat_impl(path, NULL) & RETRO_VFS_STAT_IS_VALID``
+    (libretro/libretro-common/file/file_path_io.c:87-90), and that answers 0
+    on an empty path
+    (libretro/libretro-common/vfs/vfs_implementation.c:848-849) and where the
+    ``stat`` itself fails (:941-952) — a directory sets a separate
+    ``IS_DIRECTORY`` bit nobody here tests.
+
+    So the state this route hands back to the folder verdict is the one it
+    can state as a search: nothing at the composed path. A directory there is
+    not searched past — it stats, so the core goes to the open at :281
+    instead — and a path atlas could not stat is the third, where WHICH of
+    the two the core takes is what was not established. Either way the
+    configured file stays the requirement, with ``found`` saying what is
+    there and the shape caveats
+    (:data:`CAVEAT_FIRMWARE_PATH_OBSTRUCTED`,
+    :data:`CAVEAT_FIRMWARE_PATH_INACCESSIBLE`) stating it. Neither reaches a
+    verdict: ``satisfied`` beside both is ``None``. [D] What the open at :281
+    then yields for a directory is the platform's answer rather than
+    anything these lines state, which is exactly why no verdict is put on
+    it.
+    """
+    row = declared_directory_of(core.stem, declaration.path)
+    if row is None or row.option_key is None or found != KIND_DIRECTORY:
+        return _ConfiguredImage()
+    key = row.option_key
+    root = context.root
+    assert root is not None  # callers resolve the empty-root answer before getting here
+    name, options_file, caveats = _configured_name(machine, context, core, row)
+    # What resolving the options-file chain itself cost — a line RetroArch's
+    # parser refused, a boolean outside its vocabulary, a sandbox spelling with
+    # no host path. It rides the ANSWER because it is about this installation's
+    # configuration rather than about one core, and it is stated by the route
+    # that actually reads an option rather than where the chain was assembled:
+    # an answer that never reads one was never degraded by it. Stated whatever
+    # the read returned, because a line the parser refused is one of the
+    # reasons a value comes back unset.
+    chain: tuple[Caveat, ...] = () if context.core_options is None else context.core_options.caveats
+    if not name:
+        return _ConfiguredImage(core_caveats=tuple(caveats), answer_caveats=chain)
+    composed = qt_ini.path_combine(path, name)
+    destination = _destination_of(machine, root, composed)
+    if destination.path is None:
+        refusal = destination.refusal or CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+        caveats.append(_configured_refusal(core, key, refusal, name, root=root))
+        return _ConfiguredImage(core_caveats=tuple(caveats), answer_caveats=chain)
+    named = destination.path
+    if machine.path_kind(named) == KIND_MISSING:
+        caveats.append(_configured_image_missing(core, key, name, directory=path))
+        return _ConfiguredImage(core_caveats=tuple(caveats), answer_caveats=chain)
+    caveats.append(
+        _configured_image_caveat(core, key, name, directory=path, options_file=options_file)
+    )
+    requirement, observed = _configured_requirement(
+        machine,
+        context,
+        core,
+        declaration,
+        row,
+        named=named,
+        # The basename of what the core OPENS rather than of the raw value:
+        # the two agree for every ordinary name and part company on a
+        # degenerate one, and the composed path is the authority on both.
+        file_name=os.path.basename(composed),
+        verify=verify,
+    )
+    return _ConfiguredImage(requirement, tuple(caveats), (*chain, *observed))
+
+
 def _requirements_for(
     machine: Machine,
     context: FirmwareContext,
@@ -4295,6 +4717,7 @@ def _requirements_for(
     *,
     verify: bool,
     folders: _FolderReads,
+    for_a_launch: bool = True,
 ) -> tuple[
     tuple[FirmwareRequirement, ...],
     tuple[RefusedDeclaration, ...],
@@ -4349,6 +4772,30 @@ def _requirements_for(
         )
         if supplied_caveat is not None:
             answer_caveats.append(supplied_caveat)
+        # Which file inside a listed folder this launch opens, where the core
+        # composes that out of an option of its own. A name that reaches a
+        # destination answers the declaration by itself: the folder is not
+        # judged, because the verdict it would give answers a question this
+        # launch no longer asks.
+        configured = (
+            _configured_image(
+                machine, context, core, declaration, path=path, found=found, verify=verify
+            )
+            if for_a_launch
+            else _ConfiguredImage()
+        )
+        core_caveats.extend(configured.core_caveats)
+        answer_caveats.extend(configured.answer_caveats)
+        if configured.requirement is not None:
+            requirements.append(configured.requirement)
+            # The claim follows the composed path wherever it landed — inside
+            # the declared folder for an ordinary name, elsewhere under the
+            # root where the value carried a separator — so the read that
+            # named it claims it, the way a listed folder's read claims what
+            # it stated. Already resolved: the destination came back from a
+            # resolution.
+            claims.append(configured.requirement.path)
+            continue
         # What the folder holds, where the core lists one and one is there —
         # the verdict a folder declaration's ``satisfied`` answers with.
         contents = _contents_of_a_listed_folder(
@@ -4679,6 +5126,7 @@ def _read_core(
     declared_index: int | None = None,
     verify: bool,
     folders: _FolderReads,
+    for_a_launch: bool = True,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """One core whose ``.info`` was read: the answer for it, and what it observed.
 
@@ -4694,7 +5142,7 @@ def _read_core(
     ``firmware_for_system`` answer stopped saying which kind of empty it was.
     """
     requirements, refused, core_caveats, observed, claims = _requirements_for(
-        machine, context, core, verify=verify, folders=folders
+        machine, context, core, verify=verify, folders=folders, for_a_launch=for_a_launch
     )
     # What the core's own code does, beside what its file declares: a core
     # whose packaged knowledge states a second door composes the name it opens
@@ -4731,6 +5179,7 @@ def _resolve_cores(
     *,
     verify: bool,
     labels: Mapping[str, str] | None = None,
+    for_a_launch: bool = True,
 ) -> tuple[tuple[CoreFirmware, ...], list[Caveat]]:
     resolved: list[CoreFirmware] = []
     answer_caveats: list[Caveat] = []
@@ -4740,7 +5189,9 @@ def _resolve_cores(
         if core.info_status != READ_OK:
             resolved.append(_undeclarable_core(core, label))
             continue
-        answer, observed = _read_core(machine, context, core, label, verify=verify, folders=folders)
+        answer, observed = _read_core(
+            machine, context, core, label, verify=verify, folders=folders, for_a_launch=for_a_launch
+        )
         answer_caveats.extend(observed)
         resolved.append(answer)
     return tuple(resolved), answer_caveats
@@ -7002,7 +7453,7 @@ def _content_table(card: CoreFirmwareCard) -> BiosTable:
 
 
 def _locating_library_name(
-    machine: Machine, context: FirmwareContext, core: CoreDeclarations
+    machine: Machine, context: FirmwareContext, core: CoreDeclarations, *, falls_back_to: str
 ) -> tuple[str | None, list[Caveat]]:
     """The core's own ``library_name``, where a per-core options file could govern.
 
@@ -7011,9 +7462,23 @@ def _locating_library_name(
     where it would decide nothing: with ``global_core_options`` on, RetroArch
     reads no per-core file at all, and then the global options file is the
     whole chain whatever the core calls itself.
+
+    *falls_back_to* is what the caveat says is left to read, and it is the
+    caller's sentence because the two routes here have different remainders: a
+    core whose packaged knowledge records a default for every key it reads
+    falls back on the global file and those defaults, while a folder
+    declaration's option has no recorded default — the core fills that one
+    from its own listing at run time — so nothing but the global file is left.
     """
     chain = context.core_options
     if chain is None or not chain.per_core_options or chain.core_dir is None:
+        return None, []
+    if machine.path_kind(chain.override_config_dir) == KIND_MISSING:
+        # Every per-core file is one directory down from here
+        # (:func:`atlas.core_options._option_file_candidates`), so with nothing
+        # at this path there is none to read whatever the core calls itself.
+        # The probe would decide nothing, and a caveat saying a file was not
+        # read would name a degradation that cannot bite.
         return None, []
     reading = machine.read_core(os.path.join(chain.core_dir, core.core_so))
     if reading.info is not None:
@@ -7022,8 +7487,7 @@ def _locating_library_name(
         Caveat(
             CAVEAT_CORE_UNQUERYABLE,
             f"core {core.core_so!r} could not be queried — its library_name is unknown, so the "
-            "per-core options file that could name another image was not read and the values "
-            "below come from the global options file and this core's own defaults",
+            f"per-core options file that could name another image was not read and {falls_back_to}",
             {"core_so": core.core_so, "reason": reading.status},
         )
     ]
@@ -7661,7 +8125,12 @@ def _located_firmware(
     assert root is not None  # callers resolve the empty-root answer before getting here
     table = _content_table(card)
     route = card.name_route
-    library_name, caveats = _locating_library_name(machine, context, core)
+    library_name, caveats = _locating_library_name(
+        machine,
+        context,
+        core,
+        falls_back_to="the values below come from the global options file and this core's own defaults",
+    )
     region_value = _locating_option(
         machine,
         context,
@@ -9078,7 +9547,15 @@ def identify_firmware(
     # (files nobody declared), and none of its result reaches here. Running it
     # would glob and stat every directory a declaration references for a lookup
     # the caller already has the bytes for.
-    cores, _observations = _resolve_cores(machine, context, context.cores, verify=False)
+    # Asked of the DECLARATION rather than of a launch. A setting that names
+    # one file inside a folder says which image the next launch opens; it does
+    # not say where a file this caller is holding belongs, and the folder is
+    # still that — the core takes any name inside it, and the setting is one
+    # edit away from naming another. So the destination this answer hands back
+    # is the declared folder whatever the option currently says.
+    cores, _observations = _resolve_cores(
+        machine, context, context.cores, verify=False, for_a_launch=False
+    )
     wanted = tuple(
         r for r in _requirements_of(cores) if _destination_for(r, identity, context.hashes)
     )

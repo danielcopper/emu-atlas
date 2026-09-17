@@ -38,6 +38,7 @@ from atlas.firmware import (
     CAVEAT_EMULATOR_CATALOGUE_SEALED,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+    CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING,
     CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
     CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED,
     CAVEAT_FIRMWARE_CONTENT_UNSTATED,
@@ -49,6 +50,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_CANDIDATE,
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
     CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
+    CAVEAT_FIRMWARE_IMAGE_CONFIGURED,
     CAVEAT_FIRMWARE_IMAGE_CONTRADICTED,
     CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS,
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
@@ -1465,6 +1467,10 @@ class TestADeclarationStatesItsOwnShape:
             min_size=4 * 1024 * 1024,
             max_size=8 * 1024 * 1024,
             reader=READER_PS2_BIOS_HEADER,
+            # The option whose value names the one file inside the folder a
+            # launch opens (main.cpp:360-365 at 14d19f8) — the row states it,
+            # so the resolver reads no core name of its own.
+            option_key="pcsx2_bios",
         )
         assert row.accepts_size(4 * 1024 * 1024 - 1) is False
         assert row.accepts_size(4 * 1024 * 1024) is True
@@ -2085,6 +2091,332 @@ class TestADeclarationStatesItsOwnShape:
                 checked=None,
                 declared_kind="folder",  # type: ignore[arg-type]
             )
+
+
+class TestAConfiguredNameNamesWhatTheLaunchOpens:
+    """``pcsx2_bios``: once a name is stored, the launch opens one file and the folder is not judged.
+
+    ``retro_init`` lists the folder whenever the core has not read a value yet
+    (libretro/main.cpp:1801 at 14d19f8) — so the listing keeps happening, to
+    fill the option's own values — while ``check_variables`` writes the stored
+    value to ``Filenames/BIOS`` (:360-365), ``FullpathToBios`` joins it onto
+    the folder (pcsx2/Pcsx2Config.cpp:994-1000) and ``LoadBIOS`` opens that one
+    path (pcsx2/ps2/BiosTools.cpp:281). It falls back to the listing where its
+    own stat says no (:270-278), and the state atlas can state as that search
+    is the one below: nothing at the composed path.
+    """
+
+    OPTIONS = "/cfg/retroarch-core-options.cfg"
+    OPT_DIR = "/cfg/config"
+    IMAGE = f"{LRPS2_FOLDER}/scph70004.bin"
+
+    def _answer(
+        self,
+        options: str | None = None,
+        *,
+        files: Mapping[str, FixtureFileSpec] | None = None,
+        per_core: str | None = None,
+        per_core_options: bool = False,
+        chain: CoreOptionsChain | None = None,
+        no_chain: bool = False,
+        verify: bool = True,
+        **kwargs: object,
+    ):
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+            f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+            self.IMAGE: PS2_IMAGE_EUR,
+        }
+        if options is not None:
+            tree[self.OPTIONS] = options
+        if per_core is not None:
+            tree[f"{self.OPT_DIR}/PCSX2/PCSX2.opt"] = per_core
+        tree.update(files or {})
+        machine = _machine(tree, ps2_bios_headers={self.IMAGE: PS2_HEADER_EUR}, **kwargs)
+        if chain is None and not no_chain:
+            chain = CoreOptionsChain(
+                global_file=self.OPTIONS,
+                override_config_dir=self.OPT_DIR,
+                per_core_options=per_core_options,
+                core_dir=INFO_DIR,
+            )
+        return firmware_for_core(
+            machine, _context(machine, core_options=chain), core_so=LRPS2_SO, verify=verify
+        )
+
+    def _entry(self, answer) -> FirmwareRequirement:
+        (entry,) = _plain_requirements(answer.cores[0])
+        return entry
+
+    def test_the_named_file_is_the_requirement_and_the_folder_is_not_judged(self):
+        answer = self._answer('pcsx2_bios = "scph70004.bin"\n')
+        entry = self._entry(answer)
+        # The declaration is still the folder — the name came from a setting,
+        # which is what the caveat beside it says — and the destination is the
+        # one file the launch opens.
+        assert entry.declared == "pcsx2/bios"
+        assert entry.declared_kind == DECLARED_FILE
+        assert entry.file_name == "scph70004.bin"
+        assert entry.path == self.IMAGE
+        assert entry.found == "file"
+        assert entry.checked == CHECKED_VERIFIED
+        assert entry.satisfied is True
+        # By CONTENT under the row's prefix: the core takes any name inside the
+        # folder, so what the file is called says nothing about its bytes.
+        assert entry.identity is not None
+        assert entry.identity.known_as == ("pcsx2/bios/ps2-0200e-20040614.bin",)
+        # No folder verdict was reached, so none of the folder's codes appear.
+        assert [c.code for c in answer.caveats] == []
+        (stated,) = answer.cores[0].caveats
+        assert stated.code == CAVEAT_FIRMWARE_IMAGE_CONFIGURED
+        assert dict(stated.data) == {
+            "core": "pcsx2",
+            "key": "pcsx2_bios",
+            "name": "scph70004.bin",
+            "options_file": self.OPTIONS,
+        }
+
+    def test_the_named_file_is_claimed_so_the_scan_does_not_restate_it(self):
+        answer = self._answer('pcsx2_bios = "scph70004.bin"\n')
+        assert answer.cores[0].claims == (self.IMAGE,)
+
+    def test_bytes_the_packaged_prefix_does_not_know_stay_open(self):
+        # The core opens the configured file whatever its header reads as
+        # (BiosTools.cpp:281, the ROMDIR walk at :294 discarding its verdict),
+        # so an unlisted image is neither a failure nor a green light.
+        answer = self._answer(
+            'pcsx2_bios = "mystery.bin"\n', files={f"{LRPS2_FOLDER}/mystery.bin": PS2_UNLISTED}
+        )
+        entry = self._entry(answer)
+        assert entry.checked == CHECKED_UNRECOGNISED
+        assert entry.identity is None
+        assert entry.satisfied is None
+
+    def test_without_a_content_check_the_named_file_is_unchecked(self):
+        answer = self._answer('pcsx2_bios = "scph70004.bin"\n', verify=False)
+        entry = self._entry(answer)
+        assert entry.checked == CHECKED_UNCHECKED
+        assert entry.satisfied is None
+
+    def test_bytes_that_do_not_come_back_are_unread_and_stated(self):
+        answer = self._answer(
+            'pcsx2_bios = "locked.bin"\n',
+            files={f"{LRPS2_FOLDER}/locked.bin": {"status": "unreadable", "size": PS2_IMAGE_SIZE}},
+        )
+        entry = self._entry(answer)
+        assert entry.checked == CHECKED_UNREAD
+        assert entry.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_UNREADABLE]
+
+    def test_a_name_at_no_file_is_stale_and_the_folder_answers(self):
+        answer = self._answer('pcsx2_bios = "gone.bin"\n')
+        entry = self._entry(answer)
+        # The state atlas can state as a search: nothing at the composed path,
+        # so the folder verdict is what the launch rests on and it is unchanged.
+        assert entry.declared_kind == DECLARED_DIRECTORY
+        assert entry.found == "directory"
+        assert entry.satisfied is True
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_IMAGE_IDENTIFIED]
+        (stale,) = answer.cores[0].caveats
+        assert stale.code == CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING
+        assert dict(stale.data) == {
+            "core": "pcsx2",
+            "key": "pcsx2_bios",
+            "name": "gone.bin",
+            "dir": LRPS2_FOLDER,
+        }
+
+    def test_a_directory_at_the_configured_name_is_not_searched_past(self):
+        """The core's test is a stat that succeeded, and a directory passes it.
+
+        ``LoadBIOS`` searches the folder where the path is empty or where
+        ``path_is_valid`` says no (BiosTools.cpp:270), and that call returns 0
+        for an empty path or where ``stat`` itself fails (file_path_io.c:87-90
+        with vfs_implementation.c:848-849, :941-952). A directory there passes
+        the stat, so the core does not search past it: the configured file
+        stays the requirement, the shape is stated, and no folder verdict and
+        no green light stands over it.
+        """
+        answer = self._answer(
+            'pcsx2_bios = "a-folder"\n', dirs=[f"{LRPS2_FOLDER}/a-folder"]
+        )
+        entry = self._entry(answer)
+        assert entry.declared_kind == DECLARED_FILE
+        assert entry.path == f"{LRPS2_FOLDER}/a-folder"
+        assert entry.found == "directory"
+        assert entry.checked == CHECKED_UNKNOWN
+        assert entry.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_PATH_OBSTRUCTED]
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
+
+    def test_a_configured_name_atlas_cannot_stat_establishes_neither_branch(self):
+        """The core decides by that same stat, so which branch it takes is the open question.
+
+        Answering it with the folder would claim the core searched; answering
+        it with a missing file would claim it did not. The configured file
+        stays the requirement and the look that did not happen is stated.
+        """
+        answer = self._answer(
+            'pcsx2_bios = "locked.bin"\n', inaccessible=[f"{LRPS2_FOLDER}/locked.bin"]
+        )
+        entry = self._entry(answer)
+        assert entry.declared_kind == DECLARED_FILE
+        assert entry.found == "inaccessible"
+        assert entry.checked is None
+        assert entry.satisfied is None
+        assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_PATH_INACCESSIBLE]
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
+
+    def test_a_value_with_a_separator_is_followed_the_way_the_core_follows_it(self):
+        """Nothing normalises, so a climb that stays under the root is followed, not refused.
+
+        ``Path::Combine`` resolves no component of its own, so the value
+        composes literally and where it lands is the kernel's answer — which
+        is the file the core opens. The requirement's ``path`` then names a
+        file OUTSIDE the declared folder while ``declared`` stays the folder,
+        and the claim follows the path so the unclaimed scan does not meet it
+        again.
+        """
+        outside = f"{BIOS_DIR}/pcsx2/elsewhere.bin"
+        answer = self._answer(
+            'pcsx2_bios = "../elsewhere.bin"\n', files={outside: PS2_IMAGE_EUR}
+        )
+        entry = self._entry(answer)
+        assert entry.declared == "pcsx2/bios"
+        assert entry.path == outside
+        assert entry.file_name == "elsewhere.bin"
+        assert entry.checked == CHECKED_VERIFIED
+        assert answer.cores[0].claims == (outside,)
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
+
+    def test_an_options_file_stating_no_value_leaves_the_folder_verdict_alone(self):
+        answer = self._answer('pcsx2_fastboot = "enabled"\n')
+        assert self._entry(answer).declared_kind == DECLARED_DIRECTORY
+        assert answer.cores[0].caveats == ()
+
+    def test_no_options_file_at_all_leaves_the_folder_verdict_alone(self):
+        # There is no default to fall back on and there could not be: the core
+        # fills this option's default from the folder it has just listed
+        # (main.cpp:1832-1834), which is not a stored value.
+        answer = self._answer()
+        assert self._entry(answer).declared_kind == DECLARED_DIRECTORY
+        assert answer.cores[0].caveats == ()
+
+    def test_an_empty_value_is_unset(self):
+        answer = self._answer('pcsx2_bios = ""\n')
+        assert self._entry(answer).declared_kind == DECLARED_DIRECTORY
+        assert answer.cores[0].caveats == ()
+
+    def test_a_context_carrying_no_chain_answers_as_it_did_before(self):
+        answer = self._answer(no_chain=True)
+        assert self._entry(answer).declared_kind == DECLARED_DIRECTORY
+        assert answer.cores[0].caveats == ()
+
+    def test_the_per_core_file_outranks_the_global_one(self):
+        # RetroArch reads the per-core .opt first unless global_core_options
+        # switched it on, and the file is named for the core's library_name —
+        # which lives in the binary, so reading it costs the same probe
+        # RetroArch makes.
+        answer = self._answer(
+            'pcsx2_bios = "scph70004.bin"\n',
+            per_core='pcsx2_bios = "mystery.bin"\n',
+            per_core_options=True,
+            files={f"{LRPS2_FOLDER}/mystery.bin": PS2_UNLISTED},
+            cores={f"{INFO_DIR}/pcsx2_libretro.so": {"library_name": "PCSX2"}},
+        )
+        entry = self._entry(answer)
+        assert entry.file_name == "mystery.bin"
+        assert entry.checked == CHECKED_UNRECOGNISED
+
+    def test_a_core_that_cannot_be_queried_says_the_per_core_file_went_unread(self):
+        answer = self._answer(
+            'pcsx2_bios = "scph70004.bin"\n',
+            per_core='pcsx2_bios = "mystery.bin"\n',
+            per_core_options=True,
+            files={f"{LRPS2_FOLDER}/mystery.bin": PS2_UNLISTED},
+        )
+        # The global file answered, and what could have outranked it was not read.
+        assert self._entry(answer).file_name == "scph70004.bin"
+        assert [c.code for c in answer.cores[0].caveats] == [
+            CAVEAT_CORE_UNQUERYABLE,
+            CAVEAT_FIRMWARE_IMAGE_CONFIGURED,
+        ]
+
+    def test_no_per_core_directory_means_no_probe_and_no_statement(self):
+        """A degradation that cannot bite is not stated: with nothing at the
+        override directory there is no per-core file to miss, whatever the core
+        calls itself."""
+        answer = self._answer(
+            'pcsx2_bios = "scph70004.bin"\n',
+            per_core_options=True,
+        )
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
+
+    def test_an_absolute_value_lands_below_the_folder(self):
+        # Path::Combine swallows the leading separator of an absolute name
+        # (common/FileSystem.cpp:442-457 at 14d19f8, ported as
+        # qt_ini.path_combine), where os.path.join would let it replace the
+        # folder entirely.
+        answer = self._answer('pcsx2_bios = "/scph70004.bin"\n')
+        assert self._entry(answer).path == self.IMAGE
+
+    def test_a_value_climbing_out_of_the_root_is_refused_rather_than_followed(self):
+        answer = self._answer('pcsx2_bios = "../../../elsewhere/scph70004.bin"\n')
+        entry = self._entry(answer)
+        # No destination is stated for it, so the folder's own listing is what
+        # this answer carries.
+        assert entry.declared_kind == DECLARED_DIRECTORY
+        (refusal,) = answer.cores[0].caveats
+        assert refusal.code == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+        assert dict(refusal.data) == {
+            "core_so": LRPS2_SO,
+            "declared": "../../../elsewhere/scph70004.bin",
+            "key": "pcsx2_bios",
+        }
+
+    def test_identification_still_names_the_declared_folder(self):
+        """A setting says which image the next launch opens, not where a file belongs.
+
+        The download flow asks about content: the core takes any name inside
+        the folder and the option is one edit away from naming another, so the
+        destination stays the declared folder whatever it currently says.
+        """
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+            f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+            self.IMAGE: PS2_IMAGE_EUR,
+            self.OPTIONS: 'pcsx2_bios = "scph70004.bin"\n',
+        }
+        machine = _machine(tree, ps2_bios_headers={self.IMAGE: PS2_HEADER_EUR})
+        context = _context(
+            machine,
+            core_options=CoreOptionsChain(
+                global_file=self.OPTIONS,
+                override_config_dir=self.OPT_DIR,
+                per_core_options=False,
+                core_dir=INFO_DIR,
+            ),
+        )
+        identified = identify_firmware(machine, context, md5="77" * 16)
+        (entry,) = identified.requirements
+        assert entry.declared == "pcsx2/bios"
+        assert entry.declared_kind == DECLARED_DIRECTORY
+        assert entry.path == LRPS2_FOLDER
+
+    def test_what_resolving_the_options_chain_cost_reaches_the_answer(self):
+        # A line RetroArch's parser refused degrades every value read through
+        # the chain, and this answer reads one — stated whatever the read came
+        # back with, because a refused line is one reason a value is missing.
+        dropped = Caveat(CAVEAT_CFG_LINE_DROPPED, "a line the parser refused", {"key": "x"})
+        answer = self._answer(
+            chain=CoreOptionsChain(
+                global_file=self.OPTIONS,
+                override_config_dir=self.OPT_DIR,
+                per_core_options=False,
+                caveats=(dropped,),
+            )
+        )
+        assert CAVEAT_CFG_LINE_DROPPED in [c.code for c in answer.caveats]
 
 
 class TestResolutionIsTheKernelsOrder:

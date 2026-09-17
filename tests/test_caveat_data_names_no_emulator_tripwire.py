@@ -179,10 +179,14 @@ _CORE_FILE_ATTRIBUTES = (".core_so",)
 # whatever it hides. Each was read: ``tag`` is the ES-DE ``<platform>`` token
 # this module's one documented exception is about; the three basename calls are
 # handed a name this walk does place (``core_so``) and return the file part of
-# it; and the f-string builds a file name by appending the suffix itself. None
-# of them is a name a rule about names could place without pretending to
-# evaluate an expression.
+# it; and the f-string builds a file name by appending the suffix itself. The
+# two ``core_short_name`` calls are the inverse of those basenames — they are
+# handed a ``.so`` stem and return the short name the core tables are keyed by,
+# which is the vocabulary ``core`` names. None of them is a name a rule about
+# names could place without pretending to evaluate an expression.
 UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
+    ("firmware.py", "_configured_image_caveat", CORE_KEY): "core_short_name(core.stem)",
+    ("firmware.py", "_configured_image_missing", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "firmware_for_core", CORE_SO_KEY): "f'{stem}.so'",
     ("installations.py", "_core_info_unreadable_caveat", CORE_SO_KEY): (
         "os.path.basename(core_so)"

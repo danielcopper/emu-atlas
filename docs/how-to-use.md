@@ -2757,12 +2757,13 @@ anywhere. It needs exactly one image: the first found becomes the `pcsx2_bios` o
 file passing `IsBIOS` regardless of region (`BiosTools.cpp:241-250`; the fallback `:270-278`). A configured image is
 opened with no size filter (`BiosTools.cpp:281-306`, only `filesize > 0`), so the size-based verdict below is a verdict
 about the auto-detect path; the option does not stop the listing — set, `LoadBIOS` opens the named file rather than the
-first the listing found (#360). Atlas lists the same folder at its resolved path, stats the sizes, and reads each file
-of an accepted size the way the core reads it: the ROMDIR walk `LoadBiosVersion` makes — performed step for step by
-`atlas/ps2_bios.py` and asked of the machine seam as `read_ps2_bios_header` — is the verdict, and the md5 against the
-packaged identities filed under the `pcsx2/bios/` prefix — 73 of them, a _subset_ of what the header check accepts — is
-the name. The curated row states the prefix, the size range and the content read (`FIRMWARE_DECLARED_DIRECTORY`, version
-3), and the caveats reuse the codes the DuckStation search already taught you, plus three of their own:
+first the listing found, which is [what a setting names](#when-a-setting-names-the-image). Atlas lists the same folder
+at its resolved path, stats the sizes, and reads each file of an accepted size the way the core reads it: the ROMDIR
+walk `LoadBiosVersion` makes — performed step for step by `atlas/ps2_bios.py` and asked of the machine seam as
+`read_ps2_bios_header` — is the verdict, and the md5 against the packaged identities filed under the `pcsx2/bios/`
+prefix — 73 of them, a _subset_ of what the header check accepts — is the name. The curated row states the prefix, the
+size range, the content read and the option that can name a file inside the folder (`FIRMWARE_DECLARED_DIRECTORY`,
+version 4), and the caveats reuse the codes the DuckStation search already taught you beside codes of their own:
 
 | the folder holds                                                                           | `satisfied`                                  | stated by                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2792,6 +2793,54 @@ listing at the resolved path sees every other system's dumps too. That is why th
 the core: a 512 KiB PlayStation image is dropped by its stat before a byte of it is read. `path` is the resolved
 destination and `declared` the declaration as spelled, so on RetroDECK `path` for `pcsx2/bios` is the BIOS root itself.
 
+#### When a setting names the image
+
+Once `pcsx2_bios` holds a name, the folder verdict answers a question the launch no longer asks. `check_variables` reads
+the option and writes it to `Filenames/BIOS` (`main.cpp:360-365`), `FullpathToBios` joins it onto the folder with
+`Path::Combine` (`Pcsx2Config.cpp:994-1000`), and `LoadBIOS` opens that one path (`BiosTools.cpp:281`). The setting does
+not replace the listing — `retro_init` runs it whenever the core has not read a value yet, to fill the option's own
+values — it replaces the listing's verdict. Where RetroArch keeps the value is the ordinary options chain: the per-core
+`.opt` unless `global_core_options` is on, then the global options file. Reading the per-core file means knowing the
+core's `library_name`, which lives in the binary, so a core that cannot be queried states `core-unqueryable` and the
+global file is the whole of what was read — unless there is no per-core directory at all, in which case there was
+nothing to miss and nothing is said.
+
+What the folder answers again is the one state atlas can state as a search: **nothing at the composed path** (a refused
+name, in the last row below, is answered by the folder too, with the refusal beside it). The core's own test is
+`path_is_valid`, and that is a stat that succeeded and nothing more — `LoadBIOS` searches where the path is empty or
+that call says no (`BiosTools.cpp:270`), the call is `retro_vfs_stat_impl(path, NULL) & RETRO_VFS_STAT_IS_VALID`
+(`file_path_io.c:87-90`), and that answers `0` on an empty path (`vfs_implementation.c:848-849`) and where the `stat`
+itself fails (`:941-952`), a directory setting a separate `IS_DIRECTORY` bit nobody tests here. So a directory at the
+configured name is _not_ searched past: it stats, so the core goes to the open at `:281` instead, and what that open
+yields for a directory is the platform's answer rather than anything these lines state.
+
+Four states the option can be in:
+
+| the option                                      | the requirement                                                        | stated by                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| names a file that is there                      | that file: `declared_kind: "file"`, `path` the joined destination      | `firmware-image-configured` (`core`, `key`, `name`, `options_file`) — `declared` stays the `.info`'s folder path, because the declaration is still the folder and only the name came from a setting; `contents_satisfied` is absent, since no folder was judged                                     |
+| names a file that is not there                  | the folder, exactly as before                                          | `firmware-configured-image-missing` (`core`, `key`, `name`, `dir`) — the state `LoadBIOS` searches the folder in, so the listing answers and the stored name is stale. The same requirement as the unset row below, reached for a different reason: here a value was read and composed              |
+| names a directory, or a path that will not stat | still that path: `declared_kind: "file"`, `found` saying what is there | `firmware-image-configured` beside `firmware-path-obstructed` or `firmware-path-inaccessible` — no folder verdict and `satisfied` `null`: a directory stats, so the core does not search past it, and what its open then yields is the platform's answer rather than anything the cited lines state |
+| is unset, empty, or states a path atlas refuses | the folder, exactly as before                                          | nothing, or the refusal's own code — `retro_init` fills this option's _default_ from the folder it just listed (`main.cpp:1832-1834`), and a default is not a stored value                                                                                                                          |
+
+`checked` on the named file is the packaged prefix table's answer about its **bytes**, never about its name: the core
+takes any name inside the folder. `verified` where `pcsx2/bios/` lists them, `unrecognised` where it does not, `unread`
+where they would not come back, and `unchecked` without a content check. `unrecognised` means _bytes the packaged table
+does not know, and the core opens them regardless_: `LoadBIOS` loads the configured file whatever its header reads as
+(the ROMDIR walk at `BiosTools.cpp:294` has its return discarded). Nothing about its bytes turns it down — what can is
+an open that fails (`:281-283`) or a size of zero (`:286-290`) — so the header check that gates the _listing_ (`IsBIOS`,
+`main.cpp:1818`) does not stand between this core and the file a setting named.
+
+The value is a file **name**, and `Path::Combine` is how it is joined: an absolute value lands _below_ the folder rather
+than replacing it. Nothing normalises, because upstream resolves no `.` or `..` component either — so a value carrying a
+separator composes literally and where it lands is the kernel's answer, which is the file the core opens. atlas follows
+it for that reason: `../elsewhere.bin` under a `pcsx2/bios` declaration gives a requirement whose `path` is
+`<root>/pcsx2/elsewhere.bin` while `declared` stays `pcsx2/bios`, and the claim follows the `path`, so the unclaimed
+scan does not meet that file a second time. What is refused rather than followed is only what leaves the firmware root —
+`firmware-path-escapes-root`, carrying `core_so`, `declared` and `key` — which is the bound every read atlas makes is
+held to. None of this moves where a download goes: a `needs`/identification answer still names the declared folder as
+the destination, because that is what the core declares and a setting does not change it.
+
 **Why is `satisfied` `None`?** Every route to it, in one place:
 
 | route                                                                                     | `found`        | `checked`        | what says so                       |
@@ -2805,6 +2854,11 @@ destination and `declared` the declaration as spelled, so on RetroDECK `path` fo
 | a listed folder whose candidate the table names and the header check denies, none passing | `directory`    | `unknown`        | `firmware-image-contradicted`      |
 | a listed folder whose candidates' header reads did not come back, none passing            | `directory`    | `unknown`        | `firmware-unreadable`              |
 | a listed folder that could not be listed                                                  | `directory`    | `unknown`        | `firmware-scan-incomplete`         |
+| a configured image, and `verify` was not passed                                           | `file`         | `unchecked`      | `hash_checked: false`              |
+| a configured name with a directory at it                                                  | `directory`    | `unknown`        | `firmware-path-obstructed`         |
+| a configured name atlas could not stat                                                    | `inaccessible` | `None`           | `firmware-path-inaccessible`       |
+| a configured image whose bytes the packaged prefix does not list                          | `file`         | `unrecognised`   | `firmware-image-configured`        |
+| a configured image whose bytes could not be read                                          | `file`         | `unread`         | `firmware-unreadable`              |
 
 Nothing else reaches `None`. A file the table does not cover is `True` (nothing further can ever be established about
 it), a missing destination or a wrong shape is `False`, and a folder holding nothing of an accepted size, or nothing
