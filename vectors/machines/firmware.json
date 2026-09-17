@@ -14482,6 +14482,256 @@
       }
     },
     {
+      "name": "emudeck-xemu-a-package-value-reads-through-the-deploy-its-launch-runs",
+      "rationale": "Issue #350's witness. EmuDeck installs xemu as the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5), so this launch runs inside that app's sandbox and its configuration is written in that sandbox's spellings: bootrom_path names the boot ROM inside the deployed package and flashrom_path names the app's own config tree. Both are resolved against the app the launch really runs — /app through the deploy that flatpak run would start, /var/config through ~/.var/app/<id>/config — which is what the savefile and savestate answers have done for the same launch since #317. The sandbox is built from the very homes this entry states, so the app whose files a value resolves against can never disagree with the trees the rest of the answer is about. Both configured values are synthetic: no EmuDeck script writes a sandbox spelling into xemu.toml, so this pins the shape such a value answers in rather than a case seen in the wild — any sandbox-spelled value on a launch with an app id answers this way, whichever emulator states it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2": "qqqqqqqqqqqqqqqq",
+          "/home/deck/.var/app/app.xemu.xemu/data/xemu/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/app/share/xemu/mcpx_1.0.bin'\nflashrom_path = '/var/config/xemu/Complex.bin'\nhdd_path = '/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2'\n",
+          "/var/lib/flatpak/app/app.xemu.xemu/current/active/files/share/xemu/mcpx_1.0.bin": "mcpxmcpxmcpxmcpx",
+          "/home/deck/.var/app/app.xemu.xemu/config/xemu/Complex.bin": "complexcomplexcx"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/var/lib/flatpak/app/app.xemu.xemu"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "label": "xemu (Standalone)",
+              "declaration": "packaged",
+              "locating": "by-name",
+              "requirements_met": true,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "Complex.bin",
+                  "path": "/home/deck/.var/app/app.xemu.xemu/config/xemu/Complex.bin",
+                  "declared": "/var/config/xemu/Complex.bin",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "xbox_hdd.qcow2",
+                  "path": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                  "declared": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "mcpx_1.0.bin",
+                  "path": "/var/lib/flatpak/app/app.xemu.xemu/current/active/files/share/xemu/mcpx_1.0.bin",
+                  "declared": "/app/share/xemu/mcpx_1.0.bin",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "xemu (Standalone)",
+                    "token": "XEMU"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-xemu-the-same-value-on-an-id-less-launch-is-refused",
+      "rationale": "The other arm of #350: the same configuration on the launch that establishes no app. The AppImage under ~/Applications is what the probe finds first (vars.sh:4-5), nothing sandboxes it, and the settings table names no app id for it — so /app names a deployed package no launch here runs and is refused with sandbox-path-untranslated beside an answer that still stands, while /var/config is the (unusual) host path it names, looked for at that host path and answered missing. The deployed package is present in this fixture and is still not read: what decides is the launch, not what the machine happens to carry. The configured values are the sibling vector's, synthetic for the same reason: one pair of values, two launches, and only the launch differs.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2": "qqqqqqqqqqqqqqqq",
+          "/home/deck/.local/share/xemu/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/app/share/xemu/mcpx_1.0.bin'\nflashrom_path = '/var/config/xemu/Complex.bin'\nhdd_path = '/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2'\n",
+          "/home/deck/Applications/xemu.AppImage": "AI\u0002",
+          "/var/lib/flatpak/app/app.xemu.xemu/current/active/files/share/xemu/mcpx_1.0.bin": "mcpxmcpxmcpxmcpx"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "label": "xemu (Standalone)",
+              "declaration": "packaged",
+              "locating": "by-name",
+              "requirements_met": false,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "xbox_hdd.qcow2",
+                  "path": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                  "declared": "/home/deck/Emulation/storage/xemu/xbox_hdd.qcow2",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "file",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": null,
+                  "system": "xbox",
+                  "system_source": "card",
+                  "need": "required",
+                  "file_name": "Complex.bin",
+                  "path": "/var/config/xemu/Complex.bin",
+                  "declared": "/var/config/xemu/Complex.bin",
+                  "declared_kind": "file",
+                  "identity": null,
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "xemu (Standalone)",
+                    "token": "XEMU"
+                  }
+                },
+                {
+                  "code": "sandbox-path-untranslated",
+                  "data": {
+                    "label": "xemu (Standalone)",
+                    "token": "XEMU",
+                    "key": "sys.files/bootrom_path",
+                    "path": "/app/share/xemu/mcpx_1.0.bin"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "retrodeck-duckstation-searches-a-directory-and-recognises-the-image",
       "rationale": "DuckStation names no BIOS file: [BIOS] SearchDirectory names a directory, the three per-region keys are empty — the state RetroDECK ships — and the emulator keeps every file of an accepted size and recognises it by hashing it against a table compiled into the binary. Both files here are exactly 512 KiB, which is why the size test cannot be the answer: one is a PlayStation BIOS the table knows and the other is a Saturn image of the same size. The known one wins, because an unknown image never displaces a known one, and the answer names what it is rather than only where it is: the read that made the pick is the requirement's own, so it carries the table's row as its identity and 'verified', and the verdict over the card follows.",
       "input": {
