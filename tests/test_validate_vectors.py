@@ -543,8 +543,12 @@ INPUT_PS2_BIOS_HEADER_CASES = [
 
 INPUT_CORE_CASES = [
     case(_with(_vector(), cores=[]), "input.cores must be an object", id="cores-not-object"),
-    case(_with(_vector(), cores={"/a.so": {}}), "must be null or an object with a string library_name",
+    case(_with(_vector(), cores={"/a.so": {}}), "or an object with a string library_name",
          id="core-without-library-name"),
+    case(_with(_vector(), cores={"/a.so": "binary-inaccessible"}), "state must be one of",
+         id="core-state-a-declaration-cannot-make"),
+    case(_with(_vector(), cores={"/a.so": "answered"}), "state must be one of",
+         id="core-state-outside-the-vocabulary"),
     case(_with(_vector(), cores={"/a.so": {"library_name": "X", "options": []}}),
          "options must be an object", id="core-options-not-object"),
     case(_with(_vector(), cores={"/a.so": {"library_name": "X", "options": {"k": {"stray": 1}}}}),
@@ -1728,6 +1732,15 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_granularity_vocabularies_match(self):
         assert validate_vectors.KNOWN_GRANULARITIES == set(atlas.GRANULARITIES)
+
+    def test_the_declarable_core_states_match(self):
+        # The fixture grammar's side of the probe vocabulary: every unanswered
+        # status a machine file may declare. `binary-inaccessible` is the one
+        # it may not — a path with nothing at it is stated by declaring no core
+        # there — so the gate's list is the vocabulary minus exactly that word.
+        assert validate_vectors.CORE_STATES == set(atlas.CORE_UNANSWERED_STATUSES) - {
+            atlas.CORE_READ_BINARY_INACCESSIBLE
+        }
 
     def test_the_role_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROLES == set(atlas.ROLES)

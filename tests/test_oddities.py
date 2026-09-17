@@ -10,7 +10,15 @@ from typing import Mapping
 import pytest
 
 import atlas
-from atlas.machine import CoreInfo, CoreOption, CoreReading, FixtureMachine, RealMachine
+from atlas.machine import (
+    CORE_READ_ANSWERED,
+    CORE_READ_UNLOADABLE,
+    CoreInfo,
+    CoreOption,
+    CoreReading,
+    FixtureMachine,
+    RealMachine,
+)
 from atlas.mode_rules import RULES as MODE_RULES
 from atlas.oddities import (
     ANCHOR_KINDS,
@@ -4391,14 +4399,17 @@ class _RefusingLoader(RealMachine):
     REFUSAL = "libGL.so.1: cannot open shared object file: No such file or directory"
 
     def read_core(self, so_path: str) -> CoreReading:
-        return CoreReading(None, self.REFUSAL)
+        return CoreReading(CORE_READ_UNLOADABLE, unloadable=self.REFUSAL)
 
 
 class _LoadingMachine(RealMachine):
     """A machine that reads every core, and reads no option out of it."""
 
     def read_core(self, so_path: str) -> CoreReading:
-        return CoreReading(CoreInfo(library_name="Stub", library_version=None, valid_extensions=None))
+        return CoreReading(
+            CORE_READ_ANSWERED,
+            CoreInfo(library_name="Stub", library_version=None, valid_extensions=None),
+        )
 
 
 # A card that governs its layout with an option, so the option reading below has

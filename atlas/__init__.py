@@ -367,6 +367,15 @@ from .installations import (
     HEALTH_ISSUE_SAVES_ROOT_MISSING,
 )
 from .machine import (
+    CORE_READ_ANSWERED,
+    CORE_READ_BINARY_INACCESSIBLE,
+    CORE_READ_CRASHED,
+    CORE_READ_NO_INTERPRETER,
+    CORE_READ_NOT_STARTED,
+    CORE_READ_TIMED_OUT,
+    CORE_READ_UNLOADABLE,
+    CORE_READ_UNUSABLE,
+    CORE_UNANSWERED_STATUSES,
     KIND_DIRECTORY,
     KIND_FILE,
     KIND_INACCESSIBLE,
@@ -375,6 +384,8 @@ from .machine import (
     READ_MISSING,
     READ_OK,
     READ_UNREADABLE,
+    CoreReadStatus,
+    CoreUnansweredStatus,
     PathKind,
     ReadStatus,
 )
@@ -679,6 +690,8 @@ __all__ = [
     # Vocabulary types
     "PathKind",
     "ReadStatus",
+    "CoreReadStatus",
+    "CoreUnansweredStatus",
     "RootKind",
     "StateRootKind",
     "FileSetState",
@@ -702,6 +715,18 @@ __all__ = [
     "READ_MISSING",
     "READ_UNREADABLE",
     "READ_INVALID_TEXT",
+    # Vocabulary values — how a core probe came back. The unanswered ones are
+    # the vocabulary of `core-unqueryable`'s `reason`; `answered` is not a
+    # failure and the caveat refuses it.
+    "CORE_UNANSWERED_STATUSES",
+    "CORE_READ_ANSWERED",
+    "CORE_READ_BINARY_INACCESSIBLE",
+    "CORE_READ_NO_INTERPRETER",
+    "CORE_READ_NOT_STARTED",
+    "CORE_READ_UNLOADABLE",
+    "CORE_READ_CRASHED",
+    "CORE_READ_TIMED_OUT",
+    "CORE_READ_UNUSABLE",
     # Vocabulary values — emulator kinds, save roots, firmware axes
     "CATALOGUE_KINDS",
     "KIND_LIBRETRO",

@@ -550,6 +550,15 @@ visible in `system_source`, and marked as derived where the core spans systems.
 ## Settled since the rewrite
 
 - **Seam signatures**: explicit operation outcomes (`ReadResult`, `PathKind`) — see "The machine seam".
+- **Distinct probe-failure reporting.** `read_core` answers a status per way a core probe comes back, each decided by
+  one thing the seam observed: a `.so` that will not `stat`, no interpreter to launch a probe under, a spawn the system
+  refused, the loader's own refusal, a crash by signal, the timeout, and a run that ended by itself naming no core. A
+  crash or a hang after the core named itself is an answer, because the probe prints that line before it takes the risk.
+  `query_core` is unchanged — a resolver acts on the core's answer and every absence of one is the same unknown to it —
+  and the distinction reaches a client as `core-unqueryable`'s enumerated `reason`, refused at construction outside the
+  vocabulary. It is a seam status rather than a resolver's reading of process state on purpose: read in the resolver, a
+  fixture machine would report the test host's interpreter while the fixture described another machine, and message
+  prose is non-contractual, so no vector would ever catch it (#412).
 - **Health representation**: a structured value on the handle (issue caveats with stable codes), mirrored into placement
   caveats.
 - **Vector encoding**: schema-versioned files; whole machines including read-failure states; exact-equality contract
@@ -648,11 +657,3 @@ visible in `system_source`, and marked as derived where the core spans systems.
 - Whether an archive's _contents_ can ever be compared member by member. The fifth `checked` value settled the
   whole-file question; going further needs a source that states which ROMs a correct set holds, and `System.dat` carries
   one md5 per name and no member list.
-- Distinct probe-failure reporting for `query_core` (crashed vs. missing vs. sandbox-only vs. never launched, for want
-  of an interpreter to launch it under) — revisit with the feature-detection extension (ROADMAP: card variants), which
-  reworks the probe anyway. Tracked as issue #412. One of the four is stated already, beside `query_core` rather than in
-  it: `RealMachine.read_core` keeps the loader's refusal — the sandbox-only case and more, because a `.so` this loader
-  can make no sense of lands there too. `query_core` still tells the two apart, a refused core answering `None` where a
-  core that loaded and registered nothing answers a `CoreInfo` with `options=None`; what cannot tell them apart is the
-  option reading a measurement does on top of it, and the tests that hold cards against the deployed binaries needed to
-  (#408). A crash that printed nothing, a missing `.so` and a probe never launched still arrive as one _unknown_.

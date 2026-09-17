@@ -29,6 +29,15 @@ from atlas.machine import (
     ARCHIVE_NOT_ARCHIVE,
     ARCHIVE_OK,
     ARCHIVE_UNREADABLE,
+    CORE_READ_ANSWERED,
+    CORE_READ_BINARY_INACCESSIBLE,
+    CORE_READ_CRASHED,
+    CORE_READ_NO_INTERPRETER,
+    CORE_READ_NOT_STARTED,
+    CORE_READ_TIMED_OUT,
+    CORE_READ_UNLOADABLE,
+    CORE_READ_UNUSABLE,
+    CORE_UNANSWERED_STATUSES,
     DIGEST_ALGORITHMS,
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
@@ -673,6 +682,14 @@ class TestGlobStatesWhatTheStandardLibraryHides:
         )
 
 
+# The probe states a machine file may declare, in the vocabulary's own order:
+# every unanswered status but the one a declaration cannot make about a path
+# it names. The test below holds this against the vocabulary itself.
+_DECLARABLE_CORE_STATES = tuple(
+    status for status in CORE_UNANSWERED_STATUSES if status != CORE_READ_BINARY_INACCESSIBLE
+)
+
+
 class TestFixtureCores:
     def test_query_core_returns_info(self):
         m = FixtureMachine({}, cores={"/cores/mgba_libretro.so": {"library_name": "mGBA"}})
@@ -736,6 +753,77 @@ class TestFixtureCores:
         info = m.query_core("/config/cores/mgba_libretro.so")
         assert info is not None
         assert info.library_name == "mGBA"
+
+
+class TestFixtureCoreStatuses:
+    """A vector can reach every status a real probe reaches, or it cannot be tested.
+
+    The fixture seam declares what a probe of a path answers, so each word of
+    :data:`CORE_UNANSWERED_STATUSES` is a state string a machine file can
+    state — bar the one a declaration cannot make about a path it names, which
+    is the path not being there at all.
+    """
+
+    SO = "/cores/mgba_libretro.so"
+
+    def test_the_parametrized_states_and_the_excluded_one_are_the_vocabulary(self):
+        # The counting rule for the parametrizations below: what they drive,
+        # plus the single word held out of the fixture grammar, is the whole
+        # vocabulary — so a status added later is driven here or fails here.
+        driven = {*_DECLARABLE_CORE_STATES, CORE_READ_BINARY_INACCESSIBLE}
+        assert sorted(driven) == sorted(CORE_UNANSWERED_STATUSES)
+
+    @pytest.mark.parametrize("state", _DECLARABLE_CORE_STATES)
+    def test_a_declared_state_is_read_back_as_that_status(self, state):
+        machine = FixtureMachine({}, cores={self.SO: state})
+        assert machine.read_core(self.SO).status == state
+
+    @pytest.mark.parametrize("state", _DECLARABLE_CORE_STATES)
+    def test_a_declared_state_answers_the_resolver_unknown(self, state):
+        machine = FixtureMachine({}, cores={self.SO: state})
+        assert machine.query_core(self.SO) is None
+
+    def test_null_is_the_refusal_it_has_always_been(self):
+        machine = FixtureMachine({}, cores={self.SO: None})
+        assert machine.read_core(self.SO) == CoreReading(CORE_READ_UNLOADABLE)
+
+    def test_an_answering_core_is_answered(self):
+        machine = FixtureMachine({}, cores={self.SO: {"library_name": "mGBA"}})
+        assert machine.read_core(self.SO).status == CORE_READ_ANSWERED
+
+    def test_an_object_naming_no_core_is_unusable(self):
+        machine = FixtureMachine({}, cores={self.SO: {"library_version": "0.10.5"}})
+        assert machine.read_core(self.SO).status == CORE_READ_UNUSABLE
+
+    def test_a_path_with_nothing_at_it_is_inaccessible(self):
+        assert FixtureMachine({}).read_core(self.SO).status == CORE_READ_BINARY_INACCESSIBLE
+
+    def test_a_path_whose_stat_would_fail_is_inaccessible(self):
+        machine = FixtureMachine({}, cores={self.SO: {"library_name": "mGBA"}}, inaccessible=["/cores"])
+        assert machine.read_core("/cores/other_libretro.so").status == CORE_READ_BINARY_INACCESSIBLE
+
+    def test_a_file_no_core_answer_was_declared_for_is_refused(self):
+        # A fixture's files are text and blobs, never a loadable library, so
+        # the loader refusing what is there is what a real machine answers for
+        # the same bytes — and it is what `null` means, said the other way.
+        machine = FixtureMachine({self.SO: "not an ELF"})
+        assert machine.read_core(self.SO).status == CORE_READ_UNLOADABLE
+
+    def test_a_declaration_outranks_what_the_tree_says_about_the_path(self):
+        # The declaration is the seam. A core declared under a directory whose
+        # stat fails answers what it declares, the way an AppImage's entries do.
+        machine = FixtureMachine({}, cores={self.SO: {"library_name": "mGBA"}}, inaccessible=["/cores"])
+        assert machine.read_core(self.SO).status == CORE_READ_ANSWERED
+
+    def test_a_state_no_probe_answers_is_refused_at_construction(self):
+        with pytest.raises(ValueError, match="probe state must be one of"):
+            FixtureMachine({}, cores={self.SO: "answered"})
+
+    def test_the_state_a_declaration_cannot_make_is_refused(self):
+        # Declaring "there is nothing here" about a path the declaration names
+        # would give one machine two spellings a resolver cannot tell apart.
+        with pytest.raises(ValueError, match="probe state must be one of"):
+            FixtureMachine({}, cores={self.SO: CORE_READ_BINARY_INACCESSIBLE})
 
 
 class TestRealMachine:
@@ -836,7 +924,9 @@ class TestRealMachine:
     def test_a_path_with_nothing_at_it_names_no_refusal(self):
         # Nothing was loaded and nothing refused to load: the reading says only
         # that there is no answer, which is what a missing path can support.
-        assert RealMachine().read_core("/nonexistent/core.so") == CoreReading(None)
+        assert RealMachine().read_core("/nonexistent/core.so") == CoreReading(
+            CORE_READ_BINARY_INACCESSIBLE
+        )
 
 
 def _fake_core(tmp_path):
@@ -928,14 +1018,18 @@ class TestCoreProbeAnswer:
         refusal = b'{"unloadable": "libGL.so.1: cannot open shared object file"}\n'
         _stub_probe(monkeypatch, stdout=refusal, returncode=1)
         reading = RealMachine().read_core(_fake_core(tmp_path))
-        assert reading == CoreReading(None, "libGL.so.1: cannot open shared object file")
+        assert reading == CoreReading(
+            CORE_READ_UNLOADABLE, unloadable="libGL.so.1: cannot open shared object file"
+        )
 
     def test_a_reading_is_an_answer_or_a_refusal_and_never_both(self):
         # Exclusive by construction: a core the loader would not open never
         # reported a library_name, so a reading claiming both states is a bug
         # in whoever built it rather than something a machine can be in.
         with pytest.raises(ValueError):
-            CoreReading(self.MGBA, "libGL.so.1: cannot open shared object file")
+            CoreReading(
+                CORE_READ_ANSWERED, self.MGBA, "libGL.so.1: cannot open shared object file"
+            )
 
     def test_a_refused_load_is_unknown_to_the_resolver(self, tmp_path, monkeypatch):
         # The distinction stops at the seam: query_core answers what a resolver
@@ -951,6 +1045,170 @@ class TestCoreProbeAnswer:
     def test_line_without_a_library_name_is_unknown(self, tmp_path, monkeypatch):
         _stub_probe(monkeypatch, stdout=b'{"library_version": "0.10.5"}\n')
         assert RealMachine().query_core(_fake_core(tmp_path)) is None
+
+
+# What the seam has to observe for each unanswered status, as the arguments to
+# _stub_probe that produce that observation. Two statuses are not an ending of
+# a probe at all and stand outside this table: binary-inaccessible is a path
+# whose stat fails, and no-interpreter a machine where nothing can be launched.
+_PROBE_ENDINGS = {
+    CORE_READ_NOT_STARTED: {"raises": OSError("cannot spawn")},
+    CORE_READ_UNLOADABLE: {
+        "stdout": b'{"unloadable": "libGL.so.1: cannot open shared object file"}\n',
+        "returncode": 1,
+    },
+    CORE_READ_CRASHED: {"stdout": b"", "returncode": -11},
+    CORE_READ_TIMED_OUT: {"raises": subprocess.TimeoutExpired(cmd=["probe"], timeout=15)},
+    CORE_READ_UNUSABLE: {"stdout": b"", "returncode": 1},
+}
+_UNLAUNCHED_STATUSES = (CORE_READ_BINARY_INACCESSIBLE, CORE_READ_NO_INTERPRETER)
+
+
+def _machine_that_reads(status, tmp_path, monkeypatch):
+    """A machine and a ``.so`` whose reading is the one *status* is the word for.
+
+    The stub answers a perfectly good core throughout the two cases that launch
+    nothing, so an implementation that reached the probe there would come back
+    ``answered`` — which is what makes those two assertions worth making.
+    """
+    if status == CORE_READ_BINARY_INACCESSIBLE:
+        _stub_probe(monkeypatch, stdout=TestEveryWayAProbeComesBackUnanswered.BASE)
+        return RealMachine(), str(tmp_path / "never-deployed.so")
+    if status == CORE_READ_NO_INTERPRETER:
+        _stub_probe(monkeypatch, stdout=TestEveryWayAProbeComesBackUnanswered.BASE)
+        monkeypatch.setattr(atlas.machine, "core_probe_interpreter", lambda: None)
+        return RealMachine(), _fake_core(tmp_path)
+    _stub_probe(monkeypatch, **_PROBE_ENDINGS[status])
+    return RealMachine(), _fake_core(tmp_path)
+
+
+def _read_one_core(status, tmp_path, monkeypatch):
+    """The reading a machine in that state answers for one core."""
+    machine, so_path = _machine_that_reads(status, tmp_path, monkeypatch)
+    return machine.read_core(so_path)
+
+
+class TestEveryWayAProbeComesBackUnanswered:
+    """One word per observation, and every word held to the whole vocabulary.
+
+    ``None`` was the entire vocabulary for every way a probe fails, and a
+    caveat naming a class of degradations rather than one is a code a client
+    cannot act on (#412). Each status here is decided by one thing this seam saw —
+    a failed ``stat``, an interpreter that is not there, a spawn the operating
+    system refused, the loader's own refusal line, a negative returncode, the
+    timeout, or a run that ended by itself printing nothing usable — and never
+    by process state a resolver could have read for itself.
+
+    The parametrization is over :data:`CORE_UNANSWERED_STATUSES` itself rather
+    than over a list written here, so a value added to the vocabulary and not
+    driven from a machine fails this file instead of shipping undocumented.
+    """
+
+    BASE = b'{"library_name": "mGBA", "library_version": "0.10.5", "valid_extensions": "gb|gba"}\n'
+
+    def test_every_status_of_the_vocabulary_is_driven_here(self):
+        # The counting rule for the parametrizations below: every member of
+        # the vocabulary is either an ending _PROBE_ENDINGS states or one of
+        # the two the seam reaches without launching anything.
+        assert sorted({*_PROBE_ENDINGS, *_UNLAUNCHED_STATUSES}) == sorted(CORE_UNANSWERED_STATUSES)
+
+    @pytest.mark.parametrize("status", CORE_UNANSWERED_STATUSES)
+    def test_the_status_is_the_one_its_observation_earns(self, status, tmp_path, monkeypatch):
+        assert _read_one_core(status, tmp_path, monkeypatch).status == status
+
+    @pytest.mark.parametrize("status", CORE_UNANSWERED_STATUSES)
+    def test_no_unanswered_reading_carries_a_core(self, status, tmp_path, monkeypatch):
+        assert _read_one_core(status, tmp_path, monkeypatch).info is None
+
+    @pytest.mark.parametrize("status", CORE_UNANSWERED_STATUSES)
+    def test_the_resolver_still_sees_one_unknown(self, status, tmp_path, monkeypatch):
+        # query_core is unchanged by all of this: a resolver acts on the core's
+        # answer, and every way of not having one is the same absence to it.
+        machine, so_path = _machine_that_reads(status, tmp_path, monkeypatch)
+        assert machine.query_core(so_path) is None
+
+    @pytest.mark.parametrize("status", CORE_UNANSWERED_STATUSES)
+    def test_only_a_refused_load_carries_the_loaders_message(
+        self, status, tmp_path, monkeypatch
+    ):
+        reading = _read_one_core(status, tmp_path, monkeypatch)
+        carried = reading.unloadable is not None
+        assert carried == (status == CORE_READ_UNLOADABLE)
+
+    def test_the_refusal_carries_the_loaders_own_words(self, tmp_path, monkeypatch):
+        reading = _read_one_core(CORE_READ_UNLOADABLE, tmp_path, monkeypatch)
+        assert reading.unloadable == "libGL.so.1: cannot open shared object file"
+
+    def test_a_crash_after_a_usable_line_is_an_answer(self, tmp_path, monkeypatch):
+        # The two-phase probe prints its base line before it takes the risk
+        # that kills it, so how the process died says nothing about a read
+        # that already succeeded. -11 is the SIGSEGV in retro_set_environment.
+        _stub_probe(monkeypatch, stdout=self.BASE, returncode=-11)
+        assert RealMachine().read_core(_fake_core(tmp_path)).status == CORE_READ_ANSWERED
+
+    def test_a_hang_after_a_usable_line_is_an_answer(self, tmp_path, monkeypatch):
+        expired = subprocess.TimeoutExpired(cmd=["probe"], timeout=15, output=self.BASE)
+        _stub_probe(monkeypatch, raises=expired)
+        assert RealMachine().read_core(_fake_core(tmp_path)).status == CORE_READ_ANSWERED
+
+    def test_a_clean_exit_that_printed_nothing_is_unusable(self, tmp_path, monkeypatch):
+        # The probe's own "core reported no library_name" exit prints no JSON
+        # line at all, and so does a core that ends before printing one: the
+        # process ran to an end of its own and named no core.
+        _stub_probe(monkeypatch, stdout=b"", returncode=0)
+        assert RealMachine().read_core(_fake_core(tmp_path)).status == CORE_READ_UNUSABLE
+
+    def test_a_line_naming_no_core_is_unusable(self, tmp_path, monkeypatch):
+        _stub_probe(monkeypatch, stdout=b'{"library_version": "0.10.5"}\n', returncode=0)
+        assert RealMachine().read_core(_fake_core(tmp_path)).status == CORE_READ_UNUSABLE
+
+    @pytest.mark.parametrize("status", _UNLAUNCHED_STATUSES)
+    def test_an_unlaunched_status_starts_no_process(self, status, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        if status == CORE_READ_NO_INTERPRETER:
+            monkeypatch.setattr(atlas.machine, "core_probe_interpreter", lambda: None)
+            RealMachine().read_core(_fake_core(tmp_path))
+        else:
+            RealMachine().read_core(str(tmp_path / "never-deployed.so"))
+        assert calls == []
+
+    @pytest.mark.parametrize("status", sorted(_PROBE_ENDINGS))
+    def test_a_run_that_ended_by_itself_is_asked_again(self, status, tmp_path, monkeypatch):
+        # The memoisation rule, driven per status: a reading from a run that
+        # ended by itself is asked again, because what emptied it can be gone
+        # by the next question while the .so is unchanged. The hang is the one
+        # retry that would cost the caller the whole timeout, so it is kept.
+        calls = _stub_probe(monkeypatch, **_PROBE_ENDINGS[status])
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.read_core(so).status == status
+        assert machine.read_core(so).status == status
+        assert len(calls) == (1 if status == CORE_READ_TIMED_OUT else 2)
+
+    def test_a_refusal_printed_before_a_hang_is_stated_as_the_refusal(self, tmp_path, monkeypatch):
+        # What the bytes said and how the run ended are two questions. The
+        # loader refused, and that is what the reading states, whatever killed
+        # the process afterwards.
+        expired = subprocess.TimeoutExpired(
+            cmd=["probe"], timeout=15, output=_PROBE_ENDINGS[CORE_READ_UNLOADABLE]["stdout"]
+        )
+        _stub_probe(monkeypatch, raises=expired)
+        reading = RealMachine().read_core(_fake_core(tmp_path))
+        assert reading.status == CORE_READ_UNLOADABLE
+
+    def test_a_refusal_printed_before_a_hang_is_remembered(self, tmp_path, monkeypatch):
+        # And the ending is what the memory goes on, not the status: asking a
+        # hung probe again costs _CORE_PROBE_TIMEOUT_SECONDS every time, which
+        # is the whole reason a killed run is remembered. Reading the status
+        # instead would re-ask this one, because a refusal that ended on its
+        # own is asked again — the case right above this one.
+        expired = subprocess.TimeoutExpired(
+            cmd=["probe"], timeout=15, output=_PROBE_ENDINGS[CORE_READ_UNLOADABLE]["stdout"]
+        )
+        calls = _stub_probe(monkeypatch, raises=expired)
+        machine, so = RealMachine(), _fake_core(tmp_path)
+        assert machine.read_core(so).status == CORE_READ_UNLOADABLE
+        assert machine.read_core(so).status == CORE_READ_UNLOADABLE
+        assert len(calls) == 1
 
 
 class TestCoreProbeMemory:
