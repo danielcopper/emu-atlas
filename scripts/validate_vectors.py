@@ -489,6 +489,8 @@ KNOWN_CAVEAT_CODES = {
     "firmware-declaration-unread",
     "firmware-content-contradictory",
     "firmware-content-unstated",
+    "firmware-configured-image-missing",
+    "firmware-image-configured",
     "firmware-image-identified",
     "firmware-image-refused",
     "firmware-image-unlisted",
@@ -1795,7 +1797,7 @@ def _validate_requirement_fields(
         fail(f"{name}: with no source for the system the slug must be '_unknown'")
 
 
-def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
+def _validate_requirement_path(name: str, entry: Any, root: str, named_by: frozenset[str]) -> None:
     # The root itself is a legal destination: LRPS2 declares the FOLDER
     # "pcsx2/bios", and RetroDECK links it back to the firmware root, so that
     # declaration resolves to the root exactly.
@@ -1815,9 +1817,17 @@ def _validate_requirement_path(name: str, entry: Any, root: str) -> None:
     # emulator's combine, so the two spellings must agree. One that ends in a
     # separator spells no name of its own: the combine folds it onto the
     # directory, and file_name follows the composed path instead (#320).
+    #
+    # *named_by* is the one way the two may part: a core option naming a file
+    # inside a folder the .info declares. The declaration stays the folder and
+    # the name comes from the setting, so the answer MUST say which setting and
+    # which value — firmware-image-configured, whose ``name`` this set holds,
+    # reduced to the name the emulator's combine ends in. Without a statement
+    # naming this very file the mismatch is a resolver renaming one silently,
+    # which is what the rule exists to catch.
     declared_tail = os.path.basename(entry["declared"])
     if declared_tail:
-        if declared_tail != entry["file_name"]:
+        if declared_tail != entry["file_name"] and entry["file_name"] not in named_by:
             fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
     elif entry["file_name"] != os.path.basename(entry["path"]):
         fail(f"{name}: a declaration spelling no name composes onto its directory — file_name must be the end of 'path'")
@@ -1908,7 +1918,9 @@ SATISFIED_BY_CHECKED: dict[str, tuple[Any, str]] = {
 }
 
 
-def _refuse_unreachable_checked(name: str, identity: Any, checked: Any, *, hash_checked: bool) -> None:
+def _refuse_unreachable_checked(
+    name: str, identity: Any, checked: Any, *, hash_checked: bool, named_by_setting: bool
+) -> None:
     """Could this ``checked`` value have been produced at all, on this run?
 
     Both rules are about the *reach* of the check rather than its outcome, and
@@ -1923,11 +1935,20 @@ def _refuse_unreachable_checked(name: str, identity: Any, checked: Any, *, hash_
     one value that by itself fails a present file on a run without hash
     checking — and ``unread`` that the bytes were asked for and did not come
     back. The message names the set rather than counting it in prose.
+
+    ``unchecked`` joins them for one shape only: a file a core option named
+    inside a folder declaration. The table that covers such a destination is
+    keyed by CONTENT, so it names the bytes only once they are read and there
+    is no identity to pin before that — what is outstanding without a content
+    check is the identity and the comparison together, which is exactly what
+    the word means. Everywhere else a table pins the identity off the declared
+    NAME before a byte is read, so ``unchecked`` with none is a dropped lookup.
     """
-    if identity is None and checked not in NO_IDENTITY_CHECKED:
+    allowed = NO_IDENTITY_CHECKED | ({"unchecked"} if named_by_setting else set())
+    if identity is None and checked not in allowed:
         fail(
             f"{name}: with no known identity, checked must be one of "
-            f"{sorted(NO_IDENTITY_CHECKED)}, got {checked!r}"
+            f"{sorted(allowed)}, got {checked!r}"
         )
     if identity is not None and not hash_checked and checked != "unchecked":
         fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
@@ -1963,7 +1984,7 @@ def _refuse_unknown_beside_an_identity(name: str, identity: Any, checked: Any) -
 
 
 def _validate_file_requirement(
-    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool
+    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool, named_by_setting: bool
 ) -> None:
     """A file is at the destination: what was checked settles what is satisfied.
 
@@ -1972,7 +1993,9 @@ def _validate_file_requirement(
     ``satisfied`` to be. The verdict rules are one per value and mutually
     exclusive, so exactly one of them ever applies.
     """
-    _refuse_unreachable_checked(name, identity, checked, hash_checked=hash_checked)
+    _refuse_unreachable_checked(
+        name, identity, checked, hash_checked=hash_checked, named_by_setting=named_by_setting
+    )
     _refuse_unknown_beside_an_identity(name, identity, checked)
     if checked == "not-comparable":
         _refuse_not_comparable_over_a_dump(name, identity)
@@ -2025,7 +2048,9 @@ def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checke
         )
 
 
-def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) -> None:
+def _validate_requirement_verdict(
+    name: str, entry: Any, *, hash_checked: bool, named_by_setting: bool
+) -> None:
     found = entry["found"]
     checked = entry["checked"]
     satisfied = entry["satisfied"]
@@ -2042,7 +2067,14 @@ def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) 
     if entry["declared_kind"] == DECLARED_DIRECTORY:
         _validate_file_at_a_folder_declaration(name, checked, satisfied)
         return
-    _validate_file_requirement(name, entry["identity"], checked, satisfied, hash_checked=hash_checked)
+    _validate_file_requirement(
+        name,
+        entry["identity"],
+        checked,
+        satisfied,
+        hash_checked=hash_checked,
+        named_by_setting=named_by_setting,
+    )
 
 
 def _validate_requirement(
@@ -2052,11 +2084,18 @@ def _validate_requirement(
     root: str,
     hash_checked: bool,
     fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS,
+    named_by: frozenset[str] = frozenset(),
 ) -> None:
     _validate_requirement_fields(name, entry, fields)
-    _validate_requirement_path(name, entry, root)
+    _validate_requirement_path(name, entry, root, named_by)
     _validate_requirement_presence(name, entry)
-    _validate_requirement_verdict(name, entry, hash_checked=hash_checked)
+    _validate_requirement_verdict(
+        name,
+        entry,
+        hash_checked=hash_checked,
+        named_by_setting=entry["file_name"] in named_by
+        and os.path.basename(entry["declared"]) != entry["file_name"],
+    )
     _validate_supplied_by(name, entry)
 
 
@@ -2119,6 +2158,13 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
             f"{name}: a declaration that was not read off the machine must state why (or, "
             "packaged, its provenance) — an unexplained list reads as 'needs nothing'"
         )
+    # The file names this core says a setting of its own chose, rather than its
+    # .info — each the end of what the emulator's combine composed.
+    named_by = frozenset(
+        os.path.basename(caveat["data"]["name"])
+        for caveat in core["caveats"]
+        if caveat["code"] == "firmware-image-configured" and isinstance(caveat["data"].get("name"), str)
+    )
     for entry in requirements:
         if isinstance(entry, dict) and "alternatives" in entry:
             _validate_alternatives(
@@ -2127,7 +2173,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
             continue
         if entry["core_so"] != core["core_so"]:
             fail(f"{name}: a requirement must name the core it is listed under")
-        _validate_requirement(name, entry, root=root, hash_checked=hash_checked)
+        _validate_requirement(name, entry, root=root, hash_checked=hash_checked, named_by=named_by)
 
 
 def _validate_core_refusals(name: str, core: Any) -> None:
