@@ -1348,9 +1348,20 @@ IDENTIFICATION_CASES = [
          "must be exactly the fields", id="identification-identity-shape"),
     case(_base_identification(requirements=[{"nope": 1}], identity=_identity(), known_as=["a"], caveats=[]),
          "each identified requirement must carry its absolute destination path", id="identification-requirement-shape"),
+    # The two halves of the split rule. A FILE declaration names the file, so
+    # its entry carries the queried identity and nothing else; a FOLDER
+    # declaration names none and carries null, so an identity on one is an
+    # invention. The declared_kind is explicit on both, because which branch
+    # each case exercises is the point of the pair.
     case(_base_identification(identity=_identity(), known_as=["a"], caveats=[],
-                              requirements=[_requirement(path=f"{BIOS}/gb_bios.bin")]),
+                              requirements=[_requirement(path=f"{BIOS}/gb_bios.bin",
+                                                         declared_kind="file")]),
          "returns only requirements that expect exactly this content", id="identification-foreign-requirement"),
+    case(_base_identification(identity=_identity(), known_as=["a"], caveats=[],
+                              requirements=[_requirement(path=f"{BIOS}/pcsx2/bios",
+                                                         declared_kind="directory",
+                                                         identity=_identity())]),
+         "an identified folder destination carries identity null", id="identification-folder-with-identity"),
     case(_vector({"identification": _identification()}, installed=True, identify_query={"size": 256}),
          "names no content and must answer that it does not", id="identification-size-only-unstated"),
 ]

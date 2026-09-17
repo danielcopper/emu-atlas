@@ -2968,8 +2968,25 @@ The download flow runs off content, not names:
 ident = inst.identify_firmware(md5=server_row["md5_hash"])
 ident.known_as                     # every name this dump is known under
 for req in ident.requirements:     # every destination on THIS machine that wants it
-    place_file_at(req.path)
+    place_file_at(req.path)        # a file to write, or a folder to write into — req.declared_kind
 ```
+
+A destination has the shape the declaring core opens, and `req.declared_kind` is which: `"file"` is a path to write,
+matched because the packaged table pins these bytes for the name that core declared. `"directory"` is a folder to write
+_into_ — LRPS2 declares `pcsx2/bios` and no file in it, lists the folder and validates each survivor of its size filter
+by that file's ROMDIR header, so the name inside is yours and atlas states none. Such a requirement is matched because
+the packaged table files this content under the prefix the folder's curated row states. It carries no `identity` for two
+reasons at once: the core recognises an image by its header rather than by any name, and atlas looks an identity up by
+the declared path, which for a folder names no table entry to find. Where you want a conventional name anyway, take a
+basename from `known_as`. `found: "missing"` on one of these is the folder to create, not a dump to go looking for.
+
+Two things not to read into such a requirement. `satisfied` is the verdict about what the folder **already holds**,
+never about the file you are about to put there — this question always asks without a content check, so it is `false`
+for a folder that is absent, holds nothing of a size the core accepts, or has a plain file sitting where the core lists
+a folder, and `null` wherever atlas established nothing: the path could not be looked at, the folder could not be
+listed, or it holds candidates whose bytes nobody read. A `false` there is never a reason not to place your file. And
+where one content has both a folder destination and a file destination that falls **inside** that folder, the two are
+one write, not two: place the file under its declared name and the folder destination is served by the same copy.
 
 Pass at least `md5` or `sha1`: a size is not an identity, and a request carrying only one is answered with an empty
 identification plus `firmware-content-unstated` rather than an exception. Two more codes sit next to it when `identity`
@@ -3262,8 +3279,20 @@ for core in answer.cores:
 ident = inst.identify_firmware(md5=downloaded_md5)
 if any(c.code == "firmware-content-unidentified" for c in ident.caveats):
     return ask_user()                             # atlas does not know this dump — normal, not an error
-for req in ident.requirements:
-    copy(tmp_file, req.path)                      # every destination that wants this content, resolved
+files = [r for r in ident.requirements if r.declared_kind != "directory"]
+folders = [r for r in ident.requirements if r.declared_kind == "directory"]
+for req in files:                                 # every named destination that wants this content
+    copy(tmp_file, req.path)                      # the core opens this exact name
+for req in folders:                               # every listed folder whose core recognises it by header
+    if any(dirname(f.path) == req.path for f in files):
+        continue                                  # a file copy above already sits inside: one write, not two
+    if req.found == "missing":
+        make_directory(req.path)                  # a folder to create, not a dump to go fetch
+    elif req.found != "directory":                # a file in the way, or a path atlas could not look at
+        report(req)                               # nothing to write into — do not copy over it
+        continue
+    inside_name = basename(ident.known_as[0])     # any name you like: the core reads headers, not names
+    copy(tmp_file, join(req.path, inside_name))   # a requirement exists, so known_as is never empty
 ```
 
 ### Flow 5 — "Did the layout drift since the last sync?"

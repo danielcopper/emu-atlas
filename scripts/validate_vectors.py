@@ -200,7 +200,15 @@ KNOWN_PATH_KINDS = {"file", "directory", "missing", "inaccessible"}
 # declaration nobody has read from source gets: no typed field holds the
 # difference, and RetroArch's own presence check is one `path_is_valid` stat
 # that answers alike for both shapes.
-KNOWN_DECLARED_KINDS = {"file", "directory"}
+# The `declared_kind` vocabulary, named rather than spelled out: the same two
+# words spell a path kind elsewhere in this file, and `found == "directory"` is
+# what is AT the destination, never what the core opens there. Only
+# DECLARED_DIRECTORY is compared against below; DECLARED_FILE is here because a
+# vocabulary half-named is one a reader has to go looking for, and it is what
+# the known-kinds set is built from rather than a second spelling of the word.
+DECLARED_FILE = "file"
+DECLARED_DIRECTORY = "directory"
+KNOWN_DECLARED_KINDS = {DECLARED_FILE, DECLARED_DIRECTORY}
 FIRMWARE_REQUIREMENT_FIELDS = {
     "core_so",
     "system",
@@ -2006,7 +2014,7 @@ def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checke
     if entry["checked"] != "unknown":
         fail(f"{name}: a directory at the destination is checked='unknown' — no identity belongs to a folder")
     satisfied = entry["satisfied"]
-    if entry["declared_kind"] != "directory":
+    if entry["declared_kind"] != DECLARED_DIRECTORY:
         if satisfied is not None:
             fail(f"{name}: a directory where the core reads a file establishes nothing, so satisfied must be null")
         return
@@ -2031,7 +2039,7 @@ def _validate_requirement_verdict(name: str, entry: Any, *, hash_checked: bool) 
     if found == "directory":
         _validate_directory_at_the_destination(name, entry, hash_checked=hash_checked)
         return
-    if entry["declared_kind"] == "directory":
+    if entry["declared_kind"] == DECLARED_DIRECTORY:
         _validate_file_at_a_folder_declaration(name, checked, satisfied)
         return
     _validate_file_requirement(name, entry["identity"], checked, satisfied, hash_checked=hash_checked)
@@ -2499,11 +2507,35 @@ def _validate_identified_content(name: str, identification: Any) -> None:
 
 
 def _validate_identified_requirements(name: str, identification: Any) -> None:
+    """Every destination in an identification is one this content goes to — per declared shape.
+
+    A **file** declaration names the file, so the packaged table pins an
+    identity for that name and the entry carries exactly the queried one. That
+    is the original rule of this route and it is unchanged: a requirement for
+    other bytes in an answer about these would be the claim the whole module
+    refuses to make.
+
+    A **folder** declaration is the exception, and carries no identity at all.
+    The core lists the folder and reads each file's own header, so it names no
+    file to pin — what ties such a declaration to this content is that the
+    table files the content under the folder's identity prefix. A vector
+    cannot show that: the prefix lives in the curated row and the row is not
+    part of any serialized answer, so the tie is held by the resolver's own
+    tests rather than here. What this gate can still hold is that no folder
+    entry invents an identity, which would be a second shape for a fact the
+    per-core route states in one place.
+    """
     identity = identification["identity"]
     for entry in identification["requirements"]:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             fail(f"{name}: each identified requirement must carry its absolute destination path")
-        if entry.get("identity") != identity:
+        if entry.get("declared_kind") == DECLARED_DIRECTORY:
+            if entry.get("identity") is not None:
+                fail(
+                    f"{name}: a folder declaration pins no identity — the core reads each file's own "
+                    "header — so an identified folder destination carries identity null"
+                )
+        elif entry.get("identity") != identity:
             fail(f"{name}: identification returns only requirements that expect exactly this content")
         # The destination directory stands in for the root here: an
         # identification is about content, and carries no root of its own.
