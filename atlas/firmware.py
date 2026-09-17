@@ -3216,6 +3216,13 @@ class CatalogueEntry:
     EmuDeck's flatpak variant reads ``~/.var/app/<id>``, not the host's XDG
     tree — set by the same handle for the same reason the token is.
 
+    ``standalone_sandbox`` is the per-entry override of the context's sandbox
+    and overrides it exactly where the homes do, because it is built from
+    those same homes: it is how *this* launch's own configured paths read from
+    the host, so the app whose ``/app`` tree a value resolves against and the
+    trees its ``/var/config`` spelling lands in are the app whose homes the
+    entry states, never a second reading of the same launch (#350).
+
     ``foreign_core_file`` is the core file a ``retroarch-foreign-core`` row
     hands RetroArch, carried across because this seam has no command to read it
     out of and the caveat that states such a row names the file. Non-``None``
@@ -3233,6 +3240,7 @@ class CatalogueEntry:
     standalone_data_home: str | None = None
     standalone_config_home: str | None = None
     standalone_flatpak: str | None = None
+    standalone_sandbox: SandboxTranslation | None = None
     foreign_core_file: str | None = None
 
     def __post_init__(self) -> None:
@@ -8363,12 +8371,17 @@ def _standalone_entry_core(
 
     The bases are the entry's own where its launch establishes them — on
     EmuDeck the picked variant decides which trees the emulator reads — and
-    otherwise the arrangement's pair.
+    otherwise the arrangement's pair. The sandbox that reads this launch's own
+    configured paths follows them, and takes the same fallback: it is built
+    from the very homes the entry states, so an ``/app`` value resolves
+    against the deploy that runs and a ``/var/config`` one against the trees
+    the answer is otherwise about (#350).
     """
     card = lookup_standalone_firmware_card(entry.standalone_token)
     data_home = entry.standalone_data_home or context.standalone_data_home
     config_home = entry.standalone_config_home or context.standalone_config_home
     flatpak = entry.standalone_flatpak or context.standalone_flatpak
+    sandbox = entry.standalone_sandbox or context.standalone_sandbox
     if (
         card is not None
         and system in card.systems
@@ -8383,7 +8396,7 @@ def _standalone_entry_core(
             data_home=data_home,
             config_home=config_home,
             flatpak=flatpak,
-            sandbox=context.standalone_sandbox,
+            sandbox=sandbox,
             xdg_pinned=context.standalone_xdg_pinned,
             verify=verify,
         )

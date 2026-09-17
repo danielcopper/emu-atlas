@@ -9420,6 +9420,228 @@ class TestEveryEntryCarriesTheIdentityItsCommandSpells:
         assert firmware == catalogue == {"Citra": None, "Azahar (Standalone)": "AZAHAR"}
 
 
+class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
+    """Issue #350: a carded standalone entry's paths read through its own app.
+
+    The placement routes have resolved a standalone emulator's configured
+    paths against the app its launch really runs since #317; the firmware
+    route read one sandbox for the whole arrangement, which on EmuDeck knows
+    the arrangement's app and never the emulator's. So one launch answered an
+    `/app` value two ways depending on which question was asked. The sandbox
+    now rides on the catalogue entry, built from the very homes that entry
+    states, and these hold the answer to the launch rather than to the
+    arrangement.
+    """
+
+    LABEL = "xemu (Standalone)"
+    SYSTEM = "xbox"
+    BIOS_ROOT = f"{HOME}/Emulation/bios"
+    BOOTROM = "/app/share/xemu/mcpx_1.0.bin"
+    FLASHROM = "/var/config/xemu/Complex.bin"
+    HDD = f"{HOME}/Emulation/storage/xemu/xbox_hdd.qcow2"
+    XEMU_APP = "app.xemu.xemu"
+    XEMU_DEPLOY = f"/var/lib/flatpak/app/{XEMU_APP}/current/active/files"
+    DEPLOYED_BOOTROM = f"{XEMU_DEPLOY}/share/xemu/mcpx_1.0.bin"
+    XEMU_FLATPAK_TOML = f"{HOME}/.var/app/{XEMU_APP}/data/xemu/xemu/xemu.toml"
+    XEMU_HOST_TOML = f"{HOME}/.local/share/xemu/xemu/xemu.toml"
+    XEMU_TOML = (
+        f"[sys.files]\nbootrom_path = '{BOOTROM}'\n"
+        f"flashrom_path = '{FLASHROM}'\nhdd_path = '{HDD}'\n"
+    )
+    XBOX_SYSTEMS = (
+        '<?xml version="1.0"?><systemList>'
+        "<system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>"
+        f'<command label="{LABEL}">%EMULATOR_XEMU% %ROM%</command></system>'
+        "</systemList>"
+    )
+
+    def _emudeck(self, systems, files, dirs=()):
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: (
+                    'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n'
+                    'biosPath="$HOME/Emulation/bios"\n'
+                ),
+                STANDALONE_CFG: f'system_directory = "{self.BIOS_ROOT}"\n',
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": systems,
+                self.HDD: "an emulated disk",
+                **files,
+            },
+            dirs=[self.BIOS_ROOT, *dirs],
+        )
+        return atlas.EmuDeck(HOME, machine)
+
+    def _xemu_flatpak_launch(self):
+        # EmuDeck installs xemu as its own flatpak, so the probe finds it among
+        # the installed apps and the launch reads that app's trees.
+        return self._emudeck(
+            self.XBOX_SYSTEMS,
+            {
+                self.XEMU_FLATPAK_TOML: self.XEMU_TOML,
+                self.DEPLOYED_BOOTROM: "a boot ROM",
+                f"{HOME}/.var/app/{self.XEMU_APP}/config/xemu/Complex.bin": "a BIOS image",
+            },
+            dirs=[f"/var/lib/flatpak/app/{self.XEMU_APP}"],
+        )
+
+    def _xemu_appimage_launch(self):
+        # The same configuration on the launch that establishes no app: the
+        # AppImage under ~/Applications, which the settings table names no id
+        # for. The deploy tree is here too, so what decides is the launch.
+        return self._emudeck(
+            self.XBOX_SYSTEMS,
+            {
+                self.XEMU_HOST_TOML: self.XEMU_TOML,
+                f"{HOME}/Applications/xemu.AppImage": "the unpacked emulator",
+                self.DEPLOYED_BOOTROM: "a boot ROM",
+            },
+        )
+
+    def _core(self, installation, system, label):
+        return next(c for c in installation.firmware_for_system(system).cores if c.label == label)
+
+    @staticmethod
+    def _destinations(core):
+        return {r.declared: (r.path, r.found) for r in core.requirements}
+
+    @staticmethod
+    def _untranslated(core):
+        return [c for c in core.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED]
+
+    def test_a_package_value_resolves_through_the_deploy_that_runs(self):
+        core = self._core(self._xemu_flatpak_launch(), self.SYSTEM, self.LABEL)
+        assert self._destinations(core)[self.BOOTROM] == (self.DEPLOYED_BOOTROM, "file")
+        assert self._untranslated(core) == []
+
+    def test_the_apps_own_config_spelling_lands_in_the_apps_own_tree(self):
+        core = self._core(self._xemu_flatpak_launch(), self.SYSTEM, self.LABEL)
+        assert self._destinations(core)[self.FLASHROM] == (
+            f"{HOME}/.var/app/{self.XEMU_APP}/config/xemu/Complex.bin",
+            "file",
+        )
+
+    def test_an_id_less_launch_refuses_the_package_value_instead_of_probing_it(self):
+        # The refusal shape the firmware route has always used for this: the
+        # answer stands, and the caveat says which value nothing was read at.
+        core = self._core(self._xemu_appimage_launch(), self.SYSTEM, self.LABEL)
+        assert self.BOOTROM not in self._destinations(core)
+        stated = self._untranslated(core)
+        assert len(stated) == 1
+        assert stated[0].data == {
+            "label": self.LABEL,
+            "token": "XEMU",
+            "key": "sys.files/bootrom_path",
+            "path": self.BOOTROM,
+        }
+
+    def test_an_id_less_launch_leaves_every_other_spelling_host_native(self):
+        # Nothing sandboxes this launch, so /var/config is the (unusual) host
+        # path it names — looked for at that host path and answered missing,
+        # never rerouted into an app's tree no launch here opens.
+        core = self._core(self._xemu_appimage_launch(), self.SYSTEM, self.LABEL)
+        assert self._destinations(core)[self.FLASHROM] == (self.FLASHROM, "missing")
+
+    def test_retrodeck_still_reads_the_same_value_through_its_own_deploy(self):
+        # The arrangement whose emulators are components inside one flatpak:
+        # its entries establish no homes of their own, so the sandbox the
+        # context carries governs exactly as it did before.
+        deploy = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                DOLPHIN_ESDE: TRIO_ESDE,
+                XEMU_TOML_PATH: self.XEMU_TOML,
+                f"{deploy}/share/xemu/mcpx_1.0.bin": "a boot ROM",
+                f"{HOME}/.var/app/net.retrodeck.retrodeck/config/xemu/Complex.bin": "a BIOS",
+            },
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        core = self._core(rd, self.SYSTEM, self.LABEL)
+        assert self._destinations(core)[self.BOOTROM] == (
+            f"{deploy}/share/xemu/mcpx_1.0.bin",
+            "file",
+        )
+        assert self._untranslated(core) == []
+
+    def test_a_launch_the_table_names_no_app_id_for_reaches_no_card_at_all(self):
+        # DuckStation runs as a flatpak here and the settings table names no id
+        # for it, so no trees are established — and the host's own XDG copy,
+        # readable and tempting, is not what the answer falls back to.
+        label = "DuckStation (Standalone)"
+        installation = self._emudeck(
+            '<?xml version="1.0"?><systemList>'
+            "<system><name>psx</name><path>%ROMPATH%/psx</path><extension>.chd</extension>"
+            f'<command label="{label}">%EMULATOR_DUCKSTATION% -batch %ROM%</command></system>'
+            "</systemList>",
+            {
+                f"{HOME}/.config/duckstation/settings.ini": (
+                    f"[BIOS]\nSearchDirectory = {self.BIOS_ROOT}\n"
+                )
+            },
+            dirs=["/var/lib/flatpak/app/org.duckstation.DuckStation"],
+        )
+        core = self._core(installation, "psx", label)
+        assert core.declaration == "unsupported"
+        assert core.requirements == ()
+        assert [c.code for c in core.caveats] == [atlas.CAVEAT_STANDALONE_UNSUPPORTED]
+
+    def test_two_spellings_of_one_token_each_answer_their_own_launch(self):
+        # melonDS is launched both ways on one machine: the %EMULATOR_…% token
+        # goes through the binary probe and finds the AppImage, while
+        # melonds.sh runs the installed flatpak outright. One token, two
+        # launches, two apps — which is why the sandbox rides on the entry and
+        # not on the token.
+        app = "net.kuribo64.melonDS"
+        bios9 = "/app/share/melonDS/bios9.bin"
+        config = (
+            f'[Emu]\nExternalBIOSEnable = true\n[DS]\nBIOS9Path = "{bios9}"\n'
+            f'BIOS7Path = "{self.BIOS_ROOT}/bios7.bin"\n'
+            f'FirmwarePath = "{self.BIOS_ROOT}/firmware.bin"\n'
+        )
+        installation = self._emudeck(
+            '<?xml version="1.0"?><systemList>'
+            "<system><name>nds</name><path>%ROMPATH%/nds</path><extension>.nds</extension>"
+            '<command label="melonDS (Standalone)">%EMULATOR_MELONDS% %ROM%</command>'
+            '<command label="melonDS (Launcher)">/bin/bash '
+            f"{HOME}/.config/EmuDeck/tools/launchers/melonds.sh %ROM%</command></system>"
+            "</systemList>",
+            {
+                f"{HOME}/Applications/melonDS.AppImage": "the unpacked emulator",
+                f"{HOME}/.config/melonDS/melonDS.toml": config,
+                f"{HOME}/.var/app/{app}/config/melonDS/melonDS.toml": config,
+                f"/var/lib/flatpak/app/{app}/current/active/files/share/melonDS/bios9.bin": "a BIOS",
+            },
+            dirs=[f"/var/lib/flatpak/app/{app}"],
+        )
+        probed = self._core(installation, "nds", "melonDS (Standalone)")
+        pinned = self._core(installation, "nds", "melonDS (Launcher)")
+        assert bios9 not in self._destinations(probed)
+        assert [c.data["path"] for c in self._untranslated(probed)] == [bios9]
+        assert self._destinations(pinned)[bios9] == (
+            f"/var/lib/flatpak/app/{app}/current/active/files/share/melonDS/bios9.bin",
+            "file",
+        )
+        assert self._untranslated(pinned) == []
+
+    def test_an_arrangement_of_one_app_hands_out_no_per_entry_sandbox(self):
+        # The hook's default: a handle whose emulators all run inside one app
+        # (RetroDECK) states no per-entry homes, and asked for a sandbox over
+        # any homes at all it still answers none, so the context's own
+        # sandbox governs every entry rather than one built per launch.
+        from atlas.installations import _XdgHomes  # pyright: ignore[reportPrivateUsage]
+
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'},
+            dirs=["/mnt/sd/retrodeck/saves"],
+        )
+        homes = _XdgHomes(
+            data=f"{HOME}/.local/share", config=f"{HOME}/.config", flatpak=self.XEMU_APP
+        )
+        assert rd.standalone_firmware_homes("%EMULATOR_XEMU% %ROM%") is None
+        assert rd.standalone_firmware_sandbox(homes) is None
+
+
 class TestARowNamingACoreFileOfAnotherHost:
     """Issue #446: EmuDeck's n3ds rows launch RetroArch with a Windows `.dll`.
 

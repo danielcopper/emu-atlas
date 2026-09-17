@@ -1237,17 +1237,18 @@ EEPROM — whenever more than one is named. Which spellings translate follows fr
 inside a sandbox, that app's bind points lead to its own trees below `~/.var/app` and `/app` leads to its deployed
 files, while the sandbox-only prefixes left over are refused. Where it cannot — an AppImage, an unpacked binary, a
 native install — every spelling but `/app` is the host path it names, and `/app` alone is still refused rather than
-probed as an ordinary directory of this machine, because it names a deployed package no launch here runs (#317). One
-seam does not follow that rule: the firmware answers read one sandbox for the whole arrangement, and it knows the
-_arrangement's_ app, never the emulator's own. On RetroDECK those are the same app — its emulators are components inside
-its Flatpak — so nothing is lost there. On EmuDeck an emulator that runs as a Flatpak runs as its own, which that seam
-does not know, so a standalone emulator's sandbox-spelled firmware paths are not resolved against its own trees: an
-`/app` value lands nowhere and rides the `sandbox-path-untranslated` caveat beside an answer that still stands, and the
-rest read as host paths. Savestates are their own wiring and their own card family (`standalone_savestates.json`, #225):
-the same entry answers `savestate_location` through it, and an emulator without a savestate card keeps the
-`standalone-unsupported` refusal there even where its save answers (since #284 every save-carded emulator carries a
-savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal marks the rows neither family has
-examined).
+probed as an ordinary directory of this machine, because it names a deployed package no launch here runs (#317). The
+firmware answers follow that rule too, and they follow it per launch (#350): a standalone entry's sandbox is built from
+the same trees that entry's own launch reads, so the app whose deployed files an `/app` value resolves against is the
+app the row launches. Where that launch runs no app at all — an AppImage, or the executable EmuDeck unpacks from one —
+an `/app` value lands nowhere and rides the `sandbox-path-untranslated` caveat beside an answer that still stands — the
+caveat, never the `emulator-config-path-untranslatable` outcome, because a firmware answer is the emulator's own row and
+always states one: an unreachable value withdraws what rested on it — that one file, or the directory a search would
+have read — and the row stands, with the caveat naming the value nothing was read at. Savestates are their own wiring
+and their own card family (`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it,
+and an emulator without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers
+(since #284 every save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today
+that refusal marks the rows neither family has examined).
 
 **Dolphin and PrimeHack read every answer above through a per-game layer, and they say so.** While a game runs, both
 load `<id>.ini` from _two_ GameSettings directories over the whole configuration — the user's own

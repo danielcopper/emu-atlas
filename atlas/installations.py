@@ -13705,6 +13705,20 @@ class _CatalogueHost(Protocol):
         """
         ...
 
+    def standalone_firmware_sandbox(self, homes: "_XdgHomes") -> "_Sandbox | None":
+        """How the launch that reads *homes* spells its own configured paths.
+
+        Asked with the homes rather than with the command so that the app the
+        sandbox carries and the trees the answer is otherwise about are read
+        off one resolution — the sandbox and the homes, not the entry as a
+        whole, which its token reaches through a reading of its own: a second
+        reading here could pick a different binary and land the two on
+        different apps.
+        ``None`` means the arrangement's own sandbox governs, which is what a
+        handle whose emulators all run inside one app answers.
+        """
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class CatalogueAnswer:
@@ -14888,6 +14902,15 @@ def _firmware_catalogue_entries(
                 standalone_data_home=homes.data if homes is not None else None,
                 standalone_config_home=homes.config if homes is not None else None,
                 standalone_flatpak=homes.flatpak if homes is not None else None,
+                # The sandbox is built from the homes this entry states rather
+                # than resolved from the command a second time: the sandbox
+                # and the homes then describe one resolution of the launch,
+                # where a second reading could pick a different binary and
+                # answer about a different app. (The token beside them comes
+                # from a reading of its own.)
+                standalone_sandbox=(
+                    None if homes is None else host.standalone_firmware_sandbox(homes)
+                ),
                 foreign_core_file=_foreign_core_of(entry.kind, entry.command),
             )
         )
@@ -15813,6 +15836,18 @@ class _CatalogueQueries:
         binary reads is the variant's fact, not the arrangement's.
         """
         del command
+        return None
+
+    def standalone_firmware_sandbox(self, homes: "_XdgHomes") -> "_Sandbox | None":
+        """The per-entry override of the context's sandbox — none by default.
+
+        The same arrangement fact as the homes above, and answered the same
+        way: where one app holds every emulator, the sandbox the firmware
+        context carries is that app's and is right for all of them. Only a
+        handle that hands out per-entry homes has a per-entry sandbox to build
+        from them.
+        """
+        del homes
         return None
 
     def _catalogue_absence(self) -> Caveat:
@@ -19041,6 +19076,20 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None
         return self._homes_for_token(self._launch_variant(launch), launch.token)
 
+    def standalone_firmware_sandbox(self, homes: _XdgHomes) -> _Sandbox:
+        """The firmware seam's sandbox for one launch — the placement routes' own.
+
+        :meth:`_standalone_sandbox` over the homes the entry already
+        established, which is what makes the firmware answer and the save,
+        savestate, texture and mod answers read one launch the same way: the
+        app id rides on the homes, so the tree a ``/var/config`` value lands
+        in and the deploy an ``/app`` value resolves against are this
+        emulator's own wherever the settings table names its id, and every
+        spelling but ``/app`` stays the host path it names wherever it does
+        not (#350).
+        """
+        return self._standalone_sandbox(homes)
+
     def _standalone_sandbox(self, homes: _XdgHomes) -> _Sandbox:
         """How the launch that reads *homes* spells its own configured paths.
 
@@ -19473,16 +19522,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
         The standalone pair the context carries is the arrangement's, not one
         launch's: this seam is asked once for the whole answer while the
-        firmware route picks its bases per entry, so the sandbox is built from
-        the same arrangement-wide homes the context states beside it and
-        establishes no app id. A sandbox spelling in a standalone emulator's
-        config is therefore read here as the host path it is not — ``/app``
-        refused, ``/var/config`` left standing — where the savefile and
-        savestate answers resolve both against the launch's own app (#317).
-        Those two are where it shows today: they are the routes whose
-        configured-path cards cover emulators the settings table names an id
-        for. The texture and mod answers take the same per-launch sandbox and
-        would follow the moment one of their cards does.
+        firmware route picks its bases per entry, and so is the sandbox built
+        beside it. What a carded entry reads is its own: the homes its launch
+        establishes, and the sandbox built from those very homes
+        (:meth:`standalone_firmware_sandbox`), which is the sandbox the
+        placement routes read for the same launch — ``/app`` resolves against
+        the deploy that runs and ``/var/config`` against the app's own trees
+        wherever the settings table names this emulator's id, and every
+        spelling but ``/app`` stays the host path it names wherever it does
+        not (#350). The arrangement's pair is what governs an entry that
+        establishes none — the same fallback the bases beside it take.
         """
         sandbox, environment_sources = self._cfg_sandbox()
         standalone_homes = self._standalone_xdg_homes()
