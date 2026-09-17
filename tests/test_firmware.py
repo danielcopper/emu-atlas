@@ -129,6 +129,7 @@ from atlas.firmware import (
 from atlas.core_firmware import lookup_core_firmware
 from atlas.core_options import CoreOptionsChain
 from atlas.machine import (
+    KIND_DIRECTORY,
     KIND_MISSING,
     AppImageReadResult,
     CoreInfo,
@@ -224,6 +225,17 @@ systemname = "Sony PlayStation 2"
 firmware_count = 1
 firmware0_desc = "pcsx2/bios (PS2 BIOS directory)"
 firmware0_path = "pcsx2/bios"
+firmware0_opt = "false"
+"""
+
+# A second core declaring one of the images LRPS2 accepts by NAME, so one
+# content is wanted at a file destination and a folder destination at once. The
+# table covers the name, so this half is matched identity to identity.
+PS2_IMAGE_BY_NAME_INFO = """
+systemname = "Sony PlayStation 2"
+firmware_count = 1
+firmware0_desc = "ps2-0200e-20040614.bin (PS2 BIOS)"
+firmware0_path = "pcsx2/bios/ps2-0200e-20040614.bin"
 firmware0_opt = "false"
 """
 
@@ -3969,6 +3981,99 @@ class TestIdentification:
         ]
         assert counted.calls.get("glob", 0) == 0
         assert counted.calls.get("file_digest", 0) == 0
+
+
+class TestIdentificationNamesTheFolderADeclarationOpens:
+    """A folder declaration is a destination too — the folder, and never a name inside it.
+
+    LRPS2 declares ``pcsx2/bios`` and no file in it, so the requirement carries
+    no identity to compare and a content-matched answer used to name nothing at
+    all: the bytes were recognised and the download flow had no ``req.path`` to
+    copy to. What ties the two halves together is the curated row's identity
+    prefix — the same prefix the folder verdict judges the files already inside
+    against, read the other way round.
+    """
+
+    def _lrps2(
+        self, files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: object
+    ) -> FixtureMachine:
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/pcsx2_libretro.info": LRPS2_FOLDER_INFO,
+            f"{INFO_DIR}/pcsx2_libretro.so": {"status": "invalid-text"},
+        }
+        tree.update(files or {})
+        return _machine(tree, **kwargs)
+
+    def test_content_filed_under_the_prefix_answers_the_folder_that_is_there(self):
+        machine = self._lrps2(dirs=[LRPS2_FOLDER])
+        identified = identify_firmware(machine, _context(machine), md5="77" * 16)
+        assert [(r.core_so, r.declared_kind, r.path, r.found) for r in identified.requirements] == [
+            (LRPS2_SO, DECLARED_DIRECTORY, LRPS2_FOLDER, KIND_DIRECTORY)
+        ]
+
+    def test_the_folder_is_named_where_it_is_not_there_yet(self):
+        # The install flow's own case: nothing is at the destination, and the
+        # answer is the folder to create rather than an empty list plus a
+        # caveat saying nobody wants these bytes.
+        machine = self._lrps2()
+        identified = identify_firmware(machine, _context(machine), md5="77" * 16)
+        assert [(r.path, r.found) for r in identified.requirements] == [(LRPS2_FOLDER, KIND_MISSING)]
+        assert CAVEAT_NO_FIRMWARE_DECLARATION not in [c.code for c in identified.caveats]
+
+    def test_the_destination_is_the_folder_and_never_a_name_inside_it(self):
+        # The core lists the folder and validates by header, so the name is the
+        # caller's: atlas states the declaration's own basename and leaves the
+        # table's name where a caller that wants a conventional one reads it.
+        machine = self._lrps2(dirs=[LRPS2_FOLDER])
+        identified = identify_firmware(machine, _context(machine), md5="77" * 16)
+        assert [(r.file_name, r.path) for r in identified.requirements] == [("bios", LRPS2_FOLDER)]
+        assert identified.known_as == ("pcsx2/bios/ps2-0200e-20040614.bin",)
+
+    def test_a_folder_declaration_answers_only_the_content_its_own_prefix_files(self):
+        # scph5501.bin's bytes are in the table and not under this prefix, so
+        # the folder is no destination for them — the match is the row's
+        # prefix, never "some directory declaration is installed".
+        machine = self._lrps2(dirs=[LRPS2_FOLDER])
+        identified = identify_firmware(machine, _context(machine), md5="aa" * 16)
+        assert [r.core_so for r in identified.requirements] == ["mednafen_psx_libretro.so"]
+
+    def test_content_under_the_prefix_is_still_empty_where_that_core_is_not_installed(self):
+        # Nothing about the prefix is a claim about the machine: with no core
+        # declaring the folder, the established absence stands exactly as it did.
+        machine = _machine()
+        identified = identify_firmware(machine, _context(machine), md5="77" * 16)
+        assert identified.identity is not None
+        assert identified.requirements == ()
+        assert CAVEAT_NO_FIRMWARE_DECLARATION in [c.code for c in identified.caveats]
+
+    def test_one_content_answers_a_folder_and_a_file_destination_at_once(self):
+        # Two cores want the same image, one by listing the folder it may sit
+        # in and one by opening it under the table's own name. Each declaring
+        # core gets its own requirement, in its own shape.
+        machine = self._lrps2(
+            {
+                f"{INFO_DIR}/ps2byname_libretro.info": PS2_IMAGE_BY_NAME_INFO,
+                f"{INFO_DIR}/ps2byname_libretro.so": {"status": "invalid-text"},
+            },
+            dirs=[LRPS2_FOLDER],
+        )
+        identified = identify_firmware(machine, _context(machine), md5="77" * 16)
+        assert [(r.core_so, r.declared_kind, r.path) for r in identified.requirements] == [
+            (LRPS2_SO, DECLARED_DIRECTORY, LRPS2_FOLDER),
+            ("ps2byname_libretro.so", DECLARED_FILE, f"{LRPS2_FOLDER}/ps2-0200e-20040614.bin"),
+        ]
+
+    def test_a_file_declaration_is_still_matched_by_identity_alone(self):
+        # The file half is untouched: a core that declares a name the table
+        # covers answers for the bytes that name pins and for nothing else.
+        machine = self._lrps2(
+            {
+                f"{INFO_DIR}/ps2byname_libretro.info": PS2_IMAGE_BY_NAME_INFO,
+                f"{INFO_DIR}/ps2byname_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        identified = identify_firmware(machine, _context(machine), md5="5a" * 16)
+        assert [r.core_so for r in identified.requirements] == [LRPS2_SO]
 
 
 class TestNoDeclarationIsNeverSatisfied:

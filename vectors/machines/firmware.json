@@ -5181,6 +5181,146 @@
       }
     },
     {
+      "name": "firmware-identified-content-names-the-folder-the-core-lists",
+      "rationale": "The download flow over a core that declares a FOLDER. LRPS2 lists pcsx2/bios and names no file in it, so the requirement carries no identity and a match by identity alone answered nothing: the bytes were recognised and the caller had no destination to copy them to. The tie is the curated row's identity prefix — the packaged table files these bytes under pcsx2/bios/, which is the prefix the folder verdict judges the files already inside against. The answer is the folder itself, declared_kind directory and found directory, never a name inside it: the core lists the folder (libretro/main.cpp:1801-1807 at 14d19f8) and validates each survivor of its 4-8 MiB size filter (main.cpp:1810-1816) by that file's ROMDIR header (IsBIOS, main.cpp:1818), so the name is the caller's choice and known_as is where a conventional one is read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system/pcsx2/bios"
+        ],
+        "identify_query": {
+          "md5": "dc752f160044f2ed5fc1f4964db2a095"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "sha1": "434bc0b4eb4827da0773ec0795aadc5162569a07",
+            "size": 4194304,
+            "kind": "file"
+          },
+          "known_as": [
+            "pcsx2/bios/ps2-0200e-20040614.bin"
+          ],
+          "requirements": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "system": "ps2",
+              "system_source": "systemname",
+              "need": "required",
+              "file_name": "bios",
+              "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+              "declared": "pcsx2/bios",
+              "declared_kind": "directory",
+              "identity": null,
+              "found": "directory",
+              "present": true,
+              "checked": "unknown",
+              "satisfied": false,
+              "supplied_by": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-identified-content-names-the-folder-to-create-where-none-is-there",
+      "rationale": "The same question with nothing at the destination, which is the user this flow is for. found=missing on a directory declaration is the folder to create, and the pair with declared_kind is what tells it apart from an absent file. The empty-answer caveat does not fire: these bytes have a destination on this machine, and saying nobody wants them would be false while the folder is exactly where they go.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "identify_query": {
+          "md5": "dc752f160044f2ed5fc1f4964db2a095"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "sha1": "434bc0b4eb4827da0773ec0795aadc5162569a07",
+            "size": 4194304,
+            "kind": "file"
+          },
+          "known_as": [
+            "pcsx2/bios/ps2-0200e-20040614.bin"
+          ],
+          "requirements": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "system": "ps2",
+              "system_source": "systemname",
+              "need": "required",
+              "file_name": "bios",
+              "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+              "declared": "pcsx2/bios",
+              "declared_kind": "directory",
+              "identity": null,
+              "found": "missing",
+              "present": false,
+              "checked": null,
+              "satisfied": false,
+              "supplied_by": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-unverified-is-not-an-all-clear",
       "rationale": "The same machine, twice. With verify=false the required file is there under the right name and the table knows what it should be — nobody looked, so satisfied is null and requirements_met is null. Presence is not the question this field answers, and a client rendering it must not get a green light nobody earned. The verified twin of this fixture is retrodeck-firmware-core-sandbox-info-path-verified-and-missing.",
       "input": {

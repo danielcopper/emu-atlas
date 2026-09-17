@@ -2999,8 +2999,13 @@ class FirmwareIdentification:
     recognise it — which is not a claim that the file is junk.
     """
     requirements: tuple[FirmwareRequirement, ...]
-    """Every place a core's own ``.info`` declares this content — a card-declared
-    requirement pins no identity, so it is never matched here.
+    """Every place a core's own ``.info`` sends this content — the file it declares under
+    a name the packaged table pins these bytes for, and the folder it declares under the
+    prefix its curated row states, which is where the packaged table files them. Only
+    ``.info`` cores: this route resolves the enumerated core declarations and nothing
+    else, so a card-declared requirement never reaches it — not because such a
+    requirement could not carry an identity (the card route that reads its file's bytes
+    sets one) but because no card is looked at here at all.
     """
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
@@ -8926,6 +8931,51 @@ def _declared_beyond_requirements(
     return False
 
 
+def _folder_row_of(requirement: FirmwareRequirement) -> DeclaredDirectory | None:
+    """The curated row behind a requirement whose core opens the declaration as a folder.
+
+    ``None`` for every other requirement, which is every requirement no row
+    covers: the kind and the row come off :data:`FIRMWARE_DECLARED_DIRECTORY`
+    together (:func:`declared_kind_of`), so asking the kind first is a cheap
+    filter and never a second opinion. A card-declared requirement carries no
+    ``.so`` to key on and names a file anyway
+    (:attr:`FirmwareRequirement.declared_kind`).
+    """
+    if requirement.declared_kind != DECLARED_DIRECTORY or requirement.core_so is None:
+        return None
+    return declared_directory_of(requirement.core_so.removesuffix(".so"), requirement.declared)
+
+
+def _destination_for(
+    requirement: FirmwareRequirement, identity: FirmwareIdentity, hashes: FirmwareHashes
+) -> bool:
+    """Is this requirement a place *identity* goes — by its own identity, or by its folder?
+
+    Two ways a declaration can be about one content, because there are two
+    shapes a core declares. A **file** declaration names the file, so the
+    packaged table pins an identity for that name and the match is identity to
+    identity — a requirement whose name the table does not cover can never be
+    matched, which is the promise that atlas claims nothing about unknown
+    bytes.
+
+    A **folder** declaration names no file at all: LRPS2 lists ``pcsx2/bios``
+    with ``"*"`` (libretro/main.cpp:1801-1807 at 14d19f8) and validates each
+    survivor of its 4-8 MiB size filter (:1810-1816) by that file's ROMDIR
+    header (``IsBIOS``, :1818), so the name inside is the caller's and the
+    requirement carries no single identity to compare. What
+    the curated row states instead is the prefix under which the packaged
+    table files the images that core recognises
+    (:attr:`DeclaredDirectory.identities`), and content filed under it is
+    content that folder is for — the same relation the folder verdict reads
+    the other way round when it judges what is already inside
+    (:func:`_directory_identified`).
+    """
+    if requirement.identity is not None and requirement.identity.md5.lower() == identity.md5.lower():
+        return True
+    row = _folder_row_of(requirement)
+    return row is not None and hashes.for_content_under(row.identities, identity.md5) is not None
+
+
 def identify_firmware(
     machine: Machine,
     context: FirmwareContext,
@@ -8938,15 +8988,22 @@ def identify_firmware(
 
     The download flow, answered by bytes: a file arrives under whatever name
     its source gave it, and the question is where it goes, under what name, and
-    whether it is even the right thing. Every requirement whose expected
-    identity is this content comes back — across cores and across systems,
-    because one identity is routinely wanted in several places under several
-    names — each carrying its own absolute destination and expected file name.
+    whether it is even the right thing. Every requirement this content is for
+    comes back — across cores and across systems, because one identity is
+    routinely wanted in several places under several names — each carrying its
+    own absolute destination.
 
-    Matching a requirement is by identity, never by the name the caller's file
-    happens to carry. A requirement whose file name the packaged table does not
-    cover can never be matched: atlas will not claim that unknown bytes belong
-    somewhere.
+    Matching is by content throughout, never by the name the caller's file
+    happens to carry, and a declaration's own shape decides what that means
+    (:func:`_destination_for`). A file declaration is matched identity to
+    identity, so one whose file name the packaged table does not cover can
+    never be matched: atlas will not claim that unknown bytes belong
+    somewhere. A folder declaration names no file to compare, and is matched
+    when the table files this content under the prefix its curated row states;
+    its destination is the folder, and the name to give the file inside is the
+    caller's — the core reads the header rather than the name, so atlas
+    invents none. :attr:`FirmwareIdentity.known_as` is where a caller that
+    wants a conventional one finds it.
 
     A request that names no content at all — a bare ``size``, which two
     different files routinely share — is answered, not raised: it is a state of
@@ -9004,9 +9061,7 @@ def identify_firmware(
     # the caller already has the bytes for.
     cores, _observations = _resolve_cores(machine, context, context.cores, verify=False)
     wanted = tuple(
-        r
-        for r in _requirements_of(cores)
-        if r.identity is not None and r.identity.md5.lower() == identity.md5.lower()
+        r for r in _requirements_of(cores) if _destination_for(r, identity, context.hashes)
     )
     if not wanted:
         caveats.append(
