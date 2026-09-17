@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.21.0](https://github.com/danielcopper/emu-atlas/compare/v0.20.0...v0.21.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** a set pcsx2_bios option names the image LRPS2 opens ([#489](https://github.com/danielcopper/emu-atlas/issues/489))
+* **firmware:** gba_bios.bin and nds_sd_card.bin name their own machines ([#488](https://github.com/danielcopper/emu-atlas/issues/488))
+* **firmware:** identification names the declared folder as destination ([#487](https://github.com/danielcopper/emu-atlas/issues/487))
+* **machine:** the core probe says which way a core went unanswered ([#486](https://github.com/danielcopper/emu-atlas/issues/486))
+* **contract:** a card token rides caveat data under token ([#485](https://github.com/danielcopper/emu-atlas/issues/485))
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480))
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477))
+
+### Features
+
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480)) ([a06e7b2](https://github.com/danielcopper/emu-atlas/commit/a06e7b22a621ff2f35a01fedd33689f0cfd078b8)), closes [#446](https://github.com/danielcopper/emu-atlas/issues/446)
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477)) ([e1eafec](https://github.com/danielcopper/emu-atlas/commit/e1eafec758298f79bccc8b4d5bde3df5737ed7fe)), closes [#466](https://github.com/danielcopper/emu-atlas/issues/466)
+* **firmware:** a set pcsx2_bios option names the image LRPS2 opens ([#489](https://github.com/danielcopper/emu-atlas/issues/489)) ([94b1f53](https://github.com/danielcopper/emu-atlas/commit/94b1f53162060b500af957061596e950d2572de4)), closes [#360](https://github.com/danielcopper/emu-atlas/issues/360)
+* **machine:** the core probe says which way a core went unanswered ([#486](https://github.com/danielcopper/emu-atlas/issues/486)) ([d54f66f](https://github.com/danielcopper/emu-atlas/commit/d54f66f54e0ff5ba50f35d43627d892f45ea789a)), closes [#412](https://github.com/danielcopper/emu-atlas/issues/412)
+
+
+### Bug Fixes
+
+* **emudeck:** the firmware route resolves a standalone's sandbox per launch ([#490](https://github.com/danielcopper/emu-atlas/issues/490)) ([748847e](https://github.com/danielcopper/emu-atlas/commit/748847e31c22746076f63b68248563cf442a7397)), closes [#350](https://github.com/danielcopper/emu-atlas/issues/350)
+* **firmware:** gba_bios.bin and nds_sd_card.bin name their own machines ([#488](https://github.com/danielcopper/emu-atlas/issues/488)) ([ff84772](https://github.com/danielcopper/emu-atlas/commit/ff84772df655aa36f72ee3dc61292571dd561106)), closes [#340](https://github.com/danielcopper/emu-atlas/issues/340)
+* **firmware:** identification names the declared folder as destination ([#487](https://github.com/danielcopper/emu-atlas/issues/487)) ([c43548e](https://github.com/danielcopper/emu-atlas/commit/c43548e952fc2dc051db339c6342f7fe1db8615f)), closes [#377](https://github.com/danielcopper/emu-atlas/issues/377)
+* **vita3k:** the user listing keys like the emulator's boost and says where it can end ([#479](https://github.com/danielcopper/emu-atlas/issues/479)) ([149f1f3](https://github.com/danielcopper/emu-atlas/commit/149f1f326371b2610a3c3401675cbb4d067ec2bc)), closes [#459](https://github.com/danielcopper/emu-atlas/issues/459) [#460](https://github.com/danielcopper/emu-atlas/issues/460)
+
+
+### Code Refactoring
+
+* **contract:** a card token rides caveat data under token ([#485](https://github.com/danielcopper/emu-atlas/issues/485)) ([62a6aa7](https://github.com/danielcopper/emu-atlas/commit/62a6aa7977246d79f8d6bce275c9cb432c29a6a1)), closes [#449](https://github.com/danielcopper/emu-atlas/issues/449)
+
 ## [0.20.0](https://github.com/danielcopper/emu-atlas/compare/v0.19.0...v0.20.0) (2026-09-13)
 
 
