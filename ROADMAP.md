@@ -152,7 +152,7 @@ The four firmware entry points ship: live `.info` declarations from the installe
   reading, cross-read against RomM's `known_bios_files.json`, and the two disagree (the Super Game Boy dumps are `snes`
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary
   itself is settled (item 20b shipped: the map's values are ES-DE ids, `DESIGN.md` Vocabulary); what remains is evidence
-  per file, and the standing list is `docs/tasks/firmware-system-evidence.md` — 173 inherited declarations across 42
+  per file, and the standing list is `docs/tasks/firmware-system-evidence.md` — 167 inherited declarations across 39
   uncertain cores at the current snapshot. Growing the table by hand is a race lost to every core release; a real fix
   needs a per-file source of truth, and none exists upstream today (`.info` has one `systemname` per core, `System.dat`
   keys by name without a system). Two known limits of the signal: a core with a `systemname` and no `database` has only

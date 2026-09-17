@@ -1110,8 +1110,8 @@ SYSTEMS_WITHOUT_CATALOGUE_ID: Mapping[str, str] = {
 # Entries are added only where the file's machine is not in question, and each
 # addition shrinks how often that caveat has to fire. Versioned like the
 # packaged data files it stands beside.
-FIRMWARE_SYSTEM_OVERRIDE_VERSION = "3"
-FIRMWARE_SYSTEM_OVERRIDE_REVIEWED = "2026-08-09"
+FIRMWARE_SYSTEM_OVERRIDE_VERSION = "4"
+FIRMWARE_SYSTEM_OVERRIDE_REVIEWED = "2026-09-17"
 
 FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     # Game Boy family (mGBA, VBA-M, Mesen-S, Gambatte, SameBoy, …)
@@ -1119,6 +1119,19 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     "dmg_boot.bin": "gb",
     "gbc_bios.bin": "gbc",
     "cgb_boot.bin": "gbc",
+    # The GBA sibling of the Game Boy and Game Boy Color boot ROMs above, and
+    # the one whose fallback was wrong: the deployed linux es_systems.xml
+    # launches NooDS under gba (its one command outside a comment; both of its
+    # nds commands are commented out), while noods_libretro.info can only say
+    # "Nintendo DS" for the whole core — so without this rule a GBA dump is
+    # filed under nds. Counting rule for the evidence: over the 292 .info
+    # files RetroDECK deploys, a core declares this name when some
+    # firmwareN_path's basename is it. Eight do, and every one of their
+    # firmwareN_desc names the Game Boy Advance — seven read "gba_bios.bin
+    # (Game Boy Advance BIOS)" (gpsp, mednafen_gba, mgba, noods, tempgba,
+    # vba_next, vbam) and SkyEmu's reads "gba_bios.bin (GBA BIOS)". Not one
+    # desc names another machine.
+    "gba_bios.bin": "gba",
     "sgb_bios.bin": "snes",
     "sgb_boot.bin": "snes",
     "sgb2_boot.bin": "snes",
@@ -1193,6 +1206,11 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
     "dsi_bios9.bin": "nds",
     "dsi_firmware.bin": "nds",
     "dsi_nand.bin": "nds",
+    # Same DS-specific name class as the six above, and the same counting rule:
+    # one of the 292 deployed .info files declares this name, noods_libretro,
+    # whose desc reads "nds_sd_card.bin (NDS SD card)". The name carries its
+    # machine the way dsi_nand.bin does and the way firmware.bin does not.
+    "nds_sd_card.bin": "nds",
     # Atari 5200 (atari800, whose systemname is "Atari 8-bit Family"). Without
     # this the 5200 BIOS is filed under atari800 and a query for atari5200
     # cannot reach it at all.
@@ -1689,13 +1707,14 @@ def system_assignment_caveats(core: CoreDeclarations) -> tuple[Caveat, ...]:
     Two distinct cases, never one bucket:
 
     - **No ``systemname`` at all.** SkyEmu ships none, only a ``database``
-      naming three systems, so eight of its ten declarations land on
+      naming three systems, so seven of its ten declarations land on
       ``_unknown``. That is not a fallback that might be wrong, it is no
       assignment at all, and it gets its own code.
     - **Fallback on a multi-system core.** The core covers several systems by
       any of the readings in :attr:`CoreDeclarations.serves_several_systems`,
-      and at least one file was filed by its single ``systemname``. mGBA's
-      ``gba_bios.bin`` goes this way.
+      and at least one file was filed by its single ``systemname``. NooDS's
+      ``firmware.bin`` goes this way — the one declaration of its five the
+      table leaves uncovered, because that name is too generic to claim.
 
     A core whose declarations are all override-assigned states nothing — there
     is nothing uncertain to state. Neither does a core that declares no

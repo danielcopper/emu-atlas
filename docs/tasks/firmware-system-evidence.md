@@ -7,9 +7,10 @@ says_ — and the answer marks it (`system-assignment-derived`, or `core-without
 until an entry here is worked off.
 
 Snapshot: the `.info` set RetroDECK 0.10.9b deploys (`components/retroarch/rd_extras/cores/`: 292 `.info` files, minus
-the two shipped template stems `00_example_libretro` and `puzzlescript_libretro` = 290 read), read 2026-08-09 — **173
-inherited declarations across 42 uncertain cores** (multiple builds of one emulator counted separately, as the info set
-ships them). Regenerate by re-running the derivation over that directory (`atlas.firmware._declarations_in` +
+the two shipped template stems `00_example_libretro` and `puzzlescript_libretro` = 290 read), re-read 2026-09-17 — **167
+inherited declarations across 39 uncertain cores** (multiple builds of one emulator counted separately, as the info set
+ships them; a declaration is counted once per core that makes it, so one name declared twice counts twice). Regenerate
+by re-running the derivation over that directory (`atlas.firmware._declarations_in` +
 `CoreDeclarations.serves_several_systems`); nothing here comes from any user data.
 
 **What retires an entry.** One of:
@@ -26,9 +27,10 @@ a `SYSTEMS_WITHOUT_CATALOGUE_ID` ruling first, like `bk`/`ti83`/`ep128`.
 
 ## No systemname at all (`_unknown`, `core-without-systemname`)
 
-- **skyemu** — 8 of 10 declarations inherited (`dmg_rom.bin`, `dmg0_rom.bin`, `cgb0_boot.bin`, `cgb_agb_boot.bin`,
-  `gba_bios.bin`, `nds7.bin`, `nds9.bin`, `firmware.bin`); the descs name GB/GBC/GBA/NDS, so most are cheap override
-  candidates — the generic `firmware.bin` is not (deliberately unclaimed, see the override table's note).
+- **skyemu** — 7 of 10 declarations inherited (`dmg_rom.bin`, `dmg0_rom.bin`, `cgb0_boot.bin`, `cgb_agb_boot.bin`,
+  `nds7.bin`, `nds9.bin`, `firmware.bin`); the descs name GB/GBC/NDS, so most are cheap override candidates — the
+  generic `firmware.bin` is not (deliberately unclaimed, see the override table's note). Its `gba_bios.bin` and the two
+  covered Game Boy Color boot ROMs are filed by rule already.
 - **galaksija** — `galaksija/CHRGEN.BIN`, `ROM1.BIN`, `ROM2.BIN`. The machine (Galaksija) has no catalogue id either;
   needs the own-spelling ruling before any filing.
 
@@ -43,9 +45,12 @@ Per core: the systemname everything inherits from, and the declared files (paths
   per-file split (BK-0010 vs 0011M) only matters if the family ever gets ids.
 - **bluemsx** (`MSX/SVI/ColecoVision/SG-1000`) → `msx`: `Databases/msxromdb.xml`, `Machines/Shared Roms/MSX.rom`
   (folder-shaped declarations).
-- **desmume**, **desmume2015**, **melonds**, **melondsds**, **noods** (`Nintendo DS`) → `nds`: `firmware.bin`,
-  `dsi_sd_card.bin`, `nds_sd_card.bin`, and noods' `gba_bios.bin` — that last one is a GBA BIOS filed under `nds` and
-  the clearest override candidate of the group.
+- **desmume**, **desmume2015**, **melonds**, **melondsds**, **noods** (`Nintendo DS`) → `nds`: `firmware.bin` and
+  melonds' `dsi_sd_card.bin`. `nds_sd_card.bin` and noods' `gba_bios.bin` moved to overrides — the second was a GBA BIOS
+  filed under `nds`. `firmware.bin` stays because the name is too generic to claim for one system. `dsi_sd_card.bin`
+  stays only because nothing has ruled on it yet: melonds alone declares it, its desc names the DSi SD card, and the
+  name is the same DSi-specific class as the `dsi_*` rows already ruled — so it meets the admission criterion and is the
+  next cheap row, in a change of its own rather than this one.
 - **dolphin** (`GameCube / Wii`) → `gc`: `dolphin-emu/Sys/codehandler.bin` (one file serving both systems).
 - **ep128emu_core** (`128`) → `ep128` (own spelling): 22 `ep128emu/roms/*` files. The Enterprise 64/128 rows are home;
   the rest inherit wrongly and their descs say so — `cpc464.rom`/`cpc664.rom`/`cpc6128.rom`/`cpc_amsdos.rom` (Amstrad
@@ -72,8 +77,6 @@ Per core: the systemname everything inherits from, and the declared files (paths
 - **mednafen_pce**, **mednafen_pce_fast**, **mednafen_supergrafx** (`PC Engine …`) → `pcenginecd`: `syscard3.pce`,
   `syscard2.pce`, `syscard1.pce`, `gexpress.pce` — the filing the ruling chose _because_ of these files; an override per
   file would only restate the systemname result and can wait.
-- **mgba**, **vbam** (`Game Boy/Game Boy Color/Game Boy Advance`) → `gba`: `gba_bios.bin` — desc-backed override
-  candidate (`gba`), which would silence the derived caveat on both cores.
 - **o2em** (`Magnavox Odyssey2 / Philips Videopac+`) → `odyssey2`: `o2rom.bin`, `c52.bin`, `g7400.bin`, `jopac.bin` (the
   G7400 dumps are Videopac+ — ES-DE has `videopac`).
 - **parallel_n64**, **parallel_n64_debug** [info-only] (`Nintendo 64`) → `n64`: `64DD_IPL.bin` (64DD — ES-DE has
@@ -86,4 +89,3 @@ Per core: the systemname everything inherits from, and the declared files (paths
   no `cdimono2` id (guard-tested), so all three stay under `cdimono1`.
 - **smsplus** (`Sega 8-bit`) → `mastersystem`: `bios.sms` (its `BIOS.col` moved to overrides).
 - **snes9x** (`Super Nintendo Entertainment System`) → `snes`: `STBIOS.bin` (Sufami Turbo — ES-DE has `sufami`).
-- **tempgba** [info-only] (`Game Boy Advance`) → `gba`: `gba_bios.bin`.

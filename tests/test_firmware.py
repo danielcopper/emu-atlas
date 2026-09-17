@@ -109,6 +109,8 @@ from atlas.firmware import (
     InventoryCatalogue,
     RELATION_DECLARES,
     RELATION_RECOGNISES,
+    SOURCE_OVERRIDE,
+    SOURCE_SYSTEMNAME,
     SuppliedBy,
     UnclaimedFile,
     declared_directory_of,
@@ -123,6 +125,7 @@ from atlas.firmware import (
     resolve_links,
     save_artifact_paths,
     stated_once,
+    system_assignment_caveats,
     system_decision,
     system_for,
 )
@@ -278,8 +281,8 @@ firmware0_path = "dmg_boot.bin"
 firmware0_opt = "true"
 """
 
-# A multi-system core: one systemname, a database naming two systems, and one
-# declared file with no per-file rule.
+# A multi-system core: one systemname, a database naming two systems, and two
+# declared files that a per-file rule sends to two different systems.
 MGBA_INFO = """
 systemname = "Game Boy/Game Boy Color/Game Boy Advance"
 database = "Nintendo - Game Boy|Nintendo - Game Boy Advance"
@@ -289,6 +292,23 @@ firmware0_path = "gb_bios.bin"
 firmware0_opt = "true"
 firmware1_desc = "gba_bios.bin"
 firmware1_path = "gba_bios.bin"
+firmware1_opt = "true"
+"""
+
+# NooDS, the core the derived assignment is still about: RetroDECK offers it as
+# a GBA emulator while its .info can only say "Nintendo DS" for the whole core.
+# One declaration of each kind — gba_bios.bin carries a per-file rule and is
+# filed by it, against that systemname; firmware.bin carries none and falls
+# back to it.
+NOODS_INFO = """
+systemname = "Nintendo DS"
+database = "Nintendo - Nintendo DS|Nintendo - Nintendo DS (Download Play)"
+firmware_count = 2
+firmware0_desc = "gba_bios.bin"
+firmware0_path = "gba_bios.bin"
+firmware0_opt = "true"
+firmware1_desc = "firmware.bin"
+firmware1_path = "firmware.bin"
 firmware1_opt = "true"
 """
 
@@ -351,9 +371,14 @@ TABLE = json.dumps(
             # One content, two canonical names — the gambatte/SameBoy case.
             "gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5, "kind": "file"},
             "dmg_boot.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5, "kind": "file"},
-            # No per-file rule covers this one, so a core declaring it is filed
-            # by its systemname — the derived case, reachable by content.
+            # A per-file rule covers this one, so it is filed as gba whatever
+            # the declaring core is called — the override case, reachable by
+            # content.
             "gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6, "kind": "file"},
+            # No per-file rule covers this one and none is going to: the name is
+            # too generic to claim for one system, so a core declaring it is
+            # filed by its systemname — the derived case, reachable by content.
+            "firmware.bin": {"md5": "a1" * 16, "sha1": "b2" * 20, "size": 9, "kind": "file"},
             # Two of the images LRPS2 accepts inside the folder it lists, filed
             # under the prefix its curated row names — the sizes are the real
             # ones, because the row's size filter is what admits them.
@@ -2183,15 +2208,30 @@ class TestSystemAssignmentIsVisible:
         return [c.code for c in core.caveats if c.code in self.ASSIGNMENT_CODES]
 
     def test_a_multi_system_core_falling_back_states_it(self):
-        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
-                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
-        core = firmware_for_core(machine, _context(machine), core_so="mgba_libretro.so").cores[0]
+        machine = _machine({f"{INFO_DIR}/noods_libretro.info": NOODS_INFO,
+                            f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="noods_libretro.so").cores[0]
         caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_ASSIGNMENT_DERIVED)
-        # gb_bios.bin has a per-file rule; gba_bios.bin does not.
-        assert caveat.data["files"] == ("gba_bios.bin",)
+        # gba_bios.bin has a per-file rule; firmware.bin does not.
+        assert caveat.data["files"] == ("firmware.bin",)
         # The systems atlas parsed out of the .info, not the .info's own
         # pipe-joined spelling re-made — a client wants what was read.
-        assert caveat.data["database"] == ("Nintendo - Game Boy", "Nintendo - Game Boy Advance")
+        assert caveat.data["database"] == (
+            "Nintendo - Nintendo DS",
+            "Nintendo - Nintendo DS (Download Play)",
+        )
+
+    def test_the_rule_beats_the_core_name_it_disagrees_with(self):
+        # The defect the two names were admitted for: NooDS is offered as a GBA
+        # emulator and its .info can only say "Nintendo DS", so without a rule
+        # its GBA BIOS is filed under nds. The rule files it under gba and says
+        # that is where the assignment came from.
+        machine = _machine({f"{INFO_DIR}/noods_libretro.info": NOODS_INFO,
+                            f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
+        core = firmware_for_core(machine, _context(machine), core_so="noods_libretro.so").cores[0]
+        filed = {r.file_name: (r.system, r.system_source) for r in _plain_requirements(core)}
+        assert filed["gba_bios.bin"] == ("gba", SOURCE_OVERRIDE)
+        assert filed["firmware.bin"] == ("nds", SOURCE_SYSTEMNAME)
 
     def test_full_override_coverage_states_nothing(self):
         machine = _machine({f"{INFO_DIR}/covered_libretro.info": FULLY_OVERRIDDEN_INFO,
@@ -2217,7 +2257,7 @@ class TestSystemAssignmentIsVisible:
         answer = firmware_for_core(machine, _context(machine), core_so="skyemu_libretro.so")
         core = answer.cores[0]
         assert [c.code for c in core.caveats] == [CAVEAT_CORE_WITHOUT_SYSTEMNAME]
-        assert [r.system for r in _plain_requirements(core) if r.file_name == "gba_bios.bin"] == ["_unknown"]
+        assert [r.system for r in _plain_requirements(core) if r.file_name == "nds7.bin"] == ["_unknown"]
         # The override still applies where it has a rule, so this is not a
         # blanket "we know nothing about this core".
         assert [r.system for r in _plain_requirements(core) if r.file_name == "cgb_boot.bin"] == ["gbc"]
@@ -2322,10 +2362,17 @@ class TestSystemAssignmentIsVisible:
         assert hiding.data["cores"] == ("atari800_libretro.so",)
 
     def test_it_names_only_cores_whose_own_database_covers_the_question(self):
-        # mGBA is derived too, but nothing on the machine says it covers the
-        # Atari 5200 — naming it would train the reader to skip the line.
-        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
-                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
+        # NooDS is derived too — firmware.bin carries no per-file rule — and it
+        # is not selected for this question either, so only the database term
+        # keeps it out of the list: nothing on the machine says it covers the
+        # Atari 5200, and naming it would train the reader to skip the line.
+        # The core has to stay derived for that term to be the one under test,
+        # which is what the first assertion holds.
+        machine = _machine({f"{INFO_DIR}/noods_libretro.info": NOODS_INFO,
+                            f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
+        cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores
+        noods = next(c for c in cores if c.stem == "noods_libretro")
+        assert system_assignment_caveats(noods) != ()
         answer = firmware_for_system(machine, _context(machine), system="atari5200")
         assert CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES not in [c.code for c in answer.caveats]
 
@@ -2343,22 +2390,22 @@ class TestSystemAssignmentIsVisible:
     def test_the_caveat_travels_with_an_identification_it_is_about(self):
         # identify_firmware hands back requirements without their emulator, so
         # the caveat has to come along or it is lost.
-        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
-                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
-        identified = identify_firmware(machine, _context(machine), md5="11" * 16)
-        assert [r.file_name for r in identified.requirements] == ["gba_bios.bin"]
+        machine = _machine({f"{INFO_DIR}/noods_libretro.info": NOODS_INFO,
+                            f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
+        identified = identify_firmware(machine, _context(machine), md5="a1" * 16)
+        assert [r.file_name for r in identified.requirements] == ["firmware.bin"]
         assert CAVEAT_SYSTEM_ASSIGNMENT_DERIVED in [c.code for c in identified.caveats]
 
     def test_a_caveat_about_other_files_stays_off_the_identification(self):
-        # The download flow asks about ONE content. mGBA's caveat names
-        # gba_bios.bin; an answer about the Game Boy boot ROM — which has a
+        # The download flow asks about ONE content. NooDS's caveat names
+        # firmware.bin; an answer about the Game Boy Advance BIOS — which has a
         # per-file rule — must not carry a warning about a file it does not
         # contain.
-        machine = _machine({f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
-                            f"{INFO_DIR}/mgba_libretro.so": {"status": "invalid-text"}})
-        identified = identify_firmware(machine, _context(machine), md5="ee" * 16)
-        assert [r.file_name for r in identified.requirements] == ["gb_bios.bin"]
-        assert all(r.system_source == "override" for r in identified.requirements)
+        machine = _machine({f"{INFO_DIR}/noods_libretro.info": NOODS_INFO,
+                            f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
+        identified = identify_firmware(machine, _context(machine), md5="11" * 16)
+        assert [r.file_name for r in identified.requirements] == ["gba_bios.bin"]
+        assert all(r.system_source == SOURCE_OVERRIDE for r in identified.requirements)
         assert [c.code for c in identified.caveats] == []
 
     def test_the_database_field_is_read_as_a_signal_not_as_a_name(self):
@@ -3285,11 +3332,11 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
 
     def _mgba_machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
         # The fixture declares two of mGBA's images — a Game Boy boot ROM
-        # beside its GBA BIOS — told apart by the per-file override rule
-        # (gb_bios.bin) from the systemname the rest falls back to (gba). The
-        # deployed .info declares four images and resolves to four systems
-        # (gb, gbc and snes by override, gba by systemname); two is what this
-        # rule needs, and two is what the shipped table has entries for.
+        # beside its GBA BIOS — which the per-file rules send to two different
+        # systems, gb and gba. The deployed .info declares four images and the
+        # rules file all four of them (gb, gbc, gba, snes); two systems is what
+        # this rule needs, and two is what the shipped system-firmware table
+        # has entries for.
         return _machine(
             {
                 f"{INFO_DIR}/mgba_libretro.info": MGBA_INFO,
@@ -4975,6 +5022,8 @@ class TestTheMapSpeaksTheCatalogueVocabulary:
             "f355bios.zip": "naomi",
             "airlbios.zip": "naomi",
             "awbios.zip": "atomiswave",
+            "gba_bios.bin": "gba",
+            "nds_sd_card.bin": "nds",
         }
         assert {name: FIRMWARE_SYSTEM_OVERRIDE.get(name) for name in ruled} == ruled
 
@@ -5734,6 +5783,14 @@ class TestTheInventoryCarriesTheCardsAndSaysWhatAFileConcerns:
                 "scph5501.bin": {"md5": SCPH5501, "sha1": "bb" * 20, "size": PS1_SIZE, "kind": "file"},
                 "scph7003.bin": {"md5": SCPH5501, "sha1": "bb" * 20, "size": PS1_SIZE, "kind": "file"},
                 "gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6, "kind": "file"},
+                # Two names no per-file rule covers: the Neo Geo system ROM,
+                # which an arcade board and a console both boot, and one of
+                # SkyEmu's DS BIOS names.
+                "neogeo.zip": {
+                    "md5": "55" * 16, "sha1": "66" * 20, "size": 9,
+                    "kind": "archive", "archive_reason": "romset",
+                },
+                "nds7.bin": {"md5": "a3" * 16, "sha1": "b4" * 20, "size": 10, "kind": "file"},
                 # Keyed by a RELATIVE PATH, which 91 of the packaged table's
                 # own entries are: the name a declaration carries is not the
                 # key, and the reading that relates the two is for_path.
@@ -5745,8 +5802,10 @@ class TestTheInventoryCarriesTheCardsAndSaysWhatAFileConcerns:
     DC_DUMP: dict[str, str | int] = {"md5": "33" * 16, "sha1": "44" * 20, "size": 7}
     DEVKIT_DUMP: dict[str, str | int] = {"md5": DEVKIT, "sha1": "cc" * 20, "size": PS1_SIZE}
     GBA_DUMP: dict[str, str | int] = {"md5": "11" * 16, "sha1": "22" * 20, "size": 6}
-    # Two cores declaring one file name that carries no per-file rule, under
-    # two systemnames: the shape the console rule refuses to pick a winner in.
+    NEOGEO_DUMP: dict[str, str | int] = {"md5": "55" * 16, "sha1": "66" * 20, "size": 9}
+    NDS7_DUMP: dict[str, str | int] = {"md5": "a3" * 16, "sha1": "b4" * 20, "size": 10}
+    # One core declaring one file the packaged table knows, under a systemname
+    # that agrees with the per-file rule covering it.
     GBA_ONLY_INFO = """
 systemname = "Nintendo - Game Boy Advance"
 firmware_count = 1
@@ -5754,19 +5813,33 @@ firmware0_desc = "gba_bios.bin"
 firmware0_path = "gba_bios.bin"
 firmware0_opt = "true"
 """
+    # Two installed cores declaring the same Neo Geo system ROM under two
+    # systemnames. The deployed info set has three cores declaring it under
+    # those same two — the FinalBurn Neo arcade build files it under arcade,
+    # its Neo Geo build and Geolith under neogeo — and no per-file rule picks
+    # between them, because that is exactly the machine being in question. The
+    # arcade build declares it under a relative path the table does not hold,
+    # so the pinning that relates the two falls back to the bare name.
+    FBNEO_INFO = """
+systemname = "Arcade (various)"
+firmware_count = 1
+firmware0_desc = "fbneo/neogeo.zip (Neo Geo BIOS)"
+firmware0_path = "fbneo/neogeo.zip"
+firmware0_opt = "false"
+"""
+    GEOLITH_INFO = """
+systemname = "Neo Geo"
+firmware_count = 1
+firmware0_desc = "neogeo.zip (Neo Geo MVS System ROM)"
+firmware0_path = "neogeo.zip"
+firmware0_opt = "false"
+"""
     DC_INFO = """
 systemname = "Sega - Dreamcast"
 firmware_count = 1
 firmware0_desc = "dc/dc_boot.bin (Dreamcast BIOS)"
 firmware0_path = "dc/dc_boot.bin"
 firmware0_opt = "false"
-"""
-    NDS_TOO_INFO = """
-systemname = "Nintendo - Nintendo DS"
-firmware_count = 1
-firmware0_desc = "gba_bios.bin"
-firmware0_path = "gba_bios.bin"
-firmware0_opt = "true"
 """
     # A core whose only declaration names a place outside the firmware root:
     # atlas refuses it, so the core declares something and requires nothing.
@@ -5978,24 +6051,26 @@ firmware0_opt = "false"
 
     def test_two_systems_declaring_one_content_state_no_console(self):
         answer = self._answer(
-            {f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP},
+            {f"{BIOS_DIR}/boardrom.bin": self.NEOGEO_DUMP},
             search=self.SEARCH,
-            infos={"mgba_libretro.so": self.GBA_ONLY_INFO, "skyemu_libretro.so": self.NDS_TOO_INFO},
+            infos={"fbneo_libretro.so": self.FBNEO_INFO, "geolith_libretro.so": self.GEOLITH_INFO},
         )
-        found = self._found(answer, "handheld.rom")
+        found = self._found(answer, "boardrom.bin")
         # A file two machines claim is not a file one of them owns, and both
         # cores still state their concern.
         assert found.console is None
         assert [concern.emulator for concern in found.concerns] == [
-            "mgba_libretro.so",
-            "skyemu_libretro.so",
+            "fbneo_libretro.so",
+            "geolith_libretro.so",
         ]
 
     def test_a_core_that_states_no_system_of_its_own_states_no_console(self):
         # _unknown marks a core whose .info names no systemname at all, which
         # is a fact about that core rather than a machine these bytes belong to.
+        # SkyEmu's DS BIOS carries no per-file rule, so nothing else assigns it
+        # either — unlike the GBA BIOS it declares beside it.
         answer = self._answer(
-            {f"{BIOS_DIR}/handheld.rom": self.GBA_DUMP},
+            {f"{BIOS_DIR}/handheld.rom": self.NDS7_DUMP},
             search=self.SEARCH,
             infos={"skyemu_libretro.so": SKYEMU_INFO},
         )
