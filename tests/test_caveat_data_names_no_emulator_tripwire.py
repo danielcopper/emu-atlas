@@ -187,6 +187,7 @@ _CORE_FILE_ATTRIBUTES = (".core_so",)
 UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
     ("firmware.py", "_configured_image_caveat", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "_configured_image_missing", CORE_KEY): "core_short_name(core.stem)",
+    ("firmware.py", "_override_image_missing", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "firmware_for_core", CORE_SO_KEY): "f'{stem}.so'",
     ("installations.py", "_core_info_unreadable_caveat", CORE_SO_KEY): (
         "os.path.basename(core_so)"

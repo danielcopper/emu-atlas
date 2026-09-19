@@ -496,6 +496,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-image-unlisted",
     "firmware-image-contradicted",
     "firmware-image-ambiguous",
+    "firmware-name-spellings",
     "firmware-search-unverified",
     "firmware-search-candidates",
     "firmware-scan-incomplete",
@@ -1797,7 +1798,9 @@ def _validate_requirement_fields(
         fail(f"{name}: with no source for the system the slug must be '_unknown'")
 
 
-def _validate_requirement_path(name: str, entry: Any, root: str, named_by: frozenset[str]) -> None:
+def _validate_requirement_path(
+    name: str, entry: Any, root: str, named_by: frozenset[str], spelled: frozenset[str]
+) -> None:
     # The root itself is a legal destination: LRPS2 declares the FOLDER
     # "pcsx2/bios", and RetroDECK links it back to the firmware root, so that
     # declaration resolves to the root exactly.
@@ -1825,9 +1828,20 @@ def _validate_requirement_path(name: str, entry: Any, root: str, named_by: froze
     # reduced to the name the emulator's combine ends in. Without a statement
     # naming this very file the mismatch is a resolver renaming one silently,
     # which is what the rule exists to catch.
+    #
+    # *spelled* is the second way, and it is the same discipline: a core that
+    # tries several spellings of one image opens the first that exists, so the
+    # declaration keeps the name its .info states while file_name is the name
+    # this machine answers under. The answer must say which names those are —
+    # firmware-name-spellings, whose lists this set holds — or the mismatch is
+    # again a resolver renaming a file with nothing behind it (#474).
     declared_tail = os.path.basename(entry["declared"])
     if declared_tail:
-        if declared_tail != entry["file_name"] and entry["file_name"] not in named_by:
+        if (
+            declared_tail != entry["file_name"]
+            and entry["file_name"] not in named_by
+            and entry["file_name"] not in spelled
+        ):
             fail(f"{name}: a requirement's file_name must be the name the core spelled at the end of 'declared'")
     elif entry["file_name"] != os.path.basename(entry["path"]):
         fail(f"{name}: a declaration spelling no name composes onto its directory — file_name must be the end of 'path'")
@@ -2085,9 +2099,10 @@ def _validate_requirement(
     hash_checked: bool,
     fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS,
     named_by: frozenset[str] = frozenset(),
+    spelled: frozenset[str] = frozenset(),
 ) -> None:
     _validate_requirement_fields(name, entry, fields)
-    _validate_requirement_path(name, entry, root, named_by)
+    _validate_requirement_path(name, entry, root, named_by, spelled)
     _validate_requirement_presence(name, entry)
     _validate_requirement_verdict(
         name,
@@ -2099,7 +2114,15 @@ def _validate_requirement(
     _validate_supplied_by(name, entry)
 
 
-def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, hash_checked: bool) -> None:
+def _validate_alternatives(
+    name: str,
+    entry: Any,
+    *,
+    core_so: Any,
+    root: str,
+    hash_checked: bool,
+    spelled: frozenset[str] = frozenset(),
+) -> None:
     """An alternatives group: one launch needs exactly one option, the region decides.
 
     Every option is a full requirement plus ``regions`` — a non-empty list of
@@ -2114,7 +2137,12 @@ def _validate_alternatives(name: str, entry: Any, *, core_so: Any, root: str, ha
     claimed: set[str] = set()
     for option in options:
         _validate_requirement(
-            name, option, root=root, hash_checked=hash_checked, fields=FIRMWARE_ALTERNATIVE_OPTION_FIELDS
+            name,
+            option,
+            root=root,
+            hash_checked=hash_checked,
+            fields=FIRMWARE_ALTERNATIVE_OPTION_FIELDS,
+            spelled=spelled,
         )
         if option["core_so"] != core_so:
             fail(f"{name}: an alternatives option must name the core it is listed under")
@@ -2165,15 +2193,29 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
         for caveat in core["caveats"]
         if caveat["code"] == "firmware-image-configured" and isinstance(caveat["data"].get("name"), str)
     )
+    # The names this core tries for one image, over every list it stated.
+    spelled = frozenset(
+        spelling
+        for caveat in core["caveats"]
+        if caveat["code"] == "firmware-name-spellings"
+        for spelling in caveat["data"].get("spellings", ())
+    )
     for entry in requirements:
         if isinstance(entry, dict) and "alternatives" in entry:
             _validate_alternatives(
-                name, entry, core_so=core["core_so"], root=root, hash_checked=hash_checked
+                name,
+                entry,
+                core_so=core["core_so"],
+                root=root,
+                hash_checked=hash_checked,
+                spelled=spelled,
             )
             continue
         if entry["core_so"] != core["core_so"]:
             fail(f"{name}: a requirement must name the core it is listed under")
-        _validate_requirement(name, entry, root=root, hash_checked=hash_checked, named_by=named_by)
+        _validate_requirement(
+            name, entry, root=root, hash_checked=hash_checked, named_by=named_by, spelled=spelled
+        )
 
 
 def _validate_core_refusals(name: str, core: Any) -> None:

@@ -56,6 +56,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
     CAVEAT_FIRMWARE_IMAGE_REFUSED,
     CAVEAT_FIRMWARE_IMAGE_UNLISTED,
+    CAVEAT_FIRMWARE_NAME_SPELLINGS,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
@@ -91,6 +92,7 @@ from atlas.firmware import (
     FIRMWARE_DECLARED_DIRECTORY,
     FIRMWARE_DECLARED_DIRECTORY_VERSION,
     FIRMWARE_SYSTEM_OVERRIDE,
+    NEED_OPTIONAL,
     NEED_REQUIRED,
     READER_PS2_BIOS_HEADER,
     SYSTEMNAME_MAP_VERSION,
@@ -135,6 +137,7 @@ from atlas.core_firmware import lookup_core_firmware
 from atlas.core_options import CoreOptionsChain
 from atlas.machine import (
     KIND_DIRECTORY,
+    KIND_INACCESSIBLE,
     KIND_MISSING,
     AppImageReadResult,
     CoreInfo,
@@ -204,7 +207,7 @@ def _plain_requirements(core: CoreFirmware) -> tuple[FirmwareRequirement, ...]:
     return tuple(r for r in core.requirements if isinstance(r, FirmwareRequirement))
 
 PSX_INFO = """
-display_name = "Sony - PlayStation (Beetle PSX)"
+display_name = "Sony - PlayStation (Demo)"
 systemname = "Sony - PlayStation"
 firmware_count = 2
 firmware0_desc = "scph5501.bin (PS1 US BIOS)"
@@ -428,10 +431,32 @@ def _entry(content: bytes, **stamp: str) -> dict[str, str | int]:
     return {**_blob(content), "kind": "file", **stamp}
 
 
+DEMO_PSX_SO = "demo_psx_libretro.so"
+"""The PlayStation core the generic tests declare, of no particular make.
+
+The stem is invented, and that is what it is for: it is the key of no packaged
+table — not ``core_firmware.json``, ``core_audit.json``, ``core_oddities.json``
+or ``save_memory.json`` — so a test about a destination, a ``checked`` value or
+an unclaimed file reads the ``.info`` route and no route a core's NAME reaches.
+What it does not escape is knowledge keyed by SYSTEM: this declaration states a
+PlayStation, so ``system_firmware.json`` still answers
+``cannot-run-without-firmware`` for it and the world-knowledge caveat still
+rides. A core whose own firmware route atlas has read answers more than its
+declaration, and a test that wants that names the core it wants
+(:data:`BEETLE_PSX_SO`).
+"""
+
+
 def _machine(files: Mapping[str, FixtureFileSpec] | None = None, **kwargs: object) -> FixtureMachine:
+    # `core` names the .so this fixture declares, and it is read out of the
+    # keywords rather than taken as one of its own: every caller here forwards
+    # an untyped **kwargs into this function, and a typed keyword beside that
+    # is a type error at each of those call sites.
+    core = kwargs.pop("core", DEMO_PSX_SO)
+    assert isinstance(core, str)
     tree: dict[str, FixtureFileSpec] = {
-        f"{INFO_DIR}/mednafen_psx_libretro.info": PSX_INFO,
-        f"{INFO_DIR}/mednafen_psx_libretro.so": {"status": "invalid-text"},
+        f"{INFO_DIR}/{core[: -len('.so')]}.info": PSX_INFO,
+        f"{INFO_DIR}/{core}": {"status": "invalid-text"},
     }
     if files is not None:
         tree.update(files)
@@ -564,12 +589,12 @@ class TestReadDeclarations:
     def test_a_core_without_its_so_is_not_installed(self):
         machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
         cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores
-        assert [c.core_so for c in cores] == ["mednafen_psx_libretro.so"]
+        assert [c.core_so for c in cores] == ["demo_psx_libretro.so"]
 
     def test_without_a_core_dir_nothing_is_filtered(self):
         machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
         cores = read_core_declarations(machine, INFO_DIR).cores
-        assert {c.core_so for c in cores} == {"mednafen_psx_libretro.so", "flycast_libretro.so"}
+        assert {c.core_so for c in cores} == {"demo_psx_libretro.so", "flycast_libretro.so"}
 
     def test_the_template_info_files_are_dropped(self):
         machine = _machine({f"{INFO_DIR}/00_example_libretro.info": TEMPLATE_INFO,
@@ -711,7 +736,7 @@ class TestPerCoreAnswer:
     """Criterion 1: does this core need firmware, and where does each file go?"""
 
     def test_the_destination_is_absolute_whether_or_not_a_file_is_there(self):
-        answer = firmware_for_core(_machine(), _context(_machine()), core_so="mednafen_psx_libretro.so")
+        answer = firmware_for_core(_machine(), _context(_machine()), core_so="demo_psx_libretro.so")
         paths = {r.file_name: r.path for r in answer.requirements}
         assert paths == {
             "scph5501.bin": f"{BIOS_DIR}/scph5501.bin",
@@ -725,7 +750,7 @@ class TestPerCoreAnswer:
         answer = firmware_for_core(machine, _context(machine), core_so="flycast_libretro.so")
         assert [r.path for r in answer.requirements] == [f"{BIOS_DIR}/dc/dc_boot.bin"]
 
-    @pytest.mark.parametrize("given", ["mednafen_psx_libretro.so", "mednafen_psx_libretro", "/x/y/mednafen_psx_libretro.so"])
+    @pytest.mark.parametrize("given", ["demo_psx_libretro.so", "demo_psx_libretro", "/x/y/demo_psx_libretro.so"])
     def test_a_core_is_named_by_so_name_stem_or_path(self, given: str):
         machine = _machine()
         answer = firmware_for_core(machine, _context(machine), core_so=given)
@@ -753,7 +778,7 @@ class TestPerCoreAnswer:
             hashes=load_hashes(table),
         )
         core = firmware_for_core(
-            machine, context, core_so="mednafen_psx_libretro.so", verify=True
+            machine, context, core_so="demo_psx_libretro.so", verify=True
         ).cores[0]
         assert [r.file_name for r in core.unmet] == []
         assert core.requirements_met is True
@@ -767,7 +792,7 @@ class TestPerCoreAnswer:
         reference machine that costs 0.03 s for one core.
         """
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
-        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        core = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so").cores[0]
         required = next(r for r in _plain_requirements(core) if r.need == NEED_REQUIRED)
         assert required.found == "file"
         assert required.checked == "unchecked"
@@ -780,7 +805,7 @@ class TestPerCoreAnswer:
         # Nothing further can EVER be established about it, so withholding the
         # answer would withhold it forever.
         machine = _machine({f"{BIOS_DIR}/psxonpsp660.bin": _blob(b"unknown to the table")})
-        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        answer = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so")
         uncovered = next(r for r in answer.requirements if r.file_name == "psxonpsp660.bin")
         assert uncovered.identity is None
         assert uncovered.checked == CHECKED_UNKNOWN
@@ -788,7 +813,7 @@ class TestPerCoreAnswer:
 
     def test_a_missing_required_file_is_unmet(self):
         machine = _machine()
-        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        core = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so").cores[0]
         assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
         assert core.requirements_met is False
 
@@ -802,13 +827,13 @@ class TestCheckedAxis:
 
     def test_nothing_there_means_nothing_to_check(self):
         machine = _machine()
-        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so"))
+        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so"))
         assert requirement["scph5501.bin"].present is False
         assert requirement["scph5501.bin"].checked is None
 
     def test_a_known_identity_not_asked_about_is_unchecked(self):
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
-        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so"))
+        requirement = _by_name(firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so"))
         assert requirement["scph5501.bin"].checked == "unchecked"
 
     def test_an_unknown_identity_is_unknown_even_when_asked_about(self):
@@ -816,7 +841,7 @@ class TestCheckedAxis:
         # establish what it is, which is a different answer from "not checked".
         machine = _machine({f"{BIOS_DIR}/psxonpsp660.bin": _blob(b"whatever")})
         answer = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         )
         assert _by_name(answer)["psxonpsp660.bin"].checked == "unknown"
 
@@ -831,21 +856,21 @@ class TestCheckedAxis:
             cores=read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores,
             hashes=load_hashes(table),
         )
-        answer = firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so", verify=True)
+        answer = firmware_for_core(machine, context, core_so="demo_psx_libretro.so", verify=True)
         assert _by_name(answer)["scph5501.bin"].checked == "verified"
 
     def test_the_right_size_with_the_wrong_bytes_is_a_mismatch(self):
         # Size passes the free pre-filter, the digest does not.
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": 8}})
         answer = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         )
         assert _by_name(answer)["scph5501.bin"].checked == "mismatch"
 
     def test_a_wrong_size_settles_it_without_reading_the_file(self):
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 9}})
         answer = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         )
         assert _by_name(answer)["scph5501.bin"].checked == "mismatch"
 
@@ -855,7 +880,7 @@ class TestCheckedAxis:
         # declared name: that was known before any byte was read.
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
         answer = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         )
         requirement = _by_name(answer)["scph5501.bin"]
         assert requirement.checked == CHECKED_UNREAD
@@ -878,9 +903,9 @@ class TestCheckedAxis:
     def test_hash_checked_records_whether_verification_ran(self):
         machine = _machine()
         context = _context(machine)
-        assert firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so").hash_checked is False
+        assert firmware_for_core(machine, context, core_so="demo_psx_libretro.so").hash_checked is False
         assert (
-            firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so", verify=True).hash_checked
+            firmware_for_core(machine, context, core_so="demo_psx_libretro.so", verify=True).hash_checked
             is True
         )
 
@@ -1033,7 +1058,7 @@ class TestArchiveIdentitiesWithhold:
         # verdict a real dump earns.
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"md5": "00" * 16, "sha1": "00" * 20, "size": 8}})
         answer = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         )
         assert _by_name(answer)["scph5501.bin"].checked == CHECKED_MISMATCH
 
@@ -1193,7 +1218,7 @@ class TestWhatTheMachineWouldNotSay:
 
     def test_an_inaccessible_path_is_not_an_absent_file(self):
         machine = _machine(inaccessible=[f"{BIOS_DIR}/scph5501.bin"])
-        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        answer = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so")
         blocked = next(r for r in answer.requirements if r.file_name == "scph5501.bin")
         assert blocked.found == "inaccessible"
         assert blocked.present is None, "could not look is not 'not there'"
@@ -1204,7 +1229,7 @@ class TestWhatTheMachineWouldNotSay:
 
     def test_a_directory_where_a_file_belongs_says_so(self):
         machine = _machine(dirs=[f"{BIOS_DIR}/scph5501.bin"])
-        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        answer = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so")
         blocked = next(r for r in answer.requirements if r.file_name == "scph5501.bin")
         # Something is there and nothing about it was established. No row of the
         # curated table names this core and this path, so the declaration is a
@@ -2048,7 +2073,7 @@ class TestADeclarationStatesItsOwnShape:
         missing row costs exactly what atlas answered before the table.
         """
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
-        answer = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so")
+        answer = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so")
         assert {r.declared_kind for r in answer.requirements} == {DECLARED_FILE}
 
     def test_a_card_declared_requirement_is_a_file(self):
@@ -2575,7 +2600,7 @@ class TestSystemAssignmentIsVisible:
         # The fallback is sound when the core covers one system, however many
         # of its files lack a per-file rule.
         machine = _machine()
-        core = firmware_for_core(machine, _context(machine), core_so="mednafen_psx_libretro.so").cores[0]
+        core = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so").cores[0]
         assert self._assignment_codes(core) == []
         # The whole list is still accounted for, so nothing else can creep in
         # unnoticed: what this PlayStation core does carry is the statement
@@ -3341,6 +3366,452 @@ class TestACoreThatOpensANameAndThenSearches:
             content_table(moved)
 
 
+BEETLE_PSX_HW_SO = "mednafen_psx_hw_libretro.so"
+# The deployed Beetle PSX declaration: one image per console region marked
+# required, and the two region-free ones marked optional beside them.
+BEETLE_INFO = """
+display_name = "Sony - PlayStation (Beetle PSX)"
+systemname = "PlayStation"
+firmware_count = 5
+firmware0_desc = "scph5500.bin (PS1 JP BIOS)"
+firmware0_path = "scph5500.bin"
+firmware0_opt = "false"
+firmware1_desc = "scph5501.bin (PS1 US BIOS)"
+firmware1_path = "scph5501.bin"
+firmware1_opt = "false"
+firmware2_desc = "scph5502.bin (PS1 EU BIOS)"
+firmware2_path = "scph5502.bin"
+firmware2_opt = "false"
+firmware3_desc = "psxonpsp660.bin (PSP PS1 BIOS)"
+firmware3_path = "psxonpsp660.bin"
+firmware3_opt = "true"
+firmware4_desc = "ps1_rom.bin (PS3 PS1 BIOS)"
+firmware4_path = "ps1_rom.bin"
+firmware4_opt = "true"
+"""
+# The US image the packaged hash table pins for scph5501.bin, and bytes that
+# are not it. Neither decides anything on this route — the core opens what it
+# finds — which is exactly what the tests below hold.
+BEETLE_US_IMAGE: dict[str, str | int] = {
+    "md5": "490f666e1afb15b7362b406ed1cea246",
+    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+    "size": PSX_IMAGE_SIZE,
+}
+BEETLE_OTHER_BYTES: dict[str, str | int] = {
+    "md5": "ab" * 16,
+    "sha1": "cd" * 20,
+    "size": PSX_IMAGE_SIZE,
+}
+
+
+class TestACoreThatTriesSeveralSpellingsOfOneImage:
+    """Beetle PSX's route: one image per console region, under any of its names.
+
+    Its ``.info`` lists five images and marks three of them required, and no
+    launch needs three: ``firmware_is_present`` is called once with one region
+    and walks that region's own list of spellings, opening the first that
+    exists. An override option can select a region-free image ahead of them.
+    Both facts are packaged knowledge (``atlas/data/core_firmware.json``), and
+    these tests are about the resolver reading it.
+    """
+
+    OPTIONS = "/config/retroarch-core-options.cfg"
+    OPT_DIR = "/config/config"
+    KEY = "beetle_psx_override_bios"
+
+    def _machine(
+        self,
+        bios: Mapping[str, FixtureFileSpec] | None = None,
+        *,
+        options: str | None = None,
+        per_core: str | None = None,
+        core_so: str = BEETLE_PSX_SO,
+        dirs: list[str] | None = None,
+        **kwargs: object,
+    ) -> FixtureMachine:
+        files: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/{core_so[: -len('.so')]}.info": BEETLE_INFO,
+            f"{INFO_DIR}/{core_so}": {"status": "invalid-text"},
+            **(bios or {}),
+        }
+        if options is not None:
+            files[self.OPTIONS] = options
+        if per_core is not None:
+            files[f"{self.OPT_DIR}/Beetle PSX/Beetle PSX.opt"] = per_core
+        return FixtureMachine(
+            files,  # type: ignore[arg-type]
+            dirs=dirs or [BIOS_DIR],
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def _core(
+        self,
+        machine: FixtureMachine,
+        *,
+        verify: bool = False,
+        core_so: str = BEETLE_PSX_SO,
+        chain: CoreOptionsChain | None = None,
+        options_file: bool = True,
+    ) -> CoreFirmware:
+        if chain is None and options_file:
+            chain = CoreOptionsChain(
+                global_file=self.OPTIONS,
+                override_config_dir=self.OPT_DIR,
+                per_core_options=False,
+                core_dir=INFO_DIR,
+            )
+        context = _context(machine, core_options=chain)
+        return firmware_for_core(machine, context, core_so=core_so, verify=verify).cores[0]
+
+    def _group(self, core: CoreFirmware) -> FirmwareAlternatives:
+        (group,) = [r for r in core.requirements if isinstance(r, FirmwareAlternatives)]
+        return group
+
+    def _option(self, core: CoreFirmware, region: str) -> FirmwareRequirement:
+        (option,) = [o for o in self._group(core).options if region in (o.regions or ())]
+        return option
+
+    def _codes(self, core: CoreFirmware) -> list[str]:
+        return [caveat.code for caveat in core.caveats]
+
+    def _spellings(self, core: CoreFirmware) -> dict[str, list[str]]:
+        """Every list this launch consulted, keyed by the region or the option it belongs to."""
+        stated: dict[str, list[str]] = {}
+        for caveat in core.caveats:
+            if caveat.code != CAVEAT_FIRMWARE_NAME_SPELLINGS:
+                continue
+            names = caveat.data.get("region") or caveat.data["option"]
+            spellings = caveat.data["spellings"]
+            assert isinstance(names, str)
+            assert not isinstance(spellings, str)
+            stated[names] = list(spellings)
+        return stated
+
+    def _rows(self, core: CoreFirmware) -> dict[str, FirmwareRequirement]:
+        """The declared rows beside the group, by the name the .info spelled.
+
+        Not :func:`_plain_requirements`, which refuses a core carrying a group
+        — here the group is the point, and these are the entries standing
+        beside it.
+        """
+        return {
+            r.declared: r for r in core.requirements if isinstance(r, FirmwareRequirement)
+        }
+
+    def _declared(self, core: CoreFirmware) -> dict[str, str]:
+        return {name: row.need for name, row in self._rows(core).items()}
+
+    # --- the region lists ----------------------------------------------------
+
+    def test_the_first_spelling_that_is_there_is_what_that_region_opens(self):
+        core = self._core(self._machine({f"{BIOS_DIR}/scph5501.bin": BEETLE_US_IMAGE}))
+        option = self._option(core, "ntsc-u")
+        assert (option.file_name, option.path) == ("scph5501.bin", f"{BIOS_DIR}/scph5501.bin")
+        assert option.satisfied is True
+
+    def test_an_image_under_a_later_spelling_is_what_that_region_opens(self):
+        # The defect #474 names: the declaration spells scph5501.bin and the
+        # core tries nine names, so a file under the third of them boots it.
+        core = self._core(self._machine({f"{BIOS_DIR}/SCPH-5501.bin": BEETLE_US_IMAGE}))
+        option = self._option(core, "ntsc-u")
+        assert option.file_name == "SCPH-5501.bin"
+        assert option.declared == "scph5501.bin"
+        assert option.satisfied is True
+
+    def test_a_verified_answer_states_no_identity_for_the_name_it_opens(self):
+        # The core pins no image to a spelling: it compares one SHA1 after
+        # opening the file and boots a mismatch with a warning, so nothing
+        # covers the destination and presence is the whole verdict.
+        core = self._core(
+            self._machine({f"{BIOS_DIR}/SCPH-5503.bin": BEETLE_OTHER_BYTES}), verify=True
+        )
+        option = self._option(core, "ntsc-u")
+        assert option.identity is None
+        assert option.checked == CHECKED_UNKNOWN
+        assert option.satisfied is True
+
+    def test_the_declared_rows_keep_answering_from_their_own_identity(self):
+        # The route states no identity; the DECLARATION still does, and the
+        # rows beside the group are reproduced with their own reading.
+        machine = self._machine({f"{BIOS_DIR}/scph5501.bin": BEETLE_OTHER_BYTES})
+        rows = self._rows(self._core(machine, verify=True))
+        assert rows["scph5501.bin"].checked == CHECKED_MISMATCH
+        assert rows["scph5501.bin"].identity is not None
+        assert rows["scph5500.bin"].checked is None
+
+    def test_a_region_with_nothing_at_any_spelling_names_the_first_one(self):
+        # The name the core reports as missing and shows on screen.
+        core = self._core(self._machine())
+        assert [(o.file_name, o.regions) for o in self._group(core).options] == [
+            ("scph5500.bin", ("ntsc-j",)),
+            ("scph5501.bin", ("ntsc-u",)),
+            ("scph5502.bin", ("pal",)),
+        ]
+        assert core.requirements_met is False
+
+    def test_one_image_of_one_region_leaves_the_launch_undecided(self):
+        # A group with one option satisfied and two not has no single verdict:
+        # which region the disc is decides it, and that is not on disk.
+        core = self._core(self._machine({f"{BIOS_DIR}/scph5502.bin": BEETLE_US_IMAGE}))
+        assert self._group(core).satisfied is None
+        assert core.requirements_met is None
+
+    def test_the_spellings_of_every_list_consulted_reach_the_answer(self):
+        core = self._core(self._machine())
+        stated = self._spellings(core)
+        assert sorted(stated) == ["ntsc-j", "ntsc-u", "pal"]
+        assert [len(names) for names in stated.values()] == [3, 9, 6]
+        assert stated["ntsc-j"][:2] == ["scph5500.bin", "SCPH5500.bin"]
+
+    def test_the_expected_image_rides_the_names_it_belongs_to(self):
+        (caveat,) = [
+            c
+            for c in self._core(self._machine()).caveats
+            if c.code == CAVEAT_FIRMWARE_NAME_SPELLINGS and c.data.get("region") == "pal"
+        ]
+        assert caveat.data["sha1"] == "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0"
+        assert "option" not in caveat.data
+
+    def test_a_region_is_stated_as_undecided_because_the_disc_decides_it(self):
+        core = self._core(self._machine())
+        assert CAVEAT_CORE_MODE_UNESTABLISHED in self._codes(core)
+
+    # --- the declaration beside it -------------------------------------------
+
+    def test_a_declared_row_the_lists_name_asks_for_nothing_by_itself(self):
+        # Three required rows for a launch that needs one of them: the group is
+        # the requirement, so the rows it speaks for are optional.
+        assert self._declared(self._core(self._machine())) == {
+            "ps1_rom.bin": NEED_OPTIONAL,
+            "psxonpsp660.bin": NEED_OPTIONAL,
+            "scph5500.bin": NEED_OPTIONAL,
+            "scph5501.bin": NEED_OPTIONAL,
+            "scph5502.bin": NEED_OPTIONAL,
+        }
+
+    def test_a_refused_declaration_the_lists_name_asks_for_nothing_either(self):
+        # A declaration atlas will not follow still carries a need, and a
+        # required one withholds the verdict. The group answers for these three
+        # names as much as for the rows: each is one spelling out of the list,
+        # and the images are in place under the others.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE,
+                f"{BIOS_DIR}/SCPH5501.bin": BEETLE_US_IMAGE,
+                f"{BIOS_DIR}/SCPH5502.bin": BEETLE_US_IMAGE,
+            },
+            symlinks={
+                f"{BIOS_DIR}/scph5500.bin": "/elsewhere/scph5500.bin",
+                f"{BIOS_DIR}/scph5501.bin": "/elsewhere/scph5501.bin",
+                f"{BIOS_DIR}/scph5502.bin": "/elsewhere/scph5502.bin",
+            },
+        )
+        core = self._core(machine)
+        assert [row.need for row in core.refused] == [NEED_OPTIONAL] * 3
+        assert self._group(core).satisfied is True
+        assert core.requirements_met is True
+
+    def test_a_declared_row_no_list_names_keeps_its_need(self):
+        info = BEETLE_INFO.replace(
+            'firmware4_path = "ps1_rom.bin"', 'firmware4_path = "something_else.bin"'
+        ).replace('firmware4_opt = "true"', 'firmware4_opt = "false"')
+        machine = self._machine({f"{INFO_DIR}/{BEETLE_PSX_SO[: -len('.so')]}.info": info})
+        assert self._declared(self._core(machine))["something_else.bin"] == NEED_REQUIRED
+
+    def test_a_core_whose_route_states_no_names_moves_no_declaration(self):
+        # The rule is the route's, not the module's: SwanStation's entry states
+        # no spellings, so every row of its declaration stands as it read.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/swanstation_libretro.info": SWANSTATION_INFO,
+                f"{INFO_DIR}/swanstation_libretro.so": {"status": "invalid-text"},
+            },
+            dirs=[BIOS_DIR],
+        )
+        core = firmware_for_core(machine, _context(machine), core_so=SWANSTATION_SO).cores[0]
+        assert [row.need for row in self._rows(core).values()] == [NEED_OPTIONAL, NEED_OPTIONAL]
+
+    def test_the_two_door_route_speaks_for_no_declared_name(self):
+        # The seam the test above rests on, held directly: SwanStation's rows
+        # are optional already, so its answer cannot show a rule that widened.
+        # What it CAN show is the route handing back nothing to move.
+        machine = FixtureMachine(
+            {
+                f"{INFO_DIR}/swanstation_libretro.info": SWANSTATION_INFO,
+                f"{INFO_DIR}/swanstation_libretro.so": {"status": "invalid-text"},
+            },
+            dirs=[BIOS_DIR],
+        )
+        context = _context(machine)
+        declarations = next(
+            core for core in context.cores if core.core_so == SWANSTATION_SO
+        )
+        located = getattr(atlas.firmware, "_located_firmware")(
+            machine, context, declarations, verify=False
+        )
+        assert located.entry is not None
+        assert located.spoken_for == ()
+
+    # --- the override option -------------------------------------------------
+
+    def test_a_selected_override_image_that_is_there_serves_every_region(self):
+        core = self._core(
+            self._machine(
+                {f"{BIOS_DIR}/psxonpsp660.bin": BEETLE_US_IMAGE},
+                options=f'{self.KEY} = "psxonpsp"\n',
+            )
+        )
+        (option,) = self._group(core).options
+        assert option.regions == ("ntsc-j", "ntsc-u", "pal")
+        assert option.file_name == "psxonpsp660.bin"
+        assert core.requirements_met is True
+
+    def test_a_selected_override_ends_the_search_before_the_region_lists(self):
+        core = self._core(
+            self._machine(
+                {f"{BIOS_DIR}/PSXONPSP660.bin": BEETLE_US_IMAGE},
+                options=f'{self.KEY} = "psxonpsp"\n',
+            )
+        )
+        assert list(self._spellings(core)) == [self.KEY]
+        assert self._option(core, "pal").file_name == "PSXONPSP660.bin"
+
+    def test_a_selected_override_at_no_name_falls_back_to_the_region_lists(self):
+        core = self._core(self._machine(options=f'{self.KEY} = "ps1_rom"\n'))
+        assert CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING in self._codes(core)
+        assert sorted(self._spellings(core)) == [self.KEY, "ntsc-j", "ntsc-u", "pal"]
+        assert self._option(core, "ntsc-u").file_name == "scph5501.bin"
+
+    def test_the_shipped_value_looks_at_no_override_name_at_all(self):
+        core = self._core(
+            self._machine(
+                {f"{BIOS_DIR}/ps1_rom.bin": BEETLE_US_IMAGE}, options=f'{self.KEY} = "disabled"\n'
+            )
+        )
+        assert sorted(self._spellings(core)) == ["ntsc-j", "ntsc-u", "pal"]
+        assert core.requirements_met is False
+
+    def test_an_option_value_the_core_does_not_declare_selects_nothing_and_says_so(self):
+        core = self._core(
+            self._machine(
+                {f"{BIOS_DIR}/ps1_rom.bin": BEETLE_US_IMAGE}, options=f'{self.KEY} = "psx_on_ps4"\n'
+            )
+        )
+        assert CAVEAT_UNKNOWN_OPTION_VALUE in self._codes(core)
+        assert sorted(self._spellings(core)) == ["ntsc-j", "ntsc-u", "pal"]
+
+    def test_each_build_reads_its_own_option_key(self):
+        # One source tree, two cores, and the renderer is in the key's name.
+        machine = self._machine(
+            {f"{BIOS_DIR}/ps1_rom.bin": BEETLE_US_IMAGE},
+            options=f'{self.KEY} = "ps1_rom"\n',
+            core_so=BEETLE_PSX_HW_SO,
+        )
+        core = self._core(machine, core_so=BEETLE_PSX_HW_SO)
+        assert sorted(self._spellings(core)) == ["ntsc-j", "ntsc-u", "pal"]
+        hardware = self._core(
+            self._machine(
+                {f"{BIOS_DIR}/ps1_rom.bin": BEETLE_US_IMAGE},
+                options=f'beetle_psx_hw_override_bios = "ps1_rom"\n',
+                core_so=BEETLE_PSX_HW_SO,
+            ),
+            core_so=BEETLE_PSX_HW_SO,
+        )
+        assert list(self._spellings(hardware)) == ["beetle_psx_hw_override_bios"]
+
+    def test_the_per_core_options_file_governs_where_it_is_the_one_read(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/psxonpsp660.bin": BEETLE_US_IMAGE},
+            options=f'{self.KEY} = "disabled"\n',
+            per_core=f'{self.KEY} = "psxonpsp"\n',
+            cores={f"{INFO_DIR}/{BEETLE_PSX_SO}": {"library_name": "Beetle PSX"}},
+        )
+        chain = CoreOptionsChain(
+            global_file=self.OPTIONS,
+            override_config_dir=self.OPT_DIR,
+            per_core_options=True,
+            core_dir=INFO_DIR,
+        )
+        assert list(self._spellings(self._core(machine, chain=chain))) == [self.KEY]
+
+    def test_a_context_that_names_no_options_file_reads_the_core_s_own_default(self):
+        core = self._core(
+            self._machine({f"{BIOS_DIR}/ps1_rom.bin": BEETLE_US_IMAGE}), options_file=False
+        )
+        assert sorted(self._spellings(core)) == ["ntsc-j", "ntsc-u", "pal"]
+
+    def test_an_options_file_that_will_not_read_leaves_the_region_lists_standing(self):
+        machine = self._machine(
+            {self.OPTIONS: {"status": "unreadable"}, f"{BIOS_DIR}/scph5500.bin": BEETLE_US_IMAGE}
+        )
+        core = self._core(machine)
+        assert sorted(self._spellings(core)) == ["ntsc-j", "ntsc-u", "pal"]
+        assert self._option(core, "ntsc-j").satisfied is True
+
+    # --- what the machine puts in the way ------------------------------------
+
+    def test_a_directory_at_one_of_the_names_ends_the_walk_there(self):
+        # The core's test is an open for reading, which succeeds on a
+        # directory; it then reads nothing out of it. So the walk stops, the
+        # later spelling is not the answer, and nothing is confirmed.
+        machine = self._machine(
+            {f"{BIOS_DIR}/SCPH-5500.bin": BEETLE_US_IMAGE},
+            dirs=[BIOS_DIR, f"{BIOS_DIR}/SCPH5500.bin"],
+        )
+        option = self._option(self._core(machine), "ntsc-j")
+        assert (option.file_name, option.found) == ("SCPH5500.bin", KIND_DIRECTORY)
+        assert option.satisfied is None
+
+    def test_a_dead_symlink_is_not_one_of_these_names_being_there(self):
+        # The core's open fails on it, so the walk goes on — and the stat says
+        # the same thing, which is why nothing special is needed to mirror it.
+        machine = self._machine(
+            {f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE},
+            symlinks={f"{BIOS_DIR}/scph5500.bin": f"{BIOS_DIR}/gone.bin"},
+        )
+        assert self._option(self._core(machine), "ntsc-j").file_name == "SCPH5500.bin"
+
+    def test_a_name_that_climbs_out_of_the_firmware_root_is_refused_and_the_walk_goes_on(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE},
+            symlinks={f"{BIOS_DIR}/scph5500.bin": "/elsewhere/scph5500.bin"},
+        )
+        core = self._core(machine)
+        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT in self._codes(core)
+        assert self._option(core, "ntsc-j").file_name == "SCPH5500.bin"
+
+    def test_a_name_that_cannot_be_looked_at_does_not_end_the_walk(self):
+        # The core's open would fail on a path a stat cannot reach either, so
+        # its walk goes on — and the look that did not happen is stated.
+        machine = self._machine(
+            {f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE},
+            inaccessible=[f"{BIOS_DIR}/scph5500.bin"],
+        )
+        answer = firmware_for_core(machine, _context(machine), core_so=BEETLE_PSX_SO)
+        assert CAVEAT_FIRMWARE_PATH_INACCESSIBLE in [c.code for c in answer.caveats]
+        assert self._option(answer.cores[0], "ntsc-j").file_name == "SCPH5500.bin"
+
+    def test_a_list_whose_names_cannot_be_looked_at_states_the_first_of_them(self):
+        machine = self._machine(inaccessible=[f"{BIOS_DIR}/scph5500.bin"])
+        option = self._option(self._core(machine), "ntsc-j")
+        assert (option.file_name, option.found) == ("scph5500.bin", KIND_INACCESSIBLE)
+        assert option.satisfied is None
+
+    def test_every_name_this_core_would_try_is_claimed(self):
+        # An unclaimed file is one no emulator asks for, and a file under any
+        # of these names is one this core opens. Including a name the WALK
+        # never reached: the first spelling is there, so the core stops at it,
+        # and the file under a later one is still a file this core asks for.
+        machine = self._machine(
+            {
+                f"{BIOS_DIR}/scph5501.bin": BEETLE_US_IMAGE,
+                f"{BIOS_DIR}/SCPH-5503.bin": BEETLE_OTHER_BYTES,
+            }
+        )
+        answer = firmware_inventory(machine, _context(machine))
+        assert [file.path for file in answer.unclaimed] == []
+
+
 class TestTheSystemBehindTheCoreReachesTheAnswer:
     """A ``.info`` cannot say "this machine does not start without one of these".
 
@@ -3368,6 +3839,11 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     """
 
     def _psx_machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
+        # These tests ask about BEETLE_PSX_SO by name, so the fixture has to
+        # declare that .so: under the generic stem the rest of the file uses,
+        # the core they name would not be on this machine at all. The
+        # declaration it carries is this file's own two-row one, not the
+        # deployed five-row declaration.
         return _machine(
             {
                 f"{INFO_DIR}/{UNDERSTATER_SO[: -len('.so')]}.info": SWANSTATION_INFO,
@@ -3375,7 +3851,8 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
                 f"{INFO_DIR}/{REARMED_SO[: -len('.so')]}.info": REARMED_INFO,
                 f"{INFO_DIR}/{REARMED_SO}": {"status": "invalid-text"},
                 **(bios or {}),
-            }
+            },
+            core=BEETLE_PSX_SO,
         )
 
     def _core(self, machine: FixtureMachine, core_so: str, *, verify: bool = False) -> CoreFirmware:
@@ -3406,7 +3883,15 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         core = self._core(self._psx_machine(), BEETLE_PSX_SO)
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
         assert core.requirements_met is False
-        assert [r.file_name for r in core.unmet] == ["scph5501.bin"]
+        # What it names as unmet is this core's own route rather than its
+        # declaration (#474): every region's list reached nothing, so the whole
+        # group fails and each region's first spelling is named. The declared
+        # row those spellings speak for is optional beside them.
+        assert [r.file_name for r in core.unmet] == [
+            "scph5500.bin",
+            "scph5501.bin",
+            "scph5502.bin",
+        ]
 
     def test_nothing_read_off_the_machine_is_overwritten(self):
         # The declaration is the emulator's statement, reproduced. SwanStation
@@ -4414,7 +4899,7 @@ class TestIdentificationNamesTheFolderADeclarationOpens:
         # prefix, never "some directory declaration is installed".
         machine = self._lrps2(dirs=[LRPS2_FOLDER])
         identified = identify_firmware(machine, _context(machine), md5="aa" * 16)
-        assert [r.core_so for r in identified.requirements] == ["mednafen_psx_libretro.so"]
+        assert [r.core_so for r in identified.requirements] == ["demo_psx_libretro.so"]
 
     def test_content_under_the_prefix_is_still_empty_where_that_core_is_not_installed(self):
         # Nothing about the prefix is a claim about the machine: with no core
@@ -4544,11 +5029,11 @@ class TestNoDeclarationIsNeverSatisfied:
         machine = _machine()
         hole = Caveat("emulator-catalogue-sealed", "part of the catalogue is sealed away")
         catalogue = Catalogue(
-            (CatalogueEntry(label="Beetle PSX", kind="libretro", core_so="mednafen_psx_libretro.so"),),
+            (CatalogueEntry(label="Demo PSX", kind="libretro", core_so="demo_psx_libretro.so"),),
             hole=hole,
         )
         answer = firmware_for_system(machine, _context(machine), system="psx", catalogue=catalogue)
-        assert [c.label for c in answer.cores] == ["Beetle PSX"]
+        assert [c.label for c in answer.cores] == ["Demo PSX"]
         assert answer.cores[0].requirements
         codes = [c.code for c in answer.caveats]
         assert "emulator-catalogue-sealed" in codes
@@ -4784,10 +5269,10 @@ class TestNoDeclarationIsNeverSatisfied:
             'firmware1_path = "psxonpsp660.bin"\n'
             'firmware1_opt = "false"\n'
         )
-        machine = _machine({f"{INFO_DIR}/mednafen_psx_libretro.info": info})
+        machine = _machine({f"{INFO_DIR}/demo_psx_libretro.info": info})
         context = _context(machine)
         catalogue = Catalogue(
-            (CatalogueEntry(label="Beetle PSX", kind="libretro", core_so="mednafen_psx_libretro.so"),)
+            (CatalogueEntry(label="Demo PSX", kind="libretro", core_so="demo_psx_libretro.so"),)
         )
         through_catalogue = firmware_for_system(machine, context, system="psx", catalogue=catalogue)
         through_systemname = firmware_for_system(machine, context, system="psx")
@@ -4805,7 +5290,7 @@ class TestNoDeclarationIsNeverSatisfied:
             caveats=(Caveat(CAVEAT_SYSTEM_DIRECTORY_CLEARED, "system_directory is cleared in the configs"),),
         )
         for answer in (
-            firmware_for_core(machine, context, core_so="mednafen_psx_libretro.so"),
+            firmware_for_core(machine, context, core_so="demo_psx_libretro.so"),
             firmware_for_system(machine, context, system="psx"),
             firmware_inventory(machine, context),
         ):
@@ -4861,7 +5346,7 @@ class TestPartialReaderIsNotMisled:
         empty = _machine()
         unreadable = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
         for machine, answer in (
-            (installed, firmware_for_core(installed, _context(installed), core_so="mednafen_psx_libretro.so")),
+            (installed, firmware_for_core(installed, _context(installed), core_so="demo_psx_libretro.so")),
             (installed, firmware_inventory(installed, _context(installed), verify=True)),
             (gb, firmware_for_system(gb, _context(gb), system="gb", verify=True)),
             (empty, firmware_for_core(empty, _context(empty), core_so="mgba_libretro.so")),
@@ -4937,7 +5422,7 @@ class TestPartialReaderIsNotMisled:
         # there, and its bytes are a different release of the same pack.
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
         core = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         ).cores[0]
         wrong = next(r for r in _plain_requirements(core) if r.file_name == "scph5501.bin")
         assert wrong.found == "file"
@@ -4949,7 +5434,7 @@ class TestPartialReaderIsNotMisled:
     def test_a_required_file_that_could_not_be_judged_leaves_it_undecided(self):
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": {"size": 8}})
         core = firmware_for_core(
-            machine, _context(machine), core_so="mednafen_psx_libretro.so", verify=True
+            machine, _context(machine), core_so="demo_psx_libretro.so", verify=True
         ).cores[0]
         undecided = next(r for r in _plain_requirements(core) if r.file_name == "scph5501.bin")
         assert undecided.found == "file"
@@ -6182,7 +6667,7 @@ firmware0_desc = "outside"
 firmware0_path = "../outside.bin"
 firmware0_opt = "false"
 """
-    PSX_CORE = "mednafen_psx_libretro.so"
+    PSX_CORE = "demo_psx_libretro.so"
     DUCKSTATION = CatalogueEntry(
         label="DuckStation (Legacy) (Standalone)",
         kind="standalone",

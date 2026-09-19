@@ -150,6 +150,73 @@ class CoreFirmwareNameRoute:
 
 
 @dataclass(frozen=True, slots=True)
+class CoreFirmwareSpellings:
+    """One list of names a core tries in order, and the image it expects behind them.
+
+    The order is the core's own: it opens the first name that exists and never
+    looks at the rest, so the list is a sequence and not a set. ``sha1`` is the
+    one image the core compares what it opened against — one digest per list,
+    however many names the list holds, which is why the two live in one type.
+    A core that warns and boots on a mismatch (Beetle PSX) makes that digest a
+    statement about the image the names are FOR, never a condition on the
+    launch.
+    """
+
+    spellings: tuple[str, ...]
+    sha1: str
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareRegionList:
+    """The names one console region's launch tries, in the core's own order."""
+
+    region: str
+    names: CoreFirmwareSpellings
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareOverrideOption:
+    """The option whose list is tried ahead of the region lists, and what its values select.
+
+    ``values`` maps each value the option takes to the list that value selects,
+    and to ``None`` where it selects none — the shipped ``disabled``, under
+    which no name is tried ahead of the region's. ``default`` is what the core
+    declares, which is what RetroArch answers with wherever its options file
+    holds no entry for the key, so the pair reads the option on a machine that
+    has never mentioned it.
+
+    A hit here ends the search: the image is region-free, so the launch opens
+    it whichever region the disc turns out to be, and the region lists are
+    never consulted.
+    """
+
+    key: str
+    default: str
+    values: Mapping[str, CoreFirmwareSpellings | None]
+    citation: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", MappingProxyType(dict(self.values)))
+
+
+@dataclass(frozen=True, slots=True)
+class CoreFirmwareSpellingRoute:
+    """The one door of a core that opens names it was never configured with.
+
+    The other shape a ``name_route`` has (:class:`CoreFirmwareNameRoute`) is
+    about settings: one option pins the region and one option per region names
+    the image. This one is about spellings the core carries itself. Nothing
+    here is configurable but the override, so a launch's image is decided by
+    the disc's region and by what is on disk — and an answer under it speaks
+    for every region rather than for one.
+    """
+
+    override_option: CoreFirmwareOverrideOption
+    regions: tuple[CoreFirmwareRegionList, ...]
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class CoreFirmwareContentRoute:
     """The second door: the table the search recognises a directory's files by.
 
@@ -183,13 +250,22 @@ class CoreFirmwareCard:
     locating: CoreFirmwareLocatingFact
     build: CoreFirmwareBuild
     provenance: str
-    name_route: CoreFirmwareNameRoute | None = None
-    """The options a ``by-name-then-content`` core reads to compose the name it opens first.
+    name_route: CoreFirmwareNameRoute | CoreFirmwareSpellingRoute | None = None
+    """How the core decides the name it opens — one of two shapes, or nothing.
 
-    Present exactly on that word and refused on every other, because the two
-    routes are what the word names: a card that said ``by-name-then-content``
-    and carried no route would state a door with nothing behind it, and a
-    ``by-name`` card carrying one would state a search its core never runs.
+    :class:`CoreFirmwareNameRoute` is the first door of a
+    ``by-name-then-content`` core: options name the image and a search follows
+    where it will not load. :class:`CoreFirmwareSpellingRoute` is the whole
+    door of a ``by-name`` core that tries several spellings of one image, which
+    no option names and no ``.info`` can state.
+
+    Which shape a word admits is fixed, and the two are told apart by a key
+    rather than by guessing (:func:`_route_shape`): a
+    ``by-name-then-content`` card carrying the spelling shape would name
+    spellings its core never tries, and a ``by-name`` card carrying the
+    two-door shape would state a search its core has not got. A ``by-name``
+    card with no route at all is a core read to open the names it declares and
+    nothing else.
     """
     content_route: CoreFirmwareContentRoute | None = None
     """The table and the reading rule behind the search that follows a name that will not load."""
@@ -310,6 +386,139 @@ def _name_route(key: str, entry: Any) -> CoreFirmwareNameRoute:
     )
 
 
+_SHA1_DIGITS = 40
+
+
+def _spellings(where: str, entry: Any) -> CoreFirmwareSpellings:
+    """One list of names and the digest behind it, held to the shape a core's list has.
+
+    Each name is a **bare** one: the core joins it under the system directory
+    itself, so a value carrying a separator would state a second directory this
+    knowledge has no citation for. A repeat inside one list is refused because
+    the list is an order — the same name twice is a second look at a path the
+    first one settled.
+    """
+    if not isinstance(entry, dict) or set(entry) != {"spellings", "sha1"}:
+        raise ValueError(f"{where}: expected exactly spellings/sha1, got {entry!r}")
+    raw = entry["spellings"]
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"{where}.spellings must be a non-empty list, got {raw!r}")
+    names = [_expect_str(name, f"{where}.spellings[{index}]") for index, name in enumerate(raw)]
+    for name in names:
+        if "/" in name:
+            raise ValueError(
+                f"{where}.spellings states {name!r}, and a spelling is a bare file name — the "
+                "core composes the directory itself"
+            )
+    if len(set(names)) != len(names):
+        raise ValueError(f"{where}.spellings repeats a name: {names}")
+    sha1 = _expect_str(entry["sha1"], f"{where}.sha1")
+    if len(sha1) != _SHA1_DIGITS or any(digit not in "0123456789abcdef" for digit in sha1):
+        raise ValueError(
+            f"{where}.sha1 must be {_SHA1_DIGITS} lowercase hex digits, got {sha1!r} — one "
+            "spelling of one digest, so two readings of the same image compare equal"
+        )
+    return CoreFirmwareSpellings(spellings=tuple(names), sha1=sha1)
+
+
+def _override_option(where: str, entry: Any) -> CoreFirmwareOverrideOption:
+    where = f"{where}.override_option"
+    if not isinstance(entry, dict) or set(entry) != {"key", "default", "values", "citation"}:
+        raise ValueError(f"{where}: expected exactly key/default/values/citation, got {entry!r}")
+    raw = entry["values"]
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError(f"{where}.values must be a non-empty object, got {raw!r}")
+    values = {
+        value: None if names is None else _spellings(f"{where}.values[{value!r}]", names)
+        for value, names in raw.items()
+    }
+    default = _expect_str(entry["default"], f"{where}.default")
+    if default not in values:
+        raise ValueError(
+            f"{where}.default is {default!r}, which {where}.values does not map — the value the "
+            "core falls back to is the one reading that must never be missing"
+        )
+    if not any(names is not None for names in values.values()):
+        raise ValueError(
+            f"{where}.values maps no value to a list of names, so this option selects nothing and "
+            "the block states a door that never opens"
+        )
+    return CoreFirmwareOverrideOption(
+        key=_expect_str(entry["key"], f"{where}.key"),
+        default=default,
+        values=values,
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
+def _region_lists(where: str, entry: Any) -> tuple[CoreFirmwareRegionList, ...]:
+    where = f"{where}.regions"
+    if not isinstance(entry, list) or not entry:
+        raise ValueError(f"{where} must be a non-empty list, got {entry!r}")
+    lists = []
+    for index, row in enumerate(entry):
+        at = f"{where}[{index}]"
+        if not isinstance(row, dict) or set(row) != {"region", "names"}:
+            raise ValueError(f"{at}: expected exactly region/names, got {row!r}")
+        lists.append(
+            CoreFirmwareRegionList(
+                region=_expect_str(row["region"], f"{at}.region"),
+                names=_spellings(f"{at}.names", row["names"]),
+            )
+        )
+    regions = [row.region for row in lists]
+    if len(set(regions)) != len(regions):
+        raise ValueError(f"{where}: one region, one list — {sorted(regions)} repeats one")
+    return tuple(lists)
+
+
+def _spelling_route(key: str, entry: Any) -> CoreFirmwareSpellingRoute:
+    where = f"core firmware card {key!r}: name_route"
+    if not isinstance(entry, dict) or set(entry) != {"override_option", "regions", "citation"}:
+        raise ValueError(
+            f"{where}: expected exactly override_option/regions/citation, got {entry!r}"
+        )
+    option = _override_option(where, entry["override_option"])
+    regions = _region_lists(where, entry["regions"])
+    # One name, one list. A spelling two lists hold would be a file whose
+    # region — and whose expected image — depends on which list the reader
+    # walked first, and the whole point of packaging the lists is that the
+    # order is the core's rather than the reader's.
+    stated = [
+        name
+        for names in (*(row.names for row in regions), *(v for v in option.values.values() if v))
+        for name in names.spellings
+    ]
+    twice = sorted({name for name in stated if stated.count(name) > 1})
+    if twice:
+        raise ValueError(f"{where}: {twice} is stated by more than one list — one name, one list")
+    return CoreFirmwareSpellingRoute(
+        override_option=option,
+        regions=regions,
+        citation=_expect_str(entry["citation"], f"{where}.citation"),
+    )
+
+
+# The key each ``name_route`` shape is recognised by. A shape is never guessed
+# at from what parses: an entry states the key of the shape it means, and one
+# that states both or neither is refused rather than read as the other one.
+_TWO_DOOR_ROUTE_KEY = "region_option"
+_SPELLING_ROUTE_KEY = "override_option"
+
+
+def _route_shape(where: str, entry: Any) -> str:
+    """Which of the two ``name_route`` shapes an entry states, by the key that says so."""
+    if not isinstance(entry, dict):
+        raise ValueError(f"{where}: expected a name_route object, got {entry!r}")
+    shapes = sorted({key for key in (_TWO_DOOR_ROUTE_KEY, _SPELLING_ROUTE_KEY) if key in entry})
+    if len(shapes) != 1:
+        raise ValueError(
+            f"{where}: a name_route states exactly one of {_TWO_DOOR_ROUTE_KEY!r} and "
+            f"{_SPELLING_ROUTE_KEY!r}, and this one states {shapes}"
+        )
+    return shapes[0]
+
+
 def _content_route(key: str, entry: Any) -> CoreFirmwareContentRoute:
     where = f"core firmware card {key!r}: content_route"
     if not isinstance(entry, dict) or set(entry) != {"table", "hash_scope", "unknown", "citation"}:
@@ -338,29 +547,49 @@ def _content_route(key: str, entry: Any) -> CoreFirmwareContentRoute:
 
 def _routes(
     key: str, mode: FirmwareLocating, entry: dict[str, Any]
-) -> tuple[CoreFirmwareNameRoute | None, CoreFirmwareContentRoute | None]:
-    """The two route blocks, required and refused by the word the entry states.
+) -> tuple[CoreFirmwareNameRoute | CoreFirmwareSpellingRoute | None, CoreFirmwareContentRoute | None]:
+    """The route blocks, required and refused by the word the entry states.
 
     ``by-name-then-content`` is a claim about two doors, and an entry stating
     it without saying what either one reads would leave the resolver to guess
     the option keys and the table — which is the guess this file exists to
     replace. The converse refusal matters as much: a ``by-name`` entry
     carrying a search would describe a door its core has not got.
+
+    ``by-name`` takes a route too, and only the other shape of one
+    (:class:`CoreFirmwareSpellingRoute`): a core that tries several spellings
+    of one image opens names no ``.info`` lists and no option holds, so the
+    names are packaged here — while the search block stays refused, because
+    the word still says there is no second door. A ``by-name`` entry with no
+    route is the ordinary case and stays legal: the core opens the names it
+    was declared with.
     """
     where = f"core firmware card {key!r}"
     stated = {block for block in ("name_route", "content_route") if block in entry}
-    if mode == LOCATING_BY_NAME_THEN_CONTENT and stated != {"name_route", "content_route"}:
-        raise ValueError(
-            f"{where}: {mode!r} names two doors and this entry states {sorted(stated)} — both "
-            "name_route and content_route are what the word claims"
-        )
-    if mode != LOCATING_BY_NAME_THEN_CONTENT and stated:
-        raise ValueError(
-            f"{where}: {mode!r} opens one door and this entry states {sorted(stated)}"
-        )
-    if not stated:
+    if mode == LOCATING_BY_NAME_THEN_CONTENT:
+        if stated != {"name_route", "content_route"}:
+            raise ValueError(
+                f"{where}: {mode!r} names two doors and this entry states {sorted(stated)} — both "
+                "name_route and content_route are what the word claims"
+            )
+        shape = _route_shape(f"{where}: name_route", entry["name_route"])
+        if shape != _TWO_DOOR_ROUTE_KEY:
+            raise ValueError(
+                f"{where}: {mode!r} composes the name it opens out of its options, and this "
+                f"name_route states {shape!r} — the shape of a core that carries its own names"
+            )
+        return _name_route(key, entry["name_route"]), _content_route(key, entry["content_route"])
+    if "content_route" in entry:
+        raise ValueError(f"{where}: {mode!r} opens one door and this entry states a content_route")
+    if "name_route" not in entry:
         return None, None
-    return _name_route(key, entry["name_route"]), _content_route(key, entry["content_route"])
+    shape = _route_shape(f"{where}: name_route", entry["name_route"])
+    if shape != _SPELLING_ROUTE_KEY:
+        raise ValueError(
+            f"{where}: {mode!r} opens names of its own, and this name_route states {shape!r} — "
+            "the shape of a core whose options name the image and whose search follows"
+        )
+    return _spelling_route(key, entry["name_route"]), None
 
 
 def _card(key: str, entry: Any) -> CoreFirmwareCard:

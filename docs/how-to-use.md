@@ -2685,8 +2685,10 @@ not be read, is still the emulator the knowledge describes.
 established what. The requirement list beside that word is a **lower bound of unknown kind** — the declaration,
 faithfully reproduced, with no statement about whether those names are what the launch opens.
 
-What it changes for a client is the sentence beside a missing file. Under `by-name` the name is the whole answer: put a
-file of that name in that place and the emulator finds it, and no other file will do however right its bytes are. Under
+What it changes for a client is the sentence beside a missing file. Under `by-name` a name is the whole answer: put a
+file of one of the names that emulator opens in that place and it finds it, and no other file will do however right its
+bytes are. Which names those are is the route's to say rather than the declaration's — a core that tries several
+spellings of one image states them beside its requirement, and Beetle PSX below is that case. Under
 `by-name-then-content` a missing named file is not yet a failure, because the search by content may still answer it —
 which is also why a DuckStation requirement reads "found by the search, not named by any setting": its per-region keys
 ship empty, so the half that actually answers is the search, and the requirement names what the search found rather than
@@ -2737,6 +2739,43 @@ one. `core-mode-unestablished` names only the regions the group actually carries
 the rest — so where no option was reached at all there is no group and no statement about which of them a disc selects.
 The readings behind all of it, and behind both Beetle PSX builds, are in
 [how a core locates firmware](research/core-firmware-locating.md).
+
+**Beetle PSX is the other shape, and it is `by-name` with names of its own.** Its deployed `.info` declares five images
+and marks the three region ones _required_, and no launch needs three: the core asks for firmware once per load, for one
+console region, and walks that region's own list of spellings — three names for Japan, nine for North America, six for
+Europe — opening the first that exists. So a directory holding `SCPH-5501.bin` starts it while the declaration spells
+`scph5501.bin`, and there is no size gate and no listing anywhere in the route.
+
+The answer is a group again, one option per region, and each option names the spelling that is actually there — or,
+where none is, the first name of that region's list, which is the one the core reports as missing on screen. The names
+themselves ride the answer, one caveat per list the launch consults:
+
+```python
+answer = inst.firmware_for_system("psx", verify=True)
+core = next(c for c in answer.cores if c.core_so == "mednafen_psx_libretro.so")
+core.locating                                         # 'by-name'
+group = core.requirements[-1]
+[(o.regions, o.declared, o.file_name) for o in group.options]
+# [(('ntsc-u',), 'scph5501.bin', 'SCPH-5501.bin'), (('ntsc-j',), 'scph5500.bin', 'scph5500.bin'), ...]
+[c.data["spellings"] for c in core.caveats if c.code == "firmware-name-spellings"]
+# [('scph5500.bin', 'SCPH5500.bin', 'SCPH-5500.bin'), ...]
+```
+
+Three things about that group are worth reading twice. The **declared rows beside it are `optional`**, including the
+three the file marks required: the group is the statement of what a launch needs, and each of those rows is one spelling
+of one of its options — left `required` they would read as a conjunction and a machine holding the right image for its
+disc would answer `False`. The option carries **no `identity`**, and `satisfied` follows presence alone. This core pins
+no image to a name, and the SHA1 it compares after opening one only warns, so a file that differs is booted anyway. That
+expected digest is on the `firmware-name-spellings` caveat instead, where it says which image the names are _for_ rather
+than what the launch requires. And a **directory** standing at one of those names ends the walk there: the core's
+existence test is an open for reading, which succeeds on a directory, so it stops and then reads nothing — the option
+names that directory, present and unconfirmed, and the spellings behind it are never reached.
+
+One option can serve every region here too, and for a different reason than SwanStation's: `beetle_psx_override_bios`
+(`beetle_psx_hw_override_bios` on the hardware-renderer build) selects a region-free image, which the core tries ahead
+of every region list and which serves whichever region the disc turns out to be. Where the selected image is at neither
+of its two spellings, `firmware-configured-image-missing` says the configured value names no file and the per-region
+options answer instead — with the override's own spellings stated beside theirs, because the launch does try them first.
 
 The word itself moves no verdict: `requirements_met` answers to the requirement list, and a word about how a file is
 found can neither satisfy a requirement nor fail one. What the group in that list does is the ordinary thing an
