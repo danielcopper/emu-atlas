@@ -65,16 +65,19 @@ which says which `(code, key)` values the constructors refuse, and the docstring
 type's attribute they fill the meaning column, and under a value constant they say what one value of a closed vocabulary
 means — and it fails loudly rather than publishing a false claim: a field the annotations say cannot be `null` for which
 a vector produced `null` stops the generator, and so do two values under one `(code, key)`, a value the registry would
-refuse, a registry tuple two names claim, a serialized field whose attribute carries no docstring, a value two constants
-of one module explain differently, a vocabulary whose values are explained in part, because the value meanings are all
-or nothing per vocabulary, and a meaning written under a value constant that nothing reads, because the vocabulary it
-belongs to is declared by no module and its own module declares no list holding that value either. Regenerate after
-touching anything those six readings read, which is more than the obvious ones: an annotation, a `__post_init__` check,
-a module-level tuple, a `from .sibling import NAME` line — it decides whether a tuple composed by splatting that name
-resolves, and so whether its vocabulary is declared at all, and separately whether a `__post_init__` check written
-against that name names its tuple beside the field's annotation — an entry in `ENUMERATED_DATA`, `atlas.__all__`, a
-class docstring, an attribute docstring, a sentence under a value constant and a serializer all move the page. A test
-fails when the committed page is not what the generator produces.
+refuse, a registry tuple two names claim, a field whose annotation states a closed vocabulary that no tuple name is
+published beside, because the name a consumer branches on is the tuple and an annotation's `Literal[...]` spelling names
+an attribute rather than a list — a tuple a `__post_init__` checks satisfies it, and so does one `atlas.__all__` exports
+— a serialized field whose attribute carries no docstring, a value two constants of one module explain differently, a
+vocabulary whose values are explained in part, because the value meanings are all or nothing per vocabulary, and a
+meaning written under a value constant that nothing reads, because the vocabulary it belongs to is declared by no module
+and its own module declares no list holding that value either. Regenerate after touching anything those six readings
+read, which is more than the obvious ones: an annotation, a `__post_init__` check, a module-level tuple, a
+`from .sibling import NAME` line — it decides whether a tuple composed by splatting that name resolves, and so whether
+its vocabulary is declared at all, and separately whether a `__post_init__` check written against that name names its
+tuple beside the field's annotation — an entry in `ENUMERATED_DATA`, `atlas.__all__`, a class docstring, an attribute
+docstring, a sentence under a value constant and a serializer all move the page. A test fails when the committed page is
+not what the generator produces.
 
 ```bash
 python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md

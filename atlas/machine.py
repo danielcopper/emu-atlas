@@ -253,6 +253,10 @@ KIND_FILE: PathKind = "file"
 KIND_DIRECTORY: PathKind = "directory"
 KIND_MISSING: PathKind = "missing"
 KIND_INACCESSIBLE: PathKind = "inaccessible"
+# The whole vocabulary, in the alias's own order: the name the answer type
+# holding a field to it is checked against, and the list a consumer branches
+# on rather than spelling four strings of its own.
+PATH_KINDS = (KIND_FILE, KIND_DIRECTORY, KIND_MISSING, KIND_INACCESSIBLE)
 
 GLOB_COMPLETE: GlobStatus = "complete"
 GLOB_INCOMPLETE: GlobStatus = "incomplete"
