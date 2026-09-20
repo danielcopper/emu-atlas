@@ -2784,7 +2784,7 @@
     },
     {
       "name": "rpcs3-every-user-home-the-emulator-lists-is-a-tree-of-its-own",
-      "rationale": "Which user account the emulator runs as is a runtime selection — it starts at 00000001 (Emulator::m_usr, System.h:164) and the user manager changes it — and no file records the current one. A machine with two accounts therefore gets two groups rather than a guess at which is in force, the way the Dolphin card states every region tree. Both were found here, which is what lets the caveat say every home the emulator lists is stated; where none is found it says the opposite in so many words. The user home holds the localusername RPCS3 writes when it lays a user down (Emulator::Init, System.cpp:617 at build 7c6b3dcd), which is the file GetUserAccounts asks for before listing an account (user_account.cpp:57-60) — without it the directory is one the emulator passes over.",
+      "rationale": "Which user account the emulator runs as is a runtime selection — it starts at 00000001 (Emulator::m_usr, System.h:164) and the user manager changes it — and no file records the current one. A machine with two accounts therefore gets two groups rather than a guess at which is in force, the way the Dolphin card states every region tree. Both were found here and both were decided, which is what lets the caveat say every account the emulator would list is stated; where none is found it says the opposite in so many words, and where an entry was left undecided it claims only the accounts established here. The user home holds the localusername RPCS3 writes when it lays a user down (Emulator::Init, System.cpp:617 at build 7c6b3dcd), which is the file GetUserAccounts asks for before listing an account (user_account.cpp:57-60) — without it the directory is one the emulator passes over.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3837,7 +3837,7 @@
     },
     {
       "name": "rpcs3-a-localusername-that-cannot-be-looked-at-leaves-the-account-unestablished",
-      "rationale": "GetUserAccounts decides 12345678 by a stat of its localusername (fs::is_file, File.cpp:1064-1079 at build 7c6b3dcd), and that stat failed here — nothing about the file could be told, not even whether it is one. The emulator's own stat is not known to fail the same way, so the answer decides neither way: the directory is not a group and not stated as skipped, and unestablished names it so a client sees the survey stopped short there. 00000001, with a readable localusername, is listed as usual, and the reason stays the one about the unrecorded selection.",
+      "rationale": "GetUserAccounts decides 12345678 by a stat of its localusername (fs::is_file, File.cpp:1064-1079 at build 7c6b3dcd), and that stat failed here — nothing about the file could be told, not even whether it is one. The emulator's own stat is not known to fail the same way, so the answer decides neither way: the directory is not a group and not stated as skipped, and unestablished names it so a client sees the survey stopped short there. 00000001, with a readable localusername, is listed as usual, and the reason stays the one about the unrecorded selection — while the sentence beside it claims the accounts established here rather than every account the emulator would list, since 12345678 may be one of those too.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4051,7 +4051,7 @@
     },
     {
       "name": "rpcs3-a-user-home-whose-own-stat-fails-is-stated-not-dropped",
-      "rationale": "12345678 is a name the walk of dev_hdd0/home handed back and whose own stat failed: nothing about it was learned, not even whether it is a directory. It cannot be a group, and it cannot be the emulator's own skip either — the walk that would reach it stats every entry and drops the ones whose fstatat fails (unix_dir::read, File.cpp:2091-2105 at build 7c6b3dcd), so the emulator's verdict rests on a stat that is not known to fail where atlas's did. It is stated as unestablished beside the account that did list, and the listing stays complete: an inaccessible entry below a listable root is not an unlistable root.",
+      "rationale": "12345678 is a name the walk of dev_hdd0/home handed back and whose own stat failed: nothing about it was learned, not even whether it is a directory. It cannot be a group, and it cannot be the emulator's own skip either — the walk that would reach it stats every entry and drops the ones whose fstatat fails (unix_dir::read, File.cpp:2091-2105 at build 7c6b3dcd), so the emulator's verdict rests on a stat that is not known to fail where atlas's did. It is stated as unestablished beside the account that did list, and the listing stays complete: an inaccessible entry below a listable root is not an unlistable root. Because the entry may be a home GetUserAccounts keeps, the sentence claims the accounts established here rather than every account the emulator would list — and it names no early end, the walk reading on past an entry whose fstatat fails.",
       "input": {
         "home": "/home/deck",
         "files": {

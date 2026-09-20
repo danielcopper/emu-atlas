@@ -9046,7 +9046,11 @@ def _melonds_savefile_placement(
 # $(EmulatorDir)dev_hdd0/, vfs_config.h:13). Below it, one directory per title
 # id under home/<user>/savedata; the user is a runtime selection nothing on
 # disk records, so the homes RPCS3's own GetUserAccounts would list are
-# stated as trees, the ones it passes over as skipped.
+# stated as trees, the ones it passes over as skipped — and that those trees
+# are the emulator's whole list is a claim the answer makes only where every
+# entry found was decided. No clause says that list could have ended early,
+# because neither entry this reading leaves undecided can end it (see
+# ``_rpcs3_listing_claim``).
 # ---------------------------------------------------------------------------
 
 _RPCS3_EMULATOR_DIR_KEY = "$(EmulatorDir)"
@@ -9674,6 +9678,39 @@ def _rpcs3_users(
     )
 
 
+def _rpcs3_listing_claim(survey: _PerUserSurvey) -> str:
+    """How far the accounts stated here are the accounts RPCS3 itself would list.
+
+    Two claims over one reading, the survey's own state — and the one this
+    answer used to make in every state was the first. Where every entry found
+    was decided, the accounts stated are the emulator's own list and the
+    answer says so. Where one was not, they are not: an undecided entry may be
+    a directory ``GetUserAccounts`` keeps, so claiming every account it would
+    list is stated claims of that entry exactly what is unsettled.
+
+    Two fates reach ``_PerUserSurvey.unestablished`` here, and the claim is
+    the same for both because both leave the same thing open —
+    ``_RPCS3_USER_UNESTABLISHED``, a ``localusername`` whose stat failed, and
+    ``_RPCS3_USER_STAT_FAILED``, an entry whose own stat failed. What the
+    claim does not say is where the emulator's listing could stop, which is
+    the clause Vita3K's claim carries and this one does not: RPCS3 reaches
+    these entries through ``fs::dir``, a ``readdir`` walk that stats every one
+    and, where the ``fstatat`` fails, reads on into the next entry rather than
+    ending ("ignore and skip to next file", ``unix_dir::read``,
+    File.cpp:2091-2105 at build 7c6b3dcd). So an undecided entry costs the
+    emulator's list that entry at most, never whatever came after it.
+
+    The claim carries no aside: the sentence that takes it appends
+    ``survey.aside``, which names every undecided entry and why it is one.
+    """
+    if not survey.unestablished:
+        return "every user account RPCS3 itself would list is stated"
+    return (
+        "the user accounts stated are the ones established here rather than every "
+        "account RPCS3 itself would list"
+    )
+
+
 def _rpcs3_savefile_placement(
     machine: Machine,
     *,
@@ -9695,10 +9732,14 @@ def _rpcs3_savefile_placement(
 
     The user is where this answer stops short of certainty: it is a runtime
     selection (``m_usr``, System.h:164) and no file records which one is in
-    force, so every user account the emulator's own listing keeps — the
-    directories ``GetUserAccounts`` takes, read here the way it runs — becomes
-    a group and the caveat says the running emulator uses one of them; the
-    directories that listing passes over are stated as such, not as users.
+    force, so every user account the emulator's own listing keeps and this
+    reading decided — the directories ``GetUserAccounts`` takes, read here the
+    way it runs — becomes a group and the caveat says the running emulator
+    uses one of them; the directories that listing passes over are stated as
+    such, not as users. An entry this reading could not decide becomes no
+    group either, and the caveat's sentence then claims the accounts
+    established here rather than the emulator's whole list (see
+    :func:`_rpcs3_listing_claim`).
     """
     settings = _standalone_settings(card)
     config_dir = homes.emulator_root(settings.bases[0], card.token)
@@ -9762,6 +9803,7 @@ def _rpcs3_savefile_placement(
     found = _per_user_listing(machine, user_root)
     listing = found.listing
     survey = _rpcs3_users(machine, user_root, found.users, found.unstatable)
+    claim = _rpcs3_listing_claim(survey)
     if survey.unestablished:
         # At least one entry found here is one atlas could not decide —
         # the opening clause cannot assert "no account exists" when that is
@@ -9808,10 +9850,10 @@ def _rpcs3_savefile_placement(
             user_sentence=(
                 "which user account the emulator runs as is a runtime selection — it starts "
                 f"at {_RPCS3_FIRST_USER} (Emulator::m_usr, System.h:164) and the user manager "
-                "changes it — and no file records the current one, so every user account "
-                "RPCS3 itself would list is stated: a directory below home named by eight "
-                "bytes opening with a non-zero number and holding a localusername file "
-                f"({_RPCS3_SELECTION_CITATION}), read here the same way{survey.aside}"
+                f"changes it — and no file records the current one, so {claim}: a directory "
+                "below home named by eight bytes opening with a non-zero number and holding "
+                f"a localusername file ({_RPCS3_SELECTION_CITATION}), read here the same "
+                f"way{survey.aside}"
             ),
             no_user_sentence=no_user_sentence,
             user_reason=REASON_ACTIVE_USER_UNRECORDED,
