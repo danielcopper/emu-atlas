@@ -111,6 +111,7 @@ from atlas.firmware import (
     FirmwareIdentity,
     FirmwareRequirement,
     InventoryCatalogue,
+    RefusedDeclaration,
     RELATION_DECLARES,
     RELATION_RECOGNISES,
     SOURCE_OVERRIDE,
@@ -1190,6 +1191,23 @@ class TestRequirementInvariants:
                 checked=None,
             )
 
+    def test_found_is_only_a_path_kind(self):
+        with pytest.raises(ValueError, match="found must be one of"):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", system_source="systemname", need="required",
+                file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
+                found="gone", checked=None,  # type: ignore[arg-type]
+            )
+
+    def test_system_source_is_only_a_way_the_system_was_arrived_at(self):
+        with pytest.raises(ValueError, match="system_source must be one of"):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", need="required",
+                system_source="guessed", file_name="a.bin",  # type: ignore[arg-type]
+                path="/bios/a.bin", declared="a.bin", description="", identity=None, found="missing",
+                checked=None,
+            )
+
     def test_the_distribution_states_the_name_it_writes_for_itself(self):
         # Derived from the identifier rather than stored beside it, so the two
         # cannot disagree — 'retrodeck' is the key, 'RetroDECK' the word to show.
@@ -1211,6 +1229,24 @@ class TestRequirementInvariants:
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="missing", checked=None, supplied_by=supplied,
             )
+
+
+class TestRefusedDeclarationInvariants:
+    """A refused declaration states the same need a followed one does."""
+
+    def test_need_is_only_required_or_optional(self):
+        with pytest.raises(ValueError, match="need must be one of"):
+            RefusedDeclaration(
+                declared="../a.bin",
+                need="undeclared",  # type: ignore[arg-type]
+                reason=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
+            )
+
+    def test_a_declared_need_is_kept(self):
+        refused = RefusedDeclaration(
+            declared="../a.bin", need="optional", reason=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+        )
+        assert refused.need == "optional"
 
 
 class TestWhatTheMachineWouldNotSay:

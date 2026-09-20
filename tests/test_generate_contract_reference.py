@@ -1017,6 +1017,106 @@ class TestAFieldRowNamesTheTupleAConsumerImports:
         assert "ambiguous_exported_tuple_names(exported_tuple_names())" in build
 
 
+class TestAClosedVocabularyIsNeverPublishedWithoutItsTuple:
+    """A `Literal` row names a tuple, or the page is not written.
+
+    `Literal[Owner.field]` is this page's spelling for an annotation and
+    nothing a consumer imports, so a row carrying that name alone publishes a
+    closed vocabulary no client can reach. The state arrives silently: the
+    tuple's name comes from the `not in` comparisons of a `__post_init__`, and
+    a check lifted into a method of the class takes the name off the page with
+    every test still passing — which is how `CoreFirmware` nearly shipped
+    without `CORE_DECLARATION_STATES`.
+    """
+
+    @staticmethod
+    def _walk(attributes: reference.Annotations) -> reference.ShapeWalk:
+        walk = reference.ShapeWalk((FirmwareRequirement,), attributes, None)
+        walk.add({"found": "file"})
+        return walk
+
+    def test_a_vocabulary_check_inside_a_method_states_nothing(self) -> None:
+        # The two spellings of one rule, read the way the generator reads
+        # them: in `__post_init__` the tuple has a name, and one hop into a
+        # METHOD is not a hop the scan makes — only a module-level function
+        # the attribute is handed to.
+        in_post_init = (
+            'FOUND_KINDS = ("file", "directory")\n'
+            "@dataclass\n"
+            "class Requirement:\n"
+            "    def __post_init__(self) -> None:\n"
+            "        if self.found not in FOUND_KINDS:\n"
+            "            raise ValueError(self.found)\n"
+        )
+        in_a_method = (
+            'FOUND_KINDS = ("file", "directory")\n'
+            "@dataclass\n"
+            "class Requirement:\n"
+            "    def __post_init__(self) -> None:\n"
+            "        self._refuse_unknown_found()\n"
+            "    def _refuse_unknown_found(self) -> None:\n"
+            "        if self.found not in FOUND_KINDS:\n"
+            "            raise ValueError(self.found)\n"
+        )
+        stated = reference.module_post_init_checks(ast.parse(in_post_init))
+        assert stated["Requirement"]["found"].name == "FOUND_KINDS"
+        assert reference.module_post_init_checks(ast.parse(in_a_method)) == {}
+
+    def test_a_field_naming_its_annotation_alone_stops_the_generation(
+        self, attributes: reference.Annotations
+    ) -> None:
+        # The state the test above produces, carried to the row: a reference
+        # stripped of everything but its `Literal`, which is what the walk
+        # builds once a check has left `__post_init__`.
+        walk = self._walk(attributes)
+        stated = walk.fields["found"]
+        assert stated is not None
+        annotation_only = tuple(
+            vocabulary
+            for vocabulary in stated.vocabularies
+            if vocabulary.name.startswith("Literal[")
+        )
+        assert len(annotation_only) == 1, stated.vocabularies
+        walk.fields["found"] = dataclasses.replace(stated, vocabularies=annotation_only)
+        failures = reference.vocabularies_without_a_tuple({"firmware_contract": walk})
+        assert len(failures) == 1
+        assert "`FirmwareRequirement.found`" in failures[0]
+        assert "'inaccessible'" in failures[0]
+
+    def test_the_same_field_with_its_tuple_passes(
+        self, attributes: reference.Annotations
+    ) -> None:
+        walk = self._walk(attributes)
+        stated = walk.fields["found"]
+        assert stated is not None
+        assert reference.vocabulary_names_of(stated) == [
+            "Literal[FirmwareRequirement.found]",
+            "PATH_KINDS",
+        ]
+        assert reference.vocabularies_without_a_tuple({"firmware_contract": walk}) == []
+
+    def test_the_package_publishes_no_such_field_today(self, built: reference.Reference) -> None:
+        assert reference.vocabularies_without_a_tuple(built.walks) == []
+
+    def test_build_carries_the_gate_among_its_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate is only a gate if `build()` carries it. Dropping one
+        # attribute from the `__post_init__` reading is precisely what moving
+        # its check into a method does, so this is the issue's scenario run
+        # through the real page.
+        real = reference.post_init_vocabularies
+
+        def one_short() -> dict[str, dict[str, reference.Vocabulary]]:
+            found = {owner: dict(checks) for owner, checks in real().items()}
+            assert found["FirmwareRequirement"].pop("found", None), "the probe found nothing to drop"
+            return found
+
+        monkeypatch.setattr(reference, "post_init_vocabularies", one_short)
+        _, failures = reference.build()
+        assert any("`FirmwareRequirement.found`" in failure for failure in failures), failures
+
+
 class TestATupleComposedFromAnotherStatesItsValues:
     """``(*REFUSAL_CODES, REASON_KEY_UNREAD)`` is a vocabulary, not an expression.
 

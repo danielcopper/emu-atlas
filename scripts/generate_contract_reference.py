@@ -419,6 +419,11 @@ FIELD = "field"
 PROPERTY = "property"
 METHOD = "method"
 SEQUENCE_ORIGINS = (tuple, list, set, frozenset, collections.abc.Sequence, collections.abc.Iterable)
+# How this page spells an annotation's own value list, both where it writes one
+# and where it tells one apart from a tuple's name
+# (:func:`_is_annotation_name`). One constant, so the reading cannot fall out
+# of step with the writing and leave every name looking like a tuple's.
+ANNOTATION_PREFIX = "Literal["
 
 
 @dataclasses.dataclass(frozen=True)
@@ -465,7 +470,7 @@ def render_annotation(annotation: object) -> str:
     if origin is types.UnionType or origin is typing.Union:
         return " | ".join(render_annotation(a) for a in args)
     if origin is typing.Literal:
-        return "Literal[" + ", ".join(repr(a) for a in args) + "]"
+        return ANNOTATION_PREFIX + ", ".join(repr(a) for a in args) + "]"
     name = getattr(origin, "__name__", str(origin))
     inner = ", ".join("..." if a is Ellipsis else render_annotation(a) for a in args)
     return f"{name}[{inner}]" if inner else name
@@ -1025,7 +1030,7 @@ class PublishedVocabulary:
         attribute rather than the list. The names arrive sorted, so the choice
         is the same on every run.
         """
-        return next((name for name in self.names if not name.startswith("Literal[")), self.names[0])
+        return next((name for name in self.names if not _is_annotation_name(name)), self.names[0])
 
     @property
     def unexplained(self) -> tuple[str, ...]:
@@ -1266,7 +1271,7 @@ class Annotations:
         found: list[Vocabulary] = []
         values = literal_values(annotation)
         if values:
-            found.append(Vocabulary(f"Literal[{cls.__name__}.{name}]", values))
+            found.append(Vocabulary(f"{ANNOTATION_PREFIX}{cls.__name__}.{name}]", values))
         checked = self._post_init.get(cls.__name__, {}).get(name)
         if checked is not None:
             found.append(checked)
@@ -1290,7 +1295,7 @@ class Annotations:
         if element is None:
             return reference
         values = literal_values(element)
-        named = f"Literal[{reference.owner}.{reference.name}]"
+        named = f"{ANNOTATION_PREFIX}{reference.owner}.{reference.name}]"
         return FieldRef(
             owner=reference.owner,
             name=reference.name,
@@ -1894,12 +1899,26 @@ def vocabulary_cell(reference: FieldRef | None) -> str:
     """
     if reference is None:
         return ""
+    return backticked(vocabulary_names_of(reference))
+
+
+def vocabulary_names_of(reference: FieldRef) -> list[str]:
+    """The names :func:`vocabulary_cell` prints for one field, before the backticks.
+
+    The cell and the gate below it read one list rather than two, so a name
+    the page publishes and a name the gate counts can never drift apart.
+    """
     exported = exported_tuple_names()
     found: list[str] = []
     for vocabulary in reference.vocabularies:
         found.append(vocabulary.name)
         found.extend(exported.get(vocabulary.values, []))
-    return backticked(sorted(dict.fromkeys(found)))
+    return sorted(dict.fromkeys(found))
+
+
+def _is_annotation_name(name: str) -> bool:
+    """Is *name* the annotation's own reading rather than the tuple a consumer branches on?"""
+    return name.startswith(ANNOTATION_PREFIX)
 
 
 @functools.cache
@@ -1941,6 +1960,58 @@ def ambiguous_exported_tuple_names(exported: Mapping[tuple[str, ...], Sequence[s
         "say one"
         for values, names in sorted(exported.items())
         if len(names) > 1
+    ]
+
+
+def vocabularies_without_a_tuple(walks: Mapping[str, ShapeWalk]) -> list[str]:
+    """Serialized fields whose closed vocabulary is published under no tuple name.
+
+    The tenth gate, and the one that holds the ninth's shape from the other
+    side: a field whose annotation states a ``Literal`` has a closed
+    vocabulary, and the name a consumer branches on is the tuple —
+    ``Literal[Owner.field]`` is this page's own spelling for an annotation and
+    names an attribute rather than a list. So a row that names the annotation
+    alone publishes a vocabulary under no name of the list itself, and that is
+    stopped here.
+
+    The state is reachable silently, which is why the gate exists rather than a
+    sentence asking for care. A tuple name reaches a row through the ``not in``
+    comparisons of the owner's ``__post_init__`` (or a module-level function it
+    hands the attribute to) and through ``atlas.__all__``, and neither is
+    something a refactor sees: lifting the three vocabulary checks of
+    ``CoreFirmware`` in :mod:`atlas.firmware` into a helper *method* to quiet a
+    complexity gate left every test passing and took
+    ``CORE_DECLARATION_STATES`` off the page — the one of those three no export
+    names, the other two reaching their rows through ``atlas.__all__`` all the
+    same. The regenerated page still equalled a fresh generation, so the one
+    gate that compared them had nothing to say.
+
+    One shape can satisfy this gate only through an export: a ``Literal``
+    element of a sequence field (``tuple[PathKind, ...]``), because
+    :meth:`Annotations.element_of` builds the member's reference from the
+    annotation alone and the vocabulary the container's ``__post_init__``
+    checks does not descend to it. Nothing serialized is in that state today —
+    no rendered row that is an array's element states a ``Literal`` at all.
+    """
+    found: dict[tuple[str, str], tuple[str, ...]] = {}
+    for walk in walks.values():
+        for path in sorted(walk.paths):
+            reference = walk.fields.get(path)
+            if reference is None:
+                continue
+            stated = [
+                vocabulary
+                for vocabulary in reference.vocabularies
+                if _is_annotation_name(vocabulary.name)
+            ]
+            named = [name for name in vocabulary_names_of(reference) if not _is_annotation_name(name)]
+            if stated and not named:
+                found[(reference.owner, reference.name)] = stated[0].values
+    return [
+        f"`{owner}.{name}` is annotated as the closed vocabulary {list(values)} and its rows name "
+        "no tuple — no check in `__post_init__` names one, and no exported tuple holds these "
+        "values, so the list a consumer branches on is on the page under no name of its own"
+        for (owner, name), values in sorted(found.items())
     ]
 
 
@@ -2338,7 +2409,10 @@ def how_to_read_a_field_table(reference: Reference) -> list[str]:
             "**Answers** is how many answers of this shape carried the path at all, over how many take the shape. "
             "**Closed vocabulary** names every `Literal` and the tuple a `__post_init__` checks the attribute "
             "against, whether it compares there or hands the attribute to a helper beside it; an empty cell means no "
-            "vocabulary is declared for it."
+            "vocabulary is declared for it. A cell that names a `Literal` always names a tuple beside it: the "
+            "`Literal[...]` name is this page's spelling for the annotation and nothing a client imports, so a field "
+            "stating a closed vocabulary under that name alone stops this generation rather than being published "
+            "with no list to branch on."
         ),
         *paragraph(
             "**Meaning** is the summary of the docstring written on the attribute the path serializes — its first "
@@ -2778,6 +2852,7 @@ def build() -> tuple[list[str], list[str]]:
         *registry_disagreements(reference.witnessed, reference.enumerations),
         *ambiguous_vocabulary_names(reference.enumerations),
         *ambiguous_exported_tuple_names(exported_tuple_names()),
+        *vocabularies_without_a_tuple(reference.walks),
         *unstated_meanings(reference.walks, reference.sentences),
         *half_explained_vocabularies(reference.published),
         *ambiguous_value_meanings(reference.published),
@@ -2789,17 +2864,19 @@ def build() -> tuple[list[str], list[str]]:
 def main() -> None:
     lines, failures = build()
     if failures:
-        # Nine gates print here. The null cross-check is annotations against
+        # Ten gates print here. The null cross-check is annotations against
         # vectors, the shape and registry checks are the corpus against itself
         # and against the registry, the two naming checks are the package
         # against itself — one for the tuples the registry cites, one for the
-        # tuples a field row cites — the meaning gate is the walk against the
-        # docstrings, and the last three read one pair between them — a
-        # published vocabulary against the sentences under its own value
-        # constants — because they catch the three ways that pair fails: a list
-        # explained in part, a value two constants explain differently, and a
-        # sentence written for a list no module declares, which no reading here
-        # would ever collect.
+        # tuples a field row cites — the tuple gate reads those same rows the
+        # other way round, refusing a field whose annotation states a closed
+        # vocabulary no tuple name is published beside, the meaning gate is the
+        # walk against the docstrings, and the last three read one pair between
+        # them — a published vocabulary against the sentences under its own
+        # value constants — because they catch the three ways that pair fails:
+        # a list explained in part, a value two constants explain differently,
+        # and a sentence written for a list no module declares, which no
+        # reading here would ever collect.
         print("contract reference: the readings disagree —", file=sys.stderr)
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)

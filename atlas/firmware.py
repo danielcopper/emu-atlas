@@ -117,6 +117,7 @@ from .machine import (
     KIND_FILE,
     KIND_INACCESSIBLE,
     KIND_MISSING,
+    PATH_KINDS,
     PS2_BIOS_NOT_A_BIOS,
     PS2_BIOS_OK,
     READ_MISSING,
@@ -1505,6 +1506,8 @@ SOURCE_NONE: SystemSource = "none"
 # save cards do, so there is no per-file derivation to weigh.
 SOURCE_CARD: SystemSource = "card"
 
+SYSTEM_SOURCES = ("override", "systemname", "slug", "none", "card")
+
 
 def system_decision(file_name: str, systemname: str) -> tuple[str, SystemSource]:
     """The system a declared file belongs to, *and how it was arrived at*.
@@ -2111,8 +2114,13 @@ class FirmwareRequirement:
             raise ValueError(
                 f"FirmwareRequirement: regions must be None or name at least one region, got {self.regions!r}"
             )
-        if self.found not in (KIND_FILE, KIND_DIRECTORY, KIND_MISSING, KIND_INACCESSIBLE):
-            raise ValueError(f"FirmwareRequirement: found must be a path kind, got {self.found!r}")
+        if self.found not in PATH_KINDS:
+            raise ValueError(f"FirmwareRequirement: found must be one of {PATH_KINDS}, got {self.found!r}")
+        if self.system_source not in SYSTEM_SOURCES:
+            raise ValueError(
+                f"FirmwareRequirement: system_source must be one of {SYSTEM_SOURCES}, "
+                f"got {self.system_source!r}"
+            )
         if self.contents_satisfied is not None and (
             self.found != KIND_DIRECTORY or self.declared_kind != DECLARED_DIRECTORY
         ):
@@ -2310,6 +2318,12 @@ class RefusedDeclaration:
     """The caveat code that says why the declaration was refused — leaving the firmware
     root and being unresolvable are different facts about the machine.
     """
+
+    def __post_init__(self) -> None:
+        if self.need not in FIRMWARE_NEEDS:
+            raise ValueError(
+                f"RefusedDeclaration: need must be one of {FIRMWARE_NEEDS}, got {self.need!r}"
+            )
 
 
 CoreDeclarationState = Literal["read", "unreadable", "absent", "unsupported", "packaged"]
@@ -2669,22 +2683,17 @@ class CoreFirmware:
     def _check_no_plain_entry_is_region_scoped(self) -> None:
         """A region-scoped requirement stands only inside an alternatives group.
 
-        Out of ``__post_init__`` rather than inline for two reasons, and the
-        second one is load-bearing. It is the one rule there that walks the
-        requirement list rather than reading a field, so it is a different kind
-        of check; and a rule that IS a field's closed vocabulary could not be
-        moved out the way this one is, because
-        ``scripts/generate_contract_reference.py`` learns which tuple a field's
-        values come from by reading that method's ``not in`` comparisons.
-
-        What it follows from there is narrow, and **arity is not what decides
-        it**: the helper table is built from the module's own top-level
-        functions, so a check moved into a *method* is not read at all, whether
-        or not the method is handed the attribute — and this one is a method.
-        Only a module-level function the ``__post_init__`` passes the attribute
-        to as an argument is followed, one hop. So a vocabulary check lifted
-        out of ``__post_init__`` into a method drops its tuple's name from the
-        published page while every gate stays green.
+        Out of ``__post_init__`` rather than inline because it is the one rule
+        there that walks the requirement list rather than reading a field, so
+        it is a different kind of check. A rule that IS a field's closed
+        vocabulary under a ``Literal`` annotation could not move into a method
+        the same way: a gate in ``scripts/generate_contract_reference.py``
+        refuses to publish a page where such a field's row lost its tuple's
+        name, and a method is what loses it — a module-level function the
+        ``__post_init__`` hands the attribute to is followed one hop and keeps
+        it. A field whose vocabulary is the tuple alone, with no ``Literal``
+        over it (:class:`atlas.placement.FileGroup`'s ``granularity`` and
+        ``role``), is outside what that gate reads.
         """
         for entry in self.requirements:
             if isinstance(entry, FirmwareRequirement) and entry.regions is not None:
