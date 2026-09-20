@@ -3220,7 +3220,12 @@ class FirmwareContext:
     standalone_sandbox: SandboxTranslation | None = None
     # Whether those bases are a flatpak's pinned XDG variables. It settles the
     # root of an emulator that picks one by whether XDG_CONFIG_HOME is set —
-    # inside a sandbox it always is, so there is nothing left to probe.
+    # inside a sandbox it always is, so there is nothing left to probe. Like
+    # the four above it, this is what governs an entry that establishes no
+    # pinning of its own (#492): an entry states one wherever its launch
+    # establishes homes, so what reads this field is the fallback —
+    # RetroDECK's entries, whose one app is the arrangement's own, and any
+    # context a caller assembles beside entries that state none.
     standalone_xdg_pinned: bool = False
     # Which distribution this arrangement is, in the copy list's vocabulary
     # (:mod:`atlas.distribution_supplied`), and how that distribution's own
@@ -3269,6 +3274,15 @@ class CatalogueEntry:
     trees its ``/var/config`` spelling lands in are the app whose homes the
     entry states, never a second reading of the same launch (#350).
 
+    ``standalone_xdg_pinned`` is the fifth fact off those same homes and the
+    last to join them (#492): whether this launch's bases are a flatpak's
+    pinned XDG variables, which settles the root of an emulator that picks one
+    by whether ``XDG_CONFIG_HOME`` is set. It is ``bool | None`` rather than
+    ``bool`` because the other four fall back on ``None`` and a pinning has to
+    fall back the same way — ``False`` here is the entry stating that its
+    launch is not pinned, which on an arrangement whose own bases are pinned
+    is the opposite answer from stating nothing.
+
     ``foreign_core_file`` is the core file a ``retroarch-foreign-core`` row
     hands RetroArch, carried across because this seam has no command to read it
     out of and the caveat that states such a row names the file. Non-``None``
@@ -3287,6 +3301,7 @@ class CatalogueEntry:
     standalone_config_home: str | None = None
     standalone_flatpak: str | None = None
     standalone_sandbox: SandboxTranslation | None = None
+    standalone_xdg_pinned: bool | None = None
     foreign_core_file: str | None = None
 
     def __post_init__(self) -> None:
@@ -8952,13 +8967,27 @@ def _standalone_entry_core(
     configured paths follows them, and takes the same fallback: it is built
     from the very homes the entry states, so an ``/app`` value resolves
     against the deploy that runs and a ``/var/config`` one against the trees
-    the answer is otherwise about (#350).
+    the answer is otherwise about (#350). Whether those bases are pinned
+    follows for the same reason (#492), and the two halves of that reason sit
+    on different emulators: EmuDeck's melonDS is where one token is two
+    launches — an AppImage off the host's tree, and the installed flatpak
+    whose bases are pinned — while DuckStation is where such a disagreement
+    would be read, because it is the one carded emulator that picks its root
+    by whether ``XDG_CONFIG_HOME`` is set. Neither half alone makes the case,
+    so the launch in hand is what the flag is asked about rather than the
+    arrangement around it. Its fallback is written out because ``False`` is a
+    statement here and ``or`` would read it as the absence of one.
     """
     card = lookup_standalone_firmware_card(entry.standalone_token)
     data_home = entry.standalone_data_home or context.standalone_data_home
     config_home = entry.standalone_config_home or context.standalone_config_home
     flatpak = entry.standalone_flatpak or context.standalone_flatpak
     sandbox = entry.standalone_sandbox or context.standalone_sandbox
+    xdg_pinned = (
+        context.standalone_xdg_pinned
+        if entry.standalone_xdg_pinned is None
+        else entry.standalone_xdg_pinned
+    )
     if (
         card is not None
         and system in card.systems
@@ -8974,7 +9003,7 @@ def _standalone_entry_core(
             config_home=config_home,
             flatpak=flatpak,
             sandbox=sandbox,
-            xdg_pinned=context.standalone_xdg_pinned,
+            xdg_pinned=xdg_pinned,
             verify=verify,
         )
     return (
