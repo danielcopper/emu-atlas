@@ -4120,6 +4120,14 @@ RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
 RPCS3_HOME = "/mnt/sd/hdd/home"
 RPCS3_LOCALUSERNAME = f"{RPCS3_HOME}/00000001/localusername"
 RPCS3_USER_UNRECORDED = atlas.REASON_ACTIVE_USER_UNRECORDED
+# The two shapes _rpcs3_listing_claim gives the sentence: the whole account
+# list where every entry found was decided, and the narrower claim where one
+# was not.
+RPCS3_WHOLE_LIST_CLAIM = "every user account RPCS3 itself would list is stated"
+RPCS3_PART_LIST_CLAIM = (
+    "the user accounts stated are the ones established here rather than every "
+    "account RPCS3 itself would list"
+)
 IDLESS_USER_XML = '<?xml version="1.0"?>\n<user/>\n'
 VITA3K_NOT_SET_UP = atlas.REASON_CONFIGURED_USER_NOT_SET_UP
 VITA3K_TREE_NAMED = atlas.REASON_CONFIGURED_USER_TREE_NAMED
@@ -5474,6 +5482,78 @@ class TestTheUserAPerUserTreeWouldOpen:
             "whether RPCS3 lists 23456789 is not established — nothing about it could be "
             "looked at" in caveat.message
         )
+
+    def test_rpcs3_a_survey_that_decided_every_entry_states_the_whole_account_list(self):
+        # Nothing found here was left undecided, so the accounts stated are
+        # GetUserAccounts' own list and the sentence says so — the claim this
+        # answer used to make in every state.
+        p = self._rpcs3(
+            files={
+                RPCS3_LOCALUSERNAME: "User",
+                f"{RPCS3_HOME}/00000002/localusername": "User",
+            },
+            dirs=[f"{RPCS3_HOME}/00000001", f"{RPCS3_HOME}/00000002"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001", "00000002")
+        assert RPCS3_WHOLE_LIST_CLAIM in caveat.message
+        assert RPCS3_PART_LIST_CLAIM not in caveat.message
+
+    def test_rpcs3_a_listed_account_beside_an_unstatable_entry_claims_no_whole_list(self):
+        # 12345678's own stat failed, so it may be a home GetUserAccounts
+        # keeps: claiming every account the emulator would list is stated
+        # would claim of that entry exactly what is unsettled. And no clause
+        # says the listing could stop there — the walk skips an entry whose
+        # fstatat fails and reads on into the next (unix_dir::read,
+        # File.cpp:2091-2105 at build 7c6b3dcd), so nothing after it is lost.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001"],
+            inaccessible=[f"{RPCS3_HOME}/12345678"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["users"] == ("00000001",)
+        assert RPCS3_WHOLE_LIST_CLAIM not in caveat.message
+        assert RPCS3_PART_LIST_CLAIM in caveat.message
+        assert "listing can end" not in caveat.message
+        # The aside names the entry; the claim carries no names, so it is
+        # named once rather than twice.
+        assert caveat.message.count("12345678") == 1
+
+    def test_rpcs3_a_listed_account_beside_an_unread_localusername_claims_no_whole_list(self):
+        # The survey's other undecided fate: the entry is a directory and its
+        # localusername is what could not be looked at. Different reading,
+        # same thing left open, so the sentence loses the same claim.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001", f"{RPCS3_HOME}/12345678/savedata"],
+            inaccessible=[f"{RPCS3_HOME}/12345678/localusername"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["unestablished"] == ("12345678",)
+        assert RPCS3_WHOLE_LIST_CLAIM not in caveat.message
+        assert RPCS3_PART_LIST_CLAIM in caveat.message
+        assert caveat.message.count("12345678") == 1
+
+    def test_rpcs3_a_passed_over_entry_leaves_the_whole_list_claim_standing(self):
+        # What separates "every entry found was decided" from "every entry
+        # found is listed": 00000000 and notauser are names check_user
+        # rejects, which the emulator passes over itself, so the accounts
+        # stated still are its whole list. A condition reading "any entry not
+        # listed" would drop the claim here and this is where it shows.
+        p = self._rpcs3(
+            files={RPCS3_LOCALUSERNAME: "User"},
+            dirs=[f"{RPCS3_HOME}/00000001", f"{RPCS3_HOME}/00000000/savedata"],
+            inaccessible=[f"{RPCS3_HOME}/notauser"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["skipped"] == ("00000000", "notauser")
+        assert "unestablished" not in caveat.data
+        assert RPCS3_WHOLE_LIST_CLAIM in caveat.message
 
     def test_vita3k_a_user_root_entry_whose_stat_fails_is_stated_not_dropped(self):
         # Vita3K reaches such an entry through boost's directory_entry, which

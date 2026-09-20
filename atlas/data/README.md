@@ -575,8 +575,11 @@ replaces everywhere it appears and which means the emulator's config directory w
 the first card read through the YAML scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does
 not read rather than guessing at it. Below the drive the unit is `home/<user>/savedata`, one directory per title id; the
 active user is a runtime selection no file records, so **every user home RPCS3's own `GetUserAccounts` would list
-becomes its own group**, the ones it passes over stated as `skipped` — the same stance the Dolphin card takes with its
-region trees. Where none exists the answer says so outright rather than presenting the compiled default as a home
+becomes its own group where every entry found here was decided**, the ones it passes over stated as `skipped` — the same
+stance the Dolphin card takes with its region trees. Where an entry was left undecided the answer claims the accounts
+established here instead and names the undecided entries; it never reports an early end, because neither kind of
+undecided entry can stop the walk — a failed stat is skipped and the walk reads on into the next entry (unix_dir::read,
+File.cpp:2091-2105). Where none exists the answer says so outright rather than presenting the compiled default as a home
 somebody found, and a tree that cannot be listed carries `save-dir-unlistable` rather than a clause glued onto another
 caveat's prose. A second save location is named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2
 classics, which a sync walking only the per-user tree would miss. It is a **directory**, so it is a group of its own
