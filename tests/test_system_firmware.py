@@ -1,20 +1,28 @@
 """Tests for atlas.system_firmware — the table of systems that need firmware.
 
-Two halves. The shipped table loads and says what it is meant to say, and every
+Three parts. The shipped table loads and says what it is meant to say, and every
 way of writing a claim this table must not carry is refused rather than
 accepted and half-understood. The refusals matter because a firmware answer now
 reads these verdicts: a malformed entry that loaded and was half-understood
 would reach a client as a claim about whether their machine starts. What the
 answer does with a verdict is held next door, in
 ``tests/test_firmware.py::TestTheSystemBehindTheCoreReachesTheAnswer``.
+
+The third is a property of the corpus rather than of the table: every core the
+corpus shows in ``cannot-run-without-firmware`` declares for a single system, so
+the conjunction across systems is unexercised there — which
+``CoreFirmware._system_image_in_place``, ``CoreFirmware.requirements_met`` and
+``docs/how-to-use.md`` state in prose, and this holds mechanically.
 """
 
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 
+from atlas.firmware import SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
 from atlas.system_firmware import (
     EVIDENCE_DERIVED,
     EVIDENCE_LEVELS,
@@ -26,6 +34,7 @@ from atlas.system_firmware import (
     VERDICT_RUNS_WITHOUT,
     load_system_firmware,
 )
+from tests.corpus import expected_blocks
 
 
 def _table(entry: object, system: str = "Demo System") -> str:
@@ -200,3 +209,67 @@ class TestTheLoaderRefuses:
         table = _table(_SOUND, system=system)
         with pytest.raises(ValueError, match="system key: expected a non-blank string"):
             load_system_firmware(table)
+
+
+class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:
+    """The corpus property the prose appeals to, held by the walk itself.
+
+    Where a core in this state declares for one system the conjunction across
+    systems has one term, its disjunction spans the whole declaration, and the
+    field reads as it did before the scope was drawn — and every core reaching
+    the state so far is that shape. A sentence saying so goes stale one vector
+    at a time; this walk states the count it walked and names the block the day
+    one declares for two, which is the failure those sentences are worth.
+
+    Counting rule, in the words :attr:`CoreFirmware._system_image_in_place`
+    states it in: every ``expected.firmware.cores[]`` block in
+    ``vectors/machines/*.json`` whose ``system_firmware`` is
+    ``cannot-run-without-firmware``, and per block the distinct ``system``
+    values of its ``requirements[]`` and their ``alternatives[]``. The systems
+    come off the requirements here for the reason they come off them in the
+    resolver: that is where ``system_firmware_needs`` is derived from, and a
+    second derivation is a second thing to keep in step. The state is read
+    through the core field's own constant rather than the table verdict of the
+    same spelling — two vocabularies meet on that word, and only one of them is
+    what a serialized core carries.
+
+    It sits beside the table rather than in the tripwire next door because the
+    tripwire reads the catalogue deployed on the running machine and skips
+    where no core is deployed. This holds a property of the committed corpus,
+    which every run has in front of it.
+    """
+
+    def _blocks(self) -> list[tuple[str, dict[str, Any]]]:
+        """Every ``(where, block)`` the counting rule reaches."""
+        return [
+            (where, core)
+            for where, expected in expected_blocks()
+            for core in (expected.get("firmware") or {}).get("cores", [])
+            if core["system_firmware"] == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        ]
+
+    @staticmethod
+    def _systems(core: dict[str, Any]) -> list[str]:
+        """The distinct systems one block declares for, alternatives flattened."""
+        return sorted(
+            {
+                option["system"]
+                for entry in core["requirements"]
+                for option in entry.get("alternatives", [entry])
+            }
+        )
+
+    def test_the_corpus_reaches_that_state_at_all(self):
+        # A walk that reaches nothing passes every property it states, so the
+        # rule below would hold over a corpus that stopped exercising it.
+        assert self._blocks(), "no corpus block reaches cannot-run-without-firmware"
+
+    def test_every_block_declares_for_exactly_one_system(self):
+        walked = self._blocks()
+        wrong = []
+        for where, core in walked:
+            systems = self._systems(core)
+            if len(systems) != 1:
+                declared = ", ".join(systems) or "no system"
+                wrong.append(f"{where}: {core['emulator']} declares for {declared}")
+        assert wrong == [], f"of {len(walked)} blocks walked: {'; '.join(wrong)}"

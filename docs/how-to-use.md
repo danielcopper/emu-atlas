@@ -2633,14 +2633,19 @@ The set that disjunction asks over is **the images filed under the system that n
 declares, and where two systems need one it is asked of each: a disjunction inside each system, a conjunction across
 them, so `True` only when every needing system has an image of its own. That is what a core declaring for several
 systems needs: mGBA declares Game Boy boot ROMs beside its GBA BIOS, and a usable Game Boy dump is no answer for a Game
-Boy Advance that needs a BIOS — over that machine, only a GBA BIOS is. Its deployed declaration resolves to four systems
-on the reference installation (Game Boy, Game Boy Color, Super Nintendo and Game Boy Advance, each by per-file rule),
-and both systems the table has an entry for are recorded `open`, so nothing turns on it there yet. Where a core in this
-state declares for one system the conjunction has one term, its disjunction spans the whole declaration, and the field
-reads as it always did — which is every core reaching that state measured so far: 37 core blocks in the vector corpus
-and 3 emulators on the reference installation, each declaring for a single system. Which images a system's name covers
-is as fine as the per-file override table makes it — a `.info` files every image under one `systemname`, so where
-nothing separates them they are one system's images.
+Boy Advance that needs a BIOS — over that machine, only a GBA BIOS is. A declaration like that one — boot images for the
+Game Boy, the Game Boy Color, the Super Game Boy and the Game Boy Advance — resolves to as many systems as the per-file
+override table files those names under, and that table files the Super Game Boy dumps under `snes`, because the
+cartridge runs in an SNES rather than in a Game Boy. The entries the table of systems has for those machines are
+recorded `open`, so nothing about them turns on the state yet. Where a core in this state declares for one system the
+conjunction has one term, its disjunction spans the whole declaration, and the field reads as it always did — which is
+every core reaching that state measured so far: 61 core blocks in the vector corpus, all for one system, counted over
+every core block in `vectors/machines/*.json` whose `system_firmware` is `cannot-run-without-firmware` and, per block,
+the distinct `system` values of its requirements and their alternatives. The count moves with the corpus and the
+property does not, so the property is the one held mechanically: `tests/test_system_firmware.py` walks the same rule and
+fails naming the block the day one declares for two systems. Which images a system's name covers is as fine as the
+per-file override table makes it — a `.info` files every image under one `systemname`, so where nothing separates them
+they are one system's images.
 
 Where the table states something — `cannot-run-without-firmware` in either shape, or `runs-without-firmware` — the core
 carries a `system-firmware-world-knowledge` caveat with `system` and `evidence`, the latter being `verified` or

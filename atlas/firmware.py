@@ -2802,16 +2802,17 @@ class CoreFirmware:
         Where a core in this state **declares for one system** it has one
         needing system, the conjunction has one term, and its disjunction
         spans the whole declaration — which is how this read before the scope
-        was drawn. That is every such core measured so far. Counting rule:
-        over every
-        ``expected.firmware.cores[]`` block in ``vectors/machines/*.json``
-        whose ``system_firmware`` is ``cannot-run-without-firmware``, the
-        distinct ``system`` values of its ``requirements[]`` and their
-        ``alternatives[]``; and the same reading over
-        :func:`firmware_inventory` on the reference machine. **49** corpus
-        blocks, every one of them one system; **4** entries on the machine
-        (``mednafen_psx``, ``mednafen_psx_hw`` and ``swanstation``, plus the
-        catalogue's DuckStation card), all ``psx``.
+        was drawn. That is every such core measured so far: **61** blocks, all
+        for one system, counted over every ``expected.firmware.cores[]`` block
+        in ``vectors/machines/*.json`` whose ``system_firmware`` is
+        ``cannot-run-without-firmware``, and per block the distinct ``system``
+        values of its ``requirements[]`` and their ``alternatives[]``. The
+        count moves with the corpus and the property does not, so the property
+        is the one held mechanically: a reader counting a different number
+        should recount with that rule, and
+        ``test_every_block_declares_for_exactly_one_system`` in
+        ``tests/test_system_firmware.py`` walks that same rule and fails naming
+        the block the day one declares for two.
 
         Which system an image belongs to is as fine as the declaration and the
         override table make it: a ``.info`` files every image under one
@@ -2939,12 +2940,13 @@ class CoreFirmware:
         list, and mGBA is the case: it declares Game Boy boot ROMs beside its
         GBA BIOS, and a usable Game Boy dump is no answer for a Game Boy
         Advance that needs a BIOS. Where a core in this state declares for one system —
-        every core reaching this state measured so far, 49 blocks in the
-        vector corpus and 4 entries on the reference machine — the conjunction
-        has one term, its disjunction spans the whole declaration, and this
-        reads as it always did; the counting rule is in
-        :attr:`_system_image_in_place`, and which images a system's name
-        covers is as fine as the per-file override table makes it (#340).
+        every core reaching this state measured so far, 61 blocks in the
+        vector corpus, all for one system — the conjunction has one term, its
+        disjunction spans the whole declaration, and this reads as it always
+        did; the counting rule behind that number and the test holding the
+        property are named in :attr:`_system_image_in_place`, and which images
+        a system's name covers is as fine as the per-file override table makes
+        it (#340).
         """
         if self.declaration in DECLARATIONS_UNJUDGED:
             return None
