@@ -275,6 +275,7 @@ from .placement import (
     REASON_CONFIGURED_USER_ID_UNREAD,
     REASON_CONFIGURED_USER_TREE_NAMED,
     REASON_CONFIGURED_USER_NOT_SET_UP,
+    REASON_CONFIGURED_USER_REACH_UNESTABLISHED,
     REASON_CONFIGURED_USER_SETUP_UNESTABLISHED,
     REASON_HDD_PATH_UNSET,
     REASON_KEY_UNREAD,
@@ -286,6 +287,7 @@ from .placement import (
     REASON_SESSION_OVERRIDE_SET,
     REASON_SLOT_DEVICE_UNINTERPRETED,
     REASON_SLOT_HOLDS_AGP_DEVICE,
+    REASON_UNSET_USER_ID_IS_LISTED,
     REASON_USER_LISTING_UNESTABLISHED,
     REASON_VIRTUAL_SD_DISABLED,
     Caveat,
@@ -9111,15 +9113,16 @@ class _PerUserSaves:
     preselection instead of only the directory listing.
 
     ``headline_user`` names the user whose tree the answer's ``dir`` points
-    at, where the caller established one: Vita3K sets it to the recorded user
-    exactly when the listing found that user's directory, because a frontend
-    launch reopens exactly that user then — and the caller resolves it
-    together with the sentence that explains it, so the two cannot drift.
-    RPCS3 never sets it: no file records its user, so its headline stays the
-    first tree found. Vita3K withholds it where the listing came back short,
-    because a user a failed listing handed back is not a user found here —
-    and the assembly names the stand-in tree on a short listing whatever this
-    field holds, so the two cannot disagree there either.
+    at, where the caller established one: Vita3K sets it where its own
+    listing settles which user a frontend launch reopens — the recorded id
+    when the listing holds it and nothing found here can end the walk short
+    of it, or the empty id an unset or empty record resolves to, whose tree
+    is the user root itself — and drops it where the reach of that walk is
+    not established; the caller resolves it together with the sentence that
+    explains it, so the two cannot drift. RPCS3 never sets it: no file
+    records its user, so its headline stays the first tree found. A short
+    listing is answered once, by the assembly naming the stand-in tree before
+    it reads this field, so nothing this field holds is read there.
     """
 
     user_root: str
@@ -9879,6 +9882,26 @@ _VITA3K_PREF_PATH_KEY = "pref-path"
 _VITA3K_USER_ID_KEY = "user-id"
 _VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
+# How the emulator's own listing decides what a user is, said once because
+# four sentences interpolate it and one drifting copy would make them four
+# rules.
+_VITA3K_LISTING_RULE = (
+    "the directories under ux0/user whose user.xml loads, keyed by the file's id or the "
+    "directory name's stem (get_users_list, user_management.cpp:83-97), read here the same way"
+)
+# Why a user this read found among the listed ones still settles nothing when
+# an entry beside it can end the emulator's walk. The entries themselves are
+# named by the listing claim the same sentence carries, and the order of the
+# walk is ``fs::directory_iterator``'s, which is the directory's own — so
+# whether the walk reaches this user before the entry it throws on is not a
+# fact this or any other read of the tree can establish.
+_VITA3K_REACH_CLAUSE = (
+    "but whether a frontend launch reopens that user or the user manager opens instead is "
+    "not established here: Vita3K's own listing can end before its walk reaches that user "
+    "(get_users_list, user_management.cpp:87-89), leaving gui.users without it when "
+    "init_home asks (gui.cpp:688-696), and the order that walk takes is the directory's "
+    "own, written nowhere"
+)
 # The user the emulator's own redirect comment names (io.cpp:203), used where
 # no user directory can be listed — never as a claim that it is the one in use.
 _VITA3K_FIRST_USER = "00"
@@ -9995,7 +10018,9 @@ def _vita3k_stem(name: str) -> str:
     ``std::map<std::string, User>`` (state.h:304) and ``gui.users[user_id]``
     takes the empty string like any other (user_management.cpp:97,100), so such
     a directory is listed, under the empty id — see
-    :func:`_vita3k_recorded_user_state` for what that leaves a recorded id.
+    :func:`_vita3k_recorded_user_state` for what that leaves a recorded id, and
+    :func:`_vita3k_unset_user_state` for the id an unset record resolves to,
+    which is that same empty one.
     """
     if name in (".", ".."):
         return name
@@ -10200,10 +10225,23 @@ def _vita3k_survey_tail(survey: _PerUserSurvey, claim: str) -> str:
 class _Vita3kUser:
     """What config.yml records about which user a launch would open.
 
-    ``headline`` is the recorded user where the emulator's own listing holds
-    it — the one user a frontend launch reopens, and so the tree the answer
-    names — and ``None`` everywhere the launch's user is not settled by what
-    was read.
+    ``headline`` is the user a frontend launch reopens where the emulator's
+    own listing settles that — the recorded id, or the empty id an unset or
+    empty record resolves to, whose tree is the user root itself — and
+    ``None`` everywhere the launch's user is not settled by what was read. The
+    empty string is therefore a headline and not the absence of one.
+
+    A headline is only ever *read* where the listing of the user root
+    completed: :func:`_per_user_savedata_placement` names the stand-in tree
+    for a short listing before it looks at this field at all. So the states
+    below settle the headline against what they found and leave the short
+    listing to that one place, rather than each taking the headline back
+    again — a second guard here would be a line that never runs, claiming to
+    hold something that is already held.
+
+    ``configured`` is the value ``user-id`` states, which is ``None`` only
+    where the key is absent or unread: a key stated with nothing in it states
+    the empty id, and that id is the one the emulator starts from.
     """
 
     configured: str | None
@@ -10211,6 +10249,63 @@ class _Vita3kUser:
     readings: tuple[OptionReading, ...]
     sentence: str
     reason: str
+
+
+def _vita3k_identities(homes: tuple[_Vita3kListedUser, ...]) -> tuple[str, ...]:
+    """Every gui.users key the entries found here yield, in the listing's order.
+
+    The keys, not the directory names: a user.xml's ``id`` attribute answers
+    for the directory it sits in, and the empty string is one of those keys
+    (see :func:`_vita3k_stem`). An entry that yields no user at all, or whose
+    fate could not be read, contributes none — which is why the states that
+    ask "is this id listed?" and the states that ask "what became of this
+    directory?" read two different things off one survey.
+    """
+    return tuple(home.identity for home in homes if home.identity is not None)
+
+
+def _vita3k_listed_recorded_state(
+    configured: str,
+    survey: _PerUserSurvey,
+    claim: str,
+    truncating: tuple[str, ...],
+    tail: str,
+) -> tuple[str | None, str, str]:
+    """The recorded id is one the listing holds — reached, or not established.
+
+    Returns ``(headline, sentence, reason)``. ``init_home`` reopens the
+    recorded user only where ``gui.users`` holds its id and the launch names
+    an app on the command line or ``user-auto-connect`` is on (gui.cpp:689),
+    and that map is whatever ``get_users_list``'s walk filled in before it
+    ended. Where an
+    entry found here can end that walk — :func:`_vita3k_truncating` traces the
+    road it takes — the map may never reach this user, and the walk's order is
+    ``fs::directory_iterator``'s, which is the directory's own and written
+    nowhere. So the finding "the recorded user is listed here" stands and the
+    reopening does not: the headline drops rather than pointing a client at a
+    tree a launch may not open, and the ending names the tree that is pointed
+    at instead.
+
+    This used to be one state whose prose alone softened, which left ``dir``,
+    ``configured_user`` and the reason saying the launch opens that user while
+    the sentence beside them said it might not.
+    """
+    if truncating:
+        sentence = (
+            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is among "
+            f"the ones listed here — {_VITA3K_LISTING_RULE} — {_VITA3K_REACH_CLAUSE}, so the "
+            f"record does not move the headline: {tail}"
+        )
+        return None, sentence, REASON_CONFIGURED_USER_REACH_UNESTABLISHED
+    sentence = (
+        f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is among the "
+        f"ones Vita3K itself would list — {_VITA3K_LISTING_RULE} — so a frontend launch, "
+        "naming an app on the command line, reopens exactly that user (init_home, "
+        "gui.cpp:688-696) and the tree named is its, created on the first save where no "
+        "directory of that name exists yet; a plain launch without user-auto-connect opens "
+        f"the user manager instead — {claim}{survey.aside}"
+    )
+    return configured, sentence, REASON_CONFIGURED_USER_TREE_NAMED
 
 
 def _vita3k_recorded_user_state(
@@ -10221,51 +10316,33 @@ def _vita3k_recorded_user_state(
     claim: str,
     truncating: tuple[str, ...],
 ) -> tuple[str | None, str, str]:
-    """The recorded user held against the emulator's own listing — four states.
+    """The recorded user held against the emulator's own listing — five states.
 
     Returns ``(headline, sentence, reason)``. The listing holds the recorded
-    id — the headline follows it; some user.xml could not be read — whether
-    the emulator would list the recorded user is not established, and nothing
-    is decided; the recorded directory exists but nothing lists it as that
-    user — not set up; or nothing here answers to the id at all — no tree.
-    ``homes`` is every directory found, whatever its fate, because the third
-    state is about a directory the emulator does not list.
+    id — the headline follows it, or, where an entry found can end the walk
+    that fills the listing, nothing is settled about the reopening and the
+    headline drops, which are the two states
+    :func:`_vita3k_listed_recorded_state` tells apart; some user.xml could not
+    be read — whether the emulator would list the recorded user is not
+    established, and nothing is decided; the recorded directory exists but
+    nothing lists it as that user — not set up; or nothing here answers to the
+    id at all — no tree. ``homes`` is every directory found, whatever its
+    fate, because the not-set-up state is about a directory the emulator does
+    not list.
 
-    ``claim`` is :func:`_vita3k_listing_claim`'s, and the first state ends on
-    it for the same reason the tail does: the recorded id being among the
+    ``claim`` is :func:`_vita3k_listing_claim`'s, and every state carries it —
+    directly where the headline follows the record, and inside ``tail``
+    everywhere else — for the same reason: the recorded id being among the
     listed ones says nothing about the entries that were never decided.
-    ``truncating`` is what that first state needs beyond the clause — its head
-    otherwise asserts what the clause takes back, because a listing that ends
-    before the recorded user is reached leaves ``gui.users`` without it and
-    opens the user manager (gui.cpp:689).
+    ``truncating`` is what the listed state needs beyond the clause — see
+    :func:`_vita3k_listed_recorded_state`, which is where that state's two
+    halves live, because the reopening it used to assert is withdrawn there.
     """
-    identities = tuple(u.identity for u in homes if u.identity is not None)
+    identities = _vita3k_identities(homes)
     own = next((u for u in homes if u.directory == configured), None)
-    if configured in identities:
-        if truncating:
-            # This read found the user; the emulator's own list is a claim
-            # about a walk that can end before reaching it, so the head states
-            # the finding and makes the reopening conditional on the same
-            # thing. Only the prose moves: the headline is still this user's
-            # tree, which is the state's whole point and its own question.
-            among = "among the ones listed here"
-            reopens = "reopens that user where Vita3K's own listing reached it"
-        else:
-            among = "among the ones Vita3K itself would list"
-            reopens = "reopens exactly that user"
-        sentence = (
-            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is "
-            f"{among} — the directories under ux0/user "
-            "whose user.xml loads, keyed by the file's id or the directory name's stem "
-            "(get_users_list, user_management.cpp:83-97), read here the same way — so "
-            f"a frontend launch, naming an app on the command line, {reopens} "
-            "(init_home, gui.cpp:688-696) and the tree named is its, created "
-            "on the first save where no directory of that name exists yet; a plain "
-            f"launch without user-auto-connect opens the user manager instead — {claim}"
-            f"{survey.aside}"
-        )
-        return configured, sentence, REASON_CONFIGURED_USER_TREE_NAMED
     tail = _vita3k_survey_tail(survey, claim)
+    if configured in identities:
+        return _vita3k_listed_recorded_state(configured, survey, claim, truncating, tail)
     if survey.unestablished:
         # Reason-neutral on purpose: the entries reach this state by more than
         # one route — a user.xml that could not be read, an entry whose own
@@ -10313,10 +10390,112 @@ def _vita3k_recorded_user_state(
     return None, sentence, REASON_CONFIGURED_USER_HAS_NO_TREE
 
 
+def _vita3k_unset_record(stated_empty: bool) -> str:
+    """How config.yml states the id the emulator starts from, absent or empty.
+
+    One value, two readings. ``user-id`` defaults to an empty ``std::string``
+    (config.h:189), so a key that is not there and a key stated with nothing
+    after the colon hand ``init_home`` the same id — and the sentence still
+    says which of the two the file holds, because a reader who opens
+    config.yml sees the difference and an answer that denied it would be
+    describing a file nobody has.
+    """
+    if stated_empty:
+        return (
+            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it, which is the id "
+            "the emulator starts from (config.h:189)"
+        )
+    return (
+        f"config.yml records no {_VITA3K_USER_ID_KEY}, so the id a launch would open is the "
+        "empty one the emulator starts from (config.h:189)"
+    )
+
+
+def _vita3k_unset_user_state(
+    *,
+    stated_empty: bool,
+    homes: tuple[_Vita3kListedUser, ...],
+    user_root: str,
+    survey: _PerUserSurvey,
+    claim: str,
+    truncating: tuple[str, ...],
+) -> tuple[str | None, str, str]:
+    """What an unset — or empty — user-id answers to, against the listing.
+
+    Returns ``(headline, sentence, reason)``. The record's own emptiness is
+    not the end of the question, which is what this answer used to make of it:
+    ``cfg.user_id`` is an empty ``std::string`` when nothing sets it
+    (config.h:189), ``init_home`` asks ``gui.users.contains(cfg.user_id)``
+    (gui.cpp:689), and the empty string is a key that map takes like any other
+    — a user.xml whose ``id`` attribute is stated empty is keyed by it
+    (user_management.cpp:94-95), and so is a directory whose name
+    :func:`_vita3k_stem` cuts away whole. So where a directory is listed under
+    the empty id, that record preselects it, and a launch naming an app on the
+    command line — or one made with ``user-auto-connect`` on — reopens it
+    instead of opening the user manager (gui.cpp:688-696).
+
+    The tree such a user writes to is the user root itself. ``io.user_id``
+    becomes the ``gui.users`` key (init_user, user_management.cpp:227) and
+    ``init_savedata_app_path`` composes ``pref_path / "ux0" / "user" /
+    io.user_id / "savedata"`` (io.cpp:136-143) — where ``append_v3``, the
+    append this build compiles for the same reason it compiles ``stem_v3``
+    (path.hpp:1550-1554 through ``BOOST_FILESYSTEM_VERSIONED_SYM``,
+    config.hpp:27-32), adds an empty component by adding nothing at all,
+    separator included: the ``begin != end`` guard at path.cpp:485-502 in the
+    bundled Boost 1.89 and :155-172 in 1.81, the oldest this build accepts.
+    ``append_v4`` is the sibling that differs, pushing a separator for an
+    empty component where the left side has a filename (path.cpp:558-561) —
+    so under it the same id would compose ``ux0/user/`` and the same savedata
+    path, which is why only the stem's reading, not this one, turns on which
+    of the two compiles. The id contributes no segment either way and the
+    saves land beside the listed directory rather than inside it. [V]
+
+    The three states: the empty id is listed and an entry found can end the
+    walk before it — nothing about the reopening is settled, the same reading
+    :func:`_vita3k_listed_recorded_state` makes of a recorded id, and for the
+    same reason; the empty id is listed and every entry was decided — the
+    record preselects that user and the headline is the tree it composes; or
+    nothing here answers to the empty id — no user is preselected after all,
+    which is the one state this answer used to give all three.
+    """
+    record = _vita3k_unset_record(stated_empty)
+    tail = _vita3k_survey_tail(survey, claim)
+    if "" not in _vita3k_identities(homes):
+        if stated_empty:
+            sentence = (
+                f"{record}, and nothing here answers to it, so the user manager opens for "
+                f"the player to pick (init_home, gui.cpp:688-696) — {tail}"
+            )
+        else:
+            sentence = (
+                f"config.yml records no {_VITA3K_USER_ID_KEY}, so nothing preselects a user "
+                "and the user manager opens for the player to pick (init_home, "
+                f"gui.cpp:688-696) — {tail}"
+            )
+        return None, sentence, REASON_NO_USER_PRESELECTED
+    if truncating:
+        sentence = (
+            f"{record}, and that id is among the ones listed here — {_VITA3K_LISTING_RULE} "
+            f"— {_VITA3K_REACH_CLAUSE}, so nothing read here moves the headline: {tail}"
+        )
+        return None, sentence, REASON_CONFIGURED_USER_REACH_UNESTABLISHED
+    sentence = (
+        f"{record}, and that id is among the ones Vita3K itself would list — "
+        f"{_VITA3K_LISTING_RULE} — so a frontend launch, naming an app on the command "
+        "line, reopens that user rather than opening the user manager (init_home, "
+        "gui.cpp:688-696), and the tree named is its: an empty id composes no segment of "
+        f"its own, so those saves land in {os.path.join(user_root, 'savedata')}, the user "
+        "root's own, and not under the directory that was listed (init_savedata_app_path, "
+        "io.cpp:136-143); a "
+        "plain launch without user-auto-connect opens the user manager whatever is "
+        f"recorded — {claim}{survey.aside}"
+    )
+    return "", sentence, REASON_UNSET_USER_ID_IS_LISTED
+
+
 def _vita3k_user(
     read: YamlScalars,
     *,
-    listing: GlobResult,
     homes: tuple[_Vita3kListedUser, ...],
     survey: _PerUserSurvey,
     user_root: str,
@@ -10338,14 +10517,27 @@ def _vita3k_user(
     frontend launch reopens exactly that user and the headline follows it: the
     tree composes from the identity (io.user_id is the gui.users key —
     init_user, user_management.cpp:227), which the first save creates where no
-    directory of that name exists yet. Everywhere else nothing read here
-    settles the launch's user, and the sentence says what stands in the way —
-    including the two states that are atlas's own — a user.xml it could not
-    read, and an entry whose own stat failed — each of which leaves the
-    emulator's listing unknowable rather than decided.
+    directory of that name exists yet. Where the listing does not hold that
+    id, or holds it behind an entry that can end the walk before it, nothing
+    read here settles the launch's user, and the sentence says what stands in
+    the way — including the states that are atlas's own rather than the
+    emulator's verdict, a user.xml it could not read and an entry whose own
+    stat failed, each of which leaves the emulator's listing unknowable rather
+    than decided.
+
+    A record that names nothing is a record all the same, which is why the
+    reading below keeps a stated empty value apart from an absent key and why
+    both roads go to :func:`_vita3k_unset_user_state` rather than to a
+    sentence about nothing being preselected: ``user-id`` defaults to an empty
+    ``std::string`` (config.h:189), and the empty string is an id a directory
+    can be listed under.
     """
     unread = _VITA3K_USER_ID_KEY in read.skipped
-    configured = None if unread else (read.get(_VITA3K_USER_ID_KEY) or None)
+    # Stated as written, and ``""`` is written: the reader hands back the empty
+    # string for ``user-id:`` with nothing after the colon and for an empty
+    # quoted scalar alike (YamlScalars.get), and collapsing that into ``None``
+    # is what made the answer read a stated empty id as an absent key.
+    configured = None if unread else read.get(_VITA3K_USER_ID_KEY)
     auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
     headline = None
     # How completely the listed users are the emulator's own list — read off
@@ -10359,18 +10551,9 @@ def _vita3k_user(
             f"which user it preselects is unread here — {_vita3k_survey_tail(survey, claim)}"
         )
         reason = REASON_CONFIGURED_USER_ID_UNREAD
-    elif configured is None:
-        sentence = (
-            f"config.yml records no {_VITA3K_USER_ID_KEY}, so nothing preselects a user and "
-            "the user manager opens for the player to pick (init_home, gui.cpp:688-696) — "
-            f"{_vita3k_survey_tail(survey, claim)}"
-        )
-        reason = REASON_NO_USER_PRESELECTED
-    else:
-        # Everywhere else the recorded id is held against the emulator's own
-        # listing — and then the headline is taken back if that listing came
-        # back short. The two halves used to be one branch and are not one
-        # fact:
+    elif configured:
+        # Everywhere a user is named the recorded id is held against the
+        # emulator's own listing.
         #
         # The REASON this state used to carry ("a launch's user depends on how
         # the launch was made") was unreadable. :func:`_per_user_state` takes
@@ -10379,31 +10562,25 @@ def _vita3k_user(
         # condition — listing short, or no homes — excluded the only path that
         # reads it. A value the guide documents and no machine produces is the
         # defect in data that the sentences were in prose, so the slug is gone.
-        #
-        # The HEADLINE was a different matter, and dropping the branch dropped
-        # a guard with it: a home a failed listing handed back is not a home
-        # found here, so the record does not move the headline until the
-        # listing that would confirm it succeeded. What reaches a short
-        # listing that still carries matches is set out at
-        # :func:`_per_user_savedata_placement`, which names the stand-in tree
-        # there for both emulators; this branch is what keeps ``headline``
-        # itself true to what it means here — a user the read did not settle
-        # is not one this answer records.
         headline, sentence, reason = _vita3k_recorded_user_state(
             configured, homes, user_root, survey, claim, truncating
         )
-        if listing.status != GLOB_COMPLETE:
-            headline = None
+    else:
+        # No user named — which names one all the same, the empty id, and the
+        # state says what this tree holds under it.
+        headline, sentence, reason = _vita3k_unset_user_state(
+            stated_empty=configured is not None,
+            homes=homes,
+            user_root=user_root,
+            survey=survey,
+            claim=claim,
+            truncating=truncating,
+        )
     readings = (
         OptionReading(
             _VITA3K_USER_ID_KEY,
-            None if unread else read.get(_VITA3K_USER_ID_KEY),
-            _vita3k_key_provenance(
-                _VITA3K_USER_ID_KEY,
-                configured,
-                unread=unread,
-                unset="no user is preselected (config.h:189)",
-            ),
+            configured,
+            _vita3k_user_id_provenance(configured, unread=unread),
             None,
         ),
         OptionReading(
@@ -10419,6 +10596,27 @@ def _vita3k_user(
         ),
     )
     return _Vita3kUser(configured, headline, readings, sentence, reason)
+
+
+def _vita3k_user_id_provenance(configured: str | None, *, unread: bool) -> str:
+    """Where the recorded user id came from — the shared grammar, one state more.
+
+    A key stated with nothing after the colon is neither a value nor an absent
+    key, and only this key has somewhere for that state to go: the emulator
+    reads the same empty id either way (config.h:189), so the reading says
+    which of the two the file holds instead of calling a stated key unset.
+    """
+    if configured == "":
+        return (
+            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it — the id the "
+            "emulator starts from is that same empty one (config.h:189)"
+        )
+    return _vita3k_key_provenance(
+        _VITA3K_USER_ID_KEY,
+        configured,
+        unread=unread,
+        unset="no user is preselected (config.h:189)",
+    )
 
 
 def _vita3k_key_provenance(key: str, value: str | None, *, unread: bool, unset: str) -> str:
@@ -10455,17 +10653,20 @@ def _vita3k_savefile_placement(
     is a refusal here rather than an invented directory.
 
     Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
-    id (io.cpp:136-143). Which user that is at run time is decided by
-    ``init_home`` from the id config.yml records — see :func:`_vita3k_user`.
-    Every user directory ``get_users_list`` keeps — one whose user.xml loads
-    (user_management.cpp:87-89) — becomes a group of its own with the recorded
-    id stated beside them, the directories it passes over are stated as
-    skipped, and one whose user.xml atlas could not read is stated as
-    unestablished; where the listing completed and the recorded user is among
-    the listed ones the headline names its tree, because a frontend launch
-    reopens exactly that user; everywhere else it stays the first tree
-    listed, or the compiled stand-in where none is and where the listing came
-    back short, and the caveat says what is not settled.
+    id (io.cpp:136-143) — and ``ux0/user/savedata`` for the user keyed by the
+    empty id, which composes no segment of its own. Which user that is at run
+    time is decided by ``init_home`` from the id config.yml records, or from
+    the empty one it starts with where it records none — see
+    :func:`_vita3k_user`. Every user directory ``get_users_list`` keeps — one
+    whose user.xml loads (user_management.cpp:87-89) — becomes a group of its
+    own with the recorded id stated beside them, the directories it passes
+    over are stated as skipped, and one whose user.xml atlas could not read is
+    stated as unestablished; where the listing completed, holds the id a
+    launch would open, and nothing found here can end the walk that filled it,
+    the headline names that user's tree, because a frontend launch reopens
+    exactly that user; everywhere else it stays the first tree listed, or the
+    compiled stand-in where none is and where the listing came back short, and
+    the caveat says what is not settled.
     """
     config_path = _standalone_settings_path(card, homes)
     result = machine.read_text(config_path)
@@ -10524,7 +10725,7 @@ def _vita3k_savefile_placement(
     user_homes = _vita3k_listed_users(machine, user_root, found.users, found.unstatable)
     survey = _vita3k_survey(user_homes)
     user = _vita3k_user(
-        read, listing=listing, homes=user_homes, survey=survey, user_root=user_root
+        read, homes=user_homes, survey=survey, user_root=user_root
     )
     if user_homes:
         # Directories were found and none is a user the emulator lists: the
@@ -10535,9 +10736,20 @@ def _vita3k_savefile_placement(
         # An empty tree with a recorded user is still an empty tree — the
         # headline stays the compiled default — but the emptiness says one
         # thing more: the recorded user's tree is among the ones missing.
-        recorded_aside = (
-            "" if user.configured is None else f", the recorded user {user.configured} included"
-        )
+        if user.configured:
+            recorded_aside = f", the recorded user {user.configured} included"
+        elif user.configured is not None:
+            # A record stating the empty id names no directory that could be
+            # missing — the tree that id composes is the user root itself,
+            # which is here and empty. What the emptiness settles for it is
+            # the other half of init_home's test: gui.users is empty, so the
+            # user manager opens whatever the record says (gui.cpp:689).
+            recorded_aside = (
+                f", and the empty {_VITA3K_USER_ID_KEY} config.yml states is listed by "
+                "nothing here either"
+            )
+        else:
+            recorded_aside = ""
         no_user_sentence = (
             f"no user directory exists below {user_root} "
             f"— nothing has saved here yet{recorded_aside}. The tree named is the one "
