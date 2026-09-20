@@ -13163,6 +13163,190 @@
       }
     },
     {
+      "name": "emudeck-firmware-a-downloaded-tree-is-stated-beside-the-declared-file-in-it",
+      "rationale": "The sighting issue #354 opens on, from the EmuDeck side: ppsspp_libretro.info declares PPSSPP/ppge_atlas.zim required, and the file is at the destination — but EmuDeck ships no copy of it anywhere, it downloads an archive from buildbot and unpacks it into the bios root (emuDeckRetroArch.sh:333-334 at acc45fc), so nothing on this machine can decide whether these bytes are the download's or the user's. supplied_by therefore stays null, exactly as it does on an arrangement atlas has read no card for, and firmware-installer-download on the core says why: it names the DIRECTORY the installer fills, the url it fills it from, and the revision of the table that was read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/ppsspp_libretro.info": "display_name = \"Sony - PlayStation Portable (PPSSPP)\"\nsystemname = \"PSP\"\nfirmware_count = 1\nfirmware0_desc = \"ppge_atlas.zim (PPSSPP Data ROM)\"\nfirmware0_path = \"PPSSPP/ppge_atlas.zim\"\nfirmware0_opt = \"false\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/ppsspp_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/Emulation/bios/PPSSPP/ppge_atlas.zim": "whatever the archive held"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "core",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "ppsspp_libretro.so",
+              "emulator": "ppsspp_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": null,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "ppsspp_libretro.so",
+                  "system": "psp",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ppge_atlas.zim",
+                  "path": "/home/deck/Emulation/bios/PPSSPP/ppge_atlas.zim",
+                  "declared": "PPSSPP/ppge_atlas.zim",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "866855cc330b9b95cc69135fb7b41d38",
+                    "sha1": "30a33f3651f8e1b0967a5dfe6ff714baebcce41a",
+                    "size": 666530,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "unchecked",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-installer-download",
+                  "data": {
+                    "dir": "/home/deck/Emulation/bios/PPSSPP",
+                    "distribution": "emudeck",
+                    "url": "https://buildbot.libretro.com/assets/system/PPSSPP.zip",
+                    "card_version": "1",
+                    "revision": "acc45fc"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "emudeck-firmware-the-download-statement-stands-over-the-empty-directory",
+      "rationale": "The other half of the same statement, and the one that shows its subject is the directory: the tree is there and empty, the declared file is missing, and the caveat is the same caveat with the same data. A consumer that reads \"not in your library\" off the missing requirement is told here that this particular file is one EmuDeck's installer fetches — the condition the card records is that the step runs only over an empty directory, which is the state this machine is in.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/Emulation/bios\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/ppsspp_libretro.info": "display_name = \"Sony - PlayStation Portable (PPSSPP)\"\nsystemname = \"PSP\"\nfirmware_count = 1\nfirmware0_desc = \"ppge_atlas.zim (PPSSPP Data ROM)\"\nfirmware0_path = \"PPSSPP/ppge_atlas.zim\"\nfirmware0_opt = \"false\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/ppsspp_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/bios/PPSSPP"
+        ],
+        "firmware_query": {
+          "installation": "emudeck",
+          "kind": "core",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/Emulation/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "ppsspp_libretro.so",
+              "emulator": "ppsspp_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "ppsspp_libretro.so",
+                  "system": "psp",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "ppge_atlas.zim",
+                  "path": "/home/deck/Emulation/bios/PPSSPP/ppge_atlas.zim",
+                  "declared": "PPSSPP/ppge_atlas.zim",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "866855cc330b9b95cc69135fb7b41d38",
+                    "sha1": "30a33f3651f8e1b0967a5dfe6ff714baebcce41a",
+                    "size": 666530,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-installer-download",
+                  "data": {
+                    "dir": "/home/deck/Emulation/bios/PPSSPP",
+                    "distribution": "emudeck",
+                    "url": "https://buildbot.libretro.com/assets/system/PPSSPP.zip",
+                    "card_version": "1",
+                    "revision": "acc45fc"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
       "name": "retrodeck-cemus-keys-are-a-packaged-expectation",
       "rationale": "A standalone emulator ships no .info, so what it expects is a packaged card, and the answer says so: declaration 'packaged' with the provenance caveat, never dressed up as a machine read. The destination is the emulator's own probe — Cemu reads its keys at GetUserDataPath('keys.txt') (KeyCache.cpp:63 at 2.6), the flatpak's data home here — resolved through the arrangement's symlink into the BIOS staging path, and what sits there is read live. No packaged identity can exist for a user-supplied key file, so a present file answers 'unknown' and stays honestly unverifiable.",
       "input": {

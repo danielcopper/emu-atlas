@@ -249,6 +249,7 @@ from .firmware import (
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
     CAVEAT_FIRMWARE_IMAGE_REFUSED,
     CAVEAT_FIRMWARE_IMAGE_UNLISTED,
+    CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD,
     CAVEAT_FIRMWARE_NAME_SPELLINGS,
     CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
     CAVEAT_FIRMWARE_PACKAGED_DECLARATION,
@@ -346,6 +347,12 @@ from .content_tree_wiring import (
     WiringRow,
     load_content_tree_wiring,
     lookup_content_tree_wiring,
+)
+from .distribution_downloads import (
+    DistributionDownloads,
+    DownloadEntry,
+    load_distribution_downloads,
+    lookup_distribution_downloads,
 )
 from .distribution_labels import (
     DistributionLabel,
@@ -918,6 +925,11 @@ __all__ = [
     "WiringRow",
     "load_content_tree_wiring",
     "lookup_content_tree_wiring",
+    # Directories a distribution's installer fills by download (which trees EmuDeck fetches)
+    "DistributionDownloads",
+    "DownloadEntry",
+    "load_distribution_downloads",
+    "lookup_distribution_downloads",
     # Distribution-supplied firmware (which files RetroDECK places itself)
     "DistributionSupplied",
     "SuppliedEntry",
@@ -989,6 +1001,7 @@ __all__ = [
     "CAVEAT_FIRMWARE_IMAGE_IDENTIFIED",
     "CAVEAT_FIRMWARE_IMAGE_REFUSED",
     "CAVEAT_FIRMWARE_IMAGE_UNLISTED",
+    "CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD",
     "CAVEAT_FIRMWARE_NAME_SPELLINGS",
     "CAVEAT_FIRMWARE_DECLARATION_UNKNOWN",
     "CAVEAT_FIRMWARE_PACKAGED_DECLARATION",

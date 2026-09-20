@@ -10,6 +10,8 @@ from collections import Counter
 import pytest
 
 import atlas
+from atlas.distribution_downloads import lookup_distribution_downloads
+from atlas.distribution_supplied import lookup_distribution_supplied
 from atlas.firmware import resolve_links
 from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPrivateUsage]
 from atlas.machine import GLOB_INCOMPLETE, SYMLINK_HOPS, FixtureMachine, GlobResult
@@ -9991,6 +9993,47 @@ class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
         )
         assert rd.standalone_firmware_homes("%EMULATOR_XEMU% %ROM%") is None
         assert rd.standalone_firmware_sandbox(homes) is None
+
+
+class TestTheDistributionWordEmuDeckStatesAboutItself:
+    """Issue #354: EmuDeck names itself in the firmware context, and one card answers.
+
+    The word is the key both distribution tables are keyed by. It reaches the
+    copy list and finds nothing, which is why this is asserted rather than
+    assumed: the provenance route must go on answering ``None`` for every
+    EmuDeck destination *because no card is keyed under the word*, not because
+    nobody passed the word. What it does reach is the download list, whose
+    statement is about a directory under the root this context already
+    resolved — so the sandbox that rides beside the word on RetroDECK, which
+    is how a distribution's own bundled tree reads from this host, is not
+    passed here and nothing asks for it.
+    """
+
+    def _context(self):
+        installation = atlas.EmuDeck(
+            HOME,
+            FixtureMachine(
+                {
+                    EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\n',
+                    STANDALONE_CFG: f'system_directory = "{HOME}/Emulation/bios"\n',
+                },
+                dirs=[f"{HOME}/Emulation/bios"],
+            ),
+        )
+        return installation._read_firmware_context()  # pyright: ignore[reportPrivateUsage]
+
+    def test_the_context_states_the_arrangement_kind(self):
+        assert self._context().distribution == "emudeck"
+
+    def test_the_word_reaches_no_copy_list_so_the_provenance_stays_unanswerable(self):
+        context = self._context()
+        assert lookup_distribution_supplied(context.distribution) is None
+        assert context.distribution_sandbox is None
+
+    def test_the_word_reaches_the_download_list(self):
+        card = lookup_distribution_downloads(self._context().distribution)
+        assert card is not None
+        assert card.distribution == "emudeck"
 
 
 class TestARowNamingACoreFileOfAnotherHost:

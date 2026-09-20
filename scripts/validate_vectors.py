@@ -458,6 +458,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-unreadable",
     "firmware-identity-not-comparable",
     "firmware-supplied-source-unreadable",
+    "firmware-installer-download",
     "firmware-content-unidentified",
     "system-unknown",
     "system-not-in-catalogue",

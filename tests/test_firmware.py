@@ -56,6 +56,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_IMAGE_IDENTIFIED,
     CAVEAT_FIRMWARE_IMAGE_REFUSED,
     CAVEAT_FIRMWARE_IMAGE_UNLISTED,
+    CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD,
     CAVEAT_FIRMWARE_NAME_SPELLINGS,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
@@ -135,6 +136,7 @@ from atlas.firmware import (
     system_for,
 )
 from atlas.core_firmware import lookup_core_firmware
+from atlas.distribution_supplied import lookup_distribution_supplied
 from atlas.core_options import CoreOptionsChain
 from atlas.machine import (
     KIND_DIRECTORY,
@@ -7321,3 +7323,139 @@ class TestALaunchsOwnXdgPinningReachesTheAnswer:
     def test_an_unpinned_entry_still_states_the_dataroot_question(self):
         core = self._core(entry_pinned=False, context_pinned=True, settings=False)
         assert CAVEAT_CORE_MODE_UNESTABLISHED in [c.code for c in core.caveats]
+
+
+class TestADirectoryTheInstallerFillsByDownload:
+    """Issue #354: a declared file the distribution fetches is not one the user is missing.
+
+    EmuDeck places nothing into the firmware root from a tree of its own. What
+    it does is download an archive and unpack it there, which leaves the bytes
+    at the destination verifiable against nothing on the machine — so
+    ``supplied_by``, whose whole content is a measured equality, stays ``None``
+    and the statement that can be made is about the DIRECTORY instead. Every
+    test here turns on that distinction: the subject is the directory, so the
+    statement stands over an empty one, is made once however many declarations
+    resolve into it, and is never made about a directory this core declares
+    nothing in.
+    """
+
+    CORE = "demo_psp_libretro.so"
+    TREE = f"{BIOS_DIR}/PPSSPP"
+    URL = "https://buildbot.libretro.com/assets/system/PPSSPP.zip"
+
+    def _info(self, *declared: str) -> str:
+        rows = "".join(
+            f'firmware{index}_desc = "{path.rpartition("/")[2]}"\n'
+            f'firmware{index}_path = "{path}"\n'
+            f'firmware{index}_opt = "false"\n'
+            for index, path in enumerate(declared)
+        )
+        return (
+            'display_name = "A handheld core of no particular make"\n'
+            'systemname = "Sony - PlayStation Portable"\n'
+            f"firmware_count = {len(declared)}\n{rows}"
+        )
+
+    def _core(
+        self,
+        *declared: str,
+        files: Mapping[str, FixtureFileSpec] | None = None,
+        dirs: list[str] | None = None,
+        distribution: str | None = "emudeck",
+    ) -> CoreFirmware:
+        stem = self.CORE[: -len(".so")]
+        tree: dict[str, FixtureFileSpec] = {
+            f"{INFO_DIR}/{stem}.info": self._info(*declared),
+            f"{INFO_DIR}/{self.CORE}": {"status": "invalid-text"},
+        }
+        tree.update(files or {})
+        machine = FixtureMachine(tree, dirs=dirs)
+        context = replace(_context(machine), distribution=distribution)
+        return firmware_for_core(machine, context, core_so=self.CORE).cores[0]
+
+    def _stated(self, core: CoreFirmware) -> list[Caveat]:
+        return [c for c in core.caveats if c.code == CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD]
+
+    def test_a_declared_file_inside_the_tree_is_told_who_fills_the_tree(self):
+        # The whole data mapping, because a key a client cannot find is the
+        # failure this shape has — and both versions are in it: the table's
+        # own revision, and the distribution release its citations were read
+        # at, which is the only thing this statement rests on.
+        core = self._core(
+            "PPSSPP/ppge_atlas.zim", files={f"{self.TREE}/ppge_atlas.zim": "whatever landed"}
+        )
+        (stated,) = self._stated(core)
+        assert stated.data == {
+            "dir": self.TREE,
+            "distribution": "emudeck",
+            "url": self.URL,
+            "card_version": "1",
+            "revision": "acc45fc",
+        }
+
+    def test_the_statement_stands_over_an_empty_directory(self):
+        # The subject is the directory, so the file being absent changes
+        # nothing about it — and that is the case the statement is worth most
+        # in: "not in your library" over a file the installer fetches.
+        core = self._core("PPSSPP/ppge_atlas.zim", dirs=[self.TREE])
+        (requirement,) = _plain_requirements(core)
+        assert requirement.found == "missing"
+        assert [c.data["dir"] for c in self._stated(core)] == [self.TREE]
+
+    def test_two_declarations_in_one_tree_are_one_statement(self):
+        core = self._core("PPSSPP/ppge_atlas.zim", "PPSSPP/flash0/font/jpn0.pgf", dirs=[self.TREE])
+        assert len(_plain_requirements(core)) == 2
+        assert len(self._stated(core)) == 1
+
+    def test_a_core_that_declares_nothing_in_the_tree_is_told_nothing(self):
+        # The tree is there and the card covers it; this core simply does not
+        # read anything out of it, so its answer carries no statement about it.
+        core = self._core("scph5501.bin", dirs=[self.TREE])
+        assert self._stated(core) == []
+
+    def test_a_declaration_of_the_directory_itself_is_not_one_of_its_contents(self):
+        # The destination IS the directory the step fills. A core that lists
+        # the directory has declared the thing the installer creates, not
+        # something the download put inside it.
+        core = self._core("PPSSPP", dirs=[self.TREE])
+        assert self._stated(core) == []
+
+    def test_a_step_no_caller_reaches_states_nothing(self):
+        # The RPG Maker runtime packages: recorded in the card with the caller
+        # measurement, invoked by nothing the reading found, and therefore
+        # answering no path. A statement here would be about a step atlas has
+        # not established runs at all.
+        core = self._core("rtp/2000/harmony.dll", dirs=[f"{BIOS_DIR}/rtp/2000"])
+        assert self._stated(core) == []
+
+    def test_an_arrangement_with_no_download_card_is_told_nothing(self):
+        # RetroDECK copies its trees out of its own deploy and is answered by
+        # the copy list; it has no entry in the download table, and a card
+        # that is absent states nothing rather than defaulting to something.
+        core = self._core(
+            "PPSSPP/ppge_atlas.zim",
+            files={f"{self.TREE}/ppge_atlas.zim": "whatever landed"},
+            distribution="retrodeck",
+        )
+        assert self._stated(core) == []
+
+    def test_an_arrangement_that_names_no_distribution_is_told_nothing(self):
+        core = self._core(
+            "PPSSPP/ppge_atlas.zim",
+            files={f"{self.TREE}/ppge_atlas.zim": "whatever landed"},
+            distribution=None,
+        )
+        assert self._stated(core) == []
+
+    def test_the_file_in_the_downloaded_tree_is_claimed_by_nobody(self):
+        # The mutation this whole shape exists to refuse: a SuppliedBy here
+        # would say the bytes equal a copy EmuDeck ships, and EmuDeck ships
+        # none — no copy list is keyed under its word, so the provenance route
+        # answers None for the reason the caveat gives rather than in silence.
+        core = self._core(
+            "PPSSPP/ppge_atlas.zim", files={f"{self.TREE}/ppge_atlas.zim": "whatever landed"}
+        )
+        (requirement,) = _plain_requirements(core)
+        assert requirement.found == "file"
+        assert requirement.supplied_by is None
+        assert lookup_distribution_supplied("emudeck") is None
