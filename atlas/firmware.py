@@ -78,7 +78,7 @@ import tomllib
 import re
 from dataclasses import dataclass, field, replace
 from glob import escape as _glob_escape
-from typing import Any, Iterable, Literal, Mapping, Protocol, Sequence, TypeAlias, cast
+from typing import Any, Iterable, Literal, Mapping, Protocol, Sequence, TypeAlias, TypeVar, cast
 
 from ._data import packaged_text
 from .bios_table import BiosCandidate, BiosImage, BiosPick, BiosTable, packaged_bios_table
@@ -88,7 +88,10 @@ from .core_firmware import (
     LOCATING_UNESTABLISHED,
     CoreFirmwareCard,
     CoreFirmwareNameRoute,
+    CoreFirmwareOverrideOption,
     CoreFirmwareRegionKey,
+    CoreFirmwareSpellingRoute,
+    CoreFirmwareSpellings,
     FirmwareLocating,
     locating_of_card,
     locating_of_core,
@@ -153,6 +156,7 @@ from .placement import (
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
     Caveat,
+    DataValue,
 )
 from .retroarch_cfg import cfg_uint
 from .system_firmware import (
@@ -565,15 +569,27 @@ CAVEAT_FIRMWARE_IMAGE_REFUSED = "firmware-image-refused"
 # the folder's own verdict is what it replaces.
 CAVEAT_FIRMWARE_IMAGE_CONFIGURED = "firmware-image-configured"
 # The option names a file and nothing is at the composed path, which is the
-# state atlas can state as a search: the core searches wherever its stat
-# fails, and a path atlas could not stat is a stat that did not come back
-# rather than one that said no. So the folder verdict beside this is the
-# answer, and this says the configured name is stale. Not
-# ``firmware-path-names-no-file``: that code says NOTHING named a file — a
+# state atlas can state as a fallback: the core goes on looking wherever its
+# stat fails, and a path atlas could not stat is a stat that did not come back
+# rather than one that said no. So whatever the core falls back to is the
+# answer beside this — the folder's own listing where the option names a file
+# inside a folder declaration, the per-region names where it selects a
+# region-free image ahead of them — and this says the configured name is stale.
+# Not ``firmware-path-names-no-file``: that code says NOTHING named a file — a
 # declaration ending in a directory step, a setting left empty — and here a
 # name was read and composed and only the file is absent, which is what a
 # consumer prunes the setting on.
 CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING = "firmware-configured-image-missing"
+# The names one launch of this core would try, in the order it tries them, and
+# the image it expects to find under them. It is no degradation: it is the one
+# fact a declaration cannot carry for a core that opens several spellings of
+# one image, and without it a consumer reading a requirement would take the
+# single name beside it for the only name the core answers to. It rides once
+# per list a launch consults — one per console region, and the override
+# option's own list where a value selects one — and the digest on it states
+# which image the names are FOR, never a condition on the launch: this core
+# warns about a file that differs and boots it anyway.
+CAVEAT_FIRMWARE_NAME_SPELLINGS = "firmware-name-spellings"
 
 # The two ``.info`` files libretro ships as templates rather than as cores:
 # both declare firmware0_path = "filename.ext" with opt = "true/false". The
@@ -2002,6 +2018,16 @@ class FirmwareRequirement:
     need: FirmwareNeed
     """What the core asks for — ``required``, or ``optional`` where its declaration marks
     the slot so.
+
+    One rule moves it away from the declaration, and only for a row the entry
+    beside it already speaks for: where the core's own route tries several
+    spellings of one image, the declared row naming one of those spellings is
+    ``optional``, because the group states what a launch needs and the row is
+    the file it is one spelling of (:func:`_spoken_for_by_the_route`). Left
+    ``required`` it would be read as a conjunction — three region images for a
+    launch that opens one — and a machine holding the right image for the disc
+    in it would answer ``False``. Every other row keeps what its declaration
+    says.
     """
     file_name: str
     """The declaration's own file name: the basename the core opens, and the key the
@@ -2877,6 +2903,15 @@ class CoreFirmware:
         boots), a mixed group leaves ``None`` (whether THIS launch is served
         is the run-time fact atlas cannot read), and only an all-satisfied
         group lets ``True`` through.
+
+        What a group does to the rows BESIDE it is the one place a declared
+        ``need`` is not the declaration's own: a row whose name the route's
+        lists try is ``optional``, because the group is already the statement
+        of what the launch needs (:attr:`FirmwareRequirement.need`). Without
+        that rule the two statements would be read as one conjunction and
+        Beetle PSX's three required region images would veto every machine
+        that holds one of them — which is the answer its declaration gave
+        before its route was read.
 
         A system that cannot run without an image folds in at the same two
         precedences, and for the same reason: a demonstrated absence is a
@@ -5125,6 +5160,50 @@ def _core_caveats(core: CoreDeclarations, refusals: tuple[Caveat, ...]) -> tuple
     )
 
 
+_SpokenForRow = TypeVar("_SpokenForRow", FirmwareRequirement, RefusedDeclaration)
+
+
+def _spoken_for_by_the_route(
+    rows: tuple[_SpokenForRow, ...], spoken_for: tuple[str, ...]
+) -> tuple[_SpokenForRow, ...]:
+    """A declared row the route's own entry answers for asks for nothing by itself.
+
+    The rule is about the two statements standing beside each other, not about
+    any one core: a ``.info``'s row says the packager filed that name under
+    this core, and the group the route adds says what a launch needs. Where the
+    group's own lists name a row, the group is the requirement and the row is
+    the file it is one spelling of — so the row stays, reproduced as declared
+    in every other field, and its ``need`` becomes ``optional``. Left
+    ``required`` it would be read as a conjunction: Beetle PSX declares one
+    image per region required, a launch needs one of the three, and a machine
+    holding the right image for the disc in it would answer ``False``.
+
+    Rows the lists never name keep their ``need`` untouched — a core declaring
+    something else beside its BIOS still requires it — and a route that states
+    no names moves nothing at all, which is every route but the spelling one.
+    No caveat says this: the group states the requirement and
+    :data:`CAVEAT_FIRMWARE_NAME_SPELLINGS` states the names it covers, so a
+    third statement would be the same fact a third time.
+
+    It runs over the **refused** declarations as well, and it has to: a
+    declaration atlas would not follow still carries a ``need``, and
+    :attr:`CoreFirmware.requirements_met` withholds its verdict over a refused
+    row that says ``required`` (a file it could not judge might be the missing
+    one). Where the route's lists name that row the group already answers for
+    it — a name leaving the firmware root is one spelling out of three, six or
+    nine — so a satisfied group would otherwise be talked down to ``None`` by
+    a declaration the entry beside it has replaced.
+    """
+    if not spoken_for:
+        return rows
+    return tuple(
+        cast(_SpokenForRow, replace(row, need=NEED_OPTIONAL))
+        if row.need == NEED_REQUIRED and row.declared in spoken_for
+        else row
+        for row in rows
+    )
+
+
 def _read_core(
     machine: Machine,
     context: FirmwareContext,
@@ -5153,12 +5232,17 @@ def _read_core(
         machine, context, core, verify=verify, folders=folders, for_a_launch=for_a_launch
     )
     # What the core's own code does, beside what its file declares: a core
-    # whose packaged knowledge states a second door composes the name it opens
-    # out of its own options and searches the directory where that fails, and
-    # neither of those is anything a ``.info`` could say. The declared rows
-    # above are untouched by it — they are what the file states — and this is
-    # one further entry, region-scoped where the console region is.
+    # whose packaged knowledge states a route either composes the name it opens
+    # out of its own options and searches the directory where that fails, or
+    # carries several spellings of one image and opens the first that is there.
+    # Neither is anything a ``.info`` could say. What comes back is one further
+    # entry, region-scoped where the console region is — and, for the spelling
+    # shape, the names that entry already answers for, which is the one thing
+    # that reaches back into the rows above: their ``need`` alone, every other
+    # field still the declaration's.
     located = _located_firmware(machine, context, core, verify=verify)
+    requirements = _spoken_for_by_the_route(requirements, located.spoken_for)
+    refused = _spoken_for_by_the_route(refused, located.spoken_for)
     return (
         CoreFirmware(
             core_so=core.core_so,
@@ -7356,6 +7440,16 @@ class _LocatedFirmware:
     core_caveats: tuple[Caveat, ...] = ()
     answer_caveats: tuple[Caveat, ...] = ()
     claims: tuple[str, ...] = ()
+    spoken_for: tuple[str, ...] = ()
+    """The declared names this route's own entry answers for (:func:`_spoken_for_by_the_route`).
+
+    Empty for a route whose entry stands beside the declaration rather than
+    over it. A route that tries several spellings of one image is the other
+    case: the ``.info`` names one of those spellings per region and marks it
+    required, and a launch needs one of the three — so those rows are what the
+    group already speaks for, and leaving them required would veto a machine
+    the core starts on.
+    """
 
 
 # What opening the name a region's key gives came to, which is what decides
@@ -8058,16 +8152,19 @@ def _region_statements(
 
 def _undecided_region_caveat(
     core: CoreDeclarations,
-    stated: tuple[str, ...],
-    unstated: tuple[str, ...],
+    group: "FirmwareAlternatives",
+    every: tuple[str, ...],
     directory: str,
 ) -> Caveat:
     """Which region a launch is, where the configuration pins none.
 
     The same fact and the same code the DuckStation card states: the console
     region is the running disc's own, and no configuration records it. What
-    differs is only how it comes about — there every region key is empty, here
-    the region option itself says ``Auto``.
+    differs is only how it comes about, and there are three ways in — every
+    region key empty, as on that card; a region option whose value says
+    ``Auto``; and a core with no region option at all, where the region is only
+    ever the disc's and no setting could have pinned it. The sentence says the
+    fact rather than the route into it, because a client acts on the fact.
 
     ``regions`` is what the group BELOW actually carries an option for, not
     every region the option could pin. The two part where a region reached no
@@ -8082,12 +8179,23 @@ def _undecided_region_caveat(
     name would leave the firmware root, which names the key and the value
     instead, because what went wrong there is the name rather than a region.
 
-    It rides only where there IS a group, which is also why the pinned case
+    It rides only where there IS a group, which is also why a pinned region
     never reaches it: a pinned region is one unconditional requirement, and no
     disc selects anything. With no option at all the answer has no
     region-scoped entry for this to explain either, and a statement about which
-    of them a launch needs would point at nothing.
+    of them a launch needs would point at nothing. A route with no region
+    option is never pinned, so for that shape this rides every answer that
+    reached an option.
+
+    *every* is every region the core's route knows, in its own order, and the
+    split against what *group* carries is made here rather than at the two call
+    sites — the rule that a caveat explaining a group names only the regions the
+    group speaks for is one rule, and a second copy of it is a second answer
+    waiting to disagree.
     """
+    carried = {region for option in group.options for region in option.regions or ()}
+    stated = tuple(region for region in every if region in carried)
+    unstated = tuple(region for region in every if region not in carried)
     left = (
         ""
         if not unstated
@@ -8096,8 +8204,8 @@ def _undecided_region_caveat(
     )
     return Caveat(
         CAVEAT_CORE_MODE_UNESTABLISHED,
-        f"{core.core_so} is configured to take the console region from the disc that is being "
-        "booted, a fact no configuration records — so the options below are stated per region "
+        f"{core.core_so} takes the console region from the disc that is being booted, a fact no "
+        "configuration records — so the options below are stated per region "
         f"({', '.join(stated)}) and a launch needs the one its disc selects{left}",
         {
             "core_so": core.core_so,
@@ -8108,31 +8216,497 @@ def _undecided_region_caveat(
     )
 
 
+# ── The core that carries its own spellings ───────────────────────────────
+# The other shape of a first door, and it reads nothing configurable but one
+# option: the core holds a list of names per console region, opens the first of
+# them that exists, and compares what it opened with one digest afterwards
+# without letting the comparison decide anything. So there is no table here and
+# no directory read: the core opens one name at a time until one opens, and
+# this reads each of those names with a stat. So this half never reaches the
+# content half. What a launch needs is one image of its disc's own region,
+# under any of that region's spellings, which is what the group below states.
+
+
+@dataclass(frozen=True, slots=True)
+class _SpelledImage:
+    """What walking one list of spellings came to."""
+
+    requirement: FirmwareRequirement | None
+    """The option this list states, and ``None`` where every one of its names was refused."""
+    opens: bool
+    """Is something at one of these names? The core stops at the first, so this ends the walk.
+
+    It is what a list ahead of another one is asked: an override list that
+    opens is the whole answer and the region lists are never consulted, while
+    one that does not hands the launch on to them.
+    """
+    stated: tuple[Caveat, ...] = ()
+    """What composing these names established about this core's declaration."""
+    observed: tuple[Caveat, ...] = ()
+    """What looking at the machine saw, which belongs to the answer rather than to the core."""
+    composed: tuple[str, ...] = ()
+    """Every destination this list's names compose to, in the core's own order.
+
+    All of them, and not only the ones the walk stat'ed: the walk stops at the
+    first name that answers, while the question "which files does this core
+    ask for" is about the list. A file under a later spelling, kept out of this
+    because an earlier name happened to be there, would be offered to a client
+    as unclaimed — a file nobody wants, under a name this core opens.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class _SpelledWalk:
+    """One list of names this launch consults, and the console regions it answers for."""
+
+    names: CoreFirmwareSpellings
+    image: _SpelledImage
+    serves: tuple[str, ...]
+    """The regions this list's option carries — every region for an override list that opens,
+    one for a region list, and none for a list that was walked and answered no option.
+    """
+    region: str | None = None
+    """The console region this list belongs to, and ``None`` for the override's own list."""
+    option: str | None = None
+    """The option key that selected this list, and ``None`` for a region's own list."""
+
+
+def _refused_spelling(core: CoreDeclarations, spelling: str, refusal: str, root: str) -> Caveat:
+    """One of the names this core tries composes a path atlas will not answer for.
+
+    The walk goes on past it, which is the same thing
+    :func:`_named_image` does with a configured name it will not follow: what
+    is stated is what the launch reaches beyond this name, and the refusal says
+    which one was left unfollowed. It overstates nothing about the file — a
+    name atlas would not follow may well be one the core opens — and it is the
+    only reading available, because following it is what the bound forbids.
+    """
+    return Caveat(
+        refusal,
+        f"{core.core_so} tries {spelling!r} under the firmware root, and that path "
+        f"{_why_refused(refusal, root)} — so no destination is stated for it, and what stands "
+        "below is what this core reaches under the names it tries after it",
+        {"core_so": core.core_so, "declared": spelling},
+    )
+
+
+def _spelled_requirement(
+    core: CoreDeclarations,
+    path: str,
+    found: PathKind,
+    checked: FirmwareChecked | None,
+    *,
+    declared: str,
+    spelling: str,
+    description: str,
+) -> FirmwareRequirement:
+    """One name this core tries, as the requirement a launch reaching it states.
+
+    ``declared`` is the name the ``.info`` spells, which is the first of the
+    list, and ``file_name`` is the spelling actually reached — two fields
+    because they are two facts: where a client should put an image, and what
+    this machine already answers under.
+
+    ``identity`` is ``None``, and that is this route's own statement rather
+    than a gap. A spelling says which image is MEANT and never which one is
+    there: the core compares what it opened against one SHA1 only afterwards,
+    and a file that differs is warned about and booted all the same
+    (libretro.cpp:322-329 at libretro/beetle-psx-libretro@d6383bff). So
+    nothing covers "whatever lies at the first of these names that exists", and
+    :attr:`FirmwareRequirement.satisfied` beside it follows presence the way it
+    does for every file no packaged table covers. Which image the names are
+    FOR is stated instead, by :data:`CAVEAT_FIRMWARE_NAME_SPELLINGS`, which
+    carries the digest.
+    """
+    return FirmwareRequirement(
+        core_so=core.core_so,
+        system=core.system,
+        system_source=SOURCE_SYSTEMNAME,
+        need=NEED_REQUIRED,
+        file_name=spelling,
+        path=path,
+        declared=declared,
+        description=description,
+        identity=None,
+        found=found,
+        checked=checked,
+        regions=None,
+    )
+
+
+def _first_spelling(
+    machine: Machine,
+    core: CoreDeclarations,
+    names: CoreFirmwareSpellings,
+    *,
+    root: str,
+    description: str,
+    verify: bool,
+) -> _SpelledImage:
+    """Walk one list the way the core walks it: the first name that is there ends it.
+
+    The core's own test is an open for reading rather than a stat
+    (``filestream_exists`` is ``filestream_open`` succeeding,
+    libretro-common/streams/file_stream.c:104-121; the hint it passes lands in
+    the buffered branch, ``fopen(path, "rb")`` at
+    libretro-common/vfs/vfs_implementation.c:445). What that open does with
+    each shape decides the walk, and three of the four are mirrored here:
+
+    - a **directory** ends the walk exactly as a file does. Measured against
+      glibc rather than watched in a launch: the call succeeds on one, answers
+      a size of 0 and fails the first read with ``EISDIR``, so the core stops
+      there and reads nothing out of it (libretro.cpp:2112-2114, :2139). The
+      option names that directory, where
+      :attr:`FirmwareRequirement.satisfied` answers ``None`` — something is
+      there and nothing about it is confirmed;
+    - a **dead symlink** fails the open, so it is not one of these names being
+      there and the walk goes on — which is what the path kind already says,
+      because the stat behind it fails too;
+    - a path that **cannot be stat'ed** is not one the open would have
+      succeeded on either, so the walk goes on there as well, with
+      :data:`CAVEAT_FIRMWARE_PATH_INACCESSIBLE` riding to say a name this core
+      tries could not be looked at. The option is then whatever a later name
+      answers, and the first name where no later one does.
+
+    [D] The fourth is not mirrored: a file whose mode denies reading. The
+    core's open fails on it and its walk would go on, while a stat answers
+    ``file`` and this ends the walk there. Establishing it would mean opening
+    every name this core might try, which is a read of the whole list on every
+    answer, and the case is a file placed where the core looks with its own
+    read bit cleared.
+
+    Where no name answers, the option is the first one this walk could compose:
+    ``declared`` is the list's own first name — the one the core reports as
+    missing and shows on screen (libretro.cpp:305-318) — while ``file_name``
+    and ``path`` are the first name atlas would follow, which differ only where
+    a name ahead of it leaves the firmware root.
+    """
+    declared = names.spellings[0]
+    answer: FirmwareRequirement | None = None
+    first: FirmwareRequirement | None = None
+    stated: list[Caveat] = []
+    observed: list[Caveat] = []
+    composed: list[str] = []
+    for spelling in names.spellings:
+        destination = destination_under(machine, root, spelling)
+        if destination.path is None:
+            refusal = destination.refusal or CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+            stated.append(_refused_spelling(core, spelling, refusal, root))
+            continue
+        composed.append(destination.path)
+        if answer is not None:
+            # The walk is over; this name is composed for the claim alone and
+            # not looked at, which is also what the launch does with it.
+            continue
+        found, checked, seen, _ = _observe(
+            machine, destination.path, None, verify=verify, file_name=spelling
+        )
+        if seen is not None:
+            observed.append(seen)
+        requirement = _spelled_requirement(
+            core,
+            destination.path,
+            found,
+            checked,
+            declared=declared,
+            spelling=spelling,
+            description=description,
+        )
+        if found in (KIND_FILE, KIND_DIRECTORY):
+            answer = requirement
+            continue
+        first = requirement if first is None else first
+    return _SpelledImage(
+        answer or first, answer is not None, tuple(stated), tuple(observed), tuple(composed)
+    )
+
+
+def _override_selection(
+    core: CoreDeclarations, option: CoreFirmwareOverrideOption, value: str
+) -> tuple[CoreFirmwareSpellings | None, list[Caveat]]:
+    """Which list the override option selects, and ``None`` where it selects none.
+
+    The shipped value selects none, and so does a value the entry's vocabulary
+    does not know — read the way :func:`_regions_answered` reads one, and for
+    the same reason: RetroArch writes a value into its options file only where
+    the core declared it, so a word outside the declared set never governs a
+    launch, and this core keeps whatever the option held before it in that case
+    (libretro.cpp:3265-3280, which has no else).
+    """
+    if value in option.values:
+        return option.values[value], []
+    return None, [
+        Caveat(
+            CAVEAT_UNKNOWN_OPTION_VALUE,
+            f'core option {option.key} = "{value}" is not a value this core declares, and '
+            "RetroArch writes only declared values into its options file — so no image is "
+            "selected ahead of this core's per-region names and the options below are theirs",
+            {"core_so": core.core_so, "option_key": option.key, "value": value},
+        )
+    ]
+
+
+def _spellings_caveat(core: CoreDeclarations, walk: _SpelledWalk) -> Caveat:
+    """The names one list holds, in order, and the image behind them.
+
+    ``region`` rides a region's own list and ``option`` rides the override's,
+    and each is absent on the other — a key stating which kind of list this is
+    by being there, because caveat data has no null and an invented token would
+    be a value a client could branch on wrongly.
+    """
+    names = walk.names
+    listed = ", ".join(names.spellings)
+    where = (
+        f"for a {walk.region} console"
+        if walk.region is not None
+        else f"ahead of its per-region names, because {walk.option} selects a region-free image"
+    )
+    data: dict[str, DataValue] = {
+        "core_so": core.core_so,
+        "spellings": list(names.spellings),
+        "sha1": names.sha1,
+    }
+    if walk.region is not None:
+        data["region"] = walk.region
+    else:
+        assert walk.option is not None  # a list is a region's or the override option's
+        data["option"] = walk.option
+    return Caveat(
+        CAVEAT_FIRMWARE_NAME_SPELLINGS,
+        f"{core.core_so} opens the first of {listed} that exists {where}, in that order — so an "
+        f"image under any one of them starts this core. It expects {names.sha1} there and boots "
+        "a file that differs anyway, warning that emulation may glitch, so the digest says which "
+        "image these names are for and decides nothing",
+        data,
+    )
+
+
+def _override_image_missing(
+    core: CoreDeclarations, option: CoreFirmwareOverrideOption, names: CoreFirmwareSpellings, *, directory: str
+) -> Caveat:
+    """The selected region-free image is at none of its names, so the region lists answer."""
+    return Caveat(
+        CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING,
+        f"{core.core_so} is configured to open a region-free image ({option.key}) and nothing is "
+        f"at {' or '.join(names.spellings)} inside {directory} — the state this core falls back "
+        "to its per-region names in, so the options below are what the launch rests on and the "
+        "configured value names no file",
+        {
+            "core": core_short_name(core.stem),
+            "key": option.key,
+            "name": names.spellings[0],
+            "dir": directory,
+        },
+    )
+
+
+def _spelled_walks(
+    machine: Machine,
+    core: CoreDeclarations,
+    route: CoreFirmwareSpellingRoute,
+    selected: CoreFirmwareSpellings | None,
+    *,
+    root: str,
+    directory: str,
+    verify: bool,
+) -> tuple[list[_SpelledWalk], list[Caveat]]:
+    """The lists this launch consults, in the core's own order, and what selecting them cost.
+
+    One list where the override selects an image that is there — it is
+    region-free, so it serves every region and the per-region lists are never
+    reached (libretro.cpp:227-244 returns before they are filled in). Otherwise
+    the three region lists, and the override's own list beside them where it
+    was selected and missed: that one was walked, so its names are stated and
+    claimed, and it carries no option because the launch does not rest on it.
+    """
+    option = route.override_option
+    walks: list[_SpelledWalk] = []
+    caveats: list[Caveat] = []
+    every = tuple(row.region for row in route.regions)
+    if selected is not None:
+        image = _first_spelling(
+            machine,
+            core,
+            selected,
+            root=root,
+            description=f"the region-free image this core opens for every console ({option.key})",
+            verify=verify,
+        )
+        if image.opens:
+            return [_SpelledWalk(selected, image, every, option=option.key)], caveats
+        caveats.append(_override_image_missing(core, option, selected, directory=directory))
+        walks.append(_SpelledWalk(selected, image, (), option=option.key))
+    walks.extend(
+        _SpelledWalk(
+            row.names,
+            _first_spelling(
+                machine,
+                core,
+                row.names,
+                root=root,
+                description=f"the image this core opens for a {row.region} console",
+                verify=verify,
+            ),
+            (row.region,),
+            region=row.region,
+        )
+        for row in route.regions
+    )
+    return walks, caveats
+
+
+def _spelled_firmware(
+    machine: Machine,
+    context: FirmwareContext,
+    core: CoreDeclarations,
+    route: CoreFirmwareSpellingRoute,
+    *,
+    root: str,
+    verify: bool,
+) -> _LocatedFirmware:
+    """What a core that carries its own spellings adds to its declaration.
+
+    At most one entry, and the group wherever there is one: the console region
+    is the running disc's own and no configuration records it, so a launch
+    needs the option its disc selects, and nothing here can ever pin a region.
+    A region whose every name was refused has no option, and it is named in the
+    caveat that explains the group; where that leaves no option at all there is
+    no entry either, and the caveats are the whole of what this route
+    established.
+    """
+    option = route.override_option
+    library_name, caveats = _locating_library_name(
+        machine,
+        context,
+        core,
+        falls_back_to="the value below comes from the global options file and this core's own default",
+    )
+    value = _locating_option(
+        machine, context, key=option.key, default=option.default, library_name=library_name
+    )
+    selected, unknown = _override_selection(core, option, value)
+    caveats.extend(unknown)
+    directory = resolve_links(machine, root) or root
+    walks, selection_caveats = _spelled_walks(
+        machine, core, route, selected, root=root, directory=directory, verify=verify
+    )
+    caveats.extend(selection_caveats)
+    caveats.extend(caveat for walk in walks for caveat in walk.image.stated)
+    caveats.extend(_spellings_caveat(core, walk) for walk in walks)
+    entry = _locating_entry(
+        [
+            (walk.image.requirement, walk.serves)
+            for walk in walks
+            if walk.serves and walk.image.requirement is not None
+        ],
+        pinned=False,
+    )
+    if isinstance(entry, FirmwareAlternatives):
+        caveats.append(
+            _undecided_region_caveat(
+                core, entry, tuple(row.region for row in route.regions), directory
+            )
+        )
+    return _LocatedFirmware(
+        entry=entry,
+        core_caveats=tuple(caveats),
+        answer_caveats=(
+            *(() if context.core_options is None else context.core_options.caveats),
+            *(caveat for walk in walks for caveat in walk.image.observed),
+        ),
+        # Every name this launch would try, whether or not a file is at it and
+        # whether or not the walk got that far: the walk stops at the first
+        # name that answers, while what this core ASKS FOR is the whole list.
+        # A file under a later spelling would otherwise be offered to a client
+        # as unclaimed — a file nobody wants, under a name this core opens.
+        claims=tuple(
+            sorted(
+                {
+                    resolve_links(machine, path) or path
+                    for walk in walks
+                    for path in walk.image.composed
+                }
+            )
+        ),
+        spoken_for=_spoken_for(route),
+    )
+
+
+def _spoken_for(route: CoreFirmwareSpellingRoute) -> tuple[str, ...]:
+    """Every name this route's lists try, whichever list and whichever option value.
+
+    It is read off the route rather than off the walk: which lists a launch
+    consults depends on one option, and a declared row's ``need`` must not move
+    with a setting. The rows this names are the ones the group below speaks
+    for.
+    """
+    return tuple(
+        sorted(
+            {
+                spelling
+                for names in (
+                    *(row.names for row in route.regions),
+                    *(value for value in route.override_option.values.values() if value is not None),
+                )
+                for spelling in names.spellings
+            }
+        )
+    )
+
+
 def _located_firmware(
     machine: Machine, context: FirmwareContext, core: CoreDeclarations, *, verify: bool
 ) -> _LocatedFirmware:
     """What this core's own locating route adds to its declaration, or nothing.
 
-    Nothing for every core but the ones whose packaged knowledge states both
-    doors (:attr:`atlas.core_firmware.CoreFirmwareCard.name_route`): a core
-    answered ``by-name`` opens the names it was given and its declaration is
-    the whole answer, and one answered ``unestablished`` has no route anybody
-    read to state.
+    Nothing for every core whose packaged knowledge states no route
+    (:attr:`atlas.core_firmware.CoreFirmwareCard.name_route`): a core answered
+    ``by-name`` with no route opens the names it was given and its declaration
+    is the whole answer, and one answered ``unestablished`` has no route
+    anybody read to state.
 
-    What is added is at most one entry. Where the region option pins a region,
-    that region's image is what every launch of this core opens and the entry
-    is an unconditional requirement; where it pins none, one launch still opens
-    exactly one of them and the entry is the alternatives group that says so.
-    Where no region reached an answer at all there is no entry, and the caveats
-    are the whole of what this route established.
+    Two shapes reach a route, and the card's own type is what says which — no
+    reading here guesses it. One composes the name it opens out of its options
+    and searches the directory where that fails; the other carries its own
+    spellings and opens them in order. Each adds at most one entry, and what
+    each does to the declaration beside it differs: the first leaves every row
+    exactly as the ``.info`` states it, while the second names the rows its own
+    lists try, which :func:`_spoken_for_by_the_route` re-emits as ``optional``
+    because the entry it adds is already their requirement. Every other field
+    of every row is the declaration's, either way.
     """
     card = lookup_core_firmware(core.core_so)
     if card is None or card.name_route is None:
         return _LocatedFirmware()
     root = context.root
     assert root is not None  # callers resolve the empty-root answer before getting here
+    if isinstance(card.name_route, CoreFirmwareSpellingRoute):
+        return _spelled_firmware(machine, context, core, card.name_route, root=root, verify=verify)
+    return _two_door_firmware(
+        machine, context, core, card, card.name_route, root=root, verify=verify
+    )
+
+
+def _two_door_firmware(
+    machine: Machine,
+    context: FirmwareContext,
+    core: CoreDeclarations,
+    card: CoreFirmwareCard,
+    route: CoreFirmwareNameRoute,
+    *,
+    root: str,
+    verify: bool,
+) -> _LocatedFirmware:
+    """What a core that opens a configured name and searches behind it adds to its declaration.
+
+    One entry at most. Where the region option pins a region, that region's
+    image is what every launch of this core opens and the entry is an
+    unconditional requirement; where it pins none, one launch still opens
+    exactly one of them and the entry is the alternatives group that says so.
+    Where no region reached an answer at all there is no entry, and the caveats
+    are the whole of what this route established.
+    """
     table = _content_table(card)
-    route = card.name_route
     library_name, caveats = _locating_library_name(
         machine,
         context,
@@ -8189,15 +8763,7 @@ def _located_firmware(
     )
     entry = _locating_entry(_region_options(answers), pinned=pinned)
     if isinstance(entry, FirmwareAlternatives):
-        carried = {region for option in entry.options for region in option.regions or ()}
-        caveats.append(
-            _undecided_region_caveat(
-                core,
-                tuple(region for region in regions if region in carried),
-                tuple(region for region in regions if region not in carried),
-                directory,
-            )
-        )
+        caveats.append(_undecided_region_caveat(core, entry, regions, directory))
     return _LocatedFirmware(
         entry=entry,
         core_caveats=tuple(caveats),

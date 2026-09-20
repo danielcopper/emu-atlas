@@ -164,6 +164,44 @@ of the region list, the two override options are tried under the same rule with 
 There is no size gate and no directory listing anywhere in it. A file the function was not given a spelling for is never
 looked at.
 
+**[V] One call per load, for one region.** `firmware_is_present(region)` is called at `:2110` and nowhere else (counting
+rule: occurrences of `firmware_is_present(` in the file — two, the definition and that call), so what a launch needs is
+one image of its own region rather than one of each. The region is the disc's: `region = CalcDiscSCEx()` (`:1980`).
+
+What is dead there is the **override**, not the setting behind it. `:1982-1983` replaces the detected region with
+`psx.region_default` only where `psx.region_autodetect` is false, and that one is hard-wired to 1
+(`mednafen/settings.c:98-99`), so that branch is unreachable. The same `psx.region_default` is read all the same, one
+level down: it is the value `CalcDiscSCEx` seeds `ret_region` with (`:1563`) before a disc's own `SYSTEM.CNF` overwrites
+it (`:1572` into `:1410`), and `MDFN_GetSettingI` answers 1 for it — `REGION_NA` (`mednafen/settings.c:53-56`). So a
+disc stating no region is read as North America. No core option names a region either: the only occurrence of the word
+in `libretro_core_options.h` is the override option's own description.
+
+**[V] The override option, and what selects it.** `libretro_core_options.h:1094-1108` declares three values — `disabled`
+(the default), `psxonpsp` and `ps1_rom` — and `libretro.cpp:3265-3280` maps them to 0, 1 and 2, leaving the previous
+value standing for anything else. The key carries the renderer: `BEETLE_OPT` spells it `beetle_psx_hw_` plus the option
+name where `HAVE_HW` is defined and `beetle_psx_` without it (`libretro_options.h:27-31`), and an unfiltered
+`strings -a` pass over each deployed binary finds exactly one spelling of it per build (counting rule: lines matching
+`override_bios`, case-insensitively, over the whole dump — one in each). A selected image that exists returns before any
+region list is filled in (`:227-244`), so it serves whichever region the disc turns out to be.
+
+**[V] The existence test is an open, not a stat.** `filestream_exists` succeeds exactly where `filestream_open` does
+(`libretro-common/streams/file_stream.c:104-121`), and the hint it passes — `RETRO_VFS_FILE_ACCESS_HINT_NONE` — leaves
+the unbuffered flag unset (`libretro-common/vfs/vfs_implementation.c:372-377`, tested at `:427`), so the call is
+`fopen(path, "rb")` at `:445` with the mode string set at `:382`. The `open(path, O_RDONLY)` at `:499` is the other
+branch, reached only under the frequent-access hint.
+
+**[V-measured] Both of those succeed on a directory.** Measured against glibc, not watched in a launch: `fopen` on a
+directory returns a stream, the seek-to-end that follows answers a size of 0, and the first read fails with `EISDIR`;
+`open(path, O_RDONLY)` on one returns a descriptor. So a directory under one of these names ends the walk there and the
+core then reads nothing out of it (`:2112-2114`, `:2139`), while a dead symlink fails the open and the next spelling is
+tried.
+
+**[V] After a miss the core opens no name it has not already tried.** Where `firmware_is_present` returns false the
+loader falls back to `psx.bios_jp` / `psx.bios_na` / `psx.bios_eu` (`:2116-2135`), and those settings answer with the
+lowercase first spelling of the same region list (`mednafen/settings.c:118-123`) under the same directory — a second
+look at a path that was just tried. What the user sees is the error screen `firmware_is_present` raised on its way out
+(`:314-315` with `:4895-4905`).
+
 **[V] The SHA1 beside each list identifies nothing.** A mismatch logs
 `Unsupported firmware may cause emulation glitches.` and **still returns true** (`:322-329`), so it warns and gates
 nothing — which is why the word is `by-name` and not something conditional on content.
@@ -188,13 +226,25 @@ that nothing here reads, or with any part of one left blank (`atlas/core_firmwar
   no entry already answers; an entry stating it would be a citation for having read nothing.
 - `locating.citation` — the `file:line` readings the word rests on, at a revision the entry names. Not a summary: the
   branch that picks the name, the branch that opens it, and the branch that does anything else.
-- `name_route` — **required on `by-name-then-content` and refused on every other word**, because a word naming two doors
-  and describing neither leaves the resolver guessing what this file exists to state. It carries `region_option` (the
-  key that pins the console region, its declared default, and every value it takes mapped to a region token — `null` for
-  a value that pins none) and `region_keys` (the key that names the image per region, with the default the core
-  declares). Every region the option can pin needs a key, or a launch it pins is one the route says nothing about. Its
-  citation covers the branch that reads the region and the branch that reads the name, and marks as `[D]` anything that
-  rests on what the FRONTEND answers rather than on the core's own code.
+- `name_route` — the options or the names a launch opens, in **one of two shapes**, and the word decides which. Neither
+  is ever guessed at from what happens to parse: an entry states the key of the shape it means, and one stating both or
+  neither is refused.
+  - On `by-name-then-content` it is **required**, because a word naming two doors and describing neither leaves the
+    resolver guessing what this file exists to state. It carries `region_option` (the key that pins the console region,
+    its declared default, and every value it takes mapped to a region token — `null` for a value that pins none) and
+    `region_keys` (the key that names the image per region, with the default the core declares). Every region the option
+    can pin needs a key, or a launch it pins is one the route says nothing about.
+  - On `by-name` it is **optional**, and it is the other shape: `override_option` (the key tried ahead of everything
+    else, its declared default, and every value it takes mapped to the list that value selects — `null` for a value that
+    selects none) and `regions` (per console region the ordered `spellings` that region's launch tries and the `sha1`
+    the core expects behind them). A `by-name` entry without it is the ordinary case — a core that opens the names it
+    was declared with. Each list is held to its shape: a spelling is a bare file name, because the core composes the
+    directory itself; a list never repeats a name, because the list is an order; the digest is forty lowercase hex
+    digits, so two readings of one image compare equal; one name is never stated by two lists, or which list a file
+    belongs to would depend on which one a reader walked first; and the option has to select a list under some value, or
+    the block describes a door that never opens.
+  - Either way its citation covers the branch that decides the name and the branch that opens it, and marks as `[D]`
+    anything resting on what the FRONTEND answers rather than on the core's own code.
 - `content_route` — required and refused the same way. It names the packaged table the search recognises a directory by
   (a bare file name beside the others, never a path), the number of leading bytes the core hashes, and what it does with
   an image no row holds. Its citation reads those out of the core's source; the table states the last two as the
@@ -217,8 +267,8 @@ read with per-region keys in front of it, which is `by-name-then-content`, and a
 
 **The vocabulary carries only the words a producer exists for.** Three of them, and each is reachable: two rules put a
 word on an answer — the packaged entry a `.so` reaches, and the shape of a standalone card — and `unestablished` is what
-a core neither of them describes takes. Over the 192 `cores[]` blocks the vector corpus holds, the words come out 119
-`unestablished`, 38 `by-name` and 35 `by-name-then-content` (counting rule: the serialized `locating` of every core
+a core neither of them describes takes. Over the 215 `cores[]` blocks the vector corpus holds, the words come out 137
+`unestablished`, 43 `by-name` and 35 `by-name-then-content` (counting rule: the serialized `locating` of every core
 block in every `expected` tree under `vectors/machines/`, tallied by value).
 
 A value nothing produces would be a claim with no mechanism behind it, and a branch a consumer could write and never

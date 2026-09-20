@@ -1397,15 +1397,52 @@ Shape:
   `retro_get_system_info`, and how that was read. This is what makes the entry checkable: **the word is a property of
   one build, not of an emulator.** Beetle PSX is the case it was written for — upstream grew a SHA1 directory search
   after the pinned commit, which would turn a `by-name` core into a `by-name-then-content` one.
-- `name_route` / `content_route` — what the two doors read, and **present on `by-name-then-content` and refused on every
-  other word**: a word that names two doors and describes neither would leave the resolver guessing exactly what this
-  file exists to replace. `name_route.region_option` is the option that pins the console region, with every value it
-  takes mapped to a region token — `null` for a value that pins none, which is SwanStation's `Auto`, the running disc's
-  own region — and `region_keys` is the option that names the image per region with the default the core declares, so
-  the pair reads fully even on a machine whose options file has never mentioned either. Every region the option can pin
-  needs a key, or a launch it pins is one the route says nothing about. `content_route` names the packaged table the
-  search recognises a directory by (a bare file name beside the others, never a path), the number of leading bytes the
-  core hashes, and what it does with an image no row holds (`atlas.bios_table.UNKNOWN_POLICIES`).
+- `name_route` / `content_route` — what the doors read. `content_route` is **present on `by-name-then-content` and
+  refused on every other word**: a word that names two doors and describes neither would leave the resolver guessing
+  exactly what this file exists to replace. It names the packaged table the search recognises a directory by (a bare
+  file name beside the others, never a path), the number of leading bytes the core hashes, and what it does with an
+  image no row holds (`atlas.bios_table.UNKNOWN_POLICIES`).
+- `name_route` comes in **two shapes, one per word**, told apart by the key an entry states and never by what happens to
+  parse — an entry stating both keys or neither is refused.
+  - `by-name-then-content` takes the **option** shape, and must: `region_option` is the option that pins the console
+    region, with every value it takes mapped to a region token — `null` for a value that pins none, which is
+    SwanStation's `Auto`, the running disc's own region — and `region_keys` is the option that names the image per
+    region with the default the core declares, so the pair reads fully even on a machine whose options file has never
+    mentioned either. Every region the option can pin needs a key, or a launch it pins is one the route says nothing
+    about.
+  - `by-name` may take the **spelling** shape, which is for a core that opens names of its own rather than names it was
+    given: `override_option` is the option tried ahead of everything else, every value mapped to the list it selects
+    (`null` where it selects none, which is Beetle PSX's shipped `disabled`), and `regions` carries per console region
+    the ordered `spellings` that region's launch tries and the `sha1` the core expects behind them. A `by-name` entry
+    with no `name_route` is the ordinary case: the core opens the names its `.info` declares. The shape is held to the
+    core's own: spellings are bare file names, a list never repeats one, the digest is forty lowercase hex digits, no
+    name is stated by two lists, and some value has to select a list.
+
+```json
+"mednafen_psx": {
+  "locating": { "mode": "by-name", "citation": "The same source file as the hardware-renderer build ..." },
+  "name_route": {
+    "override_option": {
+      "key": "beetle_psx_override_bios",
+      "default": "disabled",
+      "values": {
+        "disabled": null,
+        "psxonpsp": { "spellings": ["psxonpsp660.bin", "PSXONPSP660.bin"], "sha1": "96880d1c..." }
+      },
+      "citation": "libretro_core_options.h:1094-1108 ..."
+    },
+    "regions": [
+      { "region": "ntsc-j", "names": { "spellings": ["scph5500.bin", "SCPH5500.bin", "SCPH-5500.bin"], "sha1": "b05def97..." } }
+    ],
+    "citation": "libretro.cpp:250-282 ..."
+  }
+}
+```
+
+- **What the digest on a spelling list is, and is not.** It is the image those names are _for_, cited to the core's own
+  source, and it decides nothing: Beetle PSX compares it after opening the file and boots a mismatch with a warning. So
+  the answer states it on `firmware-name-spellings` and the requirement the route adds carries **no identity** —
+  `satisfied` beside it follows presence, the way it does for any file no packaged table covers.
 - **The scope and the policy are stated twice on purpose.** The table carries them as the generator read them out of
   upstream; the entry carries them with a citation into the core's own source; and the resolver holds the two against
   each other, so a table regenerated from a build that moved either one stops the answer rather than being read under a

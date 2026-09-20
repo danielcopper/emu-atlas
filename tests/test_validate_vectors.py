@@ -1257,6 +1257,24 @@ def _alternative(**overrides) -> Vector:
     return {**_requirement(), "regions": ["ntsc-u"], **overrides}
 
 
+def _renamed_alternative(**overrides) -> Vector:
+    """An option answering under another spelling of the name its declaration states."""
+    return _alternative(
+        file_name="GB_BIOS.bin", path=f"{BIOS}/GB_BIOS.bin", **overrides
+    )
+
+
+SPELLINGS_CAVEAT = {
+    "code": "firmware-name-spellings",
+    "data": {
+        "core_so": CORE_SO,
+        "region": "ntsc-u",
+        "sha1": "b0" * 20,
+        "spellings": ["gb_bios.bin", "GB_BIOS.bin"],
+    },
+}
+
+
 ALTERNATIVES_CASES = [
     case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_requirement()]}])]),
          "each firmware requirement must be exactly the fields",
@@ -1289,6 +1307,11 @@ ALTERNATIVES_CASES = [
                           regions=["pal"], found="file", present=True, checked="unknown", satisfied=True),
          ]}], requirements_met=False)]),
          "requirements_met must be None", id="alternatives-mixed-group-gates-the-summary"),
+    # A core that tries several spellings of one image answers under the name
+    # the machine holds while the declaration keeps its own — and the answer
+    # has to say which names it tries, or the rename has nothing behind it.
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_renamed_alternative()]}])]),
+         "file_name must be the name the core spelled", id="alternatives-renamed-with-no-spellings-stated"),
 ]
 
 UNCLAIMED_CASES = [
@@ -1637,6 +1660,9 @@ ACCEPTED_CASES = [
                  id="a-derived-entry-no-layer-declared-a-position-for"),
     pytest.param(_vector({"installations": [{**INSTALLATION, "health": [FINDING]}]}),
                  id="an-installation-with-a-health-finding"),
+    pytest.param(_base_firmware(cores=[_core(requirements=[{"alternatives": [_renamed_alternative()]}],
+                                             caveats=[SPELLINGS_CAVEAT])]),
+                 id="an-option-under-another-spelling-the-answer-states"),
 ]
 
 

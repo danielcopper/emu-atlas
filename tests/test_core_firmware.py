@@ -20,6 +20,8 @@ import pytest
 import atlas
 from atlas.core_firmware import (
     FIRMWARE_LOCATING,
+    CoreFirmwareNameRoute,
+    CoreFirmwareSpellingRoute,
     FirmwareLocating,
     LOCATING_BY_NAME,
     LOCATING_BY_NAME_THEN_CONTENT,
@@ -492,7 +494,7 @@ class TestTheTwoDoorsAreStatedOrRefused:
 
     def test_both_routes_load(self):
         (card,) = load_core_firmware(self._both())
-        assert card.name_route is not None
+        assert isinstance(card.name_route, CoreFirmwareNameRoute)
         assert card.content_route is not None
         assert card.name_route.region_option.values == {"Auto": None, "NTSC-U": "ntsc-u"}
         assert [key.key for key in card.name_route.region_keys] == ["core_PathNTSCU"]
@@ -560,6 +562,158 @@ class TestTheTwoDoorsAreStatedOrRefused:
             load_core_firmware(bad)
 
 
+class TestACoreCarryingItsOwnNamesIsStatedOrRefused:
+    """The other ``name_route`` shape: the names a ``by-name`` core tries itself.
+
+    A core that opens several spellings of one image names them nowhere a
+    machine can be read — not in its ``.info``, not in an option — so they are
+    packaged here. The shape is told apart from the two-door one by a key and
+    never by what happens to parse, because an entry read as the wrong shape
+    would describe a door its core has not got.
+    """
+
+    ROUTE = {
+        "override_option": {
+            "key": "core_override_bios",
+            "default": "disabled",
+            "values": {
+                "disabled": None,
+                "free": {"spellings": ["free.bin", "FREE.bin"], "sha1": "ab" * 20},
+            },
+            "citation": "core_options.h:1",
+        },
+        "regions": [
+            {
+                "region": "ntsc-u",
+                "names": {"spellings": ["us.bin", "US.bin"], "sha1": "cd" * 20},
+            }
+        ],
+        "citation": "libretro.cpp:176",
+    }
+
+    def _one_door(self, **overrides: object) -> str:
+        entry: dict[str, object] = {"name_route": self.ROUTE}
+        entry.update(overrides)
+        return _doc(**entry)
+
+    def _route(self, **overrides: object) -> str:
+        return self._one_door(name_route={**self.ROUTE, **overrides})
+
+    def test_the_route_loads_under_the_one_door_word(self):
+        (card,) = load_core_firmware(self._one_door())
+        assert isinstance(card.name_route, CoreFirmwareSpellingRoute)
+        assert card.locating.mode == LOCATING_BY_NAME
+        assert [row.region for row in card.name_route.regions] == ["ntsc-u"]
+        assert card.name_route.regions[0].names.spellings == ("us.bin", "US.bin")
+        assert card.name_route.override_option.values["disabled"] is None
+
+    def test_a_two_door_word_carrying_this_shape_is_refused(self):
+        bad = _doc(
+            locating={"mode": "by-name-then-content", "citation": "host_interface.cpp:151"},
+            name_route=self.ROUTE,
+            content_route={
+                "table": "swanstation_bios.json",
+                "hash_scope": 524288,
+                "unknown": "refused",
+                "citation": "bios.cpp:81",
+            },
+        )
+        with pytest.raises(ValueError, match="carries its own names"):
+            load_core_firmware(bad)
+
+    def test_a_one_door_word_carrying_the_two_door_shape_is_refused(self):
+        bad = _doc(
+            name_route={
+                "region_option": {
+                    "key": "core_Region",
+                    "default": "Auto",
+                    "values": {"Auto": None},
+                    "citation": "core_options.h:1",
+                },
+                "region_keys": [{"region": "ntsc-u", "key": "core_Path", "default": "us.bin"}],
+                "citation": "host_interface.cpp:151",
+            }
+        )
+        with pytest.raises(ValueError, match="whose search follows"):
+            load_core_firmware(bad)
+
+    def test_a_route_stating_neither_shape_is_refused(self):
+        bad = _doc(name_route={"citation": "libretro.cpp:176"})
+        with pytest.raises(ValueError, match="exactly one of"):
+            load_core_firmware(bad)
+
+    def test_a_route_stating_both_shapes_is_refused(self):
+        bad = _doc(name_route={**self.ROUTE, "region_option": {}})
+        with pytest.raises(ValueError, match="exactly one of"):
+            load_core_firmware(bad)
+
+    def test_a_default_no_value_maps_is_refused(self):
+        option = {**self.ROUTE["override_option"], "default": "elsewhere"}
+        bad = self._route(override_option=option)
+        with pytest.raises(ValueError, match="override_option.default"):
+            load_core_firmware(bad)
+
+    def test_an_option_selecting_no_list_at_all_is_refused(self):
+        option = {**self.ROUTE["override_option"], "values": {"disabled": None}}
+        bad = self._route(override_option=option)
+        with pytest.raises(ValueError, match="selects nothing"):
+            load_core_firmware(bad)
+
+    def test_a_spelling_carrying_a_directory_step_is_refused(self):
+        names = {"spellings": ["sub/us.bin"], "sha1": "cd" * 20}
+        bad = self._route(regions=[{"region": "ntsc-u", "names": names}])
+        with pytest.raises(ValueError, match="bare file name"):
+            load_core_firmware(bad)
+
+    def test_a_list_repeating_a_name_is_refused(self):
+        names = {"spellings": ["us.bin", "us.bin"], "sha1": "cd" * 20}
+        bad = self._route(regions=[{"region": "ntsc-u", "names": names}])
+        with pytest.raises(ValueError, match="repeats a name"):
+            load_core_firmware(bad)
+
+    def test_a_digest_that_is_not_forty_hex_digits_is_refused(self):
+        names = {"spellings": ["us.bin"], "sha1": "CD" * 20}
+        bad = self._route(regions=[{"region": "ntsc-u", "names": names}])
+        with pytest.raises(ValueError, match="lowercase hex"):
+            load_core_firmware(bad)
+
+    def test_two_lists_for_one_region_are_refused(self):
+        rows = [
+            {"region": "ntsc-u", "names": {"spellings": ["us.bin"], "sha1": "cd" * 20}},
+            {"region": "ntsc-u", "names": {"spellings": ["other.bin"], "sha1": "ce" * 20}},
+        ]
+        bad = self._route(regions=rows)
+        with pytest.raises(ValueError, match="one region, one list"):
+            load_core_firmware(bad)
+
+    def test_one_name_stated_by_two_lists_is_refused(self):
+        # Which list a file belongs to would depend on which one a reader walked
+        # first, and the order is the core's rather than the reader's.
+        rows = [
+            {"region": "ntsc-u", "names": {"spellings": ["shared.bin"], "sha1": "cd" * 20}},
+            {"region": "pal", "names": {"spellings": ["shared.bin"], "sha1": "ce" * 20}},
+        ]
+        bad = self._route(regions=rows)
+        with pytest.raises(ValueError, match="more than one list"):
+            load_core_firmware(bad)
+
+    def test_a_stray_field_inside_the_route_is_refused(self):
+        bad = self._route(note="spare")
+        with pytest.raises(ValueError, match="override_option/regions/citation"):
+            load_core_firmware(bad)
+
+    def test_a_stray_field_inside_a_name_list_is_refused(self):
+        names = {"spellings": ["us.bin"], "sha1": "cd" * 20, "note": "spare"}
+        bad = self._route(regions=[{"region": "ntsc-u", "names": names}])
+        with pytest.raises(ValueError, match="spellings/sha1"):
+            load_core_firmware(bad)
+
+    def test_an_empty_citation_inside_the_route_is_refused(self):
+        bad = self._route(citation="  ")
+        with pytest.raises(ValueError, match="name_route.citation"):
+            load_core_firmware(bad)
+
+
 class TestTheWordMovesNoVerdict:
     """`requirements_met` answers to the declaration, never to this field."""
 
@@ -590,16 +744,17 @@ class TestTheWordMovesNoVerdict:
             )
             for core in answers.values()
         } == {((f"{BIOS_DIR}/demo.bin", "required", False),)}
-        # One of the three carries a second entry, and that is the word doing
+        # Two of the three carry a second entry, and that is the word doing
         # its work rather than moving a verdict: a core read to open a name
         # and then search a directory has its own route answered beside the
-        # declaration (#466), and the two cores with no second door have
-        # nothing but the declaration. The verdict above is equal across all
-        # three all the same.
+        # declaration (#466), and so has one read to try several spellings of
+        # one image (#474), and the core nobody read has nothing but the
+        # declaration. The verdict above is equal across all three all the
+        # same.
         assert {
             stem: any(isinstance(r, FirmwareAlternatives) for r in core.requirements)
             for stem, core in answers.items()
-        } == {"demo": False, "swanstation": True, "mednafen_psx_hw": False}
+        } == {"demo": False, "swanstation": True, "mednafen_psx_hw": True}
 
 
 class TestTheWordIsStatedAtTwoSeamsAndNowhereElse:
