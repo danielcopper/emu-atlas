@@ -15165,6 +15165,10 @@ def _firmware_catalogue_entries(
                 standalone_sandbox=(
                     None if homes is None else host.standalone_firmware_sandbox(homes)
                 ),
+                # Off those same homes, and ``None`` where there are none, so
+                # that a launch which is not pinned says so rather than
+                # reading as one that stated nothing (#492).
+                standalone_xdg_pinned=(None if homes is None else homes.xdg_pinned),
                 foreign_core_file=_foreign_core_of(entry.kind, entry.command),
             )
         )
@@ -19784,7 +19788,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         the deploy that runs and ``/var/config`` against the app's own trees
         wherever the settings table names this emulator's id, and every
         spelling but ``/app`` stays the host path it names wherever it does
-        not (#350). The arrangement's pair is what governs an entry that
+        not (#350) — and whether those homes are a flatpak's pinned XDG
+        variables, which is the arrangement's own answer only for a launch
+        that establishes no homes (#492): here the pair is the host's and
+        nothing pins it, while the launch that runs an installed flatpak is
+        pinned. The arrangement's pair is what governs an entry that
         establishes none — the same fallback the bases beside it take.
         """
         sandbox, environment_sources = self._cfg_sandbox()

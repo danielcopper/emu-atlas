@@ -7182,3 +7182,142 @@ class TestARowsForeignCoreFileIsHeldToItsKind:
             foreign_core_file="citra_libretro.dll",
         )
         assert entry.foreign_core_file == "citra_libretro.dll"
+
+
+class TestALaunchsOwnXdgPinningReachesTheAnswer:
+    """Issue #492: the fifth launch fact comes off the entry, like the other four.
+
+    Since #350 a catalogue entry carries its launch's own bases, app id and
+    sandbox, all read off one ``_XdgHomes``; whether those bases are a
+    flatpak's pinned XDG variables was still the arrangement's answer, taken
+    from a different reading. It decides which of two DataRoots DuckStation
+    opens — inside a sandbox ``XDG_CONFIG_HOME`` is force-set, so the config
+    side is the only candidate — and an entry whose launch runs the installed
+    flatpak of an arrangement that is itself unsandboxed disagrees with the
+    context about exactly that.
+
+    The pair is hand-built because no catalogue shape composes it today: the
+    disagreement arises on an EmuDeck launch of an emulator's own flatpak, and
+    of the two carded emulators the settings table names an app id for
+    (melonDS, xemu) neither reads the flag, while the one that reads it
+    (DuckStation) has no id. That is the latency the issue names, and it is
+    why this is a unit test and not a vector — inventing a table row to reach
+    it through a fixture would test the invention.
+
+    Every field but the pinning is the same on both sides here, so what the
+    answer opens can only be the pinning's doing.
+    """
+
+    HOME = "/home/deck"
+    DATA_HOME = f"{HOME}/.local/share"
+    CONFIG_HOME = f"{HOME}/.config"
+    # Two directories that both hold a BIOS image, reachable only one way
+    # each: the settings file on the data side names the first, and the second
+    # is the emulator's compiled default below the config-side DataRoot.
+    STATED_DIR = "/mnt/sd/bios-the-settings-file-names"
+    DEFAULT_DIR = f"{CONFIG_HOME}/duckstation/bios"
+    STATED_IMAGE = f"{STATED_DIR}/stated.bin"
+    DEFAULT_IMAGE = f"{DEFAULT_DIR}/default.bin"
+    SETTINGS = f"{DATA_HOME}/duckstation/settings.ini"
+    # A row of DuckStation's own table. The tests assert the verdict as well
+    # as the path, so a fixture that stops agreeing with the shipped data
+    # fails rather than passing against an invention.
+    SCPH5501 = "490f666e1afb15b7362b406ed1cea246"
+    PS1_SIZE = 524288
+    LABEL = "DuckStation (Standalone)"
+
+    def _machine(self, *, settings: bool) -> FixtureMachine:
+        """Both directories present; *settings* says whether the data side speaks."""
+        image: FixtureFileSpec = {"md5": self.SCPH5501, "size": self.PS1_SIZE}
+        files: dict[str, FixtureFileSpec] = {
+            self.STATED_IMAGE: image,
+            self.DEFAULT_IMAGE: image,
+        }
+        if settings:
+            files[self.SETTINGS] = (
+                f"[BIOS]\nSearchDirectory = {self.STATED_DIR}\n"
+                "PathNTSCU = \nPathNTSCJ = \nPathPAL = \n"
+            )
+        return FixtureMachine(files, dirs=[BIOS_DIR, self.STATED_DIR, self.DEFAULT_DIR])
+
+    def _core(
+        self, *, entry_pinned: bool | None, context_pinned: bool, settings: bool = True
+    ) -> CoreFirmware:
+        machine = self._machine(settings=settings)
+        context = FirmwareContext(
+            root=BIOS_DIR,
+            cores=(),
+            hashes=load_hashes(TABLE),
+            standalone_data_home=self.DATA_HOME,
+            standalone_config_home=self.CONFIG_HOME,
+            standalone_xdg_pinned=context_pinned,
+        )
+        entry = CatalogueEntry(
+            label=self.LABEL,
+            kind=atlas.KIND_STANDALONE,
+            core_so=None,
+            emulator="DUCKSTATION",
+            declared_index=0,
+            standalone_token="DUCKSTATION",
+            standalone_data_home=self.DATA_HOME,
+            standalone_config_home=self.CONFIG_HOME,
+            standalone_xdg_pinned=entry_pinned,
+        )
+        # Verified, because what this emulator's search calls a BIOS is a
+        # content question: without the hash there is a directory and a count,
+        # and the file a launch opens is what these tests are about.
+        answer = firmware_for_system(
+            machine, context, system="psx", catalogue=Catalogue((entry,)), verify=True
+        )
+        return answer.cores[0]
+
+    @staticmethod
+    def _opened(core: CoreFirmware) -> list[tuple[str | None, str | None]]:
+        """What the search found, with the verdict that makes it a BIOS.
+
+        The verdict travels beside the path so the images in both directories
+        have to be rows of the emulator's own table: a file of an accepted
+        size whose bytes nothing recognises is found and stays unidentified,
+        and a test that read only the path could not tell the two apart.
+        """
+        return [
+            (r.path, r.checked)
+            for r in core.requirements
+            if isinstance(r, FirmwareRequirement)
+        ]
+
+    def test_a_pinned_entry_opens_the_config_side_the_context_would_read_past(self):
+        # The defect the issue names, with the two answers made to differ: the
+        # entry's launch is inside a sandbox, so only the config side exists
+        # for it and the settings file the unpinned arrangement would have
+        # read is not this launch's to read.
+        core = self._core(entry_pinned=True, context_pinned=False)
+        assert self._opened(core) == [(self.DEFAULT_IMAGE, CHECKED_VERIFIED)]
+
+    def test_an_unpinned_entry_reads_past_the_config_side_the_context_pinned(self):
+        # And the other way round, so the read cannot be passing by agreeing
+        # with the entry only where the entry says what the context says.
+        core = self._core(entry_pinned=False, context_pinned=True)
+        assert self._opened(core) == [(self.STATED_IMAGE, CHECKED_VERIFIED)]
+
+    @pytest.mark.parametrize(
+        ("context_pinned", "expected"), [(False, STATED_IMAGE), (True, DEFAULT_IMAGE)]
+    )
+    def test_an_entry_that_states_no_pinning_is_governed_by_the_arrangement(
+        self, context_pinned: bool, expected: str
+    ):
+        # The fallback the other four take, spelled for both values, because
+        # False is a statement here and only None is the absence of one.
+        core = self._core(entry_pinned=None, context_pinned=context_pinned)
+        assert self._opened(core) == [(expected, CHECKED_VERIFIED)]
+
+    def test_a_pinned_entry_has_no_dataroot_question_left_to_state(self):
+        # With no settings file anywhere the caveat says which root the answer
+        # hangs off is the launch environment's to decide — but a pinned launch
+        # has one candidate, so there is nothing undecided about it.
+        core = self._core(entry_pinned=True, context_pinned=False, settings=False)
+        assert CAVEAT_CORE_MODE_UNESTABLISHED not in [c.code for c in core.caveats]
+
+    def test_an_unpinned_entry_still_states_the_dataroot_question(self):
+        core = self._core(entry_pinned=False, context_pinned=True, settings=False)
+        assert CAVEAT_CORE_MODE_UNESTABLISHED in [c.code for c in core.caveats]

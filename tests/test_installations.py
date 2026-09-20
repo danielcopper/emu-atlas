@@ -9746,6 +9746,12 @@ class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
         f"[sys.files]\nbootrom_path = '{BOOTROM}'\n"
         f"flashrom_path = '{FLASHROM}'\nhdd_path = '{HDD}'\n"
     )
+    MELONDS_APP = "net.kuribo64.melonDS"
+    MELONDS_BIOS9 = "/app/share/melonDS/bios9.bin"
+    MELONDS_DEPLOYED_BIOS9 = (
+        f"/var/lib/flatpak/app/{MELONDS_APP}/current/active/files/share/melonDS/bios9.bin"
+    )
+
     XBOX_SYSTEMS = (
         '<?xml version="1.0"?><systemList>'
         "<system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>"
@@ -9884,20 +9890,20 @@ class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
         assert core.requirements == ()
         assert [c.code for c in core.caveats] == [atlas.CAVEAT_STANDALONE_UNSUPPORTED]
 
-    def test_two_spellings_of_one_token_each_answer_their_own_launch(self):
-        # melonDS is launched both ways on one machine: the %EMULATOR_…% token
-        # goes through the binary probe and finds the AppImage, while
-        # melonds.sh runs the installed flatpak outright. One token, two
-        # launches, two apps — which is why the sandbox rides on the entry and
-        # not on the token.
-        app = "net.kuribo64.melonDS"
-        bios9 = "/app/share/melonDS/bios9.bin"
+    def _melonds_two_launches(self):
+        """One machine where melonDS is launched both ways.
+
+        The ``%EMULATOR_…%`` token goes through the binary probe and finds the
+        AppImage, while melonds.sh runs the installed flatpak outright. One
+        token, two launches, two apps — which is why what the route reads
+        rides on the entry and not on the token.
+        """
         config = (
-            f'[Emu]\nExternalBIOSEnable = true\n[DS]\nBIOS9Path = "{bios9}"\n'
+            f'[Emu]\nExternalBIOSEnable = true\n[DS]\nBIOS9Path = "{self.MELONDS_BIOS9}"\n'
             f'BIOS7Path = "{self.BIOS_ROOT}/bios7.bin"\n'
             f'FirmwarePath = "{self.BIOS_ROOT}/firmware.bin"\n'
         )
-        installation = self._emudeck(
+        return self._emudeck(
             '<?xml version="1.0"?><systemList>'
             "<system><name>nds</name><path>%ROMPATH%/nds</path><extension>.nds</extension>"
             '<command label="melonDS (Standalone)">%EMULATOR_MELONDS% %ROM%</command>'
@@ -9907,20 +9913,67 @@ class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
             {
                 f"{HOME}/Applications/melonDS.AppImage": "the unpacked emulator",
                 f"{HOME}/.config/melonDS/melonDS.toml": config,
-                f"{HOME}/.var/app/{app}/config/melonDS/melonDS.toml": config,
-                f"/var/lib/flatpak/app/{app}/current/active/files/share/melonDS/bios9.bin": "a BIOS",
+                f"{HOME}/.var/app/{self.MELONDS_APP}/config/melonDS/melonDS.toml": config,
+                self.MELONDS_DEPLOYED_BIOS9: "a BIOS",
             },
-            dirs=[f"/var/lib/flatpak/app/{app}"],
+            dirs=[f"/var/lib/flatpak/app/{self.MELONDS_APP}"],
         )
+
+    def test_two_spellings_of_one_token_each_answer_their_own_launch(self):
+        installation = self._melonds_two_launches()
         probed = self._core(installation, "nds", "melonDS (Standalone)")
         pinned = self._core(installation, "nds", "melonDS (Launcher)")
-        assert bios9 not in self._destinations(probed)
-        assert [c.data["path"] for c in self._untranslated(probed)] == [bios9]
-        assert self._destinations(pinned)[bios9] == (
-            f"/var/lib/flatpak/app/{app}/current/active/files/share/melonDS/bios9.bin",
+        assert self.MELONDS_BIOS9 not in self._destinations(probed)
+        assert [c.data["path"] for c in self._untranslated(probed)] == [self.MELONDS_BIOS9]
+        assert self._destinations(pinned)[self.MELONDS_BIOS9] == (
+            self.MELONDS_DEPLOYED_BIOS9,
             "file",
         )
         assert self._untranslated(pinned) == []
+
+    def test_each_launch_states_its_own_pinning_beside_its_other_four_facts(self):
+        # The fifth fact off the same homes (#492). melonDS again, because it
+        # is the one token two launches reach: the AppImage runs unsandboxed
+        # off the host's tree, the launcher runs the installed flatpak whose
+        # XDG bases are pinned — and the arrangement, which is neither, states
+        # what governs an entry that establishes nothing.
+        from atlas.installations import (
+            _NO_GAMELIST_SELECTIONS,  # pyright: ignore[reportPrivateUsage]
+            _firmware_catalogue_entries,  # pyright: ignore[reportPrivateUsage]
+        )
+
+        installation = self._melonds_two_launches()
+        by_system = installation._read_esde_catalogue()[0]  # pyright: ignore[reportPrivateUsage]
+        entries = _firmware_catalogue_entries(
+            installation, by_system, "nds", _NO_GAMELIST_SELECTIONS
+        )
+        stated = {entry.label: entry.standalone_xdg_pinned for entry in entries}
+        assert stated == {"melonDS (Standalone)": False, "melonDS (Launcher)": True}
+        context = installation._read_firmware_context()  # pyright: ignore[reportPrivateUsage]
+        assert context.standalone_xdg_pinned is False
+
+    def test_retrodeck_keeps_reading_the_side_its_pinned_bases_leave_reachable(self):
+        # The entry states no pinning there, so the arrangement's governs — and
+        # RetroDECK's emulators run inside its flatpak, where XDG_CONFIG_HOME
+        # is force-set. The settings file below the data home is a file no
+        # launch of this arrangement opens, and the answer reads past it to
+        # the emulator's compiled default below the config-side DataRoot.
+        data_side = f"{HOME}/.var/app/net.retrodeck.retrodeck/data/duckstation/settings.ini"
+        unread = "/mnt/sd/bios-no-launch-here-reads"
+        rd = _retrodeck(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+                DOLPHIN_ESDE: TRIO_ESDE,
+                data_side: f"[BIOS]\nSearchDirectory = {unread}\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", unread],
+        )
+        core = self._core(rd, "psx", "DuckStation (Legacy) (Standalone)")
+        (stated,) = [c for c in core.caveats if c.code == atlas.CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE]
+        assert stated.data["dir"] == (
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/duckstation/bios"
+        )
 
     def test_an_arrangement_of_one_app_hands_out_no_per_entry_sandbox(self):
         # The hook's default: a handle whose emulators all run inside one app
