@@ -632,6 +632,20 @@ REASON_CONFIGURED_USER_NOT_SET_UP = "configured-user-not-set-up"
 REASON_CONFIGURED_USER_HAS_NO_TREE = "configured-user-has-no-tree"
 REASON_NO_USER_PRESELECTED = "no-user-preselected"
 REASON_CONFIGURED_USER_ID_UNREAD = "configured-user-id-unread"
+# The user a launch would open is listed here, and whether the emulator's own
+# listing reaches it is not: that walk can end at an entry it could not stat,
+# and the order it takes is the directory's own, written nowhere — so whether
+# a launch reopens that user or the user manager opens instead is not settled
+# by what was read. It says this of both roads to that user: an id the
+# configuration records, and the empty id an unset or empty record resolves to.
+REASON_CONFIGURED_USER_REACH_UNESTABLISHED = "configured-user-reach-unestablished"
+# The configuration records no user, or one with nothing in it, and that is an
+# id the emulator starts from rather than an absence — a directory listed under
+# exactly that id is the user that record preselects, so a launch naming an app
+# on the command line, or one made with the auto-connect switch on, reopens it
+# instead of opening the user manager, and the tree named is the one that id
+# composes.
+REASON_UNSET_USER_ID_IS_LISTED = "unset-user-id-is-listed"
 # Which console a launch is, and where the emulator's own root comes from.
 # ``region-decided-by-disc`` rides ``regions``, the regions found side by side.
 REASON_REGION_DECIDED_BY_DISC = "region-decided-by-disc"
@@ -743,6 +757,8 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_CONFIGURED_USER_HAS_NO_TREE,
     REASON_NO_USER_PRESELECTED,
     REASON_CONFIGURED_USER_ID_UNREAD,
+    REASON_CONFIGURED_USER_REACH_UNESTABLISHED,
+    REASON_UNSET_USER_ID_IS_LISTED,
     REASON_REGION_DECIDED_BY_DISC,
     REASON_DATA_ROOT_DECIDED_BY_LAUNCH,
     REASON_SLOT_HOLDS_AGP_DEVICE,

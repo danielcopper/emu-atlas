@@ -4123,6 +4123,15 @@ RPCS3_USER_UNRECORDED = atlas.REASON_ACTIVE_USER_UNRECORDED
 IDLESS_USER_XML = '<?xml version="1.0"?>\n<user/>\n'
 VITA3K_NOT_SET_UP = atlas.REASON_CONFIGURED_USER_NOT_SET_UP
 VITA3K_TREE_NAMED = atlas.REASON_CONFIGURED_USER_TREE_NAMED
+VITA3K_REACH_UNESTABLISHED = atlas.REASON_CONFIGURED_USER_REACH_UNESTABLISHED
+VITA3K_UNSET_ID_LISTED = atlas.REASON_UNSET_USER_ID_IS_LISTED
+VITA3K_NO_PRESELECTION = atlas.REASON_NO_USER_PRESELECTED
+# The tree the user keyed by the empty id writes to: that id composes no
+# segment of its own, so the user root itself carries the savedata directory.
+VITA3K_EMPTY_ID_SAVEDATA = "/mnt/sd/vita/ux0/user/savedata"
+# The sentence an unset user-id used to earn whatever the tree held under the
+# empty id, kept here as the thing the new states must NOT say.
+VITA3K_NOTHING_PRESELECTS = "nothing preselects a user"
 VITA3K_HIDDEN_SAVEDATA = "/mnt/sd/vita/ux0/user/.hidden/savedata"
 VITA3K_USER_00_XML = "/mnt/sd/vita/ux0/user/00/user.xml"
 NO_LISTED_USER = atlas.REASON_NO_LISTED_USER_ACCOUNT
@@ -4662,6 +4671,188 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["reason"] == VITA3K_NOT_SET_UP
         assert "it answers to the empty id instead" in caveat.message
         assert caveat.data["users"] == ("00",)
+
+    # The two roads a directory takes to the empty id, each with the key
+    # absent: an id attribute stated empty (user_management.cpp:94-95) and a
+    # name stem_v3 cuts away whole (:97). What follows is the same either way,
+    # because gui.users holds one key for both.
+    _EMPTY_ID_ROADS = {
+        "an-id-attribute-stated-empty": ("00", '<?xml version="1.0"?>\n<user id=""/>\n'),
+        "a-name-the-stem-cuts-away": (".hidden", IDLESS_USER_XML),
+    }
+
+    @pytest.mark.parametrize("road", sorted(_EMPTY_ID_ROADS))
+    def test_vita3k_an_unset_user_id_is_the_empty_id_a_directory_is_listed_under(self, road):
+        # cfg.user_id is an empty std::string when config.yml records nothing
+        # (config.h:189), and init_home asks gui.users.contains(cfg.user_id)
+        # (gui.cpp:689) — so a directory listed under the empty id IS the user
+        # a command-line launch reopens, and the user manager does not open.
+        directory, user_xml = self._EMPTY_ID_ROADS[road]
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                f"/mnt/sd/vita/ux0/user/{directory}/user.xml": user_xml,
+            },
+            dirs=[f"/mnt/sd/vita/ux0/user/{directory}"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        # The tree is the user root itself: io.user_id becomes the gui.users
+        # key (user_management.cpp:227) and boost appends an empty component by
+        # appending nothing, separator included, so the id contributes no
+        # segment to the path init_savedata_app_path composes (io.cpp:136-143).
+        assert p.dir == VITA3K_EMPTY_ID_SAVEDATA
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_UNSET_ID_LISTED
+        assert caveat.data["users"] == (directory,)
+        # And the state it replaces is not also stated: the sentence that said
+        # the user manager opens is the defect this branch exists to remove.
+        assert VITA3K_NOTHING_PRESELECTS not in caveat.message
+        # And the sentence names the same tree the answer does, rather than
+        # leaving a client to infer it from the directory that was listed.
+        assert f"land in {VITA3K_EMPTY_ID_SAVEDATA}" in caveat.message
+
+    @pytest.mark.parametrize("spelling", ["user-id:\n", 'user-id: ""\n'])
+    def test_vita3k_a_user_id_stated_empty_names_the_id_it_states(self, spelling):
+        # The record's own spelling of the same id. The scalar reader hands
+        # back the empty string for a key with nothing after the colon and for
+        # an empty quoted scalar alike (tests/test_yaml_scalars.py), so both
+        # reach the state an unset key reaches — and the reading says the file
+        # states it rather than calling a stated key unset.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: f"pref-path: /mnt/sd/vita\n{spelling}",
+                VITA3K_USER_00_XML: '<?xml version="1.0"?>\n<user id=""/>\n',
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == VITA3K_EMPTY_ID_SAVEDATA
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_UNSET_ID_LISTED
+        assert caveat.data["configured_user"] == ""
+        assert self._readings(p)["user-id"] == ""
+        assert "states user-id with nothing in it" in caveat.message
+        # And the reading's own provenance names the value the file states
+        # instead of calling a stated key unset, which is what it said before.
+        assert p.granularity is not None
+        provenance = {r.key: r.provenance for r in p.granularity.readings}
+        assert provenance["user-id"] == (
+            "config.yml states user-id with nothing in it — the id the emulator starts "
+            "from is that same empty one (config.h:189)"
+        )
+
+    def test_vita3k_a_user_id_stated_empty_with_nothing_listed_under_it_says_so(self):
+        # The same record over a tree that answers to no empty id: the user
+        # manager does open, which is the state an unset key has always
+        # reached — and the sentence still names the empty value the file
+        # states, because "records no user-id" would describe another file.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: 'pref-path: /mnt/sd/vita\nuser-id: ""\n',
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_NO_PRESELECTION
+        assert "states user-id with nothing in it" in caveat.message
+        assert "nothing here answers to it" in caveat.message
+
+    def test_vita3k_a_user_id_stated_empty_over_an_empty_tree_names_no_recorded_user(self):
+        # The empty tree writes its own sentence, and it used to be written for
+        # a recorded user with a name: an id stated empty would have reached it
+        # as "the recorded user  included", a blank where the id goes and a
+        # claim that a user the record does not name is among the missing
+        # trees. What the emptiness settles for the empty id is the other half
+        # of init_home's test — gui.users is empty, so nothing is listed under
+        # it and the user manager opens whatever the record says.
+        p = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: 'pref-path: /mnt/sd/vita\nuser-id: ""\n'},
+            dirs=["/mnt/sd/vita/ux0/user"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == atlas.REASON_NO_USER_DIRECTORY
+        assert caveat.data["configured_user"] == ""
+        assert "the recorded user" not in caveat.message
+        assert "the empty user-id config.yml states is listed by nothing here" in caveat.message
+        # And a named record still says its tree is one of the missing ones.
+        named = self._answer(
+            "psvita",
+            files={VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n"},
+            dirs=["/mnt/sd/vita/ux0/user"],
+        )
+        assert not isinstance(named, atlas.Unresolved)
+        assert "the recorded user 01 included" in self._user_caveat(named).message
+
+    def test_vita3k_an_absent_user_id_over_a_tree_without_the_empty_id_is_unchanged(self):
+        # The other side of that branch, and the one the new states must not
+        # reach: nothing is recorded and nothing is listed under the empty id,
+        # so the answer is the one it always gave.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_NO_PRESELECTION
+        assert "configured_user" not in caveat.data
+        assert f"config.yml records no user-id, so {VITA3K_NOTHING_PRESELECTS}" in caveat.message
+
+    def test_vita3k_the_empty_id_beside_an_entry_that_can_end_the_walk_settles_nothing(self):
+        # The empty id is reached by the same walk as any other, so the same
+        # doubt applies: 01's own stat failed, that entry can end the listing
+        # (get_users_list, user_management.cpp:87-89), and whether the walk
+        # reaches .hidden first is the directory's own order. The headline
+        # drops to the first listed tree and the reason says what is open.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                "/mnt/sd/vita/ux0/user/.hidden/user.xml": IDLESS_USER_XML,
+            },
+            dirs=["/mnt/sd/vita/ux0/user/.hidden"],
+            inaccessible=["/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == VITA3K_HIDDEN_SAVEDATA
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_REACH_UNESTABLISHED
+        assert caveat.data["unestablished"] == ("01",)
+        assert "Vita3K's own listing can end at 01" in caveat.message
+
+    def test_vita3k_the_empty_id_beside_an_unreadable_user_xml_is_still_reopened(self):
+        # The separating case, and the one an answer keyed on "is anything
+        # undecided?" would get wrong: 01's user.xml could not be read, which
+        # leaves 01 undecided and ends nothing — load_file decides that one
+        # directory and the walk goes on (user_management.cpp:89) — so the
+        # empty id is still the user a launch reopens.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                "/mnt/sd/vita/ux0/user/.hidden/user.xml": IDLESS_USER_XML,
+                "/mnt/sd/vita/ux0/user/01/user.xml": {"status": "unreadable"},
+            },
+            dirs=["/mnt/sd/vita/ux0/user/.hidden", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == VITA3K_EMPTY_ID_SAVEDATA
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_UNSET_ID_LISTED
+        assert caveat.data["unestablished"] == ("01",)
+        assert "listing can end at" not in caveat.message
 
     def test_vita3k_a_leading_period_directory_without_user_xml_is_not_set_up(self):
         # Reached, and then skipped by the emulator's own rule — the same
@@ -5464,17 +5655,44 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         caveat = self._user_caveat(p)
-        assert caveat.data["reason"] == VITA3K_TREE_NAMED
+        assert caveat.data["reason"] == VITA3K_REACH_UNESTABLISHED
         assert "Vita3K's own listing can end at 01" in caveat.message
         assert "every user Vita3K itself would list is stated" not in caveat.message
-        # The head of that sentence is hedged to match: a walk that throws at
-        # 01 before reaching 00 leaves gui.users without 00 and opens the user
-        # manager (gui.cpp:689), so the sentence may not say the emulator's own
-        # list holds this user, nor that a launch reopens it outright.
+        # The head of that sentence says what was found and no more: a walk
+        # that throws at 01 before reaching 00 leaves gui.users without 00 and
+        # opens the user manager (gui.cpp:689), so the sentence may not say the
+        # emulator's own list holds this user, nor that a launch reopens it.
         assert "among the ones listed here" in caveat.message
-        assert "reopens that user where Vita3K's own listing reached it" in caveat.message
         assert "among the ones Vita3K itself would list" not in caveat.message
         assert "reopens exactly that user" not in caveat.message
+
+    def test_vita3k_a_recorded_user_the_walk_may_not_reach_does_not_take_the_headline(self):
+        # The same reading with two users listed, which is what makes the
+        # headline visible: 01 is recorded and listed, so the answer used to
+        # name 01's tree — while 02, an entry whose own stat failed, can end
+        # the walk before it reaches either, and the order that walk takes is
+        # the directory's own. So the headline does not follow the record; the
+        # tree named is the first user listed, the way every state that
+        # settles nothing names it while a user IS listed — where none is, the
+        # same ending names the compiled stand-in instead.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": self._user_xml("01"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+            inaccessible=["/mnt/sd/vita/ux0/user/02"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["reason"] == VITA3K_REACH_UNESTABLISHED
+        assert caveat.data["configured_user"] == "01"
+        assert caveat.data["unestablished"] == ("02",)
+        assert "the tree named is the first user listed" in caveat.message
+        assert "the order that walk takes is the directory's own" in caveat.message
 
     def test_vita3k_the_recorded_users_sentence_keeps_its_head_where_nothing_truncates(self):
         # The same state with every entry decided: nothing can end the walk

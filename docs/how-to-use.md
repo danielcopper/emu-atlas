@@ -1068,47 +1068,49 @@ others the constructor closes — `firmware-search-candidates`'s `readings` and 
 `core-mode-unestablished.reason` — why the card's selection rule could not decide. The sentence that used to sit here is
 in `message`, and what it embedded is a key of its own (named in the third column):
 
-| reason                                | what could not be decided                                                          | what the sentence embedded |
-| ------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- |
-| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it               | —                          |
-| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                 | —                          |
-| `no-user-directory`                   | no user directory was found at all                                                 | —                          |
-| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them           | —                          |
-| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                     | —                          |
-| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                  | —                          |
-| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                     | —                          |
-| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                             | —                          |
-| `configured-user-has-no-tree`         | nothing here answers to the configured id                                          | —                          |
-| `no-user-preselected`                 | the configuration preselects no user                                               | —                          |
-| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                | —                          |
-| `region-decided-by-disc`              | which console region boots is the running disc's                                   | — [^rd]                    |
-| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                          | —                          |
-| `slot-holds-agp-device`               | the slot holds a GBA cartridge adapter this answer does not model                  | `slot`                     |
-| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                            | `slot`, `value`            |
-| `session-override-set`                | a per-session override (a movie or netplay session) is set                         | `key`                      |
-| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                 | —                          |
-| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                  | —                          |
-| `virtual-sd-disabled`                 | the emulated SD card is switched off                                               | —                          |
-| `content-class-unnamed`               | the answer splits on the content's class and no content was named                  | —                          |
-| `content-class-unrecorded`            | the content's extension is outside every class the card records                    | `extension`                |
-| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                              | `extension`                |
-| `archive-unread`                      | the loaded archive's member list did not come back                                 | `status`                   |
-| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one       | `volumes`                  |
-| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states          | `member`                   |
-| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted | `entries`                  |
-| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist     | `classes`                  |
-| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it   | `extension`                |
-| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots  | —                          |
-| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on          | `savepath`, `savedir`      |
-| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                      | —                          |
-| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                | `container`                |
-| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all   | `model`                    |
-| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                       | —                          |
-| `savepath-untranslatable`             | the configured save path has no host spelling                                      | `path`                     |
-| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover              | `options` (an object)      |
-| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                  | `members`                  |
-| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read   | —                          |
-| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal | `members`                  |
+| reason                                | what could not be decided                                                               | what the sentence embedded |
+| ------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------- |
+| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it                    | —                          |
+| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                      | —                          |
+| `no-user-directory`                   | no user directory was found at all                                                      | —                          |
+| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them                | —                          |
+| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                          | —                          |
+| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                       | —                          |
+| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                          | —                          |
+| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                                  | —                          |
+| `configured-user-has-no-tree`         | nothing here answers to the configured id                                               | —                          |
+| `no-user-preselected`                 | the configuration preselects no user                                                    | —                          |
+| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                     | —                          |
+| `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                 | —                          |
+| `unset-user-id-is-listed`             | nothing is recorded — or nothing is stated — and that empty id is one the listing holds | —                          |
+| `region-decided-by-disc`              | which console region boots is the running disc's                                        | — [^rd]                    |
+| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                               | —                          |
+| `slot-holds-agp-device`               | the slot holds a GBA cartridge adapter this answer does not model                       | `slot`                     |
+| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                 | `slot`, `value`            |
+| `session-override-set`                | a per-session override (a movie or netplay session) is set                              | `key`                      |
+| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                      | —                          |
+| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                       | —                          |
+| `virtual-sd-disabled`                 | the emulated SD card is switched off                                                    | —                          |
+| `content-class-unnamed`               | the answer splits on the content's class and no content was named                       | —                          |
+| `content-class-unrecorded`            | the content's extension is outside every class the card records                         | `extension`                |
+| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                                   | `extension`                |
+| `archive-unread`                      | the loaded archive's member list did not come back                                      | `status`                   |
+| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one            | `volumes`                  |
+| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states               | `member`                   |
+| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted      | `entries`                  |
+| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist          | `classes`                  |
+| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it        | `extension`                |
+| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots       | —                          |
+| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on               | `savepath`, `savedir`      |
+| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                           | —                          |
+| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                     | `container`                |
+| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all        | `model`                    |
+| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                            | —                          |
+| `savepath-untranslatable`             | the configured save path has no host spelling                                           | `path`                     |
+| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover                   | `options` (an object)      |
+| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                       | `members`                  |
+| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read        | —                          |
+| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal      | `members`                  |
 
 [^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
     lifted out of the sentence.
@@ -1367,15 +1369,20 @@ narrower condition of its own, that an entry found can end the emulator's walk, 
 directory without a `user.xml`, or with one that does not parse, is no user the emulator opens and is stated under
 `skipped` instead — with the recorded id beside those groups as a `user-id` reading and as `configured_user` in the
 `core-mode-unestablished` caveat, whose `reason` says which case this machine is: the recorded user's tree is the one
-named; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as that user — the player
-picks); the recorded user has no tree here at all; whether it is set up could not be read (a `user.xml` atlas could not
-read, stated under `unestablished`); no user the emulator would list was found at all (the directories found are all
-skipped, and `users` names the stand-in); whether the emulator would list a user account here was not established (at
-least one entry found is one atlas could not decide and none is listed, whatever else was skipped); or the tree could
-not be listed, in which case `dir` names the stand-in tree whatever the short listing handed back, the directories it
-did reach stay groups of their own, and a `save-dir-unlistable` caveat states the listing as short. A plain launch of
-the emulator without `user-auto-connect` opens the user manager whatever is recorded — the headline follows the launch a
-frontend makes.
+named; whether the emulator's own listing reaches that user could not be settled, because an entry found here can end
+the walk that fills the listing and the order that walk takes is the directory's own, so the headline does not follow
+the record; the recorded user is not set up here (its directory exists, but no `user.xml` lists it as that user — the
+player picks); the recorded user has no tree here at all; whether it is set up could not be read (a `user.xml` atlas
+could not read, stated under `unestablished`); no user the emulator would list was found at all (the directories found
+are all skipped, and `users` names the stand-in); whether the emulator would list a user account here was not
+established (at least one entry found is one atlas could not decide and none is listed, whatever else was skipped); or
+the tree could not be listed, in which case `dir` names the stand-in tree whatever the short listing handed back, the
+directories it did reach stay groups of their own, and a `save-dir-unlistable` caveat states the listing as short.
+Nothing recorded is a case of its own rather than the end of the question: `user-id` defaults to an empty `std::string`,
+so a `config.yml` that records none — or records one with nothing in it — hands `init_home` the empty id, and where a
+directory is listed under exactly that id the record preselects it after all, `dir` names the tree that id composes, and
+the reason says so. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is
+recorded — the headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
@@ -1423,19 +1430,29 @@ test and stands or falls on its `user.xml` like any other, is skipped, or ends t
 **every user Vita3K itself would list is stated only where every entry found was decided**: with an entry whose own
 `stat` failed beside them, it says instead that the users stated are the ones established here and that the emulator's
 own listing can end at such an entry — at any of them, since one throw ends the one walk — leaving whatever it had not
-reached by then unlisted. The sentence that answers a recorded user the listing does hold hedges its head for the same
-reason: a walk that ends before reaching that user leaves `gui.users` without it and opens the user manager, so there
-the answer says the user is among the ones listed here and that a launch reopens it where Vita3K's own listing reached
-it. The other way an entry goes undecided — a `user.xml` atlas could not read — ends nothing, so there the sentence
-drops the full-list claim without naming an early end. The stem that keys an id-less `user.xml` is boost::filesystem's
+reached by then unlisted. It is also why the answer for a user the listing **does** hold stops short of the reopening: a
+walk that ends before reaching that user leaves `gui.users` without it and opens the user manager, the order of that
+walk is written nowhere, and so whether a launch reopens the user or the player picks is not established — `reason`
+becomes `configured-user-reach-unestablished`, the headline drops to the first listed tree, and the sentence says the
+user is among the ones listed here rather than among the ones the emulator would list. The other way an entry goes
+undecided — a `user.xml` atlas could not read — ends nothing, so there the sentence drops the full-list claim without
+naming an early end and the reopening stands. The stem that keys an id-less `user.xml` is boost::filesystem's
 `path::stem`, and which of its two stems runs is the caller's: `BOOST_FILESYSTEM_VERSION` stands at 3 for anyone who
 does not set it, and Vita3K's tree sets it nowhere, so the emulator compiles **`stem_v3`, the name cut at the rightmost
 period wherever that period falls** (path.cpp:824-834), where `stem_v4` guards a period at position 0 (:836-846); both
 leave `.` and `..` whole. atlas mirrors `stem_v3`: `.hidden.bak` keys `.hidden` and `..bak` keys `.`, as they do under
 either stem, and `.hidden` — a leading period with no later one — keys the **empty string**. That is a key and not a
 hole: `gui.users` is a `std::map<std::string, User>`, so the directory is listed and stated as a tree of its own, while
-a `user-id` of `.hidden` matches nothing, because `init_home` asks `gui.users.contains`. A directory the emulator itself
-wrote never reaches the stem at all — `save_user` stamps an explicit `id` equal to the directory name.
+a `user-id` of `.hidden` matches nothing, because `init_home` asks `gui.users.contains`. A `user.xml` whose `id`
+attribute is present and empty reaches the same key without the stem, pugixml's attribute test asking whether the
+attribute exists rather than whether it says anything. **That key is the one an unset `user-id` names**, since the
+setting defaults to an empty string, so a directory listed under it is the user that record preselects — the one a
+launch naming an app reopens, on the same condition every recorded id is reopened under. The tree the answer then names
+is the **user root itself**: `io.user_id` becomes that key, and the path `init_savedata_app_path` composes from it gains
+no segment, because `append_v3` — the append this build compiles for the same reason it compiles `stem_v3` — adds an
+empty component by adding nothing at all, separator included, and `append_v4` differs only in pushing a separator that
+the next component would need anyway. A directory the emulator itself wrote never reaches the stem at all — `save_user`
+stamps an explicit `id` equal to the directory name.
 
 melonDS is the simplest card and the one whose default leaves the emulator's tree: one `<rom stem>.sav` per game where
 `[Instance0] SaveFilePath` points, and an empty or absent value lands the save **beside the ROM itself** — the answer's
