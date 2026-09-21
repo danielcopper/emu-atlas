@@ -508,6 +508,17 @@ configured card path templates its region — is knowledge written nowhere on th
 beside the card (`atlas/installations.py`), the same split the rule cards make with `atlas/mode_rules.py`. The loader
 refuses a card whose token has no resolver registered.
 
+A card may also pin the revision its citations were read at, as an optional `build` block of `revision` and `citation` —
+the short commit hash the deployed binary spells in the version string its `--version` prints, and how that string was
+read. It is what makes a card checkable, for the reason the core-firmware entries carry the same block: **the readings
+are a property of one build, not of an emulator.** So `tests/test_standalone_build_tripwire.py` reads that string off
+the deployed binary as raw bytes where the string is a constant of the build, as Vita3K's is — nothing has to be run
+then, and an emulator that composes its version at startup instead would need reading of another kind, which is why the
+pattern the stamp is read with is stated per card there — and fails a card whose pinned revision the string does not
+carry. Vita3K's card pins one; the rest pin none, which that test's `UNPINNED` set keeps deliberate rather than
+accidental, and pinning them is open work. The block is additive — a card without one reads exactly as it always did —
+so the file's schema number is unchanged.
+
 ### `citations` — the evidence a shared reading speaks
 
 A reading can serve two emulators that are not the same source. PrimeHack is a Dolphin fork with Dolphin's save shape,

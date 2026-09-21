@@ -53,7 +53,12 @@ fallback. A `.info` cannot state it, so it is packaged per core in `atlas/data/c
 fact at a pinned upstream revision, and a core with no entry answers `unestablished` rather than being assumed to open
 the names it declares. Because the fact is a property of one build, `tests/test_core_firmware_tripwire.py` asks each
 deployed core for its own version string and fails when the entry's pinned revision is not in it — an upgrade that
-changes the route turns red instead of being described by stale source.
+changes the route turns red instead of being described by stale source. Where a standalone save card pins a revision it
+states the same kind of block, `build`, and `tests/test_standalone_build_tripwire.py` holds that pin against the version
+string the deployed binary carries: a standalone emulator states its build through the string its `--version` prints
+rather than through a libretro entry point, and where that string is a constant of the build, as Vita3K's is, the test
+reads it off the binary as raw bytes instead of running it, which is why the pattern the stamp is read with is stated
+per card there.
 
 ## The generated contract reference
 
