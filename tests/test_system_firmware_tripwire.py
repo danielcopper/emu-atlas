@@ -24,11 +24,11 @@ here from the weekly drift issue, the failure is not about your machine.
 exactly the paths read below, refuses a deploy that would let this tier
 silently skip, and files or updates the drift issue when the suite goes red. So
 a release that ships a core introducing a new disagreement turns the canary red
-within the week and opens the issue by itself, days before any reference
-machine updates. What that failure asks for is a **verdict**, and the honest
-one is usually ``open``: recording the system as open takes it out of this
-tripwire and puts it where a person can see it, without anyone claiming to know
-whether the system boots.
+within the week and opens the issue by itself, days before any maintainer's
+installation updates. What that failure asks for is a **verdict**, and the
+honest one is usually ``open``: recording the system as open takes it out of
+this tripwire and puts it where a person can see it, without anyone claiming
+to know whether the system boots.
 
 **What closing it takes, concretely.** Add one entry to
 ``atlas/data/system_firmware.json``, keyed by the ``systemname`` this failure
@@ -157,12 +157,11 @@ def read_catalogue(directory: Path) -> dict[str, dict[str, bool]]:
     input and for the same reason.
 
     The walk covers every ``.info`` deployed, whether or not the matching
-    ``.so`` is there. The two sets differ — 291 catalogue entries against 211
-    binaries on the reference machine — and the declarations are what this
-    derivation is about, so filtering to the cores this deployment happens to
-    be able to load would make the evidence an accident of one installation.
-    It is a large accident: 96 of the 118 declaring entries here have a binary,
-    and holding the derivation to those loses three of the seven disagreements.
+    ``.so`` is there. The two sets differ, and the declarations are what this
+    derivation is about, so filtering to the cores a deployment happens to be
+    able to load would make the evidence an accident of one installation: an
+    entry whose binary is absent declares what it declares all the same, and
+    dropping those entries drops disagreements with them.
     """
     catalogue: dict[str, dict[str, bool]] = {}
     for path in sorted(directory.glob(f"*{INFO_SUFFIX}")):

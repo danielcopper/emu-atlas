@@ -780,8 +780,9 @@ smoothed over. Without a content check there is nothing to answer with, so an un
 count of accepted-size files and `firmware-search-unverified` — never a claim that a BIOS is there. An image the table
 does not know still boots (`Using an unknown BIOS`), so it is the pick with `firmware-content-unidentified` beside it
 rather than a fault. And where several images rank alike the emulator keeps whichever one the directory hands it last,
-an order no read reproduces — `firmware-image-ambiguous`, which on the reference machine's 27 accepted-size files fires
-over five equally ranked images.
+an order no read reproduces — `firmware-image-ambiguous`, so the file named is one of the tied images and which of them
+boots is not established; the vector `duckstation-two-images-that-rank-alike-leave-the-pick-to-the-directory` holds the
+case.
 
 ## `save_memory.json` — which files RetroArch writes for a core, per system
 

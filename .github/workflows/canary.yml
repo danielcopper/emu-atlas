@@ -13,9 +13,9 @@ name: Canary
 #
 # Deliberately latest, deliberately not PR-blocking: the pinned evidence
 # describes the release it was read from, so a red canary is the expected
-# signal that upstream moved and re-verification is due — days before the
-# reference machine updates. A pinned commit would stay green and prove almost
-# nothing a local test run does not already prove.
+# signal that upstream moved and re-verification is due — days before any
+# maintainer's installation updates. A pinned commit would stay green and
+# prove almost nothing a local test run does not already prove.
 #
 # The deploy is installed, never run: atlas reads the deployment's files the
 # way it does on a real machine, so no sandbox, session bus or GPU is needed.
@@ -68,8 +68,8 @@ jobs:
 
       - name: Run the whole suite against the deployed tree
         # -rs so the run states what still skipped: a handful of probe-gated
-        # audit tests skip wherever their core registers no options, on the
-        # reference machine and here alike.
+        # audit tests skip wherever their core registers no options, which the
+        # core decides and not the installation the suite runs against.
         run: |
           pip install -e '.[dev]'
           python -m pytest tests -q -rs

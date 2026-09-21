@@ -9913,9 +9913,10 @@ class TestEveryEntryCarriesTheIdentityItsCommandSpells:
     # Six rows in the shapes EmuDeck's own overlays use: two launcher rows for
     # one emulator (the Proton one adds cemu.sh's -w), a third launcher row for
     # another, a libretro row, a RetroArch launch naming a Windows .dll, and a
-    # token row. The reference machine's n3ds system declares two of those .dll
-    # rows (Citra and Citra 2018) where this fixture keeps one: they differ only
-    # in which .dll they name, and one is what the identity rule needs.
+    # token row. EmuDeck's own n3ds overlay declares two of those .dll rows
+    # (Citra and Citra 2018) where this fixture keeps one: they differ only in
+    # which .dll they name, and one is what the identity rule needs
+    # (configs/emulationstation/custom_systems/es_systems.xml:85-86 @ 863ab69).
     ED_SYSTEMS = (
         '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n'
         "    <path>%ROMPATH%/wiiu/roms</path>\n    <extension>.rpx</extension>\n"

@@ -439,13 +439,14 @@ class CoreInfo:
 
     ``library_name`` (via ``retro_get_system_info``) is the value RetroArch
     uses for sort-by-core directories and override directories — the display
-    name, not the ``.so`` basename: the two disagree for 183 of the 210 loadable
-    cores RetroDECK ships (reference machine, recounted 2026-08-05). ``options``
-    is the set of option definitions the core registered during
-    ``retro_set_environment`` — the observable fact that identifies a
-    core *generation* better than any version string. ``None`` means *not
-    captured* (the probe saw no registration — some cores register later, in
-    ``retro_init``): unknown, never "registers nothing".
+    name, not the ``.so`` basename, and not the ``corename`` an ``.info``
+    states either: that is a display string in the text file beside the core,
+    this one is what the binary answers, and nothing holds the two together,
+    so either may differ. ``options`` is the set of option definitions the
+    core registered during ``retro_set_environment`` — the observable fact
+    that identifies a core *generation* better than any version string.
+    ``None`` means *not captured* (the probe saw no registration — some cores
+    register later, in ``retro_init``): unknown, never "registers nothing".
 
     ``block_extract`` is the same struct's archive statement
     (``retro_system_info.block_extract``): true means RetroArch hands the

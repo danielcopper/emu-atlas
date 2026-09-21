@@ -61,8 +61,8 @@ Neither is reading. One is read and belongs to the card family; the other ships 
 
 The round that follows, and the reason it is worth it: a frontend lists several emulators per system and the user picks.
 Reading these is the same work as reading a default core, and each one answers for every system the catalogue offers it
-for. Measured on the reference machine, 87 catalogued cores had no record and no card when this round started; the order
-is by what a person is likely to choose, not alphabetical.
+for. When this round started, many catalogued cores had neither record nor card; the order is by what a person is likely
+to choose, not alphabetical.
 
 Nothing in this tier waits on the card family any more — every read card candidate is carded, the last of them
 (`desmume2015`) once the `working_directory` root existed to state it. One core is read and blocked on something else:

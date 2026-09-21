@@ -6,7 +6,7 @@
   "vectors": [
     {
       "name": "retrodeck-states-flat",
-      "rationale": "The reference machine's own layout: savestate_directory set, both sort flags off. States land flat in the configured root, and the .state lying there is observed rather than assumed.",
+      "rationale": "The flat layout: savestate_directory set, savestates_in_content_dir off and both sort flags off, so neither append runs (runloop.c:8861-8874). States land flat in the configured root, and the .state lying there is observed rather than assumed.",
       "input": {
         "home": "/home/deck",
         "files": {

@@ -254,8 +254,8 @@ class Machine(Protocol):
   directory — lives only in the core binary. Loading the core and asking it is the same read RetroArch performs; it is a
   live read, not a table. The production implementation is process-isolated (a crashing core costs one answer, not the
   host process) and may cache per `.so` mtime/size — a memoized live read, never shipped data. `.info` files are **not**
-  a substitute: `corename` disagrees with `library_name` for 56 of the 203 installed cores that load and declare a
-  `corename` (reference machine, recounted 2026-08-05).
+  a substitute: `corename` is a display string in the text file beside the core and `library_name` is what the binary
+  answers, two strings from two sources with nothing holding them together, so either may differ.
 - `file_size` and `file_digest` exist because firmware identity is checked by content, not by name: a file present under
   the right name may still be the wrong dump. `file_size` is the free pre-filter that settles most mismatches before any
   bytes are hashed; `file_digest` is the paid answer, and the algorithm vocabulary is closed to `md5`/`sha1` so a port's
@@ -381,7 +381,7 @@ the verified one; EmuDeck and both bare-RetroArch arrangements are read from sou
 caveat is a claim about atlas's evidence, never about the machine — it does not say the reading was guessed, and it is
 deliberately kept out of `health()`, where it would report a working installation as defective. The status is packaged,
 versioned data (`atlas/data/arrangement_evidence.json`, the same boundary rule the rule cards follow), so verifying an
-arrangement on a reference machine retires its caveat by changing a record, never a resolver.
+arrangement against a live installation retires its caveat by changing a record, never a resolver.
 
 Evidence has a shelf life, and the record's pinned version is the tripwire that says so: an arrangement is verified
 against one version of itself, the machine states the one it runs, and when the two differ every answer carries
