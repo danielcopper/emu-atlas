@@ -639,7 +639,7 @@ REASON_CONFIGURED_USER_ID_UNREAD = "configured-user-id-unread"
 # by what was read. It says this of both roads to that user: an id the
 # configuration records, and the empty id an unset or empty record resolves to.
 REASON_CONFIGURED_USER_REACH_UNESTABLISHED = "configured-user-reach-unestablished"
-# The configuration records no user, or one with nothing in it, and that is an
+# The configuration records no user, or one as the empty value, and that is an
 # id the emulator starts from rather than an absence — a directory listed under
 # exactly that id is the user that record preselects, so a launch naming an app
 # on the command line, or one made with the auto-connect switch on, reopens it

@@ -609,30 +609,32 @@ hold moves nothing either, the caveat's reason saying why (no tree of that name,
 user, or a `user.xml` that could not be read); where nothing at all is listed the reason names one of three further
 facts instead — no user directory was found at all, no user account the emulator would list was found, or, where some
 directory's `user.xml` could not be looked at, whether the emulator would list a user account here was not established —
-and a tree that could not be listed keeps claiming nothing. A `config.yml` that records no `user-id`, or one with
-nothing in it, is not outside all of this: the setting defaults to an empty `std::string` (config.h:189), so the id
+and a tree that could not be listed keeps claiming nothing. A `config.yml` that records no `user-id`, or one as the
+empty value `""`, is not outside all of this: the setting defaults to an empty `std::string` (config.h:189), so the id
 `init_home` tests is the empty one, and a directory listed under exactly that key — an `id` attribute stated empty, or a
 name the stem cuts away whole — is the user that record preselects, with the user root itself as the tree, since an
 empty id composes no segment of its own. Its reason says the unset id is listed; where nothing answers to it the answer
-is the one it always was, that no user is preselected. An empty `pref-path` is a refusal rather than a guess: the
-emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A configuration that
-exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that reads fine but states
-an absolute path only the emulator's sandbox can spell refuses with `emulator-config-path-untranslatable`, the stated
-value carried in `data.path` — the caveat vocabulary's `sandbox-path-untranslated` said as an outcome, for the routes
-where the whole answer hangs on that one path (`data.path` is the primary; an aggregate refusal naming more than one
-file — xemu's save answer — also carries `data.paths`, every untranslatable value, the disk image first and then the
-EEPROM). The answers root at `emulator_directory` — no frontend hands a standalone emulator a save directory — except
-where the emulator's own default walks into the content's. On EmuDeck a standalone emulator is identified by
-`%EMULATOR_…%` token or by an allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`,
-`melonds.sh` and `vita3k.sh` today), and either way the launch's binary variant gates the answer. Three variants are
-established: an **AppImage** under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the
-settings table names (`flatpak` on the row — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing
-nothing) reads its own homes below `~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which
-EmuDeck unpacks some emulators into (Vita3K) and which ES-DE's own find rule looks for right after the AppImage
-patterns, reads the host's tree like an AppImage does. The rest refuse with `standalone-variant-unestablished`. The id
-lives in the table rather than on a card because the gate is one question about the launch and every card family asks it
-— while it sat on the **save** card, an emulator without one could reach no trees at all, which is what MAME's savestate
-answer was refusing over (#288).
+is the one it always was, that no user is preselected. A `user-id` stated with nothing after the colon is not that id at
+all: yaml-cpp's string conversion answers a valueless key with the literal `null` (impl.h:145-146), so the id tested is
+those four letters and the answer holds them against the listing the way it holds any recorded id. An empty `pref-path`
+is a refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere
+(config.cpp:189-190). A configuration that exists and cannot be read refuses the whole question with
+`emulator-config-unreadable`; one that reads fine but states an absolute path only the emulator's sandbox can spell
+refuses with `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+`sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
+(`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
+`data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at
+`emulator_directory` — no frontend hands a standalone emulator a save directory — except where the emulator's own
+default walks into the content's. On EmuDeck a standalone emulator is identified by `%EMULATOR_…%` token or by an
+allowlisted launcher script (`cemu.sh`, `azahar.sh`, `duckstation.sh`, `pcsx2-qt.sh`, `melonds.sh` and `vita3k.sh`
+today), and either way the launch's binary variant gates the answer. Three variants are established: an **AppImage**
+under `~/Applications` reads the host's own XDG tree; a **flatpak** whose app id the settings table names (`flatpak` on
+the row — melonDS's `net.kuribo64.melonDS`, which `melonds.sh` runs outright, probing nothing) reads its own homes below
+`~/.var/app`; and an **extracted binary** at `~/Applications/<Name>/<Name>`, which EmuDeck unpacks some emulators into
+(Vita3K) and which ES-DE's own find rule looks for right after the AppImage patterns, reads the host's tree like an
+AppImage does. The rest refuse with `standalone-variant-unestablished`. The id lives in the table rather than on a card
+because the gate is one question about the launch and every card family asks it — while it sat on the **save** card, an
+emulator without one could reach no trees at all, which is what MAME's savestate answer was refusing over (#288).
 
 ## `standalone_savestates.json` — which standalone emulators the savestate question answers for
 

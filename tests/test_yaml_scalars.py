@@ -224,11 +224,62 @@ class TestScalarsAsWritten:
         read = read_scalars("empty:\nnext: 1\n")
         assert read.get("empty") == ""
         assert "empty" not in read.skipped
+        # And the text it states is named as stated with none, which is the
+        # fact ``values`` cannot carry: the empty string is there either way.
+        assert read.null == ("empty",)
 
     def test_a_multi_line_scalar_is_skipped_by_name(self):
         read = read_scalars("note: |\n  first\n  second\nnext: 1\n")
         assert read.skipped == ("note",)
         assert read.get("next") == "1"
+
+
+class TestTheKeysStatedWithNoValue:
+    """The third statement: which keys the file states with nothing after them.
+
+    ``values`` answers what the text says and answers the same empty string for
+    both spellings, because that is what both texts say. A caller whose
+    emulator reads the two differently — yaml-cpp makes the literal ``null`` of
+    one and the empty string of the other — asks this one instead.
+    """
+
+    def test_a_key_stated_with_no_value_is_named_in_the_order_the_file_states_it(self):
+        read = read_scalars("first:\nmiddle: 1\nlast:\n")
+        assert read.null == ("first", "last")
+
+    def test_a_quoted_empty_scalar_is_a_value_and_not_one_of_them(self):
+        # The discriminating pair: same value in ``values``, different line in
+        # the file, and the emulator that reads it may make two values of them.
+        read = read_scalars('stated: ""\n')
+        assert read.get("stated") == ""
+        assert read.null == ()
+
+    def test_a_key_the_file_never_states_is_in_neither(self):
+        read = read_scalars("next: 1\n")
+        assert read.get("absent") is None
+        assert read.null == ()
+
+    def test_a_block_under_the_key_makes_it_skipped_rather_than_valueless(self):
+        # Vita3K's own shape for an unread key: nothing after the colon and a
+        # nested block below it. The block is a value, so the key states one.
+        read = read_scalars("user-id:\n  stored: 00\nnext: 1\n")
+        assert read.skipped == ("user-id",)
+        assert read.null == ()
+
+    def test_a_later_value_takes_the_statement_back(self):
+        # ``values`` keeps the last statement, so this one must too — a reader
+        # that named the key here would contradict its own value.
+        read = read_scalars("user-id:\nuser-id: 00\n")
+        assert read.get("user-id") == "00"
+        assert read.null == ()
+
+    def test_a_key_stated_with_no_value_twice_is_named_once(self):
+        assert read_scalars("user-id:\nuser-id:\n").null == ("user-id",)
+
+    def test_a_refused_file_names_none_of_them(self):
+        read = read_scalars("user-id:\n---\nuser-id: 00\n")
+        assert read.refusal == REFUSAL_SECOND_DOCUMENT
+        assert read.null == ()
 
 
 class TestTheRefusalVocabularyIsEnumerated:

@@ -9923,6 +9923,33 @@ _VITA3K_PREF_PATH_KEY = "pref-path"
 # only matter through init_home (gui.cpp:688-696) — see the caveat sentence.
 _VITA3K_USER_ID_KEY = "user-id"
 _VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
+# The id that ``user-id``, stated with nothing after the colon, hands the
+# emulator. Vita3K reads the key as a std::string (config.h:189) and yaml-cpp's
+# string conversion answers a null node with this literal rather than with an
+# empty string (as_if<std::string, void>, impl.h:145-146) — so the key the
+# emulator looks up in gui.users is these four letters, and a directory listed
+# under them is the user that record preselects. Read and run at the commit
+# this build pins, external/yaml-cpp@2f86d137.
+#
+# WHAT THIS READING REACHES, AND WHAT IT DOES NOT. A plain scalar is a null
+# node whenever ``IsNullString`` says so — an empty one, ``~``, ``null``,
+# ``Null`` or ``NULL`` (null.cpp:13-16), asked of every untagged plain scalar
+# at singledocparser.cpp:96-97 — and all five convert to this same literal,
+# measured by running each of them at the pin above. atlas reaches the id by
+# two roads only: the key stated with no value, which the scalar reader names
+# (YamlScalars.null), and a file writing ``null`` out, which that reader reads
+# as the text it is. The other three are read here as ``~``, ``Null`` and
+# ``NULL`` — ids the emulator never looks up — which is a limit of this
+# reading, not a shape the answer states anything about.
+_VITA3K_NULL_ID = "null"
+# The sentence for a key stated with no value, said once because two readings
+# publish it — the record clause and the key's provenance — and a yaml-cpp bump
+# must move one citation, not two copies of it.
+_VITA3K_VALUELESS_ID_SENTENCE = (
+    f"config.yml states user-id with no value, which yaml-cpp reads as "
+    f'the id "{_VITA3K_NULL_ID}" (impl.h:145-146, read and run at '
+    "external/yaml-cpp@2f86d137)"
+)
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
 # How the emulator's own listing decides what a user is, said once because
 # four sentences interpolate it and one drifting copy would make them four
@@ -10281,9 +10308,11 @@ class _Vita3kUser:
     again — a second guard here would be a line that never runs, claiming to
     hold something that is already held.
 
-    ``configured`` is the value ``user-id`` states, which is ``None`` only
-    where the key is absent or unread: a key stated with nothing in it states
-    the empty id, and that id is the one the emulator starts from.
+    ``configured`` is the id ``user-id`` hands the emulator, which is ``None``
+    only where the key is absent or unread: a key stated as the empty value
+    states the empty id, the one the emulator starts from, and a key stated
+    with no value at all states the id ``null``, the literal its own reader
+    makes of that spelling (:data:`_VITA3K_NULL_ID`).
     """
 
     configured: str | None
@@ -10306,8 +10335,26 @@ def _vita3k_identities(homes: tuple[_Vita3kListedUser, ...]) -> tuple[str, ...]:
     return tuple(home.identity for home in homes if home.identity is not None)
 
 
+def _vita3k_recorded_record(configured: str, *, valueless: bool) -> str:
+    """How config.yml states the id the answer holds against the listing.
+
+    The twin of :func:`_vita3k_unset_record`, and there for the same reason: a
+    reader who opens config.yml sees which spelling is in it, and an answer
+    that named only the resulting id would be describing a file nobody has. A
+    key with nothing after the colon reaches the id ``null`` through yaml-cpp's
+    string conversion and a file writing ``null`` out reaches it as the text it
+    is — see :data:`_VITA3K_NULL_ID` for what that conversion takes for a null
+    node and which of those spellings this reading reaches — so the clause says
+    which file was read rather than making one state what the other does.
+    """
+    if valueless:
+        return _VITA3K_VALUELESS_ID_SENTENCE
+    return f'config.yml records {_VITA3K_USER_ID_KEY} "{configured}"'
+
+
 def _vita3k_listed_recorded_state(
     configured: str,
+    record: str,
     survey: _PerUserSurvey,
     claim: str,
     truncating: tuple[str, ...],
@@ -10331,17 +10378,21 @@ def _vita3k_listed_recorded_state(
     This used to be one state whose prose alone softened, which left ``dir``,
     ``configured_user`` and the reason saying the launch opens that user while
     the sentence beside them said it might not.
+
+    ``record`` opens both sentences with how config.yml states the id —
+    :func:`_vita3k_recorded_record` — and ``configured`` is the id itself,
+    which is what the headline names.
     """
     if truncating:
         sentence = (
-            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is among "
-            f"the ones listed here — {_VITA3K_LISTING_RULE} — {_VITA3K_REACH_CLAUSE}, so the "
-            f"record does not move the headline: {tail}"
+            f"{record} and that user is among the ones listed here — "
+            f"{_VITA3K_LISTING_RULE} — {_VITA3K_REACH_CLAUSE}, so the record does not move "
+            f"the headline: {tail}"
         )
         return None, sentence, REASON_CONFIGURED_USER_REACH_UNESTABLISHED
     sentence = (
-        f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and that user is among the "
-        f"ones Vita3K itself would list — {_VITA3K_LISTING_RULE} — so a frontend launch, "
+        f"{record} and that user is among the ones Vita3K itself would list — "
+        f"{_VITA3K_LISTING_RULE} — so a frontend launch, "
         "naming an app on the command line, reopens exactly that user (init_home, "
         "gui.cpp:688-696) and the tree named is its, created on the first save where no "
         "directory of that name exists yet; a plain launch without user-auto-connect opens "
@@ -10357,6 +10408,8 @@ def _vita3k_recorded_user_state(
     survey: _PerUserSurvey,
     claim: str,
     truncating: tuple[str, ...],
+    *,
+    valueless: bool,
 ) -> tuple[str | None, str, str]:
     """The recorded user held against the emulator's own listing — five states.
 
@@ -10379,20 +10432,26 @@ def _vita3k_recorded_user_state(
     ``truncating`` is what the listed state needs beyond the clause — see
     :func:`_vita3k_listed_recorded_state`, which is where that state's two
     halves live, because the reopening it used to assert is withdrawn there.
+    ``valueless`` says that the id came from a key stated with nothing after
+    the colon rather than from a value, which every sentence here opens with
+    (:func:`_vita3k_recorded_record`) and none of them turns on: what the
+    listing is held against is the id, however the file spells it.
     """
     identities = _vita3k_identities(homes)
     own = next((u for u in homes if u.directory == configured), None)
     tail = _vita3k_survey_tail(survey, claim)
+    record = _vita3k_recorded_record(configured, valueless=valueless)
     if configured in identities:
-        return _vita3k_listed_recorded_state(configured, survey, claim, truncating, tail)
+        return _vita3k_listed_recorded_state(
+            configured, record, survey, claim, truncating, tail
+        )
     if survey.unestablished:
         # Reason-neutral on purpose: the entries reach this state by more than
         # one route — a user.xml that could not be read, an entry whose own
         # stat failed — and naming one of them here would state it of both.
         # The aside inside ``tail`` carries each entry's own reason already.
         sentence = (
-            f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, and whether "
-            "Vita3K would list that user is not established — what "
+            f"{record}, and whether Vita3K would list that user is not established — what "
             f"{', '.join(survey.unestablished)} holds could not be established here, and "
             "the listing is keyed by exactly that (get_users_list, "
             f"user_management.cpp:83-97) — so the record does not move the headline: {tail}"
@@ -10416,16 +10475,16 @@ def _vita3k_recorded_user_state(
             # key, and a record naming anything else misses it.
             detail = "it answers to the empty id instead"
         sentence = (
-            f"config.yml records {_VITA3K_USER_ID_KEY} {configured} and its directory "
-            f"exists, but no user.xml here lists it as that user — {detail} — so "
+            f"{record} and its directory exists, but no user.xml here lists it as that "
+            f"user — {detail} — so "
             "Vita3K would skip it and open the user manager for the player to pick "
             "(get_users_list, user_management.cpp:83-97; init_home, gui.cpp:688-696); "
             f"the record does not move the headline: {tail}"
         )
         return None, sentence, REASON_CONFIGURED_USER_NOT_SET_UP
     sentence = (
-        f"config.yml records {_VITA3K_USER_ID_KEY} {configured}, no directory of "
-        f"that name exists below {user_root}, and no user.xml here names that id — "
+        f"{record}, no directory of that name exists below {user_root}, and no user.xml "
+        "here names that id — "
         "nothing for a launch to reopen, so the user manager opens and the player "
         f"picks (init_home, gui.cpp:688-696) — {tail}"
     )
@@ -10436,15 +10495,20 @@ def _vita3k_unset_record(stated_empty: bool) -> str:
     """How config.yml states the id the emulator starts from, absent or empty.
 
     One value, two readings. ``user-id`` defaults to an empty ``std::string``
-    (config.h:189), so a key that is not there and a key stated with nothing
-    after the colon hand ``init_home`` the same id — and the sentence still
-    says which of the two the file holds, because a reader who opens
-    config.yml sees the difference and an answer that denied it would be
-    describing a file nobody has.
+    (config.h:189), so a key that is not there and a key stated as the empty
+    value ``""`` hand ``init_home`` the same id — and the sentence still says
+    which of the two the file holds, because a reader who opens config.yml
+    sees the difference and an answer that denied it would be describing a
+    file nobody has.
+
+    A key stated with nothing after the colon is neither of them. It is a null
+    node, which yaml-cpp's string conversion answers with the literal ``null``
+    (:data:`_VITA3K_NULL_ID`) — an id like any other, held against the listing
+    by :func:`_vita3k_recorded_user_state` rather than here.
     """
     if stated_empty:
         return (
-            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it, which is the id "
+            f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "", which is the id '
             "the emulator starts from (config.h:189)"
         )
     return (
@@ -10463,6 +10527,11 @@ def _vita3k_unset_user_state(
     truncating: tuple[str, ...],
 ) -> tuple[str | None, str, str]:
     """What an unset — or empty — user-id answers to, against the listing.
+
+    Two readings reach here and ``stated_empty`` tells them apart: the key the
+    file does not state at all, and the key stated as the empty value ``""``.
+    A key stated with nothing after the colon reaches neither — yaml-cpp makes
+    the id ``null`` of it, not the empty one (:data:`_VITA3K_NULL_ID`).
 
     Returns ``(headline, sentence, reason)``. The record's own emptiness is
     not the end of the question, which is what this answer used to make of it:
@@ -10573,13 +10642,27 @@ def _vita3k_user(
     sentence about nothing being preselected: ``user-id`` defaults to an empty
     ``std::string`` (config.h:189), and the empty string is an id a directory
     can be listed under.
+
+    A key stated with nothing after the colon takes neither of those roads. It
+    is an id of its own, ``null``, because that is what the emulator's own
+    reader makes of it — see :data:`_VITA3K_NULL_ID`, which is where what that
+    reading reaches, and what it does not, is written down.
     """
     unread = _VITA3K_USER_ID_KEY in read.skipped
-    # Stated as written, and ``""`` is written: the reader hands back the empty
-    # string for ``user-id:`` with nothing after the colon and for an empty
-    # quoted scalar alike (YamlScalars.get), and collapsing that into ``None``
-    # is what made the answer read a stated empty id as an absent key.
-    configured = None if unread else read.get(_VITA3K_USER_ID_KEY)
+    # Which spelling the file holds, which the scalar reader's own third
+    # statement answers: its ``values`` say the empty string for a key stated
+    # with nothing after the colon and for an empty quoted scalar alike, and
+    # the emulator does not, so reading the value alone made one file's id of
+    # the other.
+    valueless = not unread and _VITA3K_USER_ID_KEY in read.null
+    if unread:
+        configured = None
+    elif valueless:
+        configured = _VITA3K_NULL_ID
+    else:
+        # Stated as written, and ``""`` is written: collapsing a stated empty
+        # value into ``None`` is what made the answer read it as an absent key.
+        configured = read.get(_VITA3K_USER_ID_KEY)
     auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
     headline = None
     # How completely the listed users are the emulator's own list — read off
@@ -10605,7 +10688,7 @@ def _vita3k_user(
         # reads it. A value the guide documents and no machine produces is the
         # defect in data that the sentences were in prose, so the slug is gone.
         headline, sentence, reason = _vita3k_recorded_user_state(
-            configured, homes, user_root, survey, claim, truncating
+            configured, homes, user_root, survey, claim, truncating, valueless=valueless
         )
     else:
         # No user named — which names one all the same, the empty id, and the
@@ -10622,7 +10705,7 @@ def _vita3k_user(
         OptionReading(
             _VITA3K_USER_ID_KEY,
             configured,
-            _vita3k_user_id_provenance(configured, unread=unread),
+            _vita3k_user_id_provenance(configured, unread=unread, valueless=valueless),
             None,
         ),
         OptionReading(
@@ -10637,20 +10720,30 @@ def _vita3k_user(
     return _Vita3kUser(configured, headline, readings, sentence, reason)
 
 
-def _vita3k_user_id_provenance(configured: str | None, *, unread: bool) -> str:
+def _vita3k_user_id_provenance(
+    configured: str | None, *, unread: bool, valueless: bool
+) -> str:
     """Where the recorded user id came from — the shared grammar, this key's sentences.
 
-    A key stated with nothing after the colon is neither a value nor an absent
-    key, and this key's sentence for that state names the value the file holds
-    instead of calling a stated key unset. The sentence itself is unchanged;
-    what moved is only where the branch that reaches it lives.
+    A key stated as the empty value is neither a value that names a user nor an
+    absent key, and this key's sentence for that state names the value the file
+    holds instead of calling a stated key unset.
+
+    The key stated with no value at all is the state where this key parts from
+    the other: Vita3K reads it as a ``std::string`` (config.h:189) and
+    yaml-cpp's string conversion of a null node is the literal ``null``, so the
+    sentence names the id that conversion hands the emulator and the reading
+    beside it carries that id. The other key's two spellings meet — both throw
+    — so only this one passes a sentence for the third state.
     """
+    stated_valueless = _VITA3K_VALUELESS_ID_SENTENCE if valueless else None
     return _vita3k_key_provenance(
         _VITA3K_USER_ID_KEY,
         configured,
         unread=unread,
+        stated_valueless=stated_valueless,
         stated_empty=(
-            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it — the id the "
+            f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "" — the id the '
             "emulator starts from is that same empty one (config.h:189)"
         ),
         unset="no user is preselected (config.h:189)",
@@ -10693,26 +10786,43 @@ def _vita3k_auto_connect_provenance(auto: str | None, *, unread: bool) -> str:
 
 
 def _vita3k_key_provenance(
-    key: str, value: str | None, *, unread: bool, stated_empty: str, unset: str
+    key: str,
+    value: str | None,
+    *,
+    unread: bool,
+    stated_empty: str,
+    unset: str,
+    stated_valueless: str | None = None,
 ) -> str:
-    """Where one config.yml key's value came from — the same four states twice.
+    """Where one config.yml key's value came from — one grammar, two keys.
 
     A key is stated as a construct the scalar reader passed over, stated as a
-    value, stated with nothing in it, or not stated at all, and the two keys
+    value, stated as an empty value, or not stated at all, and the two keys
     this answer reads differ only in what the last two mean to the emulator.
     Saying the grammar once keeps the two readings from drifting into two
     accounts of one shape.
 
-    Stated with nothing in it is a state of its own because the file states
-    it: the key is written and its value is empty, which is not the file
-    lacking the key. Reading the two as one is the conflation each caller's
+    A stated empty value is a state of its own because the file states it: the
+    key is written and its value is empty, which is not the file lacking the
+    key. Reading the two as one is the conflation each caller's
     ``stated_empty`` exists to remove, and it is why a stated value and a
     stated empty one take two branches below — the first tests the value, the
     second, which only an empty one reaches, tests that there is a value at
     all.
+
+    ``stated_valueless`` is how a key stated with nothing after the colon
+    enters that grammar without a branch of its own per key: the caller passes
+    a sentence exactly where its emulator makes something else of that
+    spelling than of an empty value, and the sentence is answered before the
+    value is looked at, because the value the emulator holds there is the
+    library's doing rather than the file's text. Where the two spellings meet
+    — ``user-auto-connect`` throws on both — the caller passes none and both
+    reach ``stated_empty``.
     """
     if unread:
         return f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
+    if stated_valueless is not None:
+        return stated_valueless
     if value:
         return f'config.yml: {key}: "{value}"'
     if value is not None:
@@ -10823,7 +10933,10 @@ def _vita3k_savefile_placement(
         # headline stays the compiled default — but the emptiness says one
         # thing more: the recorded user's tree is among the ones missing.
         if user.configured:
-            recorded_aside = f", the recorded user {user.configured} included"
+            # Quoted, the way the not-set-up state quotes the id a directory
+            # answers to: unquoted, an id spelled like a word — "the recorded
+            # user null included" — reads as its own negation.
+            recorded_aside = f', the recorded user "{user.configured}" included'
         elif user.configured is not None:
             # A record stating the empty id names no directory that could be
             # missing — the tree that id composes is the user root itself,
