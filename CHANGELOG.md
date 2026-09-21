@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.21.0](https://github.com/danielcopper/emu-atlas/compare/v0.20.0...v0.21.0) (2026-09-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **vita3k:** a user-id stated with no value is the id null the emulator reads ([#505](https://github.com/danielcopper/emu-atlas/issues/505))
+* **firmware:** beetle psx needs one image of the launch's region under any spelling it tries ([#493](https://github.com/danielcopper/emu-atlas/issues/493))
+* **firmware:** a set pcsx2_bios option names the image LRPS2 opens ([#489](https://github.com/danielcopper/emu-atlas/issues/489))
+* **firmware:** gba_bios.bin and nds_sd_card.bin name their own machines ([#488](https://github.com/danielcopper/emu-atlas/issues/488))
+* **firmware:** identification names the declared folder as destination ([#487](https://github.com/danielcopper/emu-atlas/issues/487))
+* **machine:** the core probe says which way a core went unanswered ([#486](https://github.com/danielcopper/emu-atlas/issues/486))
+* **contract:** a card token rides caveat data under token ([#485](https://github.com/danielcopper/emu-atlas/issues/485))
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480))
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477))
+
+### Features
+
+* **catalogue:** a RetroArch launch of a foreign core is its own kind ([#480](https://github.com/danielcopper/emu-atlas/issues/480)) ([a06e7b2](https://github.com/danielcopper/emu-atlas/commit/a06e7b22a621ff2f35a01fedd33689f0cfd078b8)), closes [#446](https://github.com/danielcopper/emu-atlas/issues/446)
+* **firmware:** a by-name-then-content core is answered as it boots ([#477](https://github.com/danielcopper/emu-atlas/issues/477)) ([e1eafec](https://github.com/danielcopper/emu-atlas/commit/e1eafec758298f79bccc8b4d5bde3df5737ed7fe)), closes [#466](https://github.com/danielcopper/emu-atlas/issues/466)
+* **firmware:** a directory the installer fills by download is said so beside supplied_by ([#501](https://github.com/danielcopper/emu-atlas/issues/501)) ([014390c](https://github.com/danielcopper/emu-atlas/commit/014390c6488dc25847c4ff5e28eb0fb937248721)), closes [#354](https://github.com/danielcopper/emu-atlas/issues/354)
+* **firmware:** a set pcsx2_bios option names the image LRPS2 opens ([#489](https://github.com/danielcopper/emu-atlas/issues/489)) ([94b1f53](https://github.com/danielcopper/emu-atlas/commit/94b1f53162060b500af957061596e950d2572de4)), closes [#360](https://github.com/danielcopper/emu-atlas/issues/360)
+* **machine:** the core probe says which way a core went unanswered ([#486](https://github.com/danielcopper/emu-atlas/issues/486)) ([d54f66f](https://github.com/danielcopper/emu-atlas/commit/d54f66f54e0ff5ba50f35d43627d892f45ea789a)), closes [#412](https://github.com/danielcopper/emu-atlas/issues/412)
+
+
+### Bug Fixes
+
+* **docs:** the contract page refuses a closed vocabulary published without its tuple ([#494](https://github.com/danielcopper/emu-atlas/issues/494)) ([eead70f](https://github.com/danielcopper/emu-atlas/commit/eead70f04f0927b573e0abfc90b8531377781bc0)), closes [#475](https://github.com/danielcopper/emu-atlas/issues/475)
+* **emudeck:** the firmware route reads a launch's own xdg pinning beside its other four facts ([#498](https://github.com/danielcopper/emu-atlas/issues/498)) ([0c0e5e3](https://github.com/danielcopper/emu-atlas/commit/0c0e5e3d3f659c21555a511565f833a2ea0505ea)), closes [#492](https://github.com/danielcopper/emu-atlas/issues/492)
+* **emudeck:** the firmware route resolves a standalone's sandbox per launch ([#490](https://github.com/danielcopper/emu-atlas/issues/490)) ([748847e](https://github.com/danielcopper/emu-atlas/commit/748847e31c22746076f63b68248563cf442a7397)), closes [#350](https://github.com/danielcopper/emu-atlas/issues/350)
+* **firmware:** beetle psx needs one image of the launch's region under any spelling it tries ([#493](https://github.com/danielcopper/emu-atlas/issues/493)) ([35ce0e2](https://github.com/danielcopper/emu-atlas/commit/35ce0e2a1f18304ac8451d30a433d824a7bc42b8)), closes [#474](https://github.com/danielcopper/emu-atlas/issues/474)
+* **firmware:** gba_bios.bin and nds_sd_card.bin name their own machines ([#488](https://github.com/danielcopper/emu-atlas/issues/488)) ([ff84772](https://github.com/danielcopper/emu-atlas/commit/ff84772df655aa36f72ee3dc61292571dd561106)), closes [#340](https://github.com/danielcopper/emu-atlas/issues/340)
+* **firmware:** identification names the declared folder as destination ([#487](https://github.com/danielcopper/emu-atlas/issues/487)) ([c43548e](https://github.com/danielcopper/emu-atlas/commit/c43548e952fc2dc051db339c6342f7fe1db8615f)), closes [#377](https://github.com/danielcopper/emu-atlas/issues/377)
+* **rpcs3:** the per-user sentence claims the full account list only where every entry was decided ([#496](https://github.com/danielcopper/emu-atlas/issues/496)) ([5222aae](https://github.com/danielcopper/emu-atlas/commit/5222aaea90bd97541b8eb8b7308ee9213c0fa003)), closes [#482](https://github.com/danielcopper/emu-atlas/issues/482)
+* **vita3k:** a user-id stated with no value is the id null the emulator reads ([#505](https://github.com/danielcopper/emu-atlas/issues/505)) ([62eadd3](https://github.com/danielcopper/emu-atlas/commit/62eadd3113974d75d15ba32f9083229eca3a5f91)), closes [#504](https://github.com/danielcopper/emu-atlas/issues/504)
+* **vita3k:** an empty user-auto-connect value states what the emulator makes of it ([#503](https://github.com/danielcopper/emu-atlas/issues/503)) ([6f61a82](https://github.com/danielcopper/emu-atlas/commit/6f61a82805283cfe2bfeb091b00e9f5716ab0977)), closes [#499](https://github.com/danielcopper/emu-atlas/issues/499)
+* **vita3k:** the empty user-id is a listed key and a short listing unsettles the recorded user ([#495](https://github.com/danielcopper/emu-atlas/issues/495)) ([3c3d5c9](https://github.com/danielcopper/emu-atlas/commit/3c3d5c95328cf495f3b2173fefae2c10ad707015)), closes [#481](https://github.com/danielcopper/emu-atlas/issues/481) [#483](https://github.com/danielcopper/emu-atlas/issues/483)
+* **vita3k:** the user listing keys like the emulator's boost and says where it can end ([#479](https://github.com/danielcopper/emu-atlas/issues/479)) ([149f1f3](https://github.com/danielcopper/emu-atlas/commit/149f1f326371b2610a3c3401675cbb4d067ec2bc)), closes [#459](https://github.com/danielcopper/emu-atlas/issues/459) [#460](https://github.com/danielcopper/emu-atlas/issues/460)
+
+
+### Documentation
+
+* **firmware:** the cannot-run-without-firmware counts carry their rule and a test holds the property ([#497](https://github.com/danielcopper/emu-atlas/issues/497)) ([e7b8e54](https://github.com/danielcopper/emu-atlas/commit/e7b8e54db5ade48475f72476d97a80e4c167e59b)), closes [#491](https://github.com/danielcopper/emu-atlas/issues/491)
+* **guide:** the remaining reference-machine readings are restated from the mechanism ([#502](https://github.com/danielcopper/emu-atlas/issues/502)) ([ae47877](https://github.com/danielcopper/emu-atlas/commit/ae47877b01d76842411f4b8999fda64ec7c10d67)), closes [#500](https://github.com/danielcopper/emu-atlas/issues/500)
+
+
+### Code Refactoring
+
+* **contract:** a card token rides caveat data under token ([#485](https://github.com/danielcopper/emu-atlas/issues/485)) ([62a6aa7](https://github.com/danielcopper/emu-atlas/commit/62a6aa7977246d79f8d6bce275c9cb432c29a6a1)), closes [#449](https://github.com/danielcopper/emu-atlas/issues/449)
+
 ## [0.20.0](https://github.com/danielcopper/emu-atlas/compare/v0.19.0...v0.20.0) (2026-09-13)
 
 
