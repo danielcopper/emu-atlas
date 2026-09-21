@@ -6376,6 +6376,103 @@
       }
     },
     {
+      "name": "vita3k-an-auto-connect-stated-empty-is-the-value-it-states",
+      "rationale": "The same conflation one key over: user-auto-connect stated as an empty quoted scalar, which the scalar reader hands back as the empty string rather than as an absent key. The emulator's own reader converts no empty bool — the load throws at that key and applies no key declared after it, so the switch is never assigned and keeps the initializer it was declared with (convert.cpp:42-43, :57-72 and impl.h:131-133, read and run at external/yaml-cpp@2f86d137; config.cpp:41-49, :182-187, :230; config.h:190). The reading states the empty value the file holds instead of calling a stated key unset, and user-id, which the declaration order reaches first (config.h:189), is the file's own value all the same.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: \"\"\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"00\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00"
+                ],
+                "configured_user": "00"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "00",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": "",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "vita3k-a-recorded-user-an-entry-can-cut-the-walk-short-of-is-not-reached",
       "rationale": "01 is recorded and listed, and 02 is an entry whose own stat failed — one the walk may hand get_users_list as DT_UNKNOWN or DT_LNK, whose deferred stat throws filesystem_error out of gui::init with gui.users cleared already, so the emulator's list is whatever prefix the walk had reached. fs::directory_iterator hands back the directory's own order (user_management.cpp:87), which nothing writes down, so whether the walk reaches 01 before 02 is not establishable from disk: contains(cfg.user_id) may be true or false, and a launch may reopen 01 or open the user manager (gui.cpp:688-696). The finding stands and the reopening does not, so the headline does not follow the record — the tree named is the first user listed, the way every state that settles nothing names it while a user is listed, and 01 stays the recorded id beside it.",
       "input": {

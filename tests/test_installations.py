@@ -4208,6 +4208,10 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert placement.granularity is not None
         return {r.key: r.value for r in placement.granularity.readings}
 
+    def _provenance(self, placement):
+        assert placement.granularity is not None
+        return {r.key: r.provenance for r in placement.granularity.readings}
+
     # A file the scalar reader refuses whole, one per refusal code it answers
     # with. Both per-user emulators read their configuration through that
     # reader, so each refusal reaches a client as this code's ``reason``.
@@ -4746,9 +4750,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert "states user-id with nothing in it" in caveat.message
         # And the reading's own provenance names the value the file states
         # instead of calling a stated key unset, which is what it said before.
-        assert p.granularity is not None
-        provenance = {r.key: r.provenance for r in p.granularity.readings}
-        assert provenance["user-id"] == (
+        assert self._provenance(p)["user-id"] == (
             "config.yml states user-id with nothing in it — the id the emulator starts "
             "from is that same empty one (config.h:189)"
         )
@@ -5022,6 +5024,57 @@ class TestTheUserAPerUserTreeWouldOpen:
         )
         assert not isinstance(p, atlas.Unresolved)
         assert self._readings(p)["user-auto-connect"] == "true"
+
+    @pytest.mark.parametrize("spelling", ["user-auto-connect:\n", 'user-auto-connect: ""\n'])
+    def test_vita3k_an_auto_connect_stated_empty_is_not_an_unset_one(self, spelling):
+        # The scalar reader hands back the empty string for a key with nothing
+        # after the colon and for an empty quoted scalar alike
+        # (tests/test_yaml_scalars.py), and the emulator's own reader converts
+        # neither to a bool: the load throws at that key and stops there, so
+        # the switch is never assigned and keeps the initializer it was
+        # declared with. An absent key ends at that same false by being
+        # assigned it — one value, two roads — so the reading says which of
+        # the two the file holds instead of calling a stated key unset.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: f"pref-path: /mnt/sd/vita\nuser-id: 00\n{spelling}",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-auto-connect"] == ""
+        assert self._provenance(p)["user-auto-connect"] == (
+            "config.yml states user-auto-connect with nothing in it, which is no boolean "
+            "yaml-cpp converts (convert.cpp:42-43, :57-72 and impl.h:131-133 at "
+            "external/yaml-cpp@2f86d137) — the load throws there and applies no key declared "
+            "after it, so the default false governs all the same (config.cpp:182-187, "
+            "config.h:190)"
+        )
+        # And the key declared before it is applied all the same: the load
+        # follows the declaration order and user-id comes first (config.h:189,
+        # :190), so the user-id reading is the file's own value.
+        assert self._readings(p)["user-id"] == "00"
+
+    def test_vita3k_an_absent_auto_connect_is_unset(self):
+        # The other end of the same branch, held so that the sentence above
+        # cannot quietly become the sentence for both: a key the file does not
+        # carry is assigned its declared default by the load rather than left
+        # at it by a throw.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-auto-connect"] is None
+        assert self._provenance(p)["user-auto-connect"] == (
+            "user-auto-connect is unset — the default false governs (config.h:190)"
+        )
 
     def test_vita3k_an_unread_user_id_is_not_an_absent_one(self):
         # A list under the key is a construct the scalar reader passes over.

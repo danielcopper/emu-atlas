@@ -10628,11 +10628,8 @@ def _vita3k_user(
         OptionReading(
             _VITA3K_AUTO_CONNECT_KEY,
             auto,
-            _vita3k_key_provenance(
-                _VITA3K_AUTO_CONNECT_KEY,
-                auto,
-                unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped,
-                unset="the default false governs (config.h:190)",
+            _vita3k_auto_connect_provenance(
+                auto, unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped
             ),
             None,
         ),
@@ -10641,38 +10638,85 @@ def _vita3k_user(
 
 
 def _vita3k_user_id_provenance(configured: str | None, *, unread: bool) -> str:
-    """Where the recorded user id came from — the shared grammar, one state more.
+    """Where the recorded user id came from — the shared grammar, this key's sentences.
 
     A key stated with nothing after the colon is neither a value nor an absent
-    key, and only this key has somewhere for that state to go: the emulator
-    reads the same empty id either way (config.h:189), so the reading says
-    which of the two the file holds instead of calling a stated key unset.
+    key, and this key's sentence for that state names the value the file holds
+    instead of calling a stated key unset. The sentence itself is unchanged;
+    what moved is only where the branch that reaches it lives.
     """
-    if configured == "":
-        return (
-            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it — the id the "
-            "emulator starts from is that same empty one (config.h:189)"
-        )
     return _vita3k_key_provenance(
         _VITA3K_USER_ID_KEY,
         configured,
         unread=unread,
+        stated_empty=(
+            f"config.yml states {_VITA3K_USER_ID_KEY} with nothing in it — the id the "
+            "emulator starts from is that same empty one (config.h:189)"
+        ),
         unset="no user is preselected (config.h:189)",
     )
 
 
-def _vita3k_key_provenance(key: str, value: str | None, *, unread: bool, unset: str) -> str:
-    """Where one config.yml key's value came from — the same three states twice.
+def _vita3k_auto_connect_provenance(auto: str | None, *, unread: bool) -> str:
+    """Where the auto-connect switch came from — the shared grammar, this key's sentences.
+
+    One false, two roads. An absent key is assigned the default its declaration
+    names (config.cpp:45-46); a key stated with nothing in it is never assigned
+    at all and keeps the initializer its member was declared with, because
+    yaml-cpp converts neither spelling of an empty bool: a key with nothing
+    after the colon is a null node, which is no scalar (convert.cpp:42-43), and
+    an empty quoted scalar passes the case test (:28-29) and then matches none
+    of y/yes/true/on or their negatives (:57-72), so ``decode`` fails both
+    times and ``as<bool>()`` throws (impl.h:131-133) — read and run at the
+    commit this build pins, external/yaml-cpp@2f86d137. ``update_members``
+    carries the throw out of the assignments the declaration order writes
+    (config.cpp:41-49), ``parse`` logs it and answers FileNotFound
+    (config.cpp:182-187), and ``init_config`` drops that answer
+    (config.cpp:230): the file is applied as far as that key and no further, so
+    this switch and every key declared after it keep the default they are
+    declared with (config.h:190, state.h:112-113) while pref-path
+    (config.h:108) and user-id (:189), both declared before it, stand.
+    """
+    return _vita3k_key_provenance(
+        _VITA3K_AUTO_CONNECT_KEY,
+        auto,
+        unread=unread,
+        stated_empty=(
+            f"config.yml states {_VITA3K_AUTO_CONNECT_KEY} with nothing in it, which is no "
+            "boolean yaml-cpp converts (convert.cpp:42-43, :57-72 and impl.h:131-133 at "
+            "external/yaml-cpp@2f86d137) — the load throws there and applies no key declared "
+            "after it, so the default false governs all the same (config.cpp:182-187, "
+            "config.h:190)"
+        ),
+        unset="the default false governs (config.h:190)",
+    )
+
+
+def _vita3k_key_provenance(
+    key: str, value: str | None, *, unread: bool, stated_empty: str, unset: str
+) -> str:
+    """Where one config.yml key's value came from — the same four states twice.
 
     A key is stated as a construct the scalar reader passed over, stated as a
-    value, or not stated at all, and the two keys this answer reads differ only
-    in what governs when nothing is stated. Saying that once keeps the two
-    readings from drifting into two accounts of one grammar.
+    value, stated with nothing in it, or not stated at all, and the two keys
+    this answer reads differ only in what the last two mean to the emulator.
+    Saying the grammar once keeps the two readings from drifting into two
+    accounts of one shape.
+
+    Stated with nothing in it is a state of its own because the file states
+    it: the key is written and its value is empty, which is not the file
+    lacking the key. Reading the two as one is the conflation each caller's
+    ``stated_empty`` exists to remove, and it is why a stated value and a
+    stated empty one take two branches below — the first tests the value, the
+    second, which only an empty one reaches, tests that there is a value at
+    all.
     """
     if unread:
         return f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
     if value:
         return f'config.yml: {key}: "{value}"'
+    if value is not None:
+        return stated_empty
     return f"{key} is unset — {unset}"
 
 
