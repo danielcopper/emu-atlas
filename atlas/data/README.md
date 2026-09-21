@@ -614,13 +614,19 @@ empty value `""`, is not outside all of this: the setting defaults to an empty `
 `init_home` tests is the empty one, and a directory listed under exactly that key — an `id` attribute stated empty, or a
 name the stem cuts away whole — is the user that record preselects, with the user root itself as the tree, since an
 empty id composes no segment of its own. Its reason says the unset id is listed; where nothing answers to it the answer
-is the one it always was, that no user is preselected. A `user-id` stated with nothing after the colon is not that id at
-all: yaml-cpp's string conversion answers a valueless key with the literal `null` (impl.h:145-146), so the id tested is
-those four letters and the answer holds them against the listing the way it holds any recorded id. An empty `pref-path`
-is a refusal rather than a guess: the emulator falls back to a default it derives at run time and writes nowhere
-(config.cpp:189-190). A configuration that exists and cannot be read refuses the whole question with
-`emulator-config-unreadable`; one that reads fine but states an absolute path only the emulator's sandbox can spell
-refuses with `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+is the one it always was, that no user is preselected. A `user-id` stated as a null node is not that id at all: five
+plain scalars are that node — nothing after the colon, `~`, `null`, `Null` and `NULL` (`IsNullString`, null.cpp:13-16) —
+and yaml-cpp's string conversion answers every one of them with the literal `null` (impl.h:145-146), so the id tested is
+those four letters and the answer holds them against the listing the way it holds any recorded id. A key the file states
+more than once is read as its first statement, the one a yaml-cpp lookup finds (`node_data::get`'s `std::find_if`,
+detail/impl.h:118-138), and the `user-id` and `user-auto-connect` readings say that the file states it more than once
+while `pref-path` answers the first statement without a word about it; RPCS3's own reader keeps the last statement it
+can decode instead, so a `vfs.yml` that states its drive, or the variable the drive is composed off, more than once
+refuses with `key-repeated` rather than answering either statement. An empty `pref-path` is a refusal rather than a
+guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A
+configuration that exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that
+reads fine but states an absolute path only the emulator's sandbox can spell refuses with
+`emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
 `sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
 (`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
 `data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at

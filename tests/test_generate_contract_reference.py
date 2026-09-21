@@ -1118,7 +1118,9 @@ class TestAClosedVocabularyIsNeverPublishedWithoutItsTuple:
 
 
 class TestATupleComposedFromAnotherStatesItsValues:
-    """``(*REFUSAL_CODES, REASON_KEY_UNREAD)`` is a vocabulary, not an expression.
+    """``(*REFUSAL_CODES, REASON_KEY_UNREAD, REASON_KEY_REPEATED)`` is a vocabulary.
+
+    A vocabulary, that is, and not an expression.
 
     A value list the package writes by splatting another states its members as
     plainly as a literal does, and every reading that asks which module declares
@@ -1208,12 +1210,16 @@ class TestATupleComposedFromAnotherStatesItsValues:
         # two plain elements are scalars imported from `atlas/placement.py`,
         # and the module-constant reading holds only names a module assigns.
         values = tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)
-        assert values == (*yaml_scalars.REFUSAL_CODES, atlas.REASON_KEY_UNREAD)
+        assert values == (
+            *yaml_scalars.REFUSAL_CODES,
+            atlas.REASON_KEY_UNREAD,
+            atlas.REASON_KEY_REPEATED,
+        )
         assert reference.declared_vocabularies()["EMULATOR_CONFIG_UNREADABLE_REASONS"] == values
 
     def test_both_modules_the_composed_list_is_spelled_across_declare_it(self) -> None:
         # The half that makes the sentences readable: the list is assigned in
-        # `atlas/placement.py`, and six of its seven value constants stand in
+        # `atlas/placement.py`, and six of its eight value constants stand in
         # `atlas/yaml_scalars.py`. A reading that named only the assigning
         # module would collect nothing written beside those six.
         values = tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)

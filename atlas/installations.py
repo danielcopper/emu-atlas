@@ -278,6 +278,7 @@ from .placement import (
     REASON_CONFIGURED_USER_REACH_UNESTABLISHED,
     REASON_CONFIGURED_USER_SETUP_UNESTABLISHED,
     REASON_HDD_PATH_UNSET,
+    REASON_KEY_REPEATED,
     REASON_KEY_UNREAD,
     REASON_LISTED_USER_ACCOUNT_UNESTABLISHED,
     REASON_MLC_LAUNCH_FLAG_OUTRANKS_CONFIG,
@@ -9711,6 +9712,110 @@ def _rpcs3_listing_claim(survey: _PerUserSurvey) -> str:
     )
 
 
+def _rpcs3_drive_provenance(stated: str | None, *, null_node: bool) -> str:
+    """Where the drive came from: the file's own value, or the compiled default.
+
+    Three sentences for three files, and the middle one is why there are three
+    rather than two: a key stated as a null node reaches the same directory as
+    a key nobody wrote, and a reader who opens vfs.yml sees a key. Each
+    sentence carries its own citations.
+    """
+    if stated:
+        return f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
+    if null_node:
+        return (
+            f"{_RPCS3_HDD0_KEY} is stated as a null node, which RPCS3's reader passes over "
+            "— a cfg::string takes a value only where convert<std::string>::decode accepts "
+            "it (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no "
+            "scalar for it to accept (convert.h:73-75 at the yaml-cpp fork 51a5d623, the "
+            "submodule that build pins) — so the compiled default "
+            f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
+        )
+    return (
+        f"{_RPCS3_HDD0_KEY} is unset — the compiled default "
+        f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
+    )
+
+
+def _rpcs3_repeated_drive_key(read: YamlScalars) -> str | None:
+    """Which repeated key leaves the drive unknowable here — the drive or its variable.
+
+    A shape where this reader and this emulator read one statement two ways.
+    ``cfg::decode`` walks every pair of the map in file order and takes each one
+    it can, so the last statement that is a scalar is the one that stands, while
+    the scalar reader holds the first, the way a yaml-cpp lookup answers. Both
+    keys reach the drive: ``/dev_hdd0/`` states it, and ``$(EmulatorDir)`` is the
+    variable a stated drive — or the compiled default an unstated one falls to —
+    is composed off (``fmt::replace_all``, vfs_config.cpp:50 at build 7c6b3dcd;
+    the default vfs_config.h:13).
+
+    A repeated ``$(EmulatorDir)`` refuses whatever the drive's own statement
+    looks like: the scalar reader resolves every ``$(Name)`` before it answers,
+    so whether the drive's statement referenced the variable is not a fact this
+    answer holds, and refusing on the repetition alone is the reading that
+    cannot be wrong.
+    """
+    if _RPCS3_HDD0_KEY in read.repeated:
+        return _RPCS3_HDD0_KEY
+    if _RPCS3_EMULATOR_DIR_KEY in read.repeated:
+        return _RPCS3_EMULATOR_DIR_KEY
+    return None
+
+
+def _rpcs3_vfs_refusal(
+    read: YamlScalars, *, card: StandaloneSaveCard, vfs_path: str
+) -> Unresolved | None:
+    """Why vfs.yml settles nothing about the drive, or ``None`` where it does.
+
+    Three ways, in the order they take precedence. A construct the scalar
+    reader refuses stops the whole file. A key stated more than once is read by
+    the emulator and by this reader from two different statements, so neither
+    can be published as the drive. A ``/dev_hdd0/`` the reader passed over is
+    stated and unread, which is not the unset key whose compiled default the
+    answer would otherwise name.
+    """
+    if read.refusal is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states a construct atlas does not read "
+            f"({read.refusal}) — which drive its saves live on is unknowable here",
+            {"token": card.token, "config": vfs_path, "reason": read.refusal},
+        )
+    repeated = _rpcs3_repeated_drive_key(read)
+    if repeated is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states {repeated} more than once; the "
+            "emulator applies every statement in turn and keeps the last it reads as a "
+            "scalar (cfg::decode, Utilities/Config.cpp:477-505 at build 7c6b3dcd), which "
+            "this reader does not follow — which drive its saves live on is unknowable here",
+            {
+                "token": card.token,
+                "config": vfs_path,
+                "reason": REASON_KEY_REPEATED,
+                "key": repeated,
+            },
+        )
+    if _RPCS3_HDD0_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: RPCS3 reads a
+        # drive here and atlas did not. Treating that as an unset key answered
+        # the compiled default and said "the compiled default governs" — a
+        # provenance line about a key the file does set.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) states {_RPCS3_HDD0_KEY} as a construct "
+            "atlas does not read — its value is unread, not absent, so which drive its saves "
+            "live on is unknowable here",
+            {
+                "token": card.token,
+                "config": vfs_path,
+                "reason": REASON_KEY_UNREAD,
+                "key": _RPCS3_HDD0_KEY,
+            },
+        )
+    return None
+
+
 def _rpcs3_savefile_placement(
     machine: Machine,
     *,
@@ -9756,38 +9861,11 @@ def _rpcs3_savefile_placement(
         )
     text = result.text or "" if result.status == READ_OK else ""
     read = read_scalars(text, fallbacks={_RPCS3_EMULATOR_DIR_KEY: f"{config_dir}/"})
-    if read.refusal is not None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"RPCS3's VFS configuration ({vfs_path}) states a construct atlas does not read "
-            f"({read.refusal}) — which drive its saves live on is unknowable here",
-            {"token": card.token, "config": vfs_path, "reason": read.refusal},
-        )
-    if _RPCS3_HDD0_KEY in read.skipped:
-        # Stated as a nested block, a list or a multi-line scalar: RPCS3 reads a
-        # drive here and atlas did not. Treating that as an unset key answered
-        # the compiled default and said "the compiled default governs" — a
-        # provenance line about a key the file does set.
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"RPCS3's VFS configuration ({vfs_path}) states {_RPCS3_HDD0_KEY} as a construct "
-            "atlas does not read — its value is unread, not absent, so which drive its saves "
-            "live on is unknowable here",
-            {
-                "token": card.token,
-                "config": vfs_path,
-                "reason": REASON_KEY_UNREAD,
-                "key": _RPCS3_HDD0_KEY,
-            },
-        )
+    refused = _rpcs3_vfs_refusal(read, card=card, vfs_path=vfs_path)
+    if refused is not None:
+        return refused
     stated = read.get(_RPCS3_HDD0_KEY)
-    if stated:
-        provenance = f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
-    else:
-        provenance = (
-            f"{_RPCS3_HDD0_KEY} is unset — the compiled default "
-            f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
-        )
+    provenance = _rpcs3_drive_provenance(stated, null_node=_RPCS3_HDD0_KEY in read.null)
     raw = stated or f"{config_dir}/dev_hdd0/"
     host = sandbox.host(_RPCS3_HDD0_KEY, raw)
     if host.path is None:
@@ -9923,32 +10001,24 @@ _VITA3K_PREF_PATH_KEY = "pref-path"
 # only matter through init_home (gui.cpp:688-696) — see the caveat sentence.
 _VITA3K_USER_ID_KEY = "user-id"
 _VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
-# The id that ``user-id``, stated with nothing after the colon, hands the
-# emulator. Vita3K reads the key as a std::string (config.h:189) and yaml-cpp's
-# string conversion answers a null node with this literal rather than with an
-# empty string (as_if<std::string, void>, impl.h:145-146) — so the key the
-# emulator looks up in gui.users is these four letters, and a directory listed
-# under them is the user that record preselects. Read and run at the commit
-# this build pins, external/yaml-cpp@2f86d137.
-#
-# WHAT THIS READING REACHES, AND WHAT IT DOES NOT. A plain scalar is a null
-# node whenever ``IsNullString`` says so — an empty one, ``~``, ``null``,
-# ``Null`` or ``NULL`` (null.cpp:13-16), asked of every untagged plain scalar
-# at singledocparser.cpp:96-97 — and all five convert to this same literal,
-# measured by running each of them at the pin above. atlas reaches the id by
-# two roads only: the key stated with no value, which the scalar reader names
-# (YamlScalars.null), and a file writing ``null`` out, which that reader reads
-# as the text it is. The other three are read here as ``~``, ``Null`` and
-# ``NULL`` — ids the emulator never looks up — which is a limit of this
-# reading, not a shape the answer states anything about.
+# The id that ``user-id``, stated as a null node, hands the emulator. Vita3K
+# reads the key as a std::string (config.h:189) and yaml-cpp's string
+# conversion answers a null node with this literal rather than with an empty
+# string (as_if<std::string, void>, impl.h:145-146, read and run at the commit
+# this build pins, external/yaml-cpp@2f86d137) — so the key the emulator looks
+# up in gui.users is these four letters, and a directory listed under them is
+# the user that record preselects. Which plain scalars are that node, and where
+# that is read, is the scalar reader's own fact: it names a key stated as any of
+# them in YamlScalars.null, and its ``_NULL_SPELLINGS`` carries the spellings
+# and their citations.
 _VITA3K_NULL_ID = "null"
-# The sentence for a key stated with no value, said once because two readings
+# The sentence for a key stated as a null node, said once because two readings
 # publish it — the record clause and the key's provenance — and a yaml-cpp bump
 # must move one citation, not two copies of it.
-_VITA3K_VALUELESS_ID_SENTENCE = (
-    f"config.yml states user-id with no value, which yaml-cpp reads as "
-    f'the id "{_VITA3K_NULL_ID}" (impl.h:145-146, read and run at '
-    "external/yaml-cpp@2f86d137)"
+_VITA3K_NULL_NODE_ID_SENTENCE = (
+    f"config.yml states {_VITA3K_USER_ID_KEY} as a null node (nothing after the colon, or "
+    f'one of ~, null, Null, NULL), which yaml-cpp reads as the id "{_VITA3K_NULL_ID}" '
+    "(impl.h:145-146, read and run at external/yaml-cpp@2f86d137)"
 )
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
 # How the emulator's own listing decides what a user is, said once because
@@ -10310,9 +10380,9 @@ class _Vita3kUser:
 
     ``configured`` is the id ``user-id`` hands the emulator, which is ``None``
     only where the key is absent or unread: a key stated as the empty value
-    states the empty id, the one the emulator starts from, and a key stated
-    with no value at all states the id ``null``, the literal its own reader
-    makes of that spelling (:data:`_VITA3K_NULL_ID`).
+    states the empty id, the one the emulator starts from, and a key stated as
+    a null node states the id ``null``, the literal its own reader makes of
+    every spelling of that node (:data:`_VITA3K_NULL_ID`).
     """
 
     configured: str | None
@@ -10335,20 +10405,20 @@ def _vita3k_identities(homes: tuple[_Vita3kListedUser, ...]) -> tuple[str, ...]:
     return tuple(home.identity for home in homes if home.identity is not None)
 
 
-def _vita3k_recorded_record(configured: str, *, valueless: bool) -> str:
+def _vita3k_recorded_record(configured: str, *, null_node: bool) -> str:
     """How config.yml states the id the answer holds against the listing.
 
     The twin of :func:`_vita3k_unset_record`, and there for the same reason: a
     reader who opens config.yml sees which spelling is in it, and an answer
     that named only the resulting id would be describing a file nobody has. A
-    key with nothing after the colon reaches the id ``null`` through yaml-cpp's
-    string conversion and a file writing ``null`` out reaches it as the text it
-    is — see :data:`_VITA3K_NULL_ID` for what that conversion takes for a null
-    node and which of those spellings this reading reaches — so the clause says
-    which file was read rather than making one state what the other does.
+    key stated as a null node reaches the id ``null`` through yaml-cpp's string
+    conversion and a file writing ``null`` out in quotes reaches it as the text
+    it is — see :data:`_VITA3K_NULL_ID` for the spellings that conversion takes
+    for a null node — so the clause says which file was read rather than making
+    one state what the other does.
     """
-    if valueless:
-        return _VITA3K_VALUELESS_ID_SENTENCE
+    if null_node:
+        return _VITA3K_NULL_NODE_ID_SENTENCE
     return f'config.yml records {_VITA3K_USER_ID_KEY} "{configured}"'
 
 
@@ -10409,7 +10479,7 @@ def _vita3k_recorded_user_state(
     claim: str,
     truncating: tuple[str, ...],
     *,
-    valueless: bool,
+    null_node: bool,
 ) -> tuple[str | None, str, str]:
     """The recorded user held against the emulator's own listing — five states.
 
@@ -10432,15 +10502,15 @@ def _vita3k_recorded_user_state(
     ``truncating`` is what the listed state needs beyond the clause — see
     :func:`_vita3k_listed_recorded_state`, which is where that state's two
     halves live, because the reopening it used to assert is withdrawn there.
-    ``valueless`` says that the id came from a key stated with nothing after
-    the colon rather than from a value, which every sentence here opens with
+    ``null_node`` says that the id came from a key stated as a null node
+    rather than from a value, which every sentence here opens with
     (:func:`_vita3k_recorded_record`) and none of them turns on: what the
     listing is held against is the id, however the file spells it.
     """
     identities = _vita3k_identities(homes)
     own = next((u for u in homes if u.directory == configured), None)
     tail = _vita3k_survey_tail(survey, claim)
-    record = _vita3k_recorded_record(configured, valueless=valueless)
+    record = _vita3k_recorded_record(configured, null_node=null_node)
     if configured in identities:
         return _vita3k_listed_recorded_state(
             configured, record, survey, claim, truncating, tail
@@ -10501,8 +10571,8 @@ def _vita3k_unset_record(stated_empty: bool) -> str:
     sees the difference and an answer that denied it would be describing a
     file nobody has.
 
-    A key stated with nothing after the colon is neither of them. It is a null
-    node, which yaml-cpp's string conversion answers with the literal ``null``
+    A key stated as a null node is neither of them: yaml-cpp's string
+    conversion answers that node with the literal ``null``
     (:data:`_VITA3K_NULL_ID`) — an id like any other, held against the listing
     by :func:`_vita3k_recorded_user_state` rather than here.
     """
@@ -10530,8 +10600,8 @@ def _vita3k_unset_user_state(
 
     Two readings reach here and ``stated_empty`` tells them apart: the key the
     file does not state at all, and the key stated as the empty value ``""``.
-    A key stated with nothing after the colon reaches neither — yaml-cpp makes
-    the id ``null`` of it, not the empty one (:data:`_VITA3K_NULL_ID`).
+    A key stated as a null node reaches neither — yaml-cpp makes the id
+    ``null`` of it, not the empty one (:data:`_VITA3K_NULL_ID`).
 
     Returns ``(headline, sentence, reason)``. The record's own emptiness is
     not the end of the question, which is what this answer used to make of it:
@@ -10643,21 +10713,20 @@ def _vita3k_user(
     ``std::string`` (config.h:189), and the empty string is an id a directory
     can be listed under.
 
-    A key stated with nothing after the colon takes neither of those roads. It
-    is an id of its own, ``null``, because that is what the emulator's own
-    reader makes of it — see :data:`_VITA3K_NULL_ID`, which is where what that
-    reading reaches, and what it does not, is written down.
+    A key stated as a null node takes neither of those roads. It is an id of
+    its own, ``null``, because that is what the emulator's own reader makes of
+    it — see :data:`_VITA3K_NULL_ID`, which is where the five spellings of that
+    node and the conversion they all reach are written down.
     """
     unread = _VITA3K_USER_ID_KEY in read.skipped
     # Which spelling the file holds, which the scalar reader's own third
     # statement answers: its ``values`` say the empty string for a key stated
-    # with nothing after the colon and for an empty quoted scalar alike, and
-    # the emulator does not, so reading the value alone made one file's id of
-    # the other.
-    valueless = not unread and _VITA3K_USER_ID_KEY in read.null
+    # as a null node and for an empty quoted scalar alike, and the emulator
+    # does not, so reading the value alone made one file's id of the other.
+    null_node = not unread and _VITA3K_USER_ID_KEY in read.null
     if unread:
         configured = None
-    elif valueless:
+    elif null_node:
         configured = _VITA3K_NULL_ID
     else:
         # Stated as written, and ``""`` is written: collapsing a stated empty
@@ -10688,7 +10757,7 @@ def _vita3k_user(
         # reads it. A value the guide documents and no machine produces is the
         # defect in data that the sentences were in prose, so the slug is gone.
         headline, sentence, reason = _vita3k_recorded_user_state(
-            configured, homes, user_root, survey, claim, truncating, valueless=valueless
+            configured, homes, user_root, survey, claim, truncating, null_node=null_node
         )
     else:
         # No user named — which names one all the same, the empty id, and the
@@ -10705,14 +10774,21 @@ def _vita3k_user(
         OptionReading(
             _VITA3K_USER_ID_KEY,
             configured,
-            _vita3k_user_id_provenance(configured, unread=unread, valueless=valueless),
+            _vita3k_user_id_provenance(
+                configured,
+                unread=unread,
+                null_node=null_node,
+                repeated=_VITA3K_USER_ID_KEY in read.repeated,
+            ),
             None,
         ),
         OptionReading(
             _VITA3K_AUTO_CONNECT_KEY,
             auto,
             _vita3k_auto_connect_provenance(
-                auto, unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped
+                auto,
+                unread=_VITA3K_AUTO_CONNECT_KEY in read.skipped,
+                repeated=_VITA3K_AUTO_CONNECT_KEY in read.repeated,
             ),
             None,
         ),
@@ -10721,7 +10797,7 @@ def _vita3k_user(
 
 
 def _vita3k_user_id_provenance(
-    configured: str | None, *, unread: bool, valueless: bool
+    configured: str | None, *, unread: bool, null_node: bool, repeated: bool
 ) -> str:
     """Where the recorded user id came from — the shared grammar, this key's sentences.
 
@@ -10729,19 +10805,20 @@ def _vita3k_user_id_provenance(
     absent key, and this key's sentence for that state names the value the file
     holds instead of calling a stated key unset.
 
-    The key stated with no value at all is the state where this key parts from
-    the other: Vita3K reads it as a ``std::string`` (config.h:189) and
-    yaml-cpp's string conversion of a null node is the literal ``null``, so the
-    sentence names the id that conversion hands the emulator and the reading
-    beside it carries that id. The other key's two spellings meet — both throw
-    — so only this one passes a sentence for the third state.
+    A key stated as a null node is the state where this key parts from the
+    other: Vita3K reads it as a ``std::string`` (config.h:189) and yaml-cpp's
+    string conversion of a null node is the literal ``null``, so the sentence
+    names the id that conversion hands the emulator and the reading beside it
+    carries that id. The other key's two spellings meet — both throw — so only
+    this one passes a sentence for the third state.
     """
-    stated_valueless = _VITA3K_VALUELESS_ID_SENTENCE if valueless else None
+    stated_null_node = _VITA3K_NULL_NODE_ID_SENTENCE if null_node else None
     return _vita3k_key_provenance(
         _VITA3K_USER_ID_KEY,
         configured,
         unread=unread,
-        stated_valueless=stated_valueless,
+        repeated=repeated,
+        stated_null_node=stated_null_node,
         stated_empty=(
             f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "" — the id the '
             "emulator starts from is that same empty one (config.h:189)"
@@ -10750,18 +10827,19 @@ def _vita3k_user_id_provenance(
     )
 
 
-def _vita3k_auto_connect_provenance(auto: str | None, *, unread: bool) -> str:
+def _vita3k_auto_connect_provenance(auto: str | None, *, unread: bool, repeated: bool) -> str:
     """Where the auto-connect switch came from — the shared grammar, this key's sentences.
 
     One false, two roads. An absent key is assigned the default its declaration
     names (config.cpp:45-46); a key stated with nothing in it is never assigned
     at all and keeps the initializer its member was declared with, because
-    yaml-cpp converts neither spelling of an empty bool: a key with nothing
-    after the colon is a null node, which is no scalar (convert.cpp:42-43), and
-    an empty quoted scalar passes the case test (:28-29) and then matches none
-    of y/yes/true/on or their negatives (:57-72), so ``decode`` fails both
-    times and ``as<bool>()`` throws (impl.h:131-133) — read and run at the
-    commit this build pins, external/yaml-cpp@2f86d137. ``update_members``
+    yaml-cpp converts neither spelling of an empty bool: a key stated as a null
+    node — nothing after the colon, or any of the words folded with it — is no
+    scalar (convert.cpp:42-43), and an empty quoted scalar passes the case test
+    (:28-29) and then matches none of y/yes/true/on or their negatives
+    (:57-72), so ``decode`` fails both times and ``as<bool>()`` throws
+    (impl.h:131-133) — read and run at the commit this build pins,
+    external/yaml-cpp@2f86d137. ``update_members``
     carries the throw out of the assignments the declaration order writes
     (config.cpp:41-49), ``parse`` logs it and answers FileNotFound
     (config.cpp:182-187), and ``init_config`` drops that answer
@@ -10774,12 +10852,14 @@ def _vita3k_auto_connect_provenance(auto: str | None, *, unread: bool) -> str:
         _VITA3K_AUTO_CONNECT_KEY,
         auto,
         unread=unread,
+        repeated=repeated,
         stated_empty=(
-            f"config.yml states {_VITA3K_AUTO_CONNECT_KEY} with nothing in it, which is no "
-            "boolean yaml-cpp converts (convert.cpp:42-43, :57-72 and impl.h:131-133 at "
-            "external/yaml-cpp@2f86d137) — the load throws there and applies no key declared "
-            "after it, so the default false governs all the same (config.cpp:182-187, "
-            "config.h:190)"
+            f"config.yml states {_VITA3K_AUTO_CONNECT_KEY} with nothing in it — as a null "
+            "node (nothing after the colon, or one of ~, null, Null, NULL) or as an empty "
+            "quoted scalar — which is no boolean yaml-cpp converts (convert.cpp:42-43, "
+            ":57-72 and impl.h:131-133 at external/yaml-cpp@2f86d137) — the load throws "
+            "there and applies no key declared after it, so the default false governs all "
+            "the same (config.cpp:182-187, config.h:190)"
         ),
         unset="the default false governs (config.h:190)",
     )
@@ -10792,7 +10872,8 @@ def _vita3k_key_provenance(
     unread: bool,
     stated_empty: str,
     unset: str,
-    stated_valueless: str | None = None,
+    stated_null_node: str | None = None,
+    repeated: bool = False,
 ) -> str:
     """Where one config.yml key's value came from — one grammar, two keys.
 
@@ -10810,24 +10891,41 @@ def _vita3k_key_provenance(
     second, which only an empty one reaches, tests that there is a value at
     all.
 
-    ``stated_valueless`` is how a key stated with nothing after the colon
-    enters that grammar without a branch of its own per key: the caller passes
-    a sentence exactly where its emulator makes something else of that
-    spelling than of an empty value, and the sentence is answered before the
-    value is looked at, because the value the emulator holds there is the
-    library's doing rather than the file's text. Where the two spellings meet
-    — ``user-auto-connect`` throws on both — the caller passes none and both
+    ``stated_null_node`` is how a key stated as a null node enters that
+    grammar without a branch of its own per key: the caller passes a sentence
+    exactly where its emulator makes something else of that spelling than of
+    an empty value, and the sentence is answered before the value is looked
+    at, because the value the emulator holds there is the library's doing
+    rather than the file's text. Where the two spellings meet —
+    ``user-auto-connect`` throws on both — the caller passes none and both
     reach ``stated_empty``.
+
+    ``repeated`` rides on top of whichever sentence was earned rather than
+    being a state beside them: what the file states twice it states all the
+    same, so the sentence above says what atlas read and this clause says
+    which of the statements that was. The emulator reads that same one — its
+    lookup answers with the first — so the clause qualifies the reading rather
+    than unsettling it, and every caller passes the flag without a sentence of
+    its own, because the fact is the library's rather than the key's.
     """
     if unread:
-        return f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
-    if stated_valueless is not None:
-        return stated_valueless
-    if value:
-        return f'config.yml: {key}: "{value}"'
-    if value is not None:
-        return stated_empty
-    return f"{key} is unset — {unset}"
+        stated = (
+            f"{key} is stated as a construct atlas does not read — its value is unread, not absent"
+        )
+    elif stated_null_node is not None:
+        stated = stated_null_node
+    elif value:
+        stated = f'config.yml: {key}: "{value}"'
+    elif value is not None:
+        stated = stated_empty
+    else:
+        stated = f"{key} is unset — {unset}"
+    if not repeated:
+        return stated
+    return (
+        f"{stated}; config.yml states the key more than once and the emulator reads the "
+        "first statement (node_data::get, detail/impl.h:118-138 at external/yaml-cpp@2f86d137)"
+    )
 
 
 def _vita3k_savefile_placement(

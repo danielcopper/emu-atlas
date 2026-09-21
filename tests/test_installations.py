@@ -4117,6 +4117,12 @@ PER_USER_ESDE = (
 )
 VITA3K_CONFIG_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
 RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+# Where the compiled default drive puts the first user's saves: $(EmulatorDir)
+# is empty, which means the emulator's own config directory (vfs_config.cpp:32-39,
+# the default itself vfs_config.h:13).
+RPCS3_DEFAULT_SAVEDATA = (
+    f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata"
+)
 # The file GetUserAccounts asks for below each user home (user_account.cpp:57-60
 # at build 7c6b3dcd); an RPCS3 that has run writes it itself (System.cpp:617).
 RPCS3_HOME = "/mnt/sd/hdd/home"
@@ -4139,13 +4145,23 @@ VITA3K_NO_PRESELECTION = atlas.REASON_NO_USER_PRESELECTED
 # The tree the user keyed by the empty id writes to: that id composes no
 # segment of its own, so the user root itself carries the savedata directory.
 VITA3K_EMPTY_ID_SAVEDATA = "/mnt/sd/vita/ux0/user/savedata"
-# The tree the user keyed by the id a valueless user-id states writes to: that
+# The tree the user keyed by the id a null-node user-id states writes to: that
 # id is four letters like any other, so it is a segment of the path.
 VITA3K_NULL_ID_SAVEDATA = "/mnt/sd/vita/ux0/user/null/savedata"
-# The id yaml-cpp hands the emulator for a user-id stated with nothing after
-# the colon, and the config.yml that states it that way.
+# The id yaml-cpp hands the emulator for a user-id stated as a null node, and
+# the config.yml that states it with nothing after the colon.
 VITA3K_NULL_ID = "null"
 VITA3K_VALUELESS_ID_CONFIG = "pref-path: /mnt/sd/vita\nuser-id:\n"
+# Every spelling of that node, each as a config.yml states it: the five plain
+# scalars IsNullString folds (null.cpp:13-16 at external/yaml-cpp@2f86d137),
+# which reach one id because the string conversion answers them all alike.
+VITA3K_NULL_NODE_CONFIGS = {
+    "nothing-after-the-colon": VITA3K_VALUELESS_ID_CONFIG,
+    "a-tilde": "pref-path: /mnt/sd/vita\nuser-id: ~\n",
+    "the-word-null": "pref-path: /mnt/sd/vita\nuser-id: null\n",
+    "the-word-Null": "pref-path: /mnt/sd/vita\nuser-id: Null\n",
+    "the-word-NULL": "pref-path: /mnt/sd/vita\nuser-id: NULL\n",
+}
 VITA3K_EMPTY_VALUE_ID_CONFIG = 'pref-path: /mnt/sd/vita\nuser-id: ""\n'
 # The sentence an unset user-id used to earn whatever the tree held under the
 # empty id, kept here as the thing the new states must NOT say.
@@ -4378,9 +4394,13 @@ class TestTheUserAPerUserTreeWouldOpen:
 
     def test_every_refusal_the_reader_answers_with_is_reachable_as_a_reason(self):
         # The pair above covers the vocabulary between them; this holds the
-        # claim mechanical, so a seventh refusal cannot be added unwitnessed.
+        # claim mechanical, so a refusal added to the reader cannot be added
+        # unwitnessed. The two key reasons are not refusals of the reader's —
+        # they say the file parsed and one key still settled nothing — and each
+        # is reached by a test of its own.
         covered = {*self._WHOLE_FILE_REFUSALS, "substitution-cycle"}
-        assert covered == set(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS) - {atlas.REASON_KEY_UNREAD}
+        key_reasons = {atlas.REASON_KEY_UNREAD, atlas.REASON_KEY_REPEATED}
+        assert covered == set(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS) - key_reasons
 
     @staticmethod
     def _user_xml(user):
@@ -4775,19 +4795,24 @@ class TestTheUserAPerUserTreeWouldOpen:
         "an-id-attribute-stating-null": ("00", '<?xml version="1.0"?>\n<user id="null"/>\n'),
     }
 
+    @pytest.mark.parametrize("spelling", sorted(VITA3K_NULL_NODE_CONFIGS))
     @pytest.mark.parametrize("road", sorted(_NULL_ID_ROADS))
-    def test_vita3k_a_user_id_stated_with_no_value_is_the_id_null(self, road):
+    def test_vita3k_a_user_id_stated_as_a_null_node_is_the_id_null(self, road, spelling):
         # yaml-cpp converts a null node to a std::string as the literal "null"
         # (as_if<std::string, void>, impl.h:145-146 at external/yaml-cpp@2f86d137),
         # and user-id is a std::string (config.h:189) — so init_home asks
         # gui.users.contains("null") and a directory listed under that id is
         # the user a command-line launch reopens. Both roads to that key, the
-        # id attribute and the directory name's stem, are here.
+        # id attribute and the directory name's stem, are here, and so is
+        # every spelling of the node: only the valueless one folded before, so
+        # ~, Null and NULL reached ids the emulator never looks up, and the
+        # word null reached the right one as the text it is rather than as the
+        # node it states.
         directory, user_xml = self._NULL_ID_ROADS[road]
         p = self._answer(
             "psvita",
             files={
-                VITA3K_CONFIG_YML: VITA3K_VALUELESS_ID_CONFIG,
+                VITA3K_CONFIG_YML: VITA3K_NULL_NODE_CONFIGS[spelling],
                 f"/mnt/sd/vita/ux0/user/{directory}/user.xml": user_xml,
             },
             dirs=[f"/mnt/sd/vita/ux0/user/{directory}"],
@@ -4800,13 +4825,14 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["reason"] == VITA3K_TREE_NAMED
         assert caveat.data["configured_user"] == VITA3K_NULL_ID
         assert self._readings(p)["user-id"] == VITA3K_NULL_ID
-        assert "states user-id with no value, which yaml-cpp reads as the id" in caveat.message
+        assert "states user-id as a null node" in caveat.message
         # Not the empty id's road: the state that answer used to reach said the
         # tree is the user root itself, which is the defect this corrects.
         assert caveat.data["reason"] != VITA3K_UNSET_ID_LISTED
         assert self._provenance(p)["user-id"] == (
-            'config.yml states user-id with no value, which yaml-cpp reads as the id "null" '
-            "(impl.h:145-146, read and run at external/yaml-cpp@2f86d137)"
+            "config.yml states user-id as a null node (nothing after the colon, or one of "
+            '~, null, Null, NULL), which yaml-cpp reads as the id "null" (impl.h:145-146, '
+            "read and run at external/yaml-cpp@2f86d137)"
         )
 
     def test_vita3k_the_id_null_with_no_directory_of_that_name_has_no_tree(self):
@@ -4850,9 +4876,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["configured_user"] == VITA3K_NULL_ID
         # And the sentence opens with how the file states that id, which is
         # what a state reached through an id rather than a value must say.
-        assert caveat.message.startswith(
-            "config.yml states user-id with no value, which yaml-cpp reads as the id "
-        )
+        assert caveat.message.startswith("config.yml states user-id as a null node")
 
     def test_vita3k_a_null_named_directory_listed_as_another_user_is_not_set_up(self):
         # The directory is there under that name and the emulator lists it as
@@ -4871,6 +4895,77 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["reason"] == VITA3K_NOT_SET_UP
         assert 'it answers to id "00" instead' in caveat.message
         assert caveat.data["configured_user"] == VITA3K_NULL_ID
+
+    def test_vita3k_a_user_id_stated_twice_is_the_first_statement(self):
+        # yaml-cpp keeps every pair of a repeated key and a lookup answers with
+        # the first one it finds (node_data::get's std::find_if,
+        # detail/impl.h:118-138 at external/yaml-cpp@2f86d137, reached by the
+        # const lookup update_members makes, config.cpp:41-44) — so the id
+        # init_home is handed is 00 and
+        # the second statement is one the emulator never reads. Reading the
+        # last statement named the user 01's tree, a directory the launch does
+        # not open.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-id: 01\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+                "/mnt/sd/vita/ux0/user/01/user.xml": self._user_xml("01"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00", "/mnt/sd/vita/ux0/user/01"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        caveat = self._user_caveat(p)
+        assert caveat.data["configured_user"] == "00"
+        assert self._readings(p)["user-id"] == "00"
+        # And the reading says the file states the key twice, because a reader
+        # who opens config.yml sees two statements and one answer.
+        assert self._provenance(p)["user-id"] == (
+            'config.yml: user-id: "00"; config.yml states the key more than once and the '
+            "emulator reads the first statement (node_data::get, detail/impl.h:118-138 at "
+            "external/yaml-cpp@2f86d137)"
+        )
+
+    def test_vita3k_an_auto_connect_stated_twice_says_so_in_its_own_reading(self):
+        # The clause is the shared grammar's, not the id key's: the switch
+        # earns it the same way, on top of whichever sentence its own state
+        # earned.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: (
+                    "pref-path: /mnt/sd/vita\nuser-id: 00\n"
+                    "user-auto-connect: true\nuser-auto-connect: false\n"
+                ),
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["user-auto-connect"] == "true"
+        assert self._provenance(p)["user-auto-connect"].endswith(
+            "; config.yml states the key more than once and the emulator reads the first "
+            "statement (node_data::get, detail/impl.h:118-138 at external/yaml-cpp@2f86d137)"
+        )
+        # The key stated once keeps the sentence it always had.
+        assert "more than once" not in self._provenance(p)["user-id"]
+
+    def test_vita3k_a_pref_path_stated_twice_answers_from_the_first_statement(self):
+        # The tree itself: the answer is exact without a word about the
+        # repetition, because the statement atlas read is the statement the
+        # emulator reads.
+        p = self._answer(
+            "psvita",
+            files={
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\npref-path: /mnt/sd/elsewhere\n",
+                VITA3K_USER_00_XML: self._user_xml("00"),
+            },
+            dirs=["/mnt/sd/vita/ux0/user/00"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == "/mnt/sd/vita/ux0/user/00/savedata"
+        assert self._readings(p)["pref-path"] == "/mnt/sd/vita"
 
     def test_vita3k_a_user_id_stated_empty_with_nothing_listed_under_it_says_so(self):
         # The same record over a tree that answers to no empty id: the user
@@ -5142,16 +5237,27 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert self._readings(p)["user-auto-connect"] == "true"
 
-    @pytest.mark.parametrize("spelling", ["user-auto-connect:\n", 'user-auto-connect: ""\n'])
+    @pytest.mark.parametrize(
+        "spelling",
+        [
+            "user-auto-connect:\n",
+            "user-auto-connect: ~\n",
+            "user-auto-connect: null\n",
+            "user-auto-connect: Null\n",
+            "user-auto-connect: NULL\n",
+            'user-auto-connect: ""\n',
+        ],
+    )
     def test_vita3k_an_auto_connect_stated_empty_is_not_an_unset_one(self, spelling):
-        # The scalar reader hands back the empty string for a key with nothing
-        # after the colon and for an empty quoted scalar alike
-        # (tests/test_yaml_scalars.py), and the emulator's own reader converts
-        # neither to a bool: the load throws at that key and stops there, so
-        # the switch is never assigned and keeps the initializer it was
-        # declared with. An absent key ends at that same false by being
-        # assigned it — one value, two roads — so the reading says which of
-        # the two the file holds instead of calling a stated key unset.
+        # The scalar reader hands back the empty string for a key stated as a
+        # null node — any of its five spellings — and for an empty quoted
+        # scalar alike (tests/test_yaml_scalars.py), and the emulator's own
+        # reader converts none of them to a bool: the load throws at that key
+        # and stops there, so the switch is never assigned and keeps the
+        # initializer it was declared with. An absent key ends at that same
+        # false by being assigned it — one value, two roads — so the reading
+        # says which of the two the file holds instead of calling a stated key
+        # unset.
         p = self._answer(
             "psvita",
             files={
@@ -5163,7 +5269,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert not isinstance(p, atlas.Unresolved)
         assert self._readings(p)["user-auto-connect"] == ""
         assert self._provenance(p)["user-auto-connect"] == (
-            "config.yml states user-auto-connect with nothing in it, which is no boolean "
+            "config.yml states user-auto-connect with nothing in it — as a null node "
+            "(nothing after the colon, or one of ~, null, Null, NULL) or as an empty quoted "
+            "scalar — which is no boolean "
             "yaml-cpp converts (convert.cpp:42-43, :57-72 and impl.h:131-133 at "
             "external/yaml-cpp@2f86d137) — the load throws there and applies no key declared "
             "after it, so the default false governs all the same (config.cpp:182-187, "
@@ -5299,6 +5407,84 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
         assert p.data["reason"] == atlas.REASON_KEY_UNREAD
         assert p.data["key"] == "/dev_hdd0/"
+
+    @pytest.mark.parametrize("vfs", ["/dev_hdd0/: ~\n", "/dev_hdd0/: # c\n"])
+    def test_rpcs3_a_drive_stated_as_a_null_node_is_the_compiled_default(self, vfs):
+        # A null node is a statement RPCS3's own reader passes over: cfg::decode
+        # takes a value only where convert<std::string>::decode accepts it
+        # (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no
+        # scalar for it to accept (convert.h:73-75 at the yaml-cpp fork
+        # 51a5d623), so the node keeps its declared default and the drive is
+        # the compiled one. Both spellings here are that node — a tilde, and a
+        # value that is nothing but a comment — and reading either as text made
+        # the drive a relative directory named for what was written.
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == RPCS3_DEFAULT_SAVEDATA
+        assert self._readings(p)["/dev_hdd0/"] == ""
+        assert self._provenance(p)["/dev_hdd0/"] == (
+            "/dev_hdd0/ is stated as a null node, which RPCS3's reader passes over — a "
+            "cfg::string takes a value only where convert<std::string>::decode accepts it "
+            "(Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar "
+            "for it to accept (convert.h:73-75 at the yaml-cpp fork 51a5d623, the submodule "
+            "that build pins) — so the compiled default $(EmulatorDir)dev_hdd0/ governs "
+            "(vfs_config.h:13)"
+        )
+
+    # The two keys the drive hangs on, each stated twice: the drive itself and
+    # the variable every device path is composed off. The third shape is the
+    # variable under a drive that states nothing of its own, where what the
+    # emulator composes off the variable is the compiled default.
+    _RPCS3_REPEATED_KEYS = {
+        "the-drive-itself": (
+            "/dev_hdd0/",
+            "/dev_hdd0/: /mnt/sd/a/\n/dev_hdd0/: /mnt/sd/b/\n",
+        ),
+        "the-variable-a-stated-drive-names": (
+            "$(EmulatorDir)",
+            "$(EmulatorDir): /mnt/sd/a/\n$(EmulatorDir): /mnt/sd/b/\n"
+            "/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n",
+        ),
+        "the-variable-under-a-drive-stated-as-a-null-node": (
+            "$(EmulatorDir)",
+            "$(EmulatorDir): /mnt/sd/a/\n$(EmulatorDir): /mnt/sd/b/\n/dev_hdd0/: ~\n",
+        ),
+    }
+
+    @pytest.mark.parametrize("shape", sorted(_RPCS3_REPEATED_KEYS))
+    def test_rpcs3_a_drive_key_stated_twice_is_unknowable_here(self, shape):
+        # A shape where the two readers of one file disagree: cfg::decode walks
+        # every pair in file order and takes each one it can
+        # (Utilities/Config.cpp:477-505 at build 7c6b3dcd), so the last scalar
+        # statement is the one that stands; the scalar reader holds the first,
+        # the way a yaml-cpp lookup answers. Neither answer can be published as
+        # the emulator's, so the question refuses and names the key.
+        key, vfs = self._RPCS3_REPEATED_KEYS[shape]
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == atlas.REASON_KEY_REPEATED
+        assert p.data["key"] == key
+        assert "keeps the last it reads as a scalar" in p.message
+
+    def test_rpcs3_another_key_stated_twice_leaves_the_answer_exact(self):
+        # /dev_usb***/ is a key this reader passes over and no answer hangs on
+        # it, so a repetition of it settles nothing about the drive — refusing
+        # here would withhold an answer the file states plainly.
+        p = self._answer(
+            "ps3",
+            files={
+                RPCS3_VFS_YML: (
+                    "/dev_hdd0/: /mnt/sd/hdd/\n"
+                    "/dev_usb***/:\n  Path: /mnt/sd/usb0/\n"
+                    "/dev_usb***/:\n  Path: /mnt/sd/usb1/\n"
+                ),
+                RPCS3_LOCALUSERNAME: "User",
+            },
+            dirs=[f"{RPCS3_HOME}/00000001"],
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{RPCS3_HOME}/00000001/savedata"
 
     def test_rpcs3_still_says_nothing_records_its_user(self):
         # The fix is Vita3K's alone: RPCS3 really does record no user.

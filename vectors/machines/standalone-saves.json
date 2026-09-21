@@ -3201,6 +3201,105 @@
       }
     },
     {
+      "name": "rpcs3-a-drive-stated-as-a-null-node-is-the-compiled-default",
+      "rationale": "A drive stated as a null node is a statement RPCS3's own reader passes over: cfg::decode takes a value only where YAML::convert<std::string>::decode accepts it (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar for it to accept (3rdparty/yaml-cpp/yaml-cpp/include/yaml-cpp/node/convert.h:73-75 at 51a5d623, the submodule that build pins), so the cfg node keeps the default it was declared with (Config.h:674-686) and the compiled $(EmulatorDir)dev_hdd0/ governs (vfs_config.h:13), below the config directory an empty $(EmulatorDir) means (vfs_config.cpp:32-39). The directory is the unset key's and the reading is not: the file states this key, so the reading carries the empty text the node leaves rather than the absent key's null. Read as the text it is written with, the drive was a relative directory named ~.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: ~\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "reason": "no-user-directory",
+                "users": [
+                  "00000001"
+                ]
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "token": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/savedata/vmc",
+                "files": []
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "emudeck-rpcs3-reads-the-vfs-in-the-appimages-own-home",
       "rationale": "EmuDeck runs RPCS3 as an AppImage (emuDeckRPCS3.sh:4-5), so the launcher route's variant gate answers from the host's own XDG tree — and that is where EmuDeck writes the VFS it points at its storage folder (emuDeckRPCS3.sh:183), linking its saves folder at dev_hdd0/home/00000001/savedata (:189). The same card, reached the other arrangement's way. The user home holds the localusername RPCS3 writes when it lays a user down (Emulator::Init, System.cpp:617 at build 7c6b3dcd), which is the file GetUserAccounts asks for before listing an account (user_account.cpp:57-60) — without it the directory is one the emulator passes over.",
       "input": {
@@ -6464,6 +6563,209 @@
               {
                 "key": "user-auto-connect",
                 "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-user-id-stated-as-a-tilde-is-the-id-null",
+      "rationale": "The same id by another spelling of the same node. Five plain scalars are a null node — an empty one, ~, null, Null and NULL (IsNullString, null.cpp:13-16, asked of every untagged plain scalar at singledocparser.cpp:96-97) — and the string conversion answers every one of them with the literal null (as_if<std::string, void>, impl.h:145-146, read and run at external/yaml-cpp@2f86d137), so a user-id stated as ~ hands init_home exactly what a key with nothing after the colon hands it: gui.users.contains(\"null\") (gui.cpp:689). The directory named null carries a user.xml with no id attribute, so the stem of its name is the key it is listed under (get_users_list, user_management.cpp:96-97), the record preselects that user, and the tree composes from the identity (init_user, :227; init_savedata_app_path, io.cpp:136-143). Read as the text it is written with, the record named the id ~ — one the emulator never looks up. Every field is the valueless spelling's, which is the claim: one node, one id, whichever of the five the file writes.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: ~\n",
+          "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/null"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "null"
+                ],
+                "configured_user": "null"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "null",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-user-id-stated-twice-is-the-first-statement",
+      "rationale": "config.yml states user-id twice, 00 then 01, and both directories are set up as the users they are named for. yaml-cpp keeps both pairs of a repeated key and a lookup answers with the first it finds: node_data::get's std::find_if returns the first pair whose key equals the one asked for (detail/impl.h:118-138 at external/yaml-cpp@2f86d137), which is the lookup update_members makes, taking the node by const reference (config.cpp:41-44 at cb1f592c), so the id init_home is handed is 00: the headline names that user's tree, the reading carries that id, and 01 is stated as a tree of its own like any other listed user. Keeping the last statement instead answered 01's tree — a directory the launch does not open — which is what the sibling vector 'vita3k-the-user-id-config-yml-records-is-stated-beside-every-tree' answers when 01 is the only statement.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-id: 01\nuser-auto-connect: true\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "configured_user": "00"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "00",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-auto-connect",
+                "value": "true",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
@@ -11456,6 +11758,48 @@
               "token": "RPCS3",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
               "reason": "key-unread",
+              "key": "/dev_hdd0/"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-drive-stated-twice-is-unknowable-here",
+      "rationale": "vfs.yml states /dev_hdd0/ twice, and the two readers of that file disagree about which statement counts: cfg::decode walks every pair of the map in file order and takes each one it can (Utilities/Config.cpp:477-505 at build 7c6b3dcd), so the last statement that is a scalar is the drive the emulator mounts, while the scalar reader holds the first, the way a yaml-cpp lookup answers. Answering either would state a directory as the emulator's on a rule this reader does not follow, so the question refuses with key-repeated and `key` names the key — the same shape as key-unread, and for the same reason: the file does state something there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/a/\n/dev_hdd0/: /mnt/sd/b/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "token": "RPCS3",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
+              "reason": "key-repeated",
               "key": "/dev_hdd0/"
             }
           }
