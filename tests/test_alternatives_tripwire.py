@@ -22,7 +22,7 @@ publish alternatives of their own, so the walk continues from them until no
 distinct ``(mode, edits)`` pair is left — the first hop is not the claim, the
 closure is.
 
-Four things are stated rather than assumed, each held by its own test below. An
+Five things are stated rather than assumed, each held by its own test below. An
 edit the fixture cannot state has its name in :data:`UNAPPLIABLE_BY_FIXTURE` —
 the set holds names, and the reason it was refused rides in the walk's own
 message and in the comment beside the entry — so it is exempted rather than
@@ -34,6 +34,28 @@ vanishing in silence, because a lost alternative makes the walk smaller rather
 than redder. And the answers the walk starts from are counted a second time by
 shape, so an answer shape the enumerator does not read cannot pass for one that
 is not there.
+
+The fifth is the alternative's other claim, held beside the mode (issue #409). A
+:class:`~atlas.ModeAlternative` also publishes ``values``, the distinct
+groupings of the mode it names with the mode's own first, and a card that named
+the right mode with a wrong list used to pass. So the answer reached is asked
+for its own groupings too, and the two must agree in order, because ``values``
+promises the mode's own grouping first. Which answers may be asked is the whole
+of that rule. A ``declared`` file set is the card stating its own shape, which
+is what ``values`` is a list of, so those are held. An ``observed`` one is a
+reading of one machine, where a grouping whose file nobody has written yet is
+absent by construction, so holding a card's list against it would measure the
+fixture's contents rather than the card — and every divergence this corpus
+produced sat there. A set that is ``unknown``, or one that carries no group at
+all, states no grouping to compare: that is the road a carded core takes when
+nothing named the content, and the alternative is right about the card. No
+declared set in this corpus carries a group whose role is
+:data:`atlas.ROLE_UNKNOWN`, and the shape says why — such a group is a file an
+*observation* found that the declaration does not name, and its grouping is read
+off that name — so the unknown-role reading is part of why the observed road is
+out rather than a filter over the declared one. A hop whose answer selected some
+other mode is not asked at all, because the groupings it states are that other
+mode's.
 """
 
 from __future__ import annotations
@@ -227,6 +249,12 @@ class Hop:
     """What the answer said instead; empty where it selected the mode named."""
     unappliable: str
     """Why the fixture could not state the edit; empty where it could."""
+    values: tuple[str, ...]
+    """The groupings the alternative says the mode it names has, the mode's own first."""
+    groupings: tuple[str, ...] | None
+    """The distinct groupings the answer reached declares, in order — ``None`` where it
+    declares none to hold ``values`` against, and where no answer was reached at all.
+    """
 
     @property
     def where(self) -> str:
@@ -245,15 +273,34 @@ class Hop:
         edits = " ".join(f"{key}={value}" for key, value, _ in self.edits)
         return f"{self.where} -> {self.mode} [{edits}]"
 
+    @property
+    def written(self) -> str:
+        """The edit as a person makes it — each key, its value, and the file it lives in.
+
+        The spelling both findings below quote, so the one a reader learns to
+        scan is the one the other prints too.
+        """
+        return "; ".join(f"{key} = {value!r} in {path}" for key, value, path in self.edits)
+
     def message(self) -> str:
         """The whole finding in one sentence — enough to fix the rule without the corpus."""
-        edits = "; ".join(f"{key} = {value!r} in {path}" for key, value, path in self.edits)
         outcome = (
             f"this fixture cannot state that edit — {self.unappliable}"
             if self.unappliable
             else f"applied, the answer {self.verdict}"
         )
-        return f"{self.where}: the alternative naming mode {self.mode!r} says to set {edits}; {outcome}"
+        return (
+            f"{self.where}: the alternative naming mode {self.mode!r} says to set "
+            f"{self.written}; {outcome}"
+        )
+
+    def values_message(self) -> str:
+        """The whole ``values`` finding in one sentence — both lists, and the rule to fix."""
+        return (
+            f"{self.where}: the alternative naming mode {self.mode!r} says to set {self.written} and "
+            f"publishes values {self.values}; applied, the answer declares the groupings "
+            f"{self.groupings}"
+        )
 
 
 def _undecided(answer: dict[str, Any]) -> set[str]:
@@ -290,6 +337,23 @@ def _verdict(answer: dict[str, Any], mode: str, before: set[str]) -> str:
     if granularity["mode"] != mode:
         return f"selected mode {granularity['mode']!r}{added}"
     return f"selected the mode{added}" if added else ""
+
+
+def _groupings(answer: dict[str, Any]) -> tuple[str, ...] | None:
+    """The distinct groupings *answer* declares, in order — ``None`` where it declares none.
+
+    The roads the module docstring's fifth paragraph gives its reasons for: a
+    set that is ``observed``, one that is ``unknown``, and a declared set that
+    decomposed into no group. Only a declaration is the card's own word about
+    its shape, and only that is what ``values`` claims. A refusal carries no
+    file set at all and is read here as stating no grouping either; no
+    alternative in this corpus reaches one, and its own verdict would keep the
+    hop out of the comparison before this reading were used.
+    """
+    file_set = cast("dict[str, Any] | None", answer.get("file_set"))
+    if not isinstance(file_set, dict) or file_set["state"] != atlas.FILE_SET_DECLARED:
+        return None
+    return tuple(dict.fromkeys(group["granularity"] for group in file_set["groups"])) or None
 
 
 def _ask(state: dict[str, Any], question: str, where: str) -> dict[str, Any]:
@@ -330,16 +394,31 @@ def _apply(
     switches = _switches_of(standing)
     in_force = standing["granularity"]["mode"]
     named = alternative["mode"]
+    values = tuple(alternative["values"])
     edits = tuple((key, value, readings.get(key)) for key, value in alternative["options"].items())
     try:
         files = _files_stating(state["files"], readings, alternative["options"])
     except Unappliable as why:
-        return Hop(origin, in_force, named, edits, switches, "", str(why)), None
+        refused = Hop(
+            origin, in_force, named, edits, switches, "", str(why), values=values, groupings=None
+        )
+        return refused, None
     reached = copy.deepcopy(state)
     reached["files"] = files
     answer = _ask(reached, question, origin)
     verdict = _verdict(answer, named, _undecided(standing))
-    return Hop(origin, in_force, named, edits, switches, verdict, ""), (reached, answer)
+    hop = Hop(
+        origin,
+        in_force,
+        named,
+        edits,
+        switches,
+        verdict,
+        "",
+        values=values,
+        groupings=_groupings(answer),
+    )
+    return hop, (reached, answer)
 
 
 def _hops(
@@ -437,6 +516,16 @@ class Walk:
         """The hops whose edit it could not."""
         return tuple(hop for hop in self.hops if hop.unappliable)
 
+    @property
+    def judged(self) -> tuple[Hop, ...]:
+        """The hops whose ``values`` the reached answer states enough to hold it against.
+
+        The conditions the module docstring's fifth paragraph names — the
+        answer declares its groups, and it selected the mode the alternative
+        named — over the hops the fixture could apply.
+        """
+        return tuple(hop for hop in self.applied if not hop.verdict and hop.groupings is not None)
+
     def coverage(self) -> dict[str, Any]:
         """What the walk reached — the numbers :data:`COVERAGE_FLOOR` pins."""
         modes: dict[tuple[str, ...], set[str]] = {}
@@ -445,6 +534,7 @@ class Walk:
         return {
             "answers": len({hop.origin for hop in self.hops} | set(self.silent)),
             "edits applied": len(self.applied),
+            "values held": len(self.judged),
             "switch sets": len(modes),
             "modes per switch set": {" ".join(s): sorted(reached) for s, reached in modes.items()},
         }
@@ -494,7 +584,21 @@ def walk() -> Walk:
 # measurements, because the corpus grows and a vector added tomorrow must not
 # have to come with an edit here; what they catch is the opposite move, a walk
 # that stops applying anything and passes green over an empty run.
-COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "switch sets": 16}
+#
+# "values held" is the measurement itself, 426, rather than a number under it.
+# The three above sit under theirs so that a vector added tomorrow needs no
+# edit here; this one can be exact for a different reason, that the test
+# compares with ``<``, so anything which raises it passes untouched. What
+# lowers it is not only a check that stopped judging: a reached answer whose
+# file set turns from declared to observed lowers it, so does a card that
+# stops decomposing into groups, and so does a vector legitimately removed. So
+# a red floor here is a prompt to measure again and write the new count with
+# the rule it was counted by — never on its own a proof that the check broke.
+# Counted as the applied hops that selected their mode and reached an answer
+# declaring at least one group, over a closure of 541; of the other 115 hops,
+# 59 reach a declared answer that decomposed into no group, 54 an observed one
+# and 2 an unknown one.
+COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "values held": 426, "switch sets": 16}
 
 # The names of edits no fixture machine can state. The reason each was refused
 # is the walk's own message; the comment beside an entry is where a person says
@@ -502,7 +606,7 @@ COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "switch sets": 16}
 #
 # Empty, and measured so: every alternative the corpus publishes today names
 # switches whose file the fixture either already states a line for or is a flat
-# RetroArch cfg a line can simply be added to — including the nine Dolphin
+# RetroArch cfg a line can simply be added to — including the Dolphin
 # answers, whose fixtures all state the slot line the alternative edits. Five
 # shapes would land here, one per refusal raised above: an options file whose
 # suffix names no grammar; a path the fixture records as a read failure rather
@@ -522,6 +626,17 @@ def test_every_alternative_selects_the_mode_it_names():
     # The messages ride as the assertion's own text, which pytest prints whole
     # where it elides a long list comparison.
     missed = sorted(hop.message() for hop in walk().applied if hop.verdict)
+    assert missed == [], "\n".join(("", *missed))
+
+
+def test_every_alternative_states_the_groupings_of_the_mode_it_names():
+    # The alternative's second claim, beside the mode. One test and one
+    # assertion listing every miss, for the same reason the mode's has one;
+    # each message names the vector, the question, the mode in force, the
+    # edit, the values published and the groupings the answer declared.
+    # Held only where the answer reached declares its groups — :func:`_groupings`
+    # is where that road is chosen and the module docstring says why.
+    missed = sorted(hop.values_message() for hop in walk().judged if hop.groupings != hop.values)
     assert missed == [], "\n".join(("", *missed))
 
 

@@ -1875,6 +1875,66 @@ class TestDolphinStandaloneSaves:
         assert dirs == {DOLPHIN_GC_USER}
         assert len([g for g in p.file_set.groups if g.files is None]) == 3
 
+    def _flip(self, ini):
+        # The one alternative the card offers, as the pair a client reads:
+        # the mode it names and the groupings that mode has.
+        p = self._answer(ini)
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.granularity is not None
+        assert len(p.granularity.alternatives) == 1
+        offered = p.granularity.alternatives[0]
+        return offered.mode, offered.values
+
+    # #518: the mode an alternative names is both slots, so its values is both
+    # slots' groupings with the flipped slot's first. A literal for slot A
+    # alone understated card+folder the way a single value understated a mixed
+    # mode before #128, and slot B's share is read off the groups slot B
+    # already carries rather than off its mode name.
+    def test_the_folder_flip_beside_a_folder_states_one_grouping(self):
+        assert self._flip("[Core]\nSlotA = 1\nSlotB = 8\n") == (
+            "folder+folder",
+            ("per-game-files",),
+        )
+
+    def test_the_card_flip_beside_a_folder_states_both_groupings(self):
+        assert self._flip("[Core]\nSlotA = 8\nSlotB = 8\n") == (
+            "card+folder",
+            ("shared-file", "per-game-files"),
+        )
+
+    def test_the_folder_flip_beside_a_card_names_the_flipped_slot_first(self):
+        assert self._flip("[Core]\nSlotA = 1\nSlotB = 1\n") == (
+            "folder+card",
+            ("per-game-files", "shared-file"),
+        )
+
+    def test_the_card_flip_beside_a_card_folds_the_repeated_grouping(self):
+        assert self._flip("[Core]\nSlotA = 8\nSlotB = 1\n") == ("card+card", ("shared-file",))
+
+    def test_a_slot_b_holding_no_device_contributes_no_grouping(self):
+        assert self._flip("[Core]\nSlotA = 8\nSlotB = 255\n") == ("card+none", ("shared-file",))
+
+    # The flipped slot is resolved rather than assumed, so a path this host
+    # cannot reach groups nothing the alternative can state — the literal used
+    # to promise the grouping whether or not the file could be located.
+    def test_a_card_path_this_host_cannot_locate_contributes_no_grouping(self):
+        assert self._flip(
+            "[Core]\nSlotA = 8\nSlotB = 8\nMemcardAPath = /var/db/cards/mine.USA.raw\n"
+        ) == ("card+folder", ("per-game-files",))
+
+    def test_a_folder_path_this_host_cannot_locate_contributes_no_grouping(self):
+        assert self._flip(
+            "[Core]\nSlotA = 1\nSlotB = 1\nGCIFolderAPath = /var/db/cards/Card A\n"
+        ) == ("folder+card", ("shared-file",))
+
+    def test_a_mode_where_neither_slot_would_group_states_that_it_keeps_none(self):
+        # Both contribute nothing, so the mode keeps no save this answer can
+        # place. `none` is the word the reached answer's own granularity value
+        # carries there, and it keeps `values[0]` a word a client can read.
+        assert self._flip(
+            "[Core]\nSlotA = 1\nSlotB = 255\nGCIFolderAPath = /var/db/cards/Card A\n"
+        ) == ("folder+none", (atlas.GRANULARITY_NONE,))
+
     def test_a_session_override_says_the_cards_live_elsewhere_while_it_runs(self):
         p = self._answer(
             "[Core]\nSlotA = 8\nSlotB = 255\nGCIFolderAPathOverride = /tmp/movie\n"

@@ -11714,7 +11714,199 @@
                   "SlotA": "1"
                 },
                 "values": [
-                  "shared-file"
+                  "shared-file",
+                  "per-game-files"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-flip-to-an-unlocatable-card-path-promises-the-other-slot",
+      "rationale": "MemcardAPath names a path only the emulator's sandbox can read, so flipping slot A to the raw card reaches an answer that locates no card file and states only slot B's GCI folders. The alternative's values is derived from what the flipped slot would carry rather than from the mode's name, so it promises the one grouping the answer will state; a literal per mode promised the shared file whether or not the file could be located.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 8\nSlotB = 8\nMemcardAPath = /var/db/cards/mine.USA.raw\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/<region>/Card A",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+folder",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderBPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card+folder",
+                "options": {
+                  "SlotA": "1"
+                },
+                "values": [
+                  "per-game-files"
                 ]
               }
             ]
