@@ -19794,6 +19794,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         nothing pins it, while the launch that runs an installed flatpak is
         pinned. The arrangement's pair is what governs an entry that
         establishes none — the same fallback the bases beside it take.
+
+        The distribution word travels without the sandbox that rides beside it
+        on RetroDECK, and that is the whole of what EmuDeck states about itself
+        here. The sandbox is how a distribution's own bundled tree reads from
+        this host, which is what hashing a shipped copy needs; EmuDeck ships no
+        copies into the firmware root, so there is no tree to reach and
+        ``supplied_by`` goes on answering ``None`` — the copy list has no card
+        under this word. What the word does reach is the download card
+        (:mod:`atlas.distribution_downloads`), whose statement is about a
+        directory under the root this context already resolved and needs
+        nothing outside it.
         """
         sandbox, environment_sources = self._cfg_sandbox()
         standalone_homes = self._standalone_xdg_homes()
@@ -19809,6 +19820,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             standalone_homes=standalone_homes,
             standalone_sandbox=self._standalone_sandbox(standalone_homes),
             extra_sources=environment_sources,
+            distribution=self.kind,
         )
 
     def _read_firmware_context(self) -> FirmwareContext:

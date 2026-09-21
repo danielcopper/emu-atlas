@@ -3088,6 +3088,31 @@ stated once per requirement however many routes tried to read those bytes — so
 files the packaged table has no identity for, which is what three of the five supplied files on the reference machine
 are.
 
+**A third `None`, and the one that tells a client what to do: the installer fills the directory.** EmuDeck places
+nothing into the firmware root from a tree of its own — it downloads an archive and unpacks it into that root, with no
+checksum in the script and none of the archive's members named in it. So there is nothing on the machine to hash
+against, `supplied_by` stays `None`, and what atlas can state is about the **directory** instead.
+`firmware-installer-download` rides on the **core** and carries `dir` (the directory, on this host), `distribution`,
+`url`, `card_version` (the revision of the packaged table) and `revision` (the release of the distribution its citations
+were read at — the reading is the whole warrant here, since nothing on the machine confirms it):
+
+```python
+core.caveats        # 'firmware-installer-download' → the tree below `dir` is the installer's to fill
+```
+
+Read it as: a file present below `dir` is of unestablished provenance rather than the user's own dump, and a declared
+file missing below `dir` is one the installer fetches rather than one to go and find — **under the step's own
+condition**, which for EmuDeck's PPSSPP tree is that the directory is empty when the step runs. A directory holding
+anything at all is skipped, so a half-filled tree stays half-filled and the missing file is not fetched after all. That
+condition is recorded in the packaged table and is not a data key, so this paragraph is where a contract reader learns
+it; a client that wants to act on it reads `atlas/data/distribution_downloads.json`.
+
+Read it as nothing more — it is not a weaker `supplied_by`, it says nothing about any particular file's bytes, and it is
+not a promise that the fetch has run or will. It is stated once per core and directory, whether or not a file is there,
+and only for a core that declares something below such a directory. An unclaimed file under the same tree is listed as
+unclaimed exactly as before: the unclaimed scan is about files nothing declares, and this statement is about a directory
+something declares into.
+
 The download flow runs off content, not names:
 
 ```python

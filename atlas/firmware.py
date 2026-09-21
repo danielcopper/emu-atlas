@@ -107,6 +107,11 @@ from .core_info import (
     unread_reason,
 )
 from .core_options import CoreOptionsChain, core_options_value
+from .distribution_downloads import (
+    DistributionDownloads,
+    DownloadEntry,
+    lookup_distribution_downloads,
+)
 from .distribution_labels import distribution_label
 from .distribution_supplied import lookup_distribution_supplied
 from .esde import KIND_LIBRETRO, KIND_RETROARCH_FOREIGN_CORE, KIND_STANDALONE, CatalogueKind
@@ -425,6 +430,18 @@ CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE = "firmware-identity-not-comparable"
 # destination is the requirement's own observation to state
 # (:data:`CAVEAT_FIRMWARE_UNREADABLE`), not this one's.
 CAVEAT_FIRMWARE_SUPPLIED_SOURCE_UNREADABLE = "firmware-supplied-source-unreadable"
+# A directory under the firmware root that the distribution's own installer
+# fills by downloading an archive and unpacking it below that root
+# (:mod:`atlas.distribution_downloads`) — the tree lands here only if the
+# archive carries the prefix, which the script never names and no reading has
+# opened. Its subject is the DIRECTORY and not
+# any file in it, which is why it stands whether or not a file is there: a
+# missing file below such a directory is one the installer would fetch, and a
+# present one is of unestablished provenance rather than the user's own dump.
+# Nothing on the machine can settle that — the script pins no checksum and the
+# archive's members are written nowhere else — so ``supplied_by``, whose whole
+# content is a measured equality, stays ``None`` here and this code says why.
+CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD = "firmware-installer-download"
 CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED = "firmware-content-unidentified"
 CAVEAT_SYSTEM_UNKNOWN = "system-unknown"
 # The marked-word code: a requirement's ``system`` is one of atlas's own
@@ -3739,6 +3756,82 @@ def _supplied_by(
     )
 
 
+def _installer_download(root: str, card: DistributionDownloads, entry: DownloadEntry) -> Caveat:
+    """The directory statement itself: who fills it, from where, and under what condition.
+
+    The subject is the directory, so the sentence says nothing about any file
+    in it and the data carries no path — what identifies the subject is the
+    ``dir`` key, the same key the search family's caveats name a directory
+    under.
+
+    Two versions ride along where a ``supplied_by`` statement carries one.
+    ``card_version`` says which revision of the packaged table stamped this,
+    as it does there. ``revision`` says which release of the distribution the
+    table was read at, and it is here because this statement rests on that
+    reading and on nothing else: no equality was measured on the machine, so
+    a consumer weighing the claim has to be able to see how old the reading
+    behind it is.
+    """
+    directory = os.path.join(root, entry.destination)
+    return Caveat(
+        CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD,
+        f"{directory} is a directory this distribution's own installer fills: it downloads "
+        f"{entry.url} and unpacks it below the firmware root, which is what fills this directory, "
+        f"{entry.condition}. The bytes that land are verifiable against nothing the "
+        "distribution ships, so whether a file here is the download's or the user's stays "
+        "unestablished and supplied_by claims nothing — and a file missing below this "
+        "directory is one the installer would fetch rather than one to go and find",
+        {
+            "dir": directory,
+            "distribution": card.distribution,
+            "url": entry.url,
+            "card_version": card.card_version,
+            "revision": card.version,
+        },
+    )
+
+
+def _installer_downloads(
+    context: FirmwareContext, requirements: Sequence[FirmwareRequirement]
+) -> list[Caveat]:
+    """One statement per directory this core has a requirement in, and no more.
+
+    Stated per ``(core, directory)`` rather than per requirement because the
+    fact is about the directory: two of a core's declarations resolving into
+    one downloaded tree is one thing a consumer needs told once. It is stated
+    whether the file is there or not, for the same reason — the directory is
+    the subject — and only for a core that declares something below such a
+    directory, so a machine's answer does not carry a statement about a tree
+    nothing on it asks for.
+
+    The bound on what may be stated is the **loader's**, not the predicate
+    below it. A destination is a clean relative path or the card refuses to
+    load, so a path outside the root relativizes to something starting with
+    ``..`` and a path that is the root relativizes to ``"."`` — neither of
+    which any loadable destination can cover. :func:`_stays_under` is
+    therefore a symmetry with :func:`_supplied_by`, which asks the same
+    question of the same paths, rather than a guard this route needs:
+    removing it fails no test in the suite, and the kept call is here so a
+    future destination shape cannot make the two routes disagree about what
+    "inside the firmware root" means.
+    """
+    root = context.root
+    card = lookup_distribution_downloads(context.distribution)
+    if root is None or card is None:
+        return []
+    caveats: list[Caveat] = []
+    stated: set[str] = set()
+    for requirement in requirements:
+        if not _stays_under(root, requirement.path):
+            continue
+        entry = card.covering(os.path.relpath(requirement.path, root))
+        if entry is None or entry.destination in stated:
+            continue
+        stated.add(entry.destination)
+        caveats.append(_installer_download(root, card, entry))
+    return caveats
+
+
 def resolve_links(machine: Machine, path: str) -> str | None:
     """Follow symlinks segment by segment, the way the kernel would.
 
@@ -4890,8 +4983,14 @@ def _requirements_for(
                 contents_satisfied=contents.verdict,
             )
         )
+    ordered = tuple(sorted(requirements, key=lambda r: r.path))
+    # Last, over the whole list: the statement is per directory, so it can only
+    # be made once the core's requirements are all in — and it belongs to the
+    # core, like the refusals, because a consumer reading one emulator's entry
+    # must see it beside the requirement it explains.
+    core_caveats.extend(_installer_downloads(context, ordered))
     return (
-        tuple(sorted(requirements, key=lambda r: r.path)),
+        ordered,
         tuple(refused),
         tuple(core_caveats),
         answer_caveats,

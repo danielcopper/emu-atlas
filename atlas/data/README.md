@@ -1011,6 +1011,48 @@ longer holds. That is what the pin is for reading at a release.
 `cp`, its source must still be the entry's below the extras root, and its destination must still be the entry's below
 `$bios_path`.
 
+## `distribution_downloads.json` — directories a distribution's installer fills by download
+
+Read by `atlas.distribution_downloads`, behind the `firmware-installer-download` caveat (issue #354). The companion of
+the copy list above, and separate from it because the evidence is of another kind. RetroDECK copies a tree out of its
+own deploy, so `supplied_by` can hash the shipped file against the placed one and state the answer. EmuDeck ships no
+copies into the firmware root: its installer fetches an archive over the network and unpacks it into that root
+(`unzip … -d "$biosPath"`, `emuDeckRetroArch.sh:333-334` at `acc45fc`), pinning no checksum and naming none of the
+archive's members — so the tree lands under `PPSSPP/` only if the archive carries that prefix, which the script never
+names and this reading has not opened [D] — and nothing on the machine can decide whether the bytes at the destination
+are the download's or the user's.
+
+So no entry here ever supports a statement about a **file**. What it supports is a statement about the **directory**,
+made whether or not anything is in it: this directory is one the installer fills from this URL — which turns a missing
+declared file from "not in your library" into "the installer fetches this", and a present one from the user's own dump
+into a file of unestablished provenance. `supplied_by` stays `null` under such a directory, because a provenance nothing
+measured would dilute a field whose whole content is a measured equality.
+
+An entry is `kind` (`tree` — every step read so far fetches an archive and fills a directory with it, and the card
+records the kind it read rather than deriving one), `destination` (relative to the firmware root, and the directory
+itself, never a file in it), `url`, `condition` (prose a reader weighs and no resolver branches on: whether the
+directory was empty when the installer last ran is not something atlas can read afterwards), `invoked` and `citation`.
+One rule the loader enforces beyond the shape, the same one the copy list enforces: no destination appears twice, and no
+destination sits inside another entry's. Both leave one path covered by two entries while the statement about it is made
+once, so the URL a reader is shown would be whichever entry the scan met first — a pick that changes with the order the
+entries were written in.
+
+`invoked` is the reachability half, and it has two words because the reading found two states, neither of them "it
+runs". `retroarch-setup` is a step the RetroArch component's own setup path reaches — `RetroArch_buildbotDownloader`,
+called from `RetroArch_init` and `RetroArch_update`, and named for the setup rather than for `RetroArch_install`, which
+installs the flatpak and its cores and reaches no download of this kind. `unestablished` is a step written in the script
+that nothing in the read repository calls: the two RPG Maker runtime packages sit under `RetroArch_dlAdditionalFiles`,
+and a word-boundary grep for that name over the whole tree at that revision returns two lines, the definition and a
+commented mention, and no call. That is neither dead — a frontend outside this repository may invoke the function by
+name — nor live, so the entries are recorded with the measurement and answer nothing. No core declares firmware into
+them either: the deployed `easyrpg_libretro.info` declares none at all.
+
+The version pin carries more weight here than next door. There every statement rests on a hash read from the live
+machine, and a stale table merely under-reports. Here nothing on the machine confirms the step, so the distribution
+revision the citations were read at is the whole warrant for the statement, and a release that stops downloading a tree
+leaves the table saying something that is no longer true. Re-read the script at a release rather than growing this table
+by guesswork.
+
 ## `distribution_labels.json` — how a distribution spells its own name
 
 Read by `atlas.distribution_labels`, behind the `label` an answer states beside a distribution identifier — an
