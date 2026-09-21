@@ -464,9 +464,9 @@ What it means: **no machine running this arrangement has confirmed the wiring en
 
 It rides on every answer that carries caveats: `savefile_location()`, `systems()`, `emulators_for()`, the three firmware
 calls, `identify_firmware()`, and the entry route's `EmulatorEntry.savefile_location()` — through the aggregate too,
-since that delegates. The status is packaged data (`atlas/data/arrangement_evidence.json`), so the day an arrangement is
-verified on a reference machine, the record changes and the caveat stops appearing; no client change is needed either
-way.
+since that delegates. The status is packaged data (`atlas/data/arrangement_evidence.json`), so the day a live
+installation of an arrangement confirms the wiring end to end, that arrangement's `verified` record stops being `null`
+and the caveat stops appearing; no client change is needed either way.
 
 ## When the machine moved on — `arrangement-version-drifted`
 
@@ -2260,14 +2260,19 @@ core = answer.cores[0]
 ```
 
 Read those three codes as one sentence about content. `firmware-search-unverified` carries the directory, the count of
-files whose size the emulator accepts — on the reference machine 27, several of them Saturn dumps that happen to be
-exactly 512 KiB, which is why the size test cannot be the answer — and the `regions` the unanswered search speaks for.
-`firmware-image-identified` names what the picked file _is_ in the emulator's own words (`SCPH-5500 (v3.0 09-09-96 J)`)
-and the region it belongs to. And `firmware-image-ambiguous` is the honest limit: where several images rank alike, the
-emulator keeps whichever one the directory hands it last, and no read reproduces that order — five images tie on the
-reference machine, so the file named is one of them rather than the one that boots. An image the table does not know is
-not a fault either: DuckStation boots it with a warning, so it is stated as the pick with
-`firmware-content-unidentified` beside it.
+files whose size the emulator accepts, and the `regions` the unanswered search speaks for. That count is a count by size
+alone: the filter reads the stat and nothing else, and the PlayStation's accepted size is not its alone — `sizes.ps1` in
+`atlas/data/duckstation_bios.json` is 512 KiB, which is also the size `atlas/data/firmware_hashes.json` records for the
+Saturn's `sega_101.bin` — so a Saturn dump left in that directory is kept and counted with the rest, which is why the
+size test cannot be the answer. The vector `retrodeck-duckstation-searches-a-directory-and-recognises-the-image` holds
+one: `mpr-17933.bin` passes the filter and comes back `unrecognised`. `firmware-image-identified` names what the picked
+file _is_ in the emulator's own words (`SCPH-5500 (v3.0 09-09-96 J)`) and the region it belongs to. And
+`firmware-image-ambiguous` is the honest limit: where several images rank alike, the emulator keeps whichever one the
+directory hands it last, and no read reproduces that order — so the file named is one of the tied images, and which of
+them boots is not established. Among the caveat's data are `tied`, how many ranked alike, and `chosen`, the file the
+requirement named; the vector `duckstation-two-images-that-rank-alike-leave-the-pick-to-the-directory` holds the case.
+An image the table does not know is not a fault either: DuckStation boots it with a warning, so it is stated as the pick
+with `firmware-content-unidentified` beside it.
 
 **One more code names every file the search kept**, so a client showing the directory can say which file is which.
 `firmware-search-candidates` rides beside the pick under `verify` and carries `dir`, `token` and three objects keyed by
@@ -3085,8 +3090,9 @@ could not be answered, one per side of the comparison — neither `None` may be 
 The first carries `path` (the destination) and `source` (the shipped file in the distribution's own spelling); the
 second carries `path` alone. `firmware-unreadable` is the same code the identity check uses for the same fact, and it is
 stated once per requirement however many routes tried to read those bytes — so it also appears without `verify`, over
-files the packaged table has no identity for, which is what three of the five supplied files on the reference machine
-are.
+files the packaged table has no identity for, `codehandler.bin` above among them. There the provenance check is the only
+route that reads those bytes at all, so the failure is stated with nothing to check it against: `supplied_by` stays
+`None`, and the caveat is what says why.
 
 **A third `None`, and the one that tells a client what to do: the installer fills the directory.** EmuDeck places
 nothing into the firmware root from a tree of its own — it downloads an archive and unpacks it into that root, with no
