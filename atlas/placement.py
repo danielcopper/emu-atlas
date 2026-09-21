@@ -1547,12 +1547,18 @@ UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
 # Why the read did not settle the question, under ``data["reason"]``, where the
 # refusal has one to state. Two sources, one vocabulary: the scalar reader's own
 # refusal codes (:data:`~atlas.yaml_scalars.REFUSAL_CODES`) say which construct
-# stopped the whole file, and ``key-unread`` says the file parsed but the one
-# key this answer hangs on is stated as a construct the reader does not read —
-# ``data["key"]`` names it. A refusal that simply could not open the file
-# states no reason at all; the file is in ``data["config"]`` either way.
+# stopped the whole file, and two more say the file parsed and the one key this
+# answer hangs on settled nothing all the same, with ``data["key"]`` naming it.
+# ``key-unread`` is a key stated as a construct the reader does not read.
+# ``key-repeated`` is a key the file states more than once, where the program
+# reading it keeps a statement this reader does not: the reader holds the first
+# statement, the way a yaml-cpp lookup answers, and RPCS3 instead applies every
+# statement in turn and keeps the last it reads as a scalar — so which of them
+# governs is not this reader's to say. A refusal that simply could not open the
+# file states no reason at all; the file is in ``data["config"]`` either way.
 REASON_KEY_UNREAD = "key-unread"
-EMULATOR_CONFIG_UNREADABLE_REASONS = (*REFUSAL_CODES, REASON_KEY_UNREAD)
+REASON_KEY_REPEATED = "key-repeated"
+EMULATOR_CONFIG_UNREADABLE_REASONS = (*REFUSAL_CODES, REASON_KEY_UNREAD, REASON_KEY_REPEATED)
 
 # Every file a BIOS search kept and hashed, keyed by path, beside what the
 # emulator's own table made of each one's bytes. Built by

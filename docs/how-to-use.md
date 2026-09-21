@@ -1154,10 +1154,17 @@ has nothing observed about it, and the caveat states `core_so` alone. Test for t
 scalar reader's own refusals — `second-document`, `anchor-or-alias`, `tag`, `substitution-cycle`,
 `substitution-unknown`, `not-a-flat-mapping` — each naming the construct that stopped the whole file. The seventh is
 `key-unread`: the file parsed, and the one key the answer hangs on is stated as a construct the reader does not read,
-with `data["key"]` naming it. Only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's
-`config.yml` — ever state a `reason` at all. A refusal that could not open its file states none, and so does one whose
-file is not parseable in its own format (xemu's TOML, Cemu's XML): there is no vocabulary for "the parser said no" and
-inventing one would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case.
+with `data["key"]` naming it. The eighth is `key-repeated`: the file parsed, and the one key the answer hangs on is
+stated more than once, with `data["key"]` naming it. The reader answers with a repeated key's first statement, which is
+the one a yaml-cpp lookup finds and so the one Vita3K reads — a `config.yml` that states a key more than once therefore
+still answers, and the `user-id` and `user-auto-connect` readings say so in their `provenance` prose, while `pref-path`
+answers that first statement and says nothing about the repetition. RPCS3 reads its own file the other way, applying
+every statement in turn and keeping the last it reads as a scalar, so a `vfs.yml` that states its drive, or the variable
+the drive is composed off, more than once gets this reason: which directory the emulator mounts is not something this
+reader can state. Only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's `config.yml` —
+ever state a `reason` at all. A refusal that could not open its file states none, and so does one whose file is not
+parseable in its own format (xemu's TOML, Cemu's XML): there is no vocabulary for "the parser said no" and inventing one
+would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case.
 
 `filenames-content-conditional.files_established_for` — which class of content the declared names were established for:
 `console`, `driver-named-content` (the emulator names the file after the driver or romset it identified, not after the
@@ -1387,12 +1394,13 @@ directories it did reach stay groups of their own, and a `save-dir-unlistable` c
 Nothing recorded is a case of its own rather than the end of the question: `user-id` defaults to an empty `std::string`,
 so a `config.yml` that records none — or records one as the empty value `""` — hands `init_home` the empty id, and where
 a directory is listed under exactly that id the record preselects it after all, `dir` names the tree that id composes,
-and the reason says so. A `user-id:` with nothing after the colon is an id of its own rather than a shorter way of
-writing that one: the key is read as a `std::string`, and yaml-cpp's string conversion answers a valueless key with the
-literal `null`, so that is the id `init_home` looks up and the answer holds it against the listing like any other
-recorded one — `configured_user` then carries the four-letter **string** `null`, the id the emulator reads, and not a
-JSON null. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is recorded — the
-headline follows the launch a frontend makes.
+and the reason says so. A `user-id` stated as a null node is an id of its own rather than a shorter way of writing that
+one — and five plain scalars are that node: nothing after the colon, `~`, `null`, `Null` and `NULL`, the list
+`IsNullString` folds. The key is read as a `std::string`, and yaml-cpp's string conversion answers a null node with the
+literal `null` whichever of the five the file writes, so that is the id `init_home` looks up and the answer holds it
+against the listing like any other recorded one — `configured_user` then carries the four-letter **string** `null`, the
+id the emulator reads, and not a JSON null. A plain launch of the emulator without `user-auto-connect` opens the user
+manager whatever is recorded — the headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the

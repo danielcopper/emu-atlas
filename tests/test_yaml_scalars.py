@@ -235,12 +235,16 @@ class TestScalarsAsWritten:
 
 
 class TestTheKeysStatedWithNoValue:
-    """The third statement: which keys the file states with nothing after them.
+    """The third statement, over the spelling that writes nothing at all.
 
-    ``values`` answers what the text says and answers the same empty string for
-    both spellings, because that is what both texts say. A caller whose
-    emulator reads the two differently — yaml-cpp makes the literal ``null`` of
-    one and the empty string of the other — asks this one instead.
+    What the statement covers is every spelling of a null node, and that is
+    :class:`TestTheNullNodeSpellings` below; here the key is written with
+    nothing after the colon, which is the spelling the two emulators' own files
+    hold. ``values`` answers what the text says and answers the same empty
+    string for this spelling and for a quoted empty scalar, because that is
+    what both texts say. A caller whose emulator reads the two differently —
+    yaml-cpp makes the literal ``null`` of one and the empty string of the
+    other — asks the third statement instead.
     """
 
     def test_a_key_stated_with_no_value_is_named_in_the_order_the_file_states_it(self):
@@ -266,13 +270,6 @@ class TestTheKeysStatedWithNoValue:
         assert read.skipped == ("user-id",)
         assert read.null == ()
 
-    def test_a_later_value_takes_the_statement_back(self):
-        # ``values`` keeps the last statement, so this one must too — a reader
-        # that named the key here would contradict its own value.
-        read = read_scalars("user-id:\nuser-id: 00\n")
-        assert read.get("user-id") == "00"
-        assert read.null == ()
-
     def test_a_key_stated_with_no_value_twice_is_named_once(self):
         assert read_scalars("user-id:\nuser-id:\n").null == ("user-id",)
 
@@ -280,6 +277,165 @@ class TestTheKeysStatedWithNoValue:
         read = read_scalars("user-id:\n---\nuser-id: 00\n")
         assert read.refusal == REFUSAL_SECOND_DOCUMENT
         assert read.null == ()
+
+
+class TestTheNullNodeSpellings:
+    """The five plain scalars yaml-cpp reads as a null node rather than as text.
+
+    ``IsNullString`` folds them (null.cpp:13-16 at external/yaml-cpp@2f86d137,
+    the same lines at the fork RPCS3 builds, 51a5d623), and every one of them
+    reaches the same conversions, so a reader that named only the valueless
+    spelling handed its callers the other four as text. Three of those —
+    ``~``, ``Null`` and ``NULL`` — were then ids and paths the emulators
+    reading those files never look up; the word ``null`` reached the right id
+    for the wrong reason, as the text it is rather than as the node it states.
+    """
+
+    @pytest.mark.parametrize("spelling", ["", "~", "null", "Null", "NULL"])
+    def test_every_spelling_of_the_node_is_named_and_reads_as_the_empty_string(self, spelling):
+        read = read_scalars(f"user-id: {spelling}\nnext: 1\n")
+        assert read.null == ("user-id",)
+        assert read.get("user-id") == ""
+
+    @pytest.mark.parametrize(
+        ("written", "text"),
+        [
+            ("nUll", "nUll"),
+            ('"null"', "null"),
+            ("'null'", "null"),
+            ('"~"', "~"),
+            ("'~'", "~"),
+        ],
+    )
+    def test_a_scalar_that_only_looks_like_the_node_is_a_value(self, written, text):
+        # The case is exact, and quoting makes a scalar of anything: each of
+        # these is the text it spells and none of them is the node.
+        read = read_scalars(f"user-id: {written}\n")
+        assert read.get("user-id") == text
+        assert read.null == ()
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "user-id: null # note",
+            "user-id: ~   ",
+            "user-id: ~\t# it",
+            "user-id: # note",
+            "user-id: #note",
+            "user-id:   # note",
+        ],
+    )
+    def test_a_comment_never_leaves_a_value_where_the_node_is(self, line):
+        # Two facts in one list. A comment after a spelling comes off and the
+        # spelling stands; a value that is nothing but a comment states nothing
+        # after the colon, which is the empty spelling — and the second of
+        # those needs no whitespace before the ``#``, because after ``key: ``
+        # no plain scalar can open with one. Both read as a null node at both
+        # commits, and the ids ``# note`` and ``#note`` were what the reader
+        # answered before.
+        read = read_scalars(f"{line}\n")
+        assert read.null == ("user-id",)
+        assert read.get("user-id") == ""
+
+    def test_the_tuple_holds_each_spelling_once_and_nothing_else(self):
+        # What the tuple is, held against the list it was read off: an empty
+        # scalar, then ~, null, Null and NULL, each named once. A hand-written
+        # copy of the source, so it catches an edit of the tuple and nothing
+        # about the parser — what the parser folds is the parametrization
+        # above, which reads every spelling through the reader.
+        spellings = vars(yaml_scalars)["_NULL_SPELLINGS"]
+        assert spellings == ("", "~", "null", "Null", "NULL")
+        assert len(set(spellings)) == len(spellings)
+
+    @pytest.mark.parametrize("spelling", ["", "~", "null"])
+    def test_an_indented_line_under_the_node_leaves_the_key_unread(self, spelling):
+        # The fold does not settle the key on its own line, and what an
+        # indented line makes of it depends on the spelling: under the empty
+        # one the key heads a nested block, under a word the document does not
+        # load at all (``~`` then ``  stored: 00`` is an illegal map value at
+        # both commits) — and where the line carries no colon the two are one
+        # multi-line plain scalar (``~ more``). This reader reads none of the
+        # three, so the key is named unread, which is the one answer true of
+        # all of them.
+        read = read_scalars(f"user-id: {spelling}\n  stored: 00\nnext: 1\n")
+        assert read.skipped == ("user-id",)
+        assert read.null == ()
+        assert read.get("next") == "1"
+
+
+class TestAKeyStatedMoreThanOnce:
+    """The fourth statement: the first statement is read, and the key is named.
+
+    yaml-cpp keeps every pair of a repeated key, and a lookup answers with the
+    first one it finds: ``node_data::get``'s ``std::find_if`` over the pairs
+    (detail/impl.h:118-138 at external/yaml-cpp@2f86d137), reached by the
+    lookup Vita3K makes on a const node (``update_members``, config.cpp:41-44
+    at cb1f592c). RPCS3 reads its own file by iterating every pair instead and
+    keeps the last statement it can decode, so the key is named as well as
+    read: a caller whose program reads the file that way must be able to refuse
+    rather than answer a statement its emulator discards.
+    """
+
+    def test_a_key_stated_twice_reads_as_its_first_statement(self):
+        read = read_scalars("user-id: 00\nuser-id: 01\n")
+        assert read.get("user-id") == "00"
+        assert read.repeated == ("user-id",)
+
+    def test_a_node_then_a_value_keeps_the_node(self):
+        read = read_scalars("user-id:\nuser-id: 00\n")
+        assert read.get("user-id") == ""
+        assert read.null == ("user-id",)
+        assert read.repeated == ("user-id",)
+
+    def test_a_value_then_a_node_keeps_the_value(self):
+        read = read_scalars("user-id: 00\nuser-id: ~\n")
+        assert read.get("user-id") == "00"
+        assert read.null == ()
+        assert read.repeated == ("user-id",)
+
+    def test_a_block_then_a_value_stays_unread(self):
+        read = read_scalars("user-id:\n  stored: 00\nuser-id: 01\n")
+        assert read.skipped == ("user-id",)
+        assert read.repeated == ("user-id",)
+        with pytest.raises(KeyError, match="unread, not absent"):
+            read.get("user-id")
+
+    def test_a_value_then_a_block_keeps_the_value_and_swallows_the_block(self):
+        # The block is the second statement's, so it may not take the first
+        # one's value away — and its lines are attributable all the same, so
+        # the file is not refused as one this reader cannot read lines from.
+        read = read_scalars("user-id: 00\nuser-id:\n  stored: 01\nnext: 1\n")
+        assert read.refusal is None
+        assert read.get("user-id") == "00"
+        assert read.skipped == ()
+        assert read.repeated == ("user-id",)
+        assert read.get("next") == "1"
+
+    def test_a_key_stated_three_times_is_named_once(self):
+        read = read_scalars("user-id: 00\nuser-id: 01\nuser-id: 02\n")
+        assert read.get("user-id") == "00"
+        assert read.repeated == ("user-id",)
+
+    def test_a_later_statement_carrying_an_anchor_still_refuses_the_file(self):
+        # An anchor changes meaning beyond the line it sits on wherever it
+        # sits, so the first statement is not safe from a later one either.
+        read = read_scalars("user-id: 00\nuser-id: &anc 01\n")
+        assert read.refusal == REFUSAL_ANCHOR
+        assert read.repeated == ()
+
+    def test_substitution_resolves_against_the_first_statement(self):
+        # The reader's own rule, and the only one consistent with the record it
+        # keeps: ``values`` holds first statements. The program that writes
+        # such tokens does it differently — RPCS3 substitutes the emulator_dir
+        # its iteration last decoded — which is why its route refuses wherever
+        # that key is stated more than once rather than answering this.
+        read = read_scalars("$(E): /first/\n$(E): /second/\n/dev_hdd0/: $(E)dev_hdd0/\n")
+        assert read.get("/dev_hdd0/") == "/first/dev_hdd0/"
+        assert read.repeated == ("$(E)",)
+
+    def test_a_key_stated_once_is_named_in_none_of_it(self):
+        read = read_scalars("user-id: 00\nnext: 1\n")
+        assert read.repeated == ()
 
 
 class TestTheRefusalVocabularyIsEnumerated:
