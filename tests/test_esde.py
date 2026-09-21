@@ -1093,10 +1093,11 @@ class TestTheIdentityACommandSpells:
         assert emulator_identity("%EMULATOR_DUCKSTATION% %ROM%") == "DUCKSTATION"
 
     def test_a_retroarch_launch_naming_no_core_identifies_nothing(self):
-        # EmuDeck's n3ds rows, as they stand on the reference machine: a
-        # RetroArch launch pointed at a Windows .dll. RETROARCH names the
-        # runner, so answering it would hand a client the frontend under the
-        # name of an emulator.
+        # EmuDeck's n3ds rows, as its own overlay states them: a RetroArch
+        # launch pointed at a Windows .dll. RETROARCH names the runner, so
+        # answering it would hand a client the frontend under the name of an
+        # emulator. The overlay:
+        # configs/emulationstation/custom_systems/es_systems.xml:85-86 @ 863ab69
         command = "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%\\citra_libretro.dll %ROM%"
         assert emulator_identity(command) is None
 

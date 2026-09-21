@@ -791,8 +791,8 @@ class TestPerCoreAnswer:
 
         The file is there under the right name and the table knows what it
         should be — but nobody looked, so the honest answer is "undetermined",
-        not "met". A caller who wants the green light asks for it; on the
-        reference machine that costs 0.03 s for one core.
+        not "met". A caller who wants the green light asks for it, and pays
+        for the files this declaration puts in question and no others.
         """
         machine = _machine({f"{BIOS_DIR}/scph5501.bin": _blob(b"12345678")})
         core = firmware_for_core(machine, _context(machine), core_so="demo_psx_libretro.so").cores[0]
@@ -5275,8 +5275,7 @@ class TestNoDeclarationIsNeverSatisfied:
         # The mixed shape, and the reason silence needs EVERY emulator read:
         # the catalogue lists a standalone whose firmware rules are not
         # resolvable at all, so "nothing here declares firmware for dc" would
-        # be an absence claimed over an emulator atlas cannot read. On the
-        # reference machine 28 systems have exactly this shape.
+        # be an absence claimed over an emulator atlas cannot read.
         machine = _machine(
             {
                 f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,

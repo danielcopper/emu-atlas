@@ -2,14 +2,14 @@
 
 The weekly canary deploys the newest RetroDECK and un-skips every machine-bound
 test, which is how the core anchors and the emulator directory names get
-re-read days before the reference machine updates. The packaged data's other
-half pointed nowhere: **every span that names a RetroDECK component script and
-a line number was read once, by hand, from one release** — ``CITATION_SPANS``
-below says how many there are and how the two spellings split, and a test
-holds it against what the patterns match over the packaged data, so the count
-cannot go stale in prose. A release that inserts a line, renames a variable or
-moves a ``dir_prep`` left the suite green and the citation pointing at a line
-that no longer said what it said.
+re-read days before any maintainer's installation updates. The packaged data's
+other half pointed nowhere: **every span that names a RetroDECK component
+script and a line number was read once, by hand, from one release** —
+``CITATION_SPANS`` below says how many there are and how the two spellings
+split, and a test holds it against what the patterns match over the packaged
+data, so the count cannot go stale in prose. A release that inserts a line,
+renames a variable or moves a ``dir_prep`` left the suite green and the
+citation pointing at a line that no longer said what it said.
 
 Three passes, weakest last:
 

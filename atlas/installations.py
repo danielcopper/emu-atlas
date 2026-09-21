@@ -2891,9 +2891,17 @@ def _content_system_root(content: _Content, *, provenance: str) -> _SystemRoot:
 # branch. ``LIBRETRO_SYSTEM_DIRECTORY`` in the environment wins when it is set
 # (``platform_unix.c:2137-2140``), and atlas cannot read the environment the
 # emulator will run with — it is not on disk, and the seam abstracts the
-# machine, not the process. [V] unset on the reference machine, so the join is
-# what applies there; an installation that exports it is [O] — the answer would
-# name this directory while RetroArch used the exported one.
+# machine, not the process. [V] RetroDECK's own launch sets it nowhere:
+# neither the app's Flatpak metadata nor any shipped component script names
+# it (read over the deployed 0.10.9b Flatpak). So the join is what applies
+# under that arrangement; a launching process that exports it, or a flatpak
+# override that names it, is [O] — the host environment enters the sandbox
+# (``flatpak-run.c:3055``) and the merged context environment, overrides
+# included, lands on top of it (``:3352``, the same route a HOME override
+# takes; see ``docs/research/retrodeck-save-placement.md`` §15), while among
+# the environment keys the overrides files are read here for ``HOME`` alone
+# (:689-700). Either way the answer would name this directory while RetroArch
+# used the other one.
 PLATFORM_SYSTEM_DIR_SOURCE = (
     "default: system_directory unset — RetroArch platform default applies "
     "('system' under the config tree, platform_unix.c:2142-2143)"
@@ -2929,9 +2937,11 @@ def _core_system_root(
       ``system`` under the config tree (``platform_unix.c:2141-2143``, the same
       block that seeds the saves default this resolver answers with) unless
       ``LIBRETRO_SYSTEM_DIRECTORY`` is exported, which wins (``:2137-2140``) and
-      which atlas cannot read off a disk — [V] unset on the reference machine,
-      [O] anywhere it is set. So an unset key resolves; it is not a hole and
-      never was one.
+      which atlas cannot read off a disk — [V] RetroDECK's own launch sets it
+      nowhere, [O] where a launching process exports it or a flatpak override
+      names it (``flatpak-run.c:3055``, ``:3352``; among the environment keys
+      the overrides files are read here for ``HOME`` alone). So an unset key
+      resolves; it is not a hole and never was one.
     - **Blank or the literal ``default``** — ``system_directory`` passes
       ``handle_setting = true`` (``configuration.c:1691``), so the generic path
       loop writes whatever the merged config holds, with no directory test
@@ -14608,10 +14618,10 @@ def _environment_overrides(text: str) -> dict[str, str | None]:
 
 # Flatpak's overrides directories, one per installation. Both hold a file
 # per app id and a file named "global" that applies to every app. Each of
-# the four spellings was observed live under `strace` (flatpak 1.16.6,
-# reference machine 2026-08-08): one `flatpak override --show` invocation
-# opens exactly one file, and the four flag combinations — plain,
-# `--user`, `<app id>`, `--user <app id>` — open these four in turn.
+# the four spellings was observed live (flatpak 1.16.6, under `strace`):
+# one `flatpak override --show` invocation opens exactly one file, and the
+# four flag combinations — plain, `--user`, `<app id>`, `--user <app id>` —
+# open these four in turn.
 _FLATPAK_OVERRIDES_USER = os.path.join(_FLATPAK_USER_BASE, "overrides")
 _FLATPAK_OVERRIDES_SYSTEM = os.path.join("/var", "lib", "flatpak", "overrides")
 _FLATPAK_OVERRIDES_GLOBAL = "global"

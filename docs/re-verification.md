@@ -61,7 +61,7 @@ pinned to versions this machine does not run says so per answer (`unverified-ver
 
 ## 4. One full-surface live run
 
-Run the whole answer surface against the updated reference machine and byte-diff the canonical contract serializations
+Run the whole answer surface against the updated installation and byte-diff the canonical contract serializations
 against the baseline from the previous round (detect → every question → every catalogue system). Fixtures prove the
 logic; only the machine proves the reality, and a diff of zero is what "verified" means here.
 

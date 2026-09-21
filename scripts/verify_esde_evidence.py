@@ -7,8 +7,8 @@ established **by hand**: the AppImage's md5 was compared against the published
 release manifest, because ES-DE stores no version on disk (no
 ``ApplicationVersion`` in Settings.cpp @ v3.4.1; the startup log states one
 only after a first launch, and the verification machine had none). This script
-is that ritual, written down: run it on the reference machine and it answers
-whether the pinned identification still holds.
+is that ritual, written down: run it on the machine whose installation was
+identified and it answers whether the pinned identification still holds.
 
 A maintainer tool, not part of the library: it talks to the network (ES-DE's
 ``latest_release.json`` — the exact manifest EmuDeck's own installer reads,

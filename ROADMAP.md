@@ -164,9 +164,9 @@ The four firmware entry points ship: live `.info` declarations from the installe
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save
   side. The requirement side of the same substructure shipped with #346: a requirement whose file is byte-identical to
   the copy the distribution's own prepare step places states `supplied_by`, off `atlas/data/distribution_supplied.json`.
-  Every name in that list is one an `UnclaimedFile` can carry too — `prboom.wad` and `capsimg.so` are unclaimed on the
-  reference machine, because no installed core's `.info` declares them — so the same equality is what this bullet needs
-  on the unclaimed side.
+  Every name in that list is one an `UnclaimedFile` can carry too — no shipped `.info` declares `prboom.wad` or
+  `capsimg.so`, so each copy is an `UnclaimedFile` rather than a requirement — and the same equality is what this bullet
+  needs on the unclaimed side.
 - **The copy list covers one component's prepare step, and two more write into the firmware root.** The entries in
   `distribution_supplied.json` are the RetroArch component's, and each is a `cp` whose source stays on disk to be
   hashed. Two other steps place files there and each is blocked on something different. PPSSPP's own component extracts
@@ -180,7 +180,7 @@ The four firmware entry points ship: live `.info` declarations from the installe
   (`standalone_firmware.json`, `XEMU`, `sys.files/hdd_path`), and the provenance check runs on the declaration route
   alone, so nothing would ask. Its source root is also per-component rather than the one `source_root` a card states.
 - **A repeated key states nothing.** `.info` files go through RetroArch's parser, where the first of a repeated key wins
-  and the later line sets nothing — silently, on both sides. One shipped `.info` on the reference machine does this
+  and the later line sets nothing — silently, on both sides. One shipped `.info` repeats a firmware key
   (`FreeIntvTSOverlay`, a `firmware1_path` typed as a second `firmware0_path`), so the file names a file the answer
   never mentions. Stating it means carrying duplicates out of `parse_cfg`, which is the same plumbing a dropped line in
   an `.info` would need.

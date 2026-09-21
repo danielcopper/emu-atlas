@@ -496,9 +496,11 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
       at all (``checked`` ``unknown`` with ``identity`` ``null``). Nothing
       further can ever be established about such a file, so withholding the
       answer would withhold it forever — but "in place under the right name" is
-      all that was checked. On the reference machine that is three requirements
-      across two cores (blueMSX's databases and machine ROMs, Dolphin's
-      ``codehandler.bin``).
+      all that was checked. Several of the names RetroDECK's copy list covers
+      carry no packaged identity, so it is the ordinary shape rather than a
+      corner: blueMSX's ``Databases`` and ``Machines`` trees are entries of
+      ``atlas/data/distribution_supplied.json``, and Dolphin's
+      ``Sys/codehandler.bin`` sits inside the ``dolphin-emu`` tree it lists.
 
     ``emulator`` on a core is the identity the catalogue answer states under
     that same name: a client that asked which emulators launch a system, let
