@@ -1082,7 +1082,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `no-user-preselected`                 | the configuration preselects no user                                                    | —                          |
 | `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                     | —                          |
 | `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                 | —                          |
-| `unset-user-id-is-listed`             | nothing is recorded — or nothing is stated — and that empty id is one the listing holds | —                          |
+| `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds | —                          |
 | `region-decided-by-disc`              | which console region boots is the running disc's                                        | — [^rd]                    |
 | `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                               | —                          |
 | `slot-holds-agp-device`               | the slot holds a GBA cartridge adapter this answer does not model                       | `slot`                     |
@@ -1385,10 +1385,14 @@ established (at least one entry found is one atlas could not decide and none is 
 the tree could not be listed, in which case `dir` names the stand-in tree whatever the short listing handed back, the
 directories it did reach stay groups of their own, and a `save-dir-unlistable` caveat states the listing as short.
 Nothing recorded is a case of its own rather than the end of the question: `user-id` defaults to an empty `std::string`,
-so a `config.yml` that records none — or records one with nothing in it — hands `init_home` the empty id, and where a
-directory is listed under exactly that id the record preselects it after all, `dir` names the tree that id composes, and
-the reason says so. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is
-recorded — the headline follows the launch a frontend makes.
+so a `config.yml` that records none — or records one as the empty value `""` — hands `init_home` the empty id, and where
+a directory is listed under exactly that id the record preselects it after all, `dir` names the tree that id composes,
+and the reason says so. A `user-id:` with nothing after the colon is an id of its own rather than a shorter way of
+writing that one: the key is read as a `std::string`, and yaml-cpp's string conversion answers a valueless key with the
+literal `null`, so that is the id `init_home` looks up and the answer holds it against the listing like any other
+recorded one — `configured_user` then carries the four-letter **string** `null`, the id the emulator reads, and not a
+JSON null. A plain launch of the emulator without `user-auto-connect` opens the user manager whatever is recorded — the
+headline follows the launch a frontend makes.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the
