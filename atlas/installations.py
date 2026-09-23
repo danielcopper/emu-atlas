@@ -6554,6 +6554,44 @@ def _dolphin_reading(
     )
 
 
+def _dolphin_carded_slot(
+    letter: str,
+    device: int | None,
+    values: Mapping[tuple[str, str], str],
+    sandbox: _Sandbox,
+    gc_root: str,
+    cite: "_Cite",
+) -> _DolphinSlot | None:
+    """What slot *letter* carries with *device* in it — ``None`` where that device keeps no card.
+
+    The path key each device reads, read the emulator's way and translated the
+    emulator's way: this is the one place either is done, so the slot in force
+    and the slot an alternative names are resolved by the same code rather than
+    by two readings that could drift apart (#518).
+    """
+    if device == _DOLPHIN_DEVICE_FOLDER:
+        folder_value, folder_spelled = _simpleini_value(values, "Core", f"GCIFolder{letter}Path")
+        return _dolphin_folder_slot(
+            letter,
+            folder_value,
+            sandbox,
+            gc_root,
+            cite,
+            spelled=folder_spelled,
+        )
+    if device == _DOLPHIN_DEVICE_RAW:
+        card_value, card_spelled = _simpleini_value(values, "Core", f"Memcard{letter}Path")
+        return _dolphin_raw_slot(
+            letter,
+            card_value,
+            sandbox,
+            gc_root,
+            cite,
+            spelled=card_spelled,
+        )
+    return None
+
+
 def _dolphin_slot(
     letter: str,
     values: Mapping[tuple[str, str], str],
@@ -6575,27 +6613,16 @@ def _dolphin_slot(
     slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite, spelled=slot_spelled)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
-    if device == _DOLPHIN_DEVICE_FOLDER:
-        folder_value, folder_spelled = _simpleini_value(values, "Core", f"GCIFolder{letter}Path")
-        slot = _dolphin_folder_slot(
-            letter,
-            folder_value,
-            sandbox,
-            gc_root,
-            cite,
-            spelled=folder_spelled,
+    slot = _dolphin_carded_slot(letter, device, values, sandbox, gc_root, cite)
+    if slot is not None:
+        return _DolphinSlot(
+            mode=slot.mode,
+            groups=slot.groups,
+            readings=(slot_reading, *slot.readings),
+            caveats=slot.caveats,
+            template_dir=slot.template_dir,
         )
-    elif device == _DOLPHIN_DEVICE_RAW:
-        card_value, card_spelled = _simpleini_value(values, "Core", f"Memcard{letter}Path")
-        slot = _dolphin_raw_slot(
-            letter,
-            card_value,
-            sandbox,
-            gc_root,
-            cite,
-            spelled=card_spelled,
-        )
-    elif device == _DOLPHIN_DEVICE_AGP:
+    if device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
             mode="agp",
             readings=(slot_reading,),
@@ -6613,34 +6640,26 @@ def _dolphin_slot(
                 ),
             ),
         )
-    else:
-        return _DolphinSlot(
-            mode="unknown",
-            readings=(slot_reading,),
-            caveats=(
-                Caveat(
-                    CAVEAT_CORE_MODE_UNESTABLISHED,
-                    f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
-                    "interpret — what sits in that slot and where it saves is unestablished",
-                    {
-                        "token": "DOLPHIN",
-                        "reason": REASON_SLOT_DEVICE_UNINTERPRETED,
-                        "slot": letter,
-                        # A slot whose key is absent takes the compiled
-                        # default, which this card reads, so the raw value is
-                        # a string wherever this branch is reached; the empty
-                        # spelling is the one a blank ``Slot<letter> =`` has.
-                        "value": raw_value or "",
-                    },
-                ),
-            ),
-        )
     return _DolphinSlot(
-        mode=slot.mode,
-        groups=slot.groups,
-        readings=(slot_reading, *slot.readings),
-        caveats=slot.caveats,
-        template_dir=slot.template_dir,
+        mode="unknown",
+        readings=(slot_reading,),
+        caveats=(
+            Caveat(
+                CAVEAT_CORE_MODE_UNESTABLISHED,
+                f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
+                "interpret — what sits in that slot and where it saves is unestablished",
+                {
+                    "token": "DOLPHIN",
+                    "reason": REASON_SLOT_DEVICE_UNINTERPRETED,
+                    "slot": letter,
+                    # A slot whose key is absent takes the compiled default,
+                    # which this card reads, so the raw value is a string
+                    # wherever this branch is reached; the empty spelling is
+                    # the one a blank ``Slot<letter> =`` has.
+                    "value": raw_value or "",
+                },
+            ),
+        ),
     )
 
 
@@ -6651,9 +6670,16 @@ def _dolphin_gc_answer(
     ini_path: str | None,
     card: StandaloneSaveCard,
     cite: _Cite,
+    alternatives: tuple[ModeAlternative, ...],
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
-    """The GameCube answer assembled from both slots' contributions."""
+    """The GameCube answer assembled from both slots' contributions.
+
+    *alternatives* arrives resolved rather than being built here, because
+    naming the other mode's groupings takes a second resolution of slot A and
+    so the configuration this answer was read from — which the caller holds and
+    this assembly does not.
+    """
     groups = tuple(g for slot in slots for g in slot.groups)
     readings = tuple(
         _reading_with_file(r, ini_path) for slot in slots for r in slot.readings
@@ -6725,7 +6751,7 @@ def _dolphin_gc_answer(
             value=groups[0].granularity if groups else GRANULARITY_NONE,
             mode=mode,
             readings=readings,
-            alternatives=_dolphin_alternatives(slots),
+            alternatives=alternatives,
             provenance=(
                 f"standalone save card '{card.token}': mode {mode!r} from Dolphin.ini's slot "
                 f"devices ({cite('slot_devices')} at {cite('build')})"
@@ -6738,30 +6764,60 @@ def _reading_with_file(reading: OptionReading, options_file: str | None) -> Opti
     return OptionReading(reading.key, reading.value, reading.provenance, options_file)
 
 
-# The one edit a player actually makes: flip slot A between the folder
-# (per-game files) and the raw card (one shared file per region). Keyed by
-# the mode it flips FROM; slot B's combinations multiply the space without
-# changing the shape of any answer, so they stay as they are.
+# The one edit a player actually makes: flip slot A between the folder and the
+# raw card. Keyed by the mode it flips FROM, and holding what that edit writes
+# — the mode the answer will then name, and the device id that selects it. Slot
+# B is left as it stands rather than enumerated beside it, because changing slot
+# B is a different edit than the one this table is about and offering both
+# slots' devices would publish their product. What each mode GROUPS by is not
+# here: that follows from the path the flipped slot would then read, which only
+# a resolution of that slot answers (#518).
 _DOLPHIN_SLOT_A_FLIPS = {
-    "folder": ("card", _DOLPHIN_DEVICE_RAW, GRANULARITY_SHARED_FILE),
-    "card": ("folder", _DOLPHIN_DEVICE_FOLDER, GRANULARITY_PER_GAME_FILES),
+    "folder": ("card", _DOLPHIN_DEVICE_RAW),
+    "card": ("folder", _DOLPHIN_DEVICE_FOLDER),
 }
 
 
 def _dolphin_alternatives(
-    slots: tuple[_DolphinSlot, _DolphinSlot]
+    slots: tuple[_DolphinSlot, _DolphinSlot],
+    values: Mapping[tuple[str, str], str],
+    sandbox: _Sandbox,
+    gc_root: str,
+    cite: "_Cite",
 ) -> tuple[ModeAlternative, ...]:
-    """The other card scheme for slot A — every other mode is a caveat, not a mode."""
+    """The other card scheme for slot A — every other mode is a caveat, not a mode.
+
+    The mode named is both slots, so its ``values`` is both slots' groupings,
+    the flipped slot's first. Neither is a constant. Slot A is resolved again
+    with the flipped device in it, through :func:`_dolphin_carded_slot`, so it
+    reads the path key that device reads, from this same configuration and
+    through this same sandbox translation; slot B is left as it stands and
+    contributes the granularity of the groups it already carries. Each slot
+    contributes the distinct granularities of its own groups and nothing at all
+    where it carries none — among those, a slot whose configured path this host
+    cannot locate, because a card whose file atlas cannot reach groups nothing
+    it can state.
+
+    Where neither slot would carry a group the mode keeps no save this answer
+    can place, and ``values`` says so with :data:`GRANULARITY_NONE`, which is
+    what the reached answer states as its own ``granularity.value``. An empty
+    tuple would say it differently and worse: nothing refuses one, and a client
+    reading ``values[0]`` the way :class:`ModeAlternative` tells it to would
+    raise instead of reading a word.
+    """
     a, b = slots
     alternatives: list[ModeAlternative] = []
     flip = _DOLPHIN_SLOT_A_FLIPS.get(a.mode)
     if flip is not None:
-        other, device, value = flip
+        other, device = flip
+        flipped = _dolphin_carded_slot("A", device, values, sandbox, gc_root, cite)
+        groups = (*(flipped.groups if flipped else ()), *b.groups)
+        groupings = tuple(dict.fromkeys(g.granularity for g in groups)) or (GRANULARITY_NONE,)
         alternatives.append(
             ModeAlternative(
                 mode=f"{other}+{b.mode}",
                 options=(("SlotA", str(device)),),
-                values=(value,),
+                values=groupings,
             )
         )
     return tuple(alternatives)
@@ -6964,6 +7020,7 @@ def _dolphin_savefile_placement(
         ini_path=stated_ini,
         card=card,
         cite=cite,
+        alternatives=_dolphin_alternatives(slots, values, sandbox, gc_root, cite),
         extra_caveats=(
             *extra_caveats,
             *override_caveats,

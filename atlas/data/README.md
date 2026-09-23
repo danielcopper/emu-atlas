@@ -255,19 +255,20 @@ The answer's granularity block records the decision so a client can act on it: o
 consulted (its live value, its provenance, the file where it would change — hatari reads one of its two write-protect
 options, never both, because which one governs is the content's class), and alternatives with the full option
 combination that selects each — every alternative lists each distinct grouping of its mode (`values`, the mode's own
-first), so a mixed mode cannot hide the card every game shares behind its per-game headline. Which other modes an answer
-lists is the rule's judgment: a small space lists every other mode (Beetle Saturn's three), a large one the one-edit
-neighbours — every switch, changed once — rather than the whole product (SwanStation's twenty, Genesis Plus GX's
-twenty-six CD combinations). A rule that cannot decide selects nothing and says why — `core-mode-unestablished` with the
-reason, or the sharper codes where they exist (`core-option-value-unestablished` per unreadable switch,
-`save-root-redirected` where ScummVM's `savepath` points outside every root kind the format can anchor, with the
-configured path in the caveat's data). Stepping aside can also be the whole truth of a mode rather than a failure to
-read one: MAME handed its own paths (`mame_mame_paths_enable`) anchors its save trees at the frontend process's working
-directory — process state, written nowhere on the machine — so the rule states the relative trees machine-readably
-(`save-root-unresolvable`) instead of claiming a root; with `mame_read_config` also on it first reads `mame.ini` and the
-driver's `<stem>.ini` along `$HOME/.mame` → `<system>/mame/ini` the way the emulator does, and absolute values become
-per-tree `save-root-redirected` caveats. The card keeps no mode for that world — a mode whose directory nobody can state
-is a caveat, not a mode.
+first), so a mixed mode cannot hide the card every game shares behind its per-game headline, and the alternatives
+tripwire applies each alternative the conformance corpus publishes and holds that list against the groupings the answer
+reached declares. Which other modes an answer lists is the rule's judgment: a small space lists every other mode (Beetle
+Saturn's three), a large one the one-edit neighbours — every switch, changed once — rather than the whole product
+(SwanStation's twenty, Genesis Plus GX's twenty-six CD combinations). A rule that cannot decide selects nothing and says
+why — `core-mode-unestablished` with the reason, or the sharper codes where they exist
+(`core-option-value-unestablished` per unreadable switch, `save-root-redirected` where ScummVM's `savepath` points
+outside every root kind the format can anchor, with the configured path in the caveat's data). Stepping aside can also
+be the whole truth of a mode rather than a failure to read one: MAME handed its own paths (`mame_mame_paths_enable`)
+anchors its save trees at the frontend process's working directory — process state, written nowhere on the machine — so
+the rule states the relative trees machine-readably (`save-root-unresolvable`) instead of claiming a root; with
+`mame_read_config` also on it first reads `mame.ini` and the driver's `<stem>.ini` along `$HOME/.mame` →
+`<system>/mame/ini` the way the emulator does, and absolute values become per-tree `save-root-redirected` caveats. The
+card keeps no mode for that world — a mode whose directory nobody can state is a caveat, not a mode.
 
 ### Anchors — every recorded name, pinned to the string it was read from
 

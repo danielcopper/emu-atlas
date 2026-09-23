@@ -1295,7 +1295,10 @@ class ModeAlternative:
     (FinalBurn Neo's shared mode writes a per-game save beside a card every
     game shares, and a single value would hide the shared file — the
     understatement issue #128 was about). A client that wants one word reads
-    ``values[0]``, which is exactly what the old single value said.
+    ``values[0]``, which is exactly what the old single value said. Selecting
+    the alternative reaches an answer that states those same distinct
+    groupings, in the same order, wherever that answer's file set is
+    ``declared`` and carries groups — the alternatives tripwire holds that.
     """
 
     mode: str
@@ -1308,7 +1311,9 @@ class ModeAlternative:
     """
     values: tuple[str, ...]
     """Every distinct grouping among that mode's groups, in card order with the mode's
-    own first.
+    own first — the same distinct groupings, in the same order, that the answer reached
+    by selecting this alternative states wherever its file set is ``declared`` and
+    carries groups.
     """
 
 
