@@ -763,9 +763,8 @@ L11, a core both describe — same: atlas has no card; its memory record says wh
 
 Sources (atlas · sigil): T3 `atlas/data/save_memory.json:532` (frontend files only) · `src/save_layout.c:77`.
 
-**[O]** atlas states only the frontend's part for this core, and its answer carries the caveat
-`core-own-writes-unestablished`; the files the core writes itself (T3) wait on atlas's core audit of it, with sigil's
-row as the lead.
+atlas's answer for this core names no file and carries `core-own-writes-unestablished`: the frontend writes none, and
+whether the core writes files of its own is not established. **[O]** The file sigil's row names (T3) is open item 5.
 
 ### `melonds`
 
@@ -893,9 +892,8 @@ L16, a core both describe — same: atlas has no card; its memory record says wh
 Sources (atlas · sigil): T4 `atlas/data/save_memory.json:1305` (frontend files only) · `src/save_layout.c:109`; O1 none
 (no card for the core) · `src/save_layout.c:109`.
 
-**[O]** atlas states only the frontend's part for this core, and its answer carries the caveat
-`core-own-writes-unestablished`; the files the core writes itself (T4) wait on atlas's core audit of it, with sigil's
-row as the lead.
+atlas's answer for this core names no file and carries `core-own-writes-unestablished`: the frontend writes none, and
+whether the core writes files of its own is not established. **[O]** The file sigil's row names (T4) is open item 5.
 
 ### `nestopia` on `fds`
 
@@ -917,9 +915,8 @@ Sources (atlas · sigil): T5 `atlas/data/save_memory.json:1041` · `src/save_lay
 `atlas/data/save_memory.json:1041` (frontend files only) · `src/save_layout.c:117`; O2 none (no card for the core) ·
 `src/save_layout.c:115`.
 
-**[O]** atlas states only the frontend's part for this core, and its answer carries the caveat
-`core-own-writes-unestablished`; the files the core writes itself (T6–T8) wait on atlas's core audit of it, with sigil's
-row as the lead.
+atlas's answer for this core names the frontend's `<stem>.srm` and states nothing about files the core writes itself.
+**[O]** The files sigil's row names (T6–T8) are open item 5.
 
 ### The answer fields
 
@@ -1019,7 +1016,7 @@ option the caller leaves out is read, and what atlas's documents say about sigil
   `beetle-psx-a-diverging-card-index-names-the-options-and-their-values`. Sources: atlas's `atlas/mode_rules.py:650`;
   sigil's `src/save_unit.c:86`.
 - **S33** atlas's link to sigil — different (atlas's documents): `rommforge/argosy-sigil` answers 301 to
-  `rommapp/argosy-sigil`. Sources: atlas's `README.md:74`, `docs/how-to-use.md:903`; sigil's
+  `rommapp/argosy-sigil`. Sources: atlas's `README.md:74`, `docs/how-to-use.md:903`; sigil:
   `curl -sI https://github.com/rommforge/argosy-sigil`.
 - **S34** What atlas says sigil covers — different (atlas's documents): atlas's account names identification only;
   sigil's README names three calls. Sources: atlas's `README.md:230-231`, `README.md:78`; sigil's `README.md:11`.
@@ -1087,10 +1084,10 @@ search over `core/` and `libretro/` (`grep -a` for `sram_init(` and `sram.on = 1
 finds `sram.on` set only in `sram_init` itself (`core/cart_hw/sram.c`), the cartridge code
 (`core/cart_hw/md_cart.c:784`) and the two EEPROM inits (`core/cart_hw/eeprom_i2c.c:218`,
 `core/cart_hw/eeprom_spi.c:84`), all called from `md_cart_init` (`md_cart.c:408`, `:409`, `:593`), and in the Master
-System cartridge code (`core/cart_hw/sms_cart.c:601`, `:604`), whose init runs only off the Mega Drive branch
-(`core/genesis.c:180`) or when `(system_hw & SYSTEM_PBC)` is not `SYSTEM_MD` (`libretro/libretro.c:1822-1825`).
+System cartridge code (`core/cart_hw/sms_cart.c:601`, `:604`), whose init runs only outside the Mega Drive branch
+(`core/genesis.c:180`, `:198`) or when `(system_hw & SYSTEM_PBC)` is not `SYSTEM_MD` (`libretro/libretro.c:1822-1825`).
 RetroArch writes no `<stem>.srm` for Sega CD content. At HEAD `c2838c7` the same holds: `core/genesis.c:72`, `:162-175`,
-`:180`; `core/cart_hw/md_cart.c:403`, `:404`, `:588`, `:843`; `core/cart_hw/eeprom_i2c.c:215`;
+`:180`, `:198`; `core/cart_hw/md_cart.c:403`, `:404`, `:588`, `:843`; `core/cart_hw/eeprom_i2c.c:215`;
 `core/cart_hw/sms_cart.c:604`, `:607`; `libretro/libretro.c:1822-1825`, `:3765-3769`. sigil's row cites
 `libretro/libretro.c` `check_variables` and `bram_save` (sigil's `README.md:314`), which place the BRAM files, not the
 `.srm`. T14, the name alone, is `sigil only`. **[O]** No Sega CD session under the shipped core has been observed.
@@ -1101,13 +1098,13 @@ takes `mednafen_psx_libretro_shared` as the stem while sharing is on and the con
 (`libretro.cpp:5243-5248`). Slot 0 is core-written only under the Mednafen method — under the libretro method it goes to
 the frontend's `.srm` (`:2461-2465`); the digit in each name is the card-image index (`:2473-2478`, row S32). With the
 second card disabled, port 2 emulates no card (`:1972-1974`), and `FrontIO::SaveMemcard` writes only a device that has
-non-volatile memory (`mednafen/psx/frontio.cpp:995`). **[D]** Nothing is written for slot 1 then: that rests on this
-condition; **[O]** the memory size of the device an unemulated port holds. So a per-game `.mcr` needs its slot's
-condition _and_ sharing off; the shared `.0.mcr` needs sharing _and_ the Mednafen method; the shared `.1.mcr` needs
-sharing _and_ the second card. The same three facts stand at sigil's cited `707d1be` (`libretro.c:6414`, `:3350-3354`,
-`:2679-2681`) and at HEAD `5718ab9` (`libretro.c:7318`, `:3801-3805`, `:3096-3098`). sigil's members each take one
-option condition (`src/save_layout.h:8-14`), and its own test asserts the per-game `.0.mcr` as a member with the
-Mednafen method and sharing on (`tests/unit_save_unit.c:246-258`). **[O]** No session with sharing on has been observed.
+non-volatile memory (`mednafen/psx/frontio.cpp:995`). **[D]** Nothing is written for slot 1 then; **[O]** that rests on
+the memory size of the device an unemulated port holds. So a per-game `.mcr` needs its slot's condition _and_ sharing
+off; the shared `.0.mcr` needs sharing _and_ the Mednafen method; the shared `.1.mcr` needs sharing _and_ the second
+card. The same three facts stand at sigil's cited `707d1be` (`libretro.c:6414`, `:3350-3354`, `:2679-2681`) and at HEAD
+`5718ab9` (`libretro.c:7318`, `:3801-3805`, `:3096-3098`). sigil's members each take one option condition
+(`src/save_layout.h:8-14`), and its own test asserts the per-game `.0.mcr` as a member with the Mednafen method and
+sharing on (`tests/unit_save_unit.c:246-258`). **[O]** No session with sharing on has been observed.
 
 **Beetle PSX second card (O23).** **[V]** At `d6383bf`, `libretro_core_options.h:657-668` registers `enable_memcard1`
 with `enabled` as the default. Commit `b923925` (2025-12-28, "Core option cleanups") changed it to `disabled`
@@ -1194,16 +1191,14 @@ atlas's answer for it names a `.bkr` that never appears and leaves out the `.srm
 
 ## 5. Identification: sigil's ids in atlas's `<save_id>` holes
 
-Where an emulator keys a save on an id it reads from the content, atlas leaves that id as a `<save_id>` hole in a
-declared name, and a client fills it; sigil reads such ids from the ROM. **[V]** The holes atlas declares (search:
-`<save_id>` in `atlas/data/*.json`, `TEMPLATE_SAVE_ID` joined into a path or name in `atlas/installations.py`): the
-Flycast and SwanStation cards; the directories atlas builds for PCSX2's texture replacements
-(`atlas/installations.py:5523`), Cemu (`:7480`) and Azahar (`:7693`), each with its `physical_dir` twin (`:5590`,
-`:7482`, `:7695`); and DuckStation's per-game card names, by serial (`:7954`) and by title (`:7958`). Two of these are
-not a save id read from the content: the title-keyed card (I4) and the texture directory, which holds no save (I7). The
-rows also cover directories whose entry names atlas refuses to state, where it declares no hole (I9–I12). The file set
-itself comes from atlas; sigil's save hash is computed over a unit that `sigil_save_resolve` produced (sigil's
-`include/sigil.h:282-283`).
+Where an emulator keys a save on an id it reads from the content and atlas states the name, atlas leaves that id as a
+`<save_id>` hole in the declared name, and a client fills it; where atlas refuses to state the entry names (I9–I12) it
+declares no hole. sigil reads such ids from the ROM. **[V]** The holes atlas declares (search: `<save_id>` in
+`atlas/data/*.json`, `TEMPLATE_SAVE_ID` joined into a path or name in `atlas/installations.py`): the Flycast and
+SwanStation cards; the directories atlas builds for PCSX2's texture replacements (`atlas/installations.py:5523`), Cemu
+(`:7480`) and Azahar (`:7693`), each with its `physical_dir` twin (`:5590`, `:7482`, `:7695`); and DuckStation's
+per-game card names, by serial (`:7954`) and by title (`:7958`). Two of these are not a save id read from the content:
+the title-keyed card (I4) and the texture directory, which holds no save (I7).
 
 - **I1** Dreamcast: the id in Flycast's per-game VMU name — different: sigil trims, cuts at a NUL and replaces nothing;
   Flycast's steps differ by build (below). Sources: atlas's `atlas/data/core_oddities.json:968`,
@@ -1241,28 +1236,45 @@ itself comes from atlas; sigil's save hash is computed over a unit that `sigil_s
 - **I13** Xbox: the title directory inside the hard-disk image — same: both: no host path, the id names a directory
   inside the image. Sources: atlas's `atlas/installations.py:7238`; sigil's `README.md:194`.
 
-**Flycast (I1).** **[V]** At `flyinghead/flycast` `1dac369` (`atlas/data/core_audit.json:217`) the game id is the
-product number with trailing spaces and NULs trimmed (`core/emulator.cpp:841`; `trim_trailing_ws`,
-`core/stdclass.h:145-153`, over the whitespace `" \0"`, `core/stdclass.cpp:25`), and nothing more; the per-game VMU name
-replaces a space and each of `/\:*?|<>` in it with `_` (`shell/libretro/oslib.cpp:46-50`). Commit `97442c0` (2025-12-12,
-"terminate game id at first null character") also cuts the id at its first NUL; at HEAD `869038f` that is
-`core/emulator.cpp:859-860`, after the trim at `:858`, and the replacement stands at `shell/libretro/oslib.cpp:48-52`.
-sigil trims, cuts at the first NUL and replaces nothing (`src/dreamcast.c:44-70`), and its README calls the result "the
-name flycast gives the per-game VMU file" (sigil's `README.md:570-571`); atlas's card states the trim and the
-replacement (`atlas/data/core_oddities.json:1095`), as the build atlas reads does them. So sigil's steps are Flycast's
-from `97442c0` on, less the replacement. **[D]** For a product number with no inner NUL and none of the replaced
-characters, sigil's id is the name at both revisions; with a replaced character, a client fills the hole with sigil's id
-after the replacement. With an inner NUL followed by other bytes, sigil and Flycast from `97442c0` on cut there, while
-`1dac369` keeps the bytes in the id. **[O]** Which name `1dac369` then writes, which depends on how the path reaches the
-file system; and whether any retail product number carries an inner NUL or one of the replaced characters.
+**Flycast (I1).** **[V]** Flycast derives the game id from the ten-byte product number. At `flyinghead/flycast`
+`1dac369` (`atlas/data/core_audit.json:217`) it trims trailing bytes of the set space and NUL (`core/emulator.cpp:841`;
+`trim_trailing_ws`, `core/stdclass.h:145-153`, over `" \0"`, `core/stdclass.cpp:25`) and does nothing more. Commit
+`97442c0` (2025-12-12, "terminate game id at first null character") then also cuts the id at its first NUL; at HEAD
+`869038f` that is `core/emulator.cpp:859-860`, after the same trim at `:858` (`core/stdclass.cpp:26`). At both revisions
+the per-game VMU name replaces a space and each of `/\:*?|<>` in the id with `_`, and an empty id falls back to the
+content's name (`shell/libretro/oslib.cpp:44-62` at `1dac369`, `:46-64` at HEAD). sigil trims trailing bytes of another
+set, space and `0x09`–`0x0D` (`src/dreamcast.c:26-28`, `:50`), then cuts at the first NUL (`:51-56`), and returns no id
+when what remains is empty, holds a byte outside `0x20`–`0x7E`, or has no upper-case letter or digit (`:57-65`); it
+replaces nothing. Its README calls the result "the name flycast gives the per-game VMU file" (sigil's
+`README.md:570-571`); atlas's card states the trim and the replacement (`atlas/data/core_oddities.json:1095`), as the
+build atlas reads does them.
+
+**[D]** Where the two meet, per case:
+
+- A product number without a NUL: both drop trailing spaces; a trailing byte in `0x09`–`0x0D` is dropped by sigil and
+  kept by Flycast, at both revisions.
+- A product number with a NUL: at HEAD both cut at the first NUL, but Flycast's trim runs first over spaces _and_ NULs
+  from the end, and sigil's over spaces and control whitespace only, so they differ where whitespace stands before a NUL
+  that only NULs and spaces follow (`AB \0\0`: Flycast's id is `AB`, sigil's keeps the space after `AB`). At `1dac369`
+  Flycast does not cut, and an inner NUL followed by other bytes stays in its id.
+- A product number sigil refuses: sigil gives no id, while Flycast still names the file after what its steps leave, or
+  after the content where that is empty.
+
+In the remaining cases sigil's id is Flycast's id, and a client fills the hole with it after the replacement. **[O]**
+Which name `1dac369` writes for an id that keeps an inner NUL, which depends on how the path reaches the file system;
+and whether any retail product number falls into one of the cases above or carries a replaced character.
 
 **Cemu (I5).** **[V]** Cemu `v2.6` (`cemu-project/Cemu` `a6fb0a4`), the release atlas's record names
 (`atlas/data/standalone_saves.json:88`), builds a save path from both words of the title id, `usr/save/%08x/%08x/…`
 (`src/Cafe/OS/libs/nn_save/nn_save.cpp:133-146`); HEAD `5e09ec7` (2026-09-23) the same (`:132-145`). sigil's `save_id`
-is the low word in lower case, and its `raw_serial` all sixteen hex digits in upper case (`src/wiiu_wua.c:31-32`,
-`:99-102`; sigil's `README.md:500-503`). sigil's README says the last eight digits "are what the save system keys on"
-(`:502`) and shows Cemu's path with both words (`:46-49`). A client fills the hole from `raw_serial`: the first and the
-last eight digits in lower case, joined by `/`.
+is the low word in lower case (`src/wiiu_wua.c:33`, `src/filename.c:189`, sigil's `README.md:46-49`). Its `raw_serial`
+holds all sixteen digits, in upper case, on two routes: the `.wua` reader, the one binary Wii U reader
+(`src/sigil.c:134`, `:308`; `src/wiiu_wua.c:31-32`, `:99-102`), and a sixteen-digit bracket starting `0005` in the file
+name (`src/filename.c:183-189`, upper-cased by `match_hex_run`, `:50-56`). From an eight-digit tag in brackets or
+parentheses, `raw_serial` is the low word alone, like `title_id` (`:193-207`). sigil's README says the last eight digits
+"are what the save system keys on" (sigil's `README.md:502`) and shows Cemu's path with both words (`:46-49`). A client
+fills the hole from `raw_serial` only when it holds sixteen digits: the first and the last eight, in lower case, joined
+by `/`. From an eight-digit tag sigil gives no high word, and the hole stays the client's to fill.
 
 **DuckStation (I3).** **[O]** The spelling DuckStation's game database gives the serial of a disc it knows, against
 sigil's `LLLL-DDDDD`; for a disc it does not know, the rewritten executable name is sigil's spelling.
@@ -1283,8 +1295,8 @@ Each **[O]** above, with what would close it:
 3. Which FinalBurn Neo drivers carry the EEPROM device (T71) — `libretro/FBNeo` at `01e29d5`.
 4. What `CDInfo_GamePrefix()` returns at FinalBurn Neo `aceeebe`, and, on a machine, a zipped Neo Geo Pocket game's
    `.flash` and a FinalBurn Neo console-subsystem save (S10).
-5. Handy's `.eeprom`, SAME CDi's NVRAM folder and Nestopia's FDS `.sav`/`.ups`/`.ips` — atlas's core audit of each (T3,
-   T4, T6–T8).
+5. Which files Handy, SAME CDi and Nestopia write themselves, past the frontend's (T3, T4, T6–T8): an audit of each core
+   by atlas's method, with sigil's rows naming the candidates.
 6. The name Flycast `1dac369` writes for an id with an inner NUL, and whether any retail product number carries one or a
    replaced character (I1).
 7. The serial spelling of DuckStation's game database for a known disc (I3).
