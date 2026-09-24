@@ -1242,10 +1242,10 @@ the title-keyed card (I4) and the texture directory, which holds no save (I7).
 `97442c0` (2025-12-12, "terminate game id at first null character") then also cuts the id at its first NUL; at HEAD
 `869038f` that is `core/emulator.cpp:859-860`, after the same trim at `:858` (`core/stdclass.cpp:26`). At both revisions
 the per-game VMU name replaces a space and each of `/\:*?|<>` in the id with `_`, and an empty id falls back to the
-content's name (`shell/libretro/oslib.cpp:44-62` at `1dac369`, `:46-64` at HEAD). sigil trims trailing bytes of another
-set, space and `0x09`–`0x0D` (`src/dreamcast.c:26-28`, `:50`), then cuts at the first NUL (`:51-56`), and returns no id
-when what remains is empty, holds a byte outside `0x20`–`0x7E`, or has no upper-case letter or digit (`:57-65`); it
-replaces nothing. Its README calls the result "the name flycast gives the per-game VMU file" (sigil's
+content's name (`shell/libretro/oslib.cpp:44-62` at `1dac369`, `:46-64` at HEAD). sigil trims trailing bytes of a
+different set, space and `0x09`–`0x0D` (`src/dreamcast.c:26-28`, `:50`), then cuts at the first NUL (`:51-56`), and
+returns no id when what remains is empty, holds a byte outside `0x20`–`0x7E`, or has no upper-case letter or digit
+(`:57-65`); it replaces nothing. Its README calls the result "the name flycast gives the per-game VMU file" (sigil's
 `README.md:570-571`); atlas's card states the trim and the replacement (`atlas/data/core_oddities.json:1095`), as the
 build atlas reads does them.
 
@@ -1253,10 +1253,10 @@ build atlas reads does them.
 
 - A product number without a NUL: both drop trailing spaces; a trailing byte in `0x09`–`0x0D` is dropped by sigil and
   kept by Flycast, at both revisions.
-- A product number with a NUL: at HEAD both cut at the first NUL, but Flycast's trim runs first over spaces _and_ NULs
-  from the end, and sigil's over spaces and control whitespace only, so they differ where whitespace stands before a NUL
-  that only NULs and spaces follow (`AB \0\0`: Flycast's id is `AB`, sigil's keeps the space after `AB`). At `1dac369`
-  Flycast does not cut, and an inner NUL followed by other bytes stays in its id.
+- A product number with a NUL: Flycast's trim runs over spaces _and_ NULs from the end, sigil's over spaces and control
+  whitespace only, so at both revisions they differ where a space stands before a NUL that only NULs and spaces follow
+  (`AB \0\0`: Flycast's id is `AB`, sigil's keeps the space after `AB`). At HEAD both then cut at the first NUL; at
+  `1dac369` Flycast does not cut, and an inner NUL followed by other bytes stays in its id.
 - A product number sigil refuses: sigil gives no id, while Flycast still names the file after what its steps leave, or
   after the content where that is empty.
 
@@ -1295,8 +1295,8 @@ Each **[O]** above, with what would close it:
 3. Which FinalBurn Neo drivers carry the EEPROM device (T71) — `libretro/FBNeo` at `01e29d5`.
 4. What `CDInfo_GamePrefix()` returns at FinalBurn Neo `aceeebe`, and, on a machine, a zipped Neo Geo Pocket game's
    `.flash` and a FinalBurn Neo console-subsystem save (S10).
-5. Which files Handy, SAME CDi and Nestopia write themselves, past the frontend's (T3, T4, T6–T8): an audit of each core
-   by atlas's method, with sigil's rows naming the candidates.
+5. Which files Handy, SAME CDi and Nestopia write themselves, beyond any frontend file (T3, T4, T6–T8): an audit of each
+   core by atlas's method, with sigil's rows naming the candidates.
 6. The name Flycast `1dac369` writes for an id with an inner NUL, and whether any retail product number carries one or a
    replaced character (I1).
 7. The serial spelling of DuckStation's game database for a known disc (I3).
