@@ -1251,8 +1251,9 @@ build atlas reads does them.
 
 **[D]** Where the two meet, per case:
 
-- A product number without a NUL: both drop trailing spaces; a trailing byte in `0x09`–`0x0D` is dropped by sigil and
-  kept by Flycast, at both revisions.
+- A product number without a NUL: both drop trailing spaces. Where the trailing run of spaces and control whitespace
+  holds a byte in `0x09`–`0x0D`, sigil drops the whole run and Flycast keeps the id up to and including the last such
+  byte, at both revisions (`AB`, a tab, a space: sigil's id is `AB`, Flycast's `AB` and the tab).
 - A product number with a NUL: Flycast's trim runs over spaces _and_ NULs from the end, sigil's over spaces and control
   whitespace only, so at both revisions they differ where a space stands before a NUL that only NULs and spaces follow
   (`AB \0\0`: Flycast's id is `AB`, sigil's keeps the space after `AB`). At HEAD both then cut at the first NUL; at
