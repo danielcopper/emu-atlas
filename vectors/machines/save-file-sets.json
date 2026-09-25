@@ -1202,7 +1202,7 @@
     },
     {
       "name": "a-core-that-keeps-its-saves-in-a-subtree-of-its-own-says-so",
-      "rationale": "FinalBurn Neo answers no libretro memory id, and that is not the same as writing nothing: it keeps a driver's battery memory in a directory of its own below the save root. The card states the subtree, the file, what kind of data it is and whom it belongs to — and which option decides that, read live, with what the other values would mean. In the registered default no memory card exists at all, so the answer is one file and one group.",
+      "rationale": "FinalBurn Neo answers no libretro memory id, and that is not the same as writing nothing: it keeps a driver's battery memory in a directory of its own below the save root. The card states the subtree, the files, what kind of data each is and whom it belongs to — and which option decides that, read live, with what the other values would mean. In the registered default no memory card exists at all, so the answer is the driver's .fs and the .nv a board on the serial EEPROM device keeps in the same subtree, one group each: the card states both for every driver, because which drivers scan an NVRAM area and which carry that device are facts per driver that nothing enumerates, and a set is an upper bound.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1246,7 +1246,8 @@
           "file_set": {
             "state": "declared",
             "files": [
-              "rtype.fs"
+              "rtype.fs",
+              "rtype.nv"
             ],
             "complete": false,
             "groups": [
@@ -1254,6 +1255,117 @@
                 "dir": "/mnt/sd/retrodeck/saves/fbneo",
                 "files": [
                   "rtype.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/fbneo",
+                "files": [
+                  "rtype.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "fbneo",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "disabled",
+            "readings": [
+              {
+                "key": "fbneo-memcard-mode",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "shared",
+                "options": {
+                  "fbneo-memcard-mode": "shared"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-card"
+                ]
+              },
+              {
+                "mode": "per-game",
+                "options": {
+                  "fbneo-memcard-mode": "per-game"
+                },
+                "values": [
+                  "per-game-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "an-eeprom-file-found-in-the-core-subtree-is-battery-memory",
+      "rationale": "A FinalBurn Neo board on the serial EEPROM device writes <driver>.nv into the core's own subtree, and the EEPROM's contents are in the .nv alone — The Simpsons scans no NVRAM area, so it writes no .fs at all. Once the .nv lies on disk the answer is an observation, and an observed file keeps the role the declaration knows for its name: battery memory, not a file no declaration covers.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/arcade/simpsons.zip": "rom",
+          "/mnt/sd/retrodeck/saves/fbneo/simpsons.nv": "eeprom"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
+            "library_name": "FinalBurn Neo",
+            "library_version": "v1.0.0.03  01e29d5"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/simpsons.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/fbneo",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "simpsons.nv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/fbneo",
+                "files": [
+                  "simpsons.nv"
                 ],
                 "granularity": "per-game-file",
                 "role": "battery"

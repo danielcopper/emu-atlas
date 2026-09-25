@@ -842,6 +842,14 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery"
+              },
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
               }
             ]
           },
@@ -852,6 +860,14 @@
                 "subdir": "fbneo",
                 "files": [
                   "<rom_stem>.fs"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "fbneo",
+                "files": [
+                  "<rom_stem>.nv"
                 ],
                 "granularity": "per-game-file",
                 "role": "battery"
@@ -880,6 +896,14 @@
               {
                 "subdir": "fbneo",
                 "files": [
+                  "<rom_stem>.nv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              },
+              {
+                "subdir": "fbneo",
+                "files": [
                   "<rom_stem>.memcard"
                 ],
                 "granularity": "per-game-file",
@@ -898,6 +922,9 @@
           "<rom_stem>.fs": {
             "literal": "%s%cfbneo%c%s.fs"
           },
+          "<rom_stem>.nv": {
+            "literal": "%s%s.nv"
+          },
           "<rom_stem>.memcard": {
             "literal": "%s%cfbneo%c%s.memcard"
           },
@@ -907,9 +934,9 @@
         }
       },
       "provenance": {
-        "source": "FinalBurn Neo source at 01e29d5, the revision the shipped binary names in its library_version. The NVRAM/EEPROM path is built at libretro.cpp:2186 as <save_dir>/fbneo/<driver>.fs and written back when content unloads (:2512); the memory card at :2174 is built only for Neo Geo cartridge content and only while fbneo-memcard-mode is not disabled, named after the driver in per-game mode and the literal 'shared' otherwise, read and written through MemCardRead/MemCardWrite (:1888, :1897). Both hang off g_save_dir, which is GET_SAVE_DIRECTORY as the frontend hands it over. The option is defined in retro_common.cpp:392-406 with the values disabled, shared and per-game and the default disabled; this core registers its options too late for a probe to capture them, so the default is recorded in the card — the same reason LRPS2's card keeps one. Two edges the file names cannot carry: the driver name is the ROM's basename without its extension, prefixed from the *name of the directory the ROM lies in* for FinalBurn's console subsystems (md_, gg_, sms_, nes_, … libretro.cpp:2352-2424), and no arcade directory is in that table, so arcade content keeps its own name; and Neo Geo CD content takes the literal driver name 'neocdz' whatever the disc is (:2416-2421), so every Neo Geo CD game there shares one neocdz.fs.",
+        "source": "FinalBurn Neo source at 01e29d5, the revision the shipped binary names in its library_version. The NVRAM path is built at libretro.cpp:2186 as <save_dir>/fbneo/<driver>.fs and written back when content unloads (:2512) with what the driver's areas scan as NVRAM (BurnNvramSave, src/burner/nvram.cpp:83-107), and nothing where they scan none (:88-92); the memory card at :2174 is built only for Neo Geo cartridge content and only while fbneo-memcard-mode is not disabled, named after the driver in per-game mode and the literal 'shared' otherwise, read and written through MemCardRead/MemCardWrite (:1888, :1897). A board on FinalBurn Neo's serial EEPROM device (src/burn/devices/eeprom.cpp) keeps a third file in the same subtree, and the .fs does not carry its contents — that device's NVRAM scan is commented out (eeprom.cpp:408-419). Other non-volatile devices are not this one: the I2C EEPROM, the Atari EA-ROM, the Intel flash and the DS2404 scan theirs as NVRAM (src/burn/devices/i2ceeprom.cpp:135, earom.cpp:55, intelfsh.cpp:499, ds2404.cpp:322), so their contents are in the .fs, and none of them opens a file of its own. The serial device builds <EEPROM path><driver>.nv, reads it in EEPROMInit (eeprom.cpp:97, 'rb' at :103) and writes it in EEPROMExit (:120, 'wb' at :126), which a driver pairs with its EEPROMInit in its own exit (src/burn/drv/konami/d_simpsons.cpp:474, :507 for one) and retro_unload_game reaches through BurnDrvExit (libretro.cpp:2514, src/burn/burn.cpp:947); the EEPROM path is <save_dir>/fbneo/ (libretro.cpp:1968), and the driver is the name the .fs takes — BurnDrvGetText and BurnDrvGetTextA both answer the driver's szShortName for DRV_NAME (burn.cpp:389-390, :495-496). Only a driver that calls EEPROMInit opens the file, which is a fact per driver and per build that nothing here enumerates, so the card states the .nv for every driver as the upper bound its file set is: a driver that never calls EEPROMInit never writes the .nv, and one that does writes it at every unload whether or not the game touched the chip. The .fs is an upper bound the same way — a driver that scans no NVRAM area writes no .fs: the one cited above scans none (d_simpsons.cpp:651-694) and writes its .nv alone. All three hang off g_save_dir, which is GET_SAVE_DIRECTORY as the frontend hands it over. The option is defined in retro_common.cpp:392-406 with the values disabled, shared and per-game and the default disabled; this core registers its options too late for a probe to capture them, so the default is recorded in the card — the same reason LRPS2's card keeps one. Two edges the file names cannot carry: the driver name is the ROM's basename without its extension, prefixed from the *name of the directory the ROM lies in* for FinalBurn's console subsystems (md_, gg_, sms_, nes_, … libretro.cpp:2352-2424), and no arcade directory is in that table, so arcade content keeps its own name; and Neo Geo CD content takes the literal driver name 'neocdz' whatever the disc is (:2416-2421), so every Neo Geo CD game there shares one neocdz.fs. The .nv takes the same name, and the literal '%s%s.nv' its anchor pins is the format eeprom.cpp:97 builds it with.",
         "status": {
-          "disabled": "[D] The registered default, and the only mode a machine reaches without a user changing it. Read from source; the .fs path and its write at unload are the same code every mode runs, but no save was watched being written.",
+          "disabled": "[D] The registered default, and the only mode a machine reaches without a user changing it. Read from source; the .fs and .nv paths and their writes at unload are the same code every mode runs, but no save was watched being written.",
           "shared": "[D] Read from source. The name is the ternary's literal 'shared' at libretro.cpp:2174; nobody has selected this mode on a machine and watched the file appear.",
           "per-game": "[D] Read from source, same branch as 'shared' with the driver name in place of the literal. Not observed."
         }

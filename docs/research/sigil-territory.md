@@ -1147,6 +1147,12 @@ and the EEPROM path is `<save dir>/fbneo/` (`src/burner/libretro/libretro.cpp:19
 `:120`; `libretro.cpp:1923`). sigil's cell cites `retro_common.cpp` and `eeprom.cpp` (sigil's `README.md:323`); T70, the
 name alone, is `sigil only`. **[O]** Which drivers carry the EEPROM device.
 
+Past atlas's pin (`cfb5f0d`), #526 names `<rom_stem>.nv` in every mode of the card, as a battery group of its own after
+the `.fs` group, stated for every driver as an upper bound. The device that writes it is the serial EEPROM
+(`src/burn/devices/eeprom.cpp`); the I2C EEPROM, the Atari EA-ROM, the Intel flash and the DS2404 scan their contents as
+NVRAM, into the `.fs` (`i2ceeprom.cpp:135`, `earom.cpp:55`, `intelfsh.cpp:499`, `ds2404.cpp:322`). Which drivers carry
+the serial device stays **[O]**.
+
 **The save root (S2).** **[V]** At `libretro/RetroArch` `a79435a` — the pin of
 `docs/research/retrodeck-save-placement.md` — the sorted save directory appends the content directory's name under
 `sort_savefiles_by_content_enable` and then `library_name` under `sort_savefiles_enable` (`runloop.c:8826-8840`). HEAD
