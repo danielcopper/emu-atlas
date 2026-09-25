@@ -1320,7 +1320,9 @@ class ModeAlternative:
     ``values[0]``, which is exactly what the old single value said. Selecting
     the alternative reaches an answer that states those same distinct
     groupings, in the same order, wherever that answer's file set is
-    ``declared`` and carries groups — the alternatives tripwire holds that.
+    ``declared`` and carries groups; where it is ``declared`` and carries none,
+    there are no groupings to list, and ``values`` is the one word that answer
+    states as its ``granularity.value``. The alternatives tripwire holds both.
     """
 
     mode: str
@@ -1335,7 +1337,8 @@ class ModeAlternative:
     """Every distinct grouping among that mode's groups, in card order with the mode's
     own first — the same distinct groupings, in the same order, that the answer reached
     by selecting this alternative states wherever its file set is ``declared`` and
-    carries groups.
+    carries groups; where that set carries none, the one word that answer states as its
+    ``granularity.value``.
     """
 
 
@@ -1419,7 +1422,14 @@ class SavefilePlacement:
 
     dir: str
     """The directory this emulator keeps the save in — concrete where the caller supplied
-    the content path, otherwise a template whose holes ``needs`` lists.
+    the content path, otherwise a template whose holes ``needs`` lists. In the GameCube
+    answer of Dolphin and of PrimeHack, the one fork that answers through it, ``dir`` can
+    name a stand-in: where ``file_set.groups`` is empty and ``granularity.value`` is not
+    ``none``, a slot holds a card at a path this host cannot locate, and ``dir`` is
+    ``Dolphin.ini``'s own directory, not where the card lies — ``physical_dir`` and any
+    link caveat describe that directory too. The card's configured path is the
+    ``data.path`` of the ``sandbox-path-untranslated`` caveat whose ``data.key`` names
+    that slot's path key.
     """
     root_kind: RootKind
     """Which anchor ``dir`` hangs off — one of :data:`ROOT_KINDS`, from the configured

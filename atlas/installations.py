@@ -6410,13 +6410,20 @@ def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
 
 @dataclass(frozen=True, slots=True)
 class _DolphinSlot:
-    """One card slot's contribution to the answer: groups, readings, caveats."""
+    """One card slot's contribution to the answer: groups, readings, caveats.
+
+    ``unreachable`` is the grouping of a card the slot holds at a path this
+    host cannot locate: the emulator keeps saves there, so the slot is not
+    empty, but atlas has no directory to state a group in. ``None`` wherever
+    the slot's groups say everything, or it holds no card atlas recognizes.
+    """
 
     mode: str
     groups: tuple[FileGroup, ...] = ()
     readings: tuple[OptionReading, ...] = ()
     caveats: tuple[Caveat, ...] = ()
     template_dir: str | None = None
+    unreachable: str | None = None
 
 
 def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
@@ -6458,6 +6465,7 @@ def _dolphin_raw_slot(
         if resolved.path is None:
             return _DolphinSlot(
                 mode="card",
+                unreachable=GRANULARITY_SHARED_FILE,
                 caveats=(
                     Caveat(
                         CAVEAT_SANDBOX_PATH_UNTRANSLATED,
@@ -6516,6 +6524,7 @@ def _dolphin_folder_slot(
         if resolved.path is None:
             return _DolphinSlot(
                 mode="folder",
+                unreachable=GRANULARITY_PER_GAME_FILES,
                 caveats=(
                     Caveat(
                         CAVEAT_SANDBOX_PATH_UNTRANSLATED,
@@ -6649,6 +6658,7 @@ def _dolphin_slot(
             readings=(slot_reading, *slot.readings),
             caveats=slot.caveats,
             template_dir=slot.template_dir,
+            unreachable=slot.unreachable,
         )
     if device == _DOLPHIN_DEVICE_AGP:
         return _DolphinSlot(
@@ -6691,6 +6701,22 @@ def _dolphin_slot(
     )
 
 
+def _dolphin_ungrouped_value(slots: Sequence[_DolphinSlot]) -> str:
+    """The granularity a GameCube answer carrying no group states.
+
+    The card of the first slot whose path this host cannot locate groups the
+    way its device does — the emulator keeps saves on it, atlas only cannot
+    reach them — so the answer states that grouping with no group beside it,
+    and :data:`GRANULARITY_NONE` is left for where no slot holds a card atlas
+    recognizes: a raw card or a GCI folder. Where two such cards group
+    differently the first slot's word is stated, the way ``groups[0]`` decides
+    the value of an answer that carries groups. The answer and the alternative
+    naming its mode both read it here, so what the alternative promises is what
+    the reached answer states.
+    """
+    return next((slot.unreachable for slot in slots if slot.unreachable), GRANULARITY_NONE)
+
+
 def _dolphin_gc_answer(
     slots: tuple[_DolphinSlot, _DolphinSlot],
     *,
@@ -6716,6 +6742,7 @@ def _dolphin_gc_answer(
     mode = "+".join(slot.mode for slot in slots)
     template = next((slot.template_dir for slot in slots if slot.template_dir), None)
     if groups:
+        value = groups[0].granularity
         directory = template or groups[0].dir
         needs = (HOLE_REGION,) if template else ()
         named_first = groups[0].files is not None
@@ -6741,12 +6768,16 @@ def _dolphin_gc_answer(
                 if g.files is None
             )
     else:
-        # No device keeps a card: nothing on this machine takes a GameCube
-        # game's save writes until a slot is configured again.
+        # No slot carries a group: either no slot holds a card atlas
+        # recognizes, and no save write lands anywhere atlas models until a
+        # slot is configured again, or a card sits at a path this host cannot
+        # locate — see _dolphin_ungrouped_value.
+        value = _dolphin_ungrouped_value(slots)
         directory = template or (ini_path and os.path.dirname(ini_path)) or "/"
         needs = ()
         files = ()
         state = FILE_SET_DECLARED
+    if value == GRANULARITY_NONE:
         caveats.append(
             Caveat(
                 CAVEAT_SAVE_WRITES_DISCARDED,
@@ -6776,7 +6807,7 @@ def _dolphin_gc_answer(
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
-            value=groups[0].granularity if groups else GRANULARITY_NONE,
+            value=value,
             mode=mode,
             readings=readings,
             alternatives=alternatives,
@@ -6823,15 +6854,16 @@ def _dolphin_alternatives(
     contributes the granularity of the groups it already carries. Each slot
     contributes the distinct granularities of its own groups and nothing at all
     where it carries none — among those, a slot whose configured path this host
-    cannot locate, because a card whose file atlas cannot reach groups nothing
-    it can state.
+    cannot locate, because a group needs a directory and this host can state
+    none for that card.
 
-    Where neither slot would carry a group the mode keeps no save this answer
-    can place, and ``values`` says so with :data:`GRANULARITY_NONE`, which is
-    what the reached answer states as its own ``granularity.value``. An empty
-    tuple would say it differently and worse: nothing refuses one, and a client
-    reading ``values[0]`` the way :class:`ModeAlternative` tells it to would
-    raise instead of reading a word.
+    Where neither slot would carry a group, ``values`` is the one word the
+    reached answer states as its own ``granularity.value`` instead, read by the
+    same :func:`_dolphin_ungrouped_value`. The flipped slot always holds a card,
+    so that word is the grouping of a card at a path this host cannot locate,
+    never :data:`GRANULARITY_NONE`. An empty tuple would say it differently and
+    worse: nothing refuses one, and a client reading ``values[0]`` the way
+    :class:`ModeAlternative` tells it to would raise instead of reading a word.
     """
     a, b = slots
     alternatives: list[ModeAlternative] = []
@@ -6839,8 +6871,12 @@ def _dolphin_alternatives(
     if flip is not None:
         other, device = flip
         flipped = _dolphin_carded_slot("A", device, values, sandbox, gc_root, cite)
-        groups = (*(flipped.groups if flipped else ()), *b.groups)
-        groupings = tuple(dict.fromkeys(g.granularity for g in groups)) or (GRANULARITY_NONE,)
+        assert flipped is not None  # every device a flip writes keeps a card
+        reached = (flipped, b)
+        groups = tuple(g for slot in reached for g in slot.groups)
+        groupings = tuple(dict.fromkeys(g.granularity for g in groups)) or (
+            _dolphin_ungrouped_value(reached),
+        )
         alternatives.append(
             ModeAlternative(
                 mode=f"{other}+{b.mode}",
