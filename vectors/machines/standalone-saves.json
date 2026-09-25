@@ -12590,7 +12590,7 @@
       }
     },
     {
-      "name": "dolphin-a-card-at-an-unlocatable-path-keeps-its-slot-and-its-saves",
+      "name": "dolphin-a-card-at-an-unlocatable-path-keeps-its-slot-and-is-not-discarded",
       "rationale": "Slot A holds the raw memory card (SlotA = 1) at a MemcardAPath only the emulator's sandbox can read, and slot B holds no device. The emulator writes every GameCube save onto that card, so the answer does not say saves are discarded: the card groups as a shared file, the way its device does, and carries no group only because atlas has no directory to state one in — sandbox-path-untranslated names the key and the path. dir is Dolphin.ini's own directory, a stand-in rather than where the card lies. The alternative names the flip to the GCI folder, which this host can locate.",
       "input": {
         "home": "/home/deck",
@@ -12694,7 +12694,7 @@
     },
     {
       "name": "dolphin-a-flip-to-a-lone-unlocatable-card-promises-its-grouping",
-      "rationale": "Slot A holds the GCI folder and slot B no device, while MemcardAPath names a path only the emulator's sandbox can read. Flipping slot A to the raw card reaches an answer that carries no group and states the card's own grouping, shared-file, as its granularity value — the card keeps saves, atlas only cannot reach it. With no group to list, the alternative's values is that one word, the one the reached answer states, rather than none, which would promise that nothing is kept. The alternative also carries the sandbox-path-untranslated caveat the reached answer states for MemcardAPath, so a client learns before the edit that the mode keeps saves atlas cannot reach here.",
+      "rationale": "Slot A holds the GCI folder and slot B no device, while MemcardAPath names a path only the emulator's sandbox can read. Flipping slot A to the raw card reaches an answer that carries no group and states the card's own grouping, shared-file, as its granularity value — the emulator writes to the card, atlas only cannot reach it or tell whether those writes are kept. With no group to list, the alternative's values is that one word, the one the reached answer states, rather than none, which would promise that nothing is kept. The alternative also carries the sandbox-path-untranslated caveat the reached answer states for MemcardAPath, so a client learns before the edit that the mode writes to a card atlas cannot reach here.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13011,7 +13011,7 @@
     },
     {
       "name": "dolphin-a-flip-to-a-lone-unlocatable-folder-promises-its-grouping",
-      "rationale": "Slot A holds the raw memory card and slot B no device, while GCIFolderAPath names a path only the emulator's sandbox can read. Flipping slot A to the GCI folder reaches an answer that carries no group and states the folder's own grouping, per-game-files, as its granularity value. The alternative promises that word and carries the sandbox-path-untranslated caveat the reached answer states for GCIFolderAPath, so a client learns before the edit that the mode keeps saves atlas cannot reach here.",
+      "rationale": "Slot A holds the raw memory card and slot B no device, while GCIFolderAPath names a path only the emulator's sandbox can read. Flipping slot A to the GCI folder reaches an answer that carries no group and states the folder's own grouping, per-game-files, as its granularity value. The alternative promises that word and carries the sandbox-path-untranslated caveat the reached answer states for GCIFolderAPath, so a client learns before the edit that the mode writes to a folder atlas cannot reach here.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13688,7 +13688,7 @@
       }
     },
     {
-      "name": "dolphin-a-gba-cartridge-at-a-sandbox-only-path-keeps-its-save-unlocated",
+      "name": "dolphin-a-gba-cartridge-at-a-sandbox-only-path-is-stated-unlocated",
       "rationale": "AgpCartAPath is a path only the emulator's sandbox can read. The cartridge's .sav beside it cannot be located from here, let alone sized, so — as for a memory card at such a path — the slot is not called empty: no group, sandbox-path-untranslated names the key and the configured path, granularity is the grouping the cartridge save would have (shared-file), and dir is Dolphin.ini's own directory as a stand-in.",
       "input": {
         "home": "/home/deck",
@@ -14159,7 +14159,7 @@
     },
     {
       "name": "dolphin-an-uninterpreted-slot-device-beside-an-unlocatable-card-answers",
-      "rationale": "Slot A holds a device id this card cannot interpret and slot B a raw memory card at a path only the sandbox can read. That card keeps saves, so the answer stands on it — granularity shared-file with sandbox-path-untranslated — and the uninterpreted device rides it as core-mode-unestablished rather than refusing the question.",
+      "rationale": "Slot A holds a device id this card cannot interpret and slot B a raw memory card at a path only the sandbox can read. The emulator writes to that card, so the answer stands on it — granularity shared-file with sandbox-path-untranslated — and the uninterpreted device rides it as core-mode-unestablished rather than refusing the question.",
       "input": {
         "home": "/home/deck",
         "files": {
