@@ -112,8 +112,10 @@ class TestWhatItRefusesWholesale:
 
     def test_a_fallback_fills_a_token_the_file_leaves_empty(self):
         # RPCS3's own rule: an empty $(EmulatorDir) means its config directory
-        # (vfs_config.cpp:32-39), so the caller supplies what the emulator
-        # would use and the file's own value still wins where it has one.
+        # (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and
+        # passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd), so the
+        # caller supplies what the emulator would use and the file's own value
+        # still wins where it has one.
         text = '$(EmulatorDir): ""\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n'
         read = read_scalars(text, fallbacks={"$(EmulatorDir)": "/config/rpcs3/"})
         assert read.get("/dev_hdd0/") == "/config/rpcs3/dev_hdd0/"

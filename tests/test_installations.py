@@ -4178,8 +4178,9 @@ PER_USER_ESDE = (
 VITA3K_CONFIG_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
 RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
 # Where the compiled default drive puts the first user's saves: $(EmulatorDir)
-# is empty, which means the emulator's own config directory (vfs_config.cpp:32-39,
-# the default itself vfs_config.h:13).
+# is empty, which means the emulator's own config directory (get_emu_dir,
+# system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into
+# vfs_config.cpp:50 at build 7c6b3dcd; the default itself vfs_config.h:13).
 RPCS3_DEFAULT_SAVEDATA = (
     f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata"
 )
@@ -5488,8 +5489,128 @@ class TestTheUserAPerUserTreeWouldOpen:
             "(Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar "
             "for it to accept (convert.h:73-75 at the yaml-cpp fork 51a5d623, the submodule "
             "that build pins) — so the compiled default $(EmulatorDir)dev_hdd0/ governs "
-            "(vfs_config.h:13)"
+            "(vfs_config.h:13), with $(EmulatorDir) the config directory an unset, empty or "
+            "null one means (get_emu_dir, system_utils.cpp:146-150, called at "
+            "System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd)"
         )
+
+    # A drive left to the compiled default, once per way vfs.yml can leave it:
+    # the key unset, stated empty, and stated as a null node.
+    _RPCS3_DEFAULT_DRIVES = {
+        "unset": "",
+        "empty": '/dev_hdd0/: ""\n',
+        "null-node": "/dev_hdd0/: ~\n",
+    }
+
+    @pytest.mark.parametrize("drive", sorted(_RPCS3_DEFAULT_DRIVES))
+    @pytest.mark.parametrize(
+        "emulator_dir,savedata",
+        [
+            ("/mnt/sd/rpcs3/", "/mnt/sd/rpcs3/dev_hdd0/home/00000001/savedata"),
+            ("/mnt/sd/rpcs3", "/mnt/sd/rpcs3dev_hdd0/home/00000001/savedata"),
+        ],
+    )
+    def test_rpcs3_the_compiled_default_composes_off_the_stated_emulator_dir(
+        self, drive, emulator_dir, savedata
+    ):
+        # Substituted as written: no separator joins a value that lacks one.
+        vfs = f"$(EmulatorDir): {emulator_dir}\n{self._RPCS3_DEFAULT_DRIVES[drive]}"
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == savedata
+        assert self._provenance(p)["/dev_hdd0/"].endswith(
+            f', with $(EmulatorDir) the "{emulator_dir}" vfs.yml states, substituted as '
+            "written (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and "
+            "passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd)"
+        )
+
+    @pytest.mark.parametrize("drive", sorted(_RPCS3_DEFAULT_DRIVES))
+    @pytest.mark.parametrize(
+        "emulator_dir", ["", "$(EmulatorDir): \"\"\n", "$(EmulatorDir):\n", "$(EmulatorDir): ~\n"]
+    )
+    def test_rpcs3_the_compiled_default_without_an_emulator_dir_is_the_config_directory(
+        self, drive, emulator_dir
+    ):
+        vfs = f"{emulator_dir}{self._RPCS3_DEFAULT_DRIVES[drive]}"
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == RPCS3_DEFAULT_SAVEDATA
+        assert self._provenance(p)["/dev_hdd0/"].endswith(
+            ", with $(EmulatorDir) the config directory an unset, empty or null one means "
+            "(get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at "
+            ":483 into vfs_config.cpp:50 at build 7c6b3dcd)"
+        )
+
+    def test_rpcs3_a_drive_stated_empty_says_so_rather_than_unset(self):
+        p = self._answer("ps3", files={RPCS3_VFS_YML: self._RPCS3_DEFAULT_DRIVES["empty"]})
+        assert not isinstance(p, atlas.Unresolved)
+        assert self._readings(p)["/dev_hdd0/"] == ""
+        assert self._provenance(p)["/dev_hdd0/"].startswith(
+            "/dev_hdd0/ is stated empty, and cfg_vfs::get falls to the default for an empty path "
+            "(vfs_config.cpp:18-28 at build 7c6b3dcd) — so the compiled default "
+            "$(EmulatorDir)dev_hdd0/ governs (vfs_config.h:13)"
+        )
+
+    @pytest.mark.parametrize("drive", sorted(_RPCS3_DEFAULT_DRIVES))
+    @pytest.mark.parametrize(
+        "emulator_dir",
+        [
+            "$(EmulatorDir):\n  Path: /mnt/sd/x/\n",
+            "$(EmulatorDir):\n  - /mnt/sd/x/\n",
+            "$(EmulatorDir): |\n  /mnt/sd/x/\n",
+        ],
+    )
+    def test_rpcs3_an_unread_emulator_dir_under_the_default_drive_refuses(
+        self, drive, emulator_dir
+    ):
+        vfs = f"{emulator_dir}{self._RPCS3_DEFAULT_DRIVES[drive]}"
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.data["reason"] == atlas.REASON_KEY_UNREAD
+        assert p.data["key"] == "$(EmulatorDir)"
+
+    @pytest.mark.parametrize("drive", sorted(_RPCS3_DEFAULT_DRIVES))
+    @pytest.mark.parametrize("emulator_dir", ["/run/user/1000/rpcs3/", "/app/rpcs3/"])
+    def test_rpcs3_a_default_drive_composed_off_a_sandbox_path_is_untranslatable(
+        self, drive, emulator_dir
+    ):
+        vfs = f"$(EmulatorDir): {emulator_dir}\n{self._RPCS3_DEFAULT_DRIVES[drive]}"
+        p = self._answer("ps3", files={RPCS3_VFS_YML: vfs})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE
+        assert p.data == {
+            "token": "RPCS3",
+            "config": RPCS3_VFS_YML,
+            "path": f"{emulator_dir}dev_hdd0/",
+        }
+        assert p.message.startswith(
+            "the compiled default $(EmulatorDir)dev_hdd0/, composed off the $(EmulatorDir) "
+            f"vfs.yml states ({emulator_dir!r}) into '{emulator_dir}dev_hdd0/', has no "
+            "spelling on this host"
+        )
+
+    def test_rpcs3_an_untranslatable_stated_drive_is_the_drive_the_file_names(self):
+        p = self._answer("ps3", files={RPCS3_VFS_YML: "/dev_hdd0/: /run/user/1000/hdd/\n"})
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE
+        assert p.data["path"] == "/run/user/1000/hdd/"
+        assert p.message.startswith(
+            "the drive RPCS3's VFS configuration names ('/run/user/1000/hdd/') has no spelling"
+        )
+
+    def test_rpcs3_an_unread_emulator_dir_beside_a_drive_without_the_token_leaves_the_answer(
+        self,
+    ):
+        # The drive names no $(EmulatorDir), so nothing in it hangs on the
+        # value the reader passed over. A drive that does name the token is
+        # not this case (see _rpcs3_vfs_refusal).
+        p = self._answer(
+            "ps3",
+            files={RPCS3_VFS_YML: "$(EmulatorDir):\n  - /mnt/sd/x/\n/dev_hdd0/: /mnt/sd/hdd/\n"},
+        )
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{RPCS3_HOME}/00000001/savedata"
 
     # The two keys the drive hangs on, each stated twice: the drive itself and
     # the variable every device path is composed off. The third shape is the
