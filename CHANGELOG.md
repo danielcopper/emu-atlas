@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.22.0](https://github.com/danielcopper/emu-atlas/compare/v0.21.0...v0.22.0) (2026-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dolphin:** an alternative carries its unlocatable path's caveat ([#544](https://github.com/danielcopper/emu-atlas/issues/544))
+* **fbneo:** the card names the .nv the serial EEPROM device writes ([#543](https://github.com/danielcopper/emu-atlas/issues/543))
+* **dolphin:** an agp slot reads the cartridge save beside its cartridge ([#539](https://github.com/danielcopper/emu-atlas/issues/539))
+* **duckstation:** a shared card whose path this host cannot locate is not an empty slot ([#538](https://github.com/danielcopper/emu-atlas/issues/538))
+* **dolphin:** a card whose path this host cannot locate keeps its slot and its saves ([#533](https://github.com/danielcopper/emu-atlas/issues/533))
+* **rpcs3:** an unset /dev_hdd0/ composes off the stated $(EmulatorDir), not off the config directory ([#531](https://github.com/danielcopper/emu-atlas/issues/531))
+* **dolphin:** an alternative's values names every grouping of its mode, and the walk holds it ([#522](https://github.com/danielcopper/emu-atlas/issues/522))
+
+### Bug Fixes
+
+* **dolphin:** a card whose path this host cannot locate keeps its slot and its saves ([#533](https://github.com/danielcopper/emu-atlas/issues/533)) ([e78ec95](https://github.com/danielcopper/emu-atlas/commit/e78ec9533e8d4095b17095d25c05247a9ebd703a)), closes [#523](https://github.com/danielcopper/emu-atlas/issues/523)
+* **dolphin:** an agp slot reads the cartridge save beside its cartridge ([#539](https://github.com/danielcopper/emu-atlas/issues/539)) ([df6d347](https://github.com/danielcopper/emu-atlas/commit/df6d347ead0d8b0f8fdd505a6b5c2cf03480cc54)), closes [#535](https://github.com/danielcopper/emu-atlas/issues/535)
+* **dolphin:** an alternative carries its unlocatable path's caveat ([#544](https://github.com/danielcopper/emu-atlas/issues/544)) ([efb6dc1](https://github.com/danielcopper/emu-atlas/commit/efb6dc1c2c9fd9fbed9ae6833f46caf38e68f330)), closes [#524](https://github.com/danielcopper/emu-atlas/issues/524)
+* **dolphin:** an alternative's values names every grouping of its mode, and the walk holds it ([#522](https://github.com/danielcopper/emu-atlas/issues/522)) ([cfb5f0d](https://github.com/danielcopper/emu-atlas/commit/cfb5f0d3e5f63c694bbeded6b72d72c2bac9636e)), closes [#518](https://github.com/danielcopper/emu-atlas/issues/518) [#409](https://github.com/danielcopper/emu-atlas/issues/409)
+* **duckstation:** a shared card whose path this host cannot locate is not an empty slot ([#538](https://github.com/danielcopper/emu-atlas/issues/538)) ([1bc5e99](https://github.com/danielcopper/emu-atlas/commit/1bc5e99d0fcb71119bef97dba359335917daa492)), closes [#534](https://github.com/danielcopper/emu-atlas/issues/534)
+* **fbneo:** the card names the .nv the serial EEPROM device writes ([#543](https://github.com/danielcopper/emu-atlas/issues/543)) ([ab8f589](https://github.com/danielcopper/emu-atlas/commit/ab8f58905c3f8360a56305b79d573b26dda01925)), closes [#526](https://github.com/danielcopper/emu-atlas/issues/526)
+* **rpcs3:** an unset /dev_hdd0/ composes off the stated $(EmulatorDir), not off the config directory ([#531](https://github.com/danielcopper/emu-atlas/issues/531)) ([d589bad](https://github.com/danielcopper/emu-atlas/commit/d589bad9b362bdc32c94503590147c208dc776ae)), closes [#512](https://github.com/danielcopper/emu-atlas/issues/512)
+* **saves:** an answer applying a card to a core with options its audit never examined says so ([#532](https://github.com/danielcopper/emu-atlas/issues/532)) ([76a4861](https://github.com/danielcopper/emu-atlas/commit/76a48610d951ec1475ca71fb51341e2022336b44)), closes [#525](https://github.com/danielcopper/emu-atlas/issues/525)
+* **yaml:** the five null spellings fold and a repeated key reads as its first statement ([#513](https://github.com/danielcopper/emu-atlas/issues/513)) ([fe67969](https://github.com/danielcopper/emu-atlas/commit/fe67969029660d9057877eceec991d790058c0e2)), closes [#506](https://github.com/danielcopper/emu-atlas/issues/506) [#507](https://github.com/danielcopper/emu-atlas/issues/507)
+
+
+### Documentation
+
+* describe sigil's three calls and state that atlas answers the save unit itself ([#529](https://github.com/danielcopper/emu-atlas/issues/529)) ([b154704](https://github.com/danielcopper/emu-atlas/commit/b15470425b9a81fb064be3cbefbf5aebae92d3b6)), closes [#519](https://github.com/danielcopper/emu-atlas/issues/519)
+* **research:** survey sigil's territory and state why atlas keeps the save-unit knowledge ([#528](https://github.com/danielcopper/emu-atlas/issues/528)) ([785f3cf](https://github.com/danielcopper/emu-atlas/commit/785f3cf5faca503cba99d9acf489bed6a5bdca06)), closes [#521](https://github.com/danielcopper/emu-atlas/issues/521)
+* the reference-machine readings outside the guide are restated from the mechanism ([#517](https://github.com/danielcopper/emu-atlas/issues/517)) ([cf57c28](https://github.com/danielcopper/emu-atlas/commit/cf57c2805ee084ca4fb3039f5f4a85307a1a6145)), closes [#508](https://github.com/danielcopper/emu-atlas/issues/508)
+
 ## [0.21.0](https://github.com/danielcopper/emu-atlas/compare/v0.20.0...v0.21.0) (2026-09-21)
 
 
