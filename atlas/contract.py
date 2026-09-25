@@ -150,7 +150,12 @@ def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
                 for r in granularity.readings
             ],
             "alternatives": [
-                {"mode": a.mode, "options": dict(a.options), "values": list(a.values)}
+                {
+                    "mode": a.mode,
+                    "options": dict(a.options),
+                    "values": list(a.values),
+                    "caveats": _caveats_contract(a.caveats),
+                }
                 for a in granularity.alternatives
             ],
         },

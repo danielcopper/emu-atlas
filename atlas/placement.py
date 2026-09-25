@@ -1325,6 +1325,11 @@ class ModeAlternative:
     ``declared`` and carries groups; where it is ``declared`` and carries none,
     there are no groupings to list, and ``values`` is the one word that answer
     states as its ``granularity.value``. The alternatives tripwire holds both.
+    ``caveats`` is what that answer will say about a switch the mode reads and
+    this answer does not — stated here, before the edit, rather than on this
+    answer, which it is not about. It is where a ``values`` that is short of
+    what the mode keeps says why: a card atlas cannot reach carries no group.
+    The tripwire holds that too.
     """
 
     mode: str
@@ -1341,6 +1346,13 @@ class ModeAlternative:
     by selecting this alternative states wherever its file set is ``declared`` and
     carries groups; where that set carries none, the one word that answer states as its
     ``granularity.value``.
+    """
+    caveats: tuple[Caveat, ...] = ()
+    """The caveats the answer reached by selecting this alternative states about a switch
+    only that mode reads — each one exactly as that answer states it, so a client learns
+    before the edit what that answer will qualify. Today the one such caveat is Dolphin's
+    ``sandbox-path-untranslated`` for a flipped slot's path this host cannot locate, which
+    says the mode keeps saves atlas cannot reach here; empty everywhere else.
     """
 
 

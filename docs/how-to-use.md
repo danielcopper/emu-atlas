@@ -829,6 +829,7 @@ for a in g.alternatives:
     a.mode          # 'internal-shared'                       — another reachable mode
     a.options       # (('beetle_saturn_shared_int', 'enabled'), ('beetle_saturn_shared_ext', 'disabled'))
     a.values        # ('shared-file', 'per-game-file')        — every grouping in that mode, its own first
+    a.caveats       # ()                                      — what the reached answer says about a switch it reads and this one does not
 ```
 
 An alternative names the **full option combination** that reaches its mode, so "switch to per-game saves" is a concrete
@@ -836,9 +837,9 @@ edit of concrete keys in a concrete file, not a guess — and a test holds it th
 corpus publishes, except any the test names as unappliable, is written into the fixture it came from and the question
 asked again, and the answer has to select exactly the mode the alternative named — and, wherever that answer declares
 its groups, state exactly the groupings its `values` named, and where it declares none, state the one word `values`
-names as its `granularity.value`. One special value: `g.value == atlas.GRANULARITY_NONE` (only ever beside
-`save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are then exactly
-the way out.
+names as its `granularity.value` — and state, about the switches only it reads, exactly the caveats its `caveats` names.
+One special value: `g.value == atlas.GRANULARITY_NONE` (only ever beside `save-writes-discarded`) means this
+configuration keeps no save at all — the readings and alternatives are then exactly the way out.
 
 **A mixed mode states every grouping.** `granularity.value` is _one_ word — the first group's — and for the mode in
 force that is exact, because `file_set.groups` carries every part with its own grouping and role. An alternative has no
@@ -848,6 +849,14 @@ FinalBurn Neo's shared mode adds a card every game shares beside the per-game sa
 'shared-card')` says so where a single word used to hide it. A client that wants one word reads
 `values[0]`. A mode that carries no group has no groupings to list; its `values` is then the one word the paragraph
 above describes.
+
+**An alternative states its own caveats.** `a.caveats` is what the answer reached by that edit will say about a switch
+the mode reads and the answer in force does not — each caveat exactly as that answer will state it, and empty wherever
+that answer says nothing of the kind. It lives on the alternative and never in `placement.caveats`, whose caveats are
+about the answer in force. The case today is Dolphin's flip of slot A to a raw card or a GCI folder at a path only the
+emulator's sandbox can spell: the alternative carries that path's `sandbox-path-untranslated`, which says why the card
+adds no group to the answer reached — and so, beside a slot that carries one, no grouping to `values` — and it tells a
+mode that keeps no such card from one whose card atlas cannot reach before the edit is written.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
 set has no files to decompose, the standard rule states one list in one directory, and a **savestate** answer is never
@@ -1290,7 +1299,9 @@ and the first slot's where both slots hold such a card. `dir` is then a stand-in
 GameCube answer and PrimeHack's, the one fork that answers through it, an answer whose `file_set.groups` is empty while
 `granularity.value` is not `none` names `Dolphin.ini`'s own directory as `dir` — not where the card lies — and
 `physical_dir` and any link caveat describe that directory too. The card's configured path is the `data.path` of the
-`sandbox-path-untranslated` caveat whose `data.key` names that slot's path key.
+`sandbox-path-untranslated` caveat whose `data.key` names that slot's path key. That holds for the slots the answer
+reads; the path a flip of slot A would read is in that alternative's `caveats` instead (see **An alternative states its
+own caveats** under "When one save is several kinds of file — `file_set.groups`").
 
 **A GBA cartridge adapter's save is the `.sav` beside its cartridge.** With a slot set to 9, Dolphin loads the cartridge
 `[Core] AgpCartAPath` or `AgpCartBPath` names and, beside it, the same path with its extension swapped for `.sav`, and

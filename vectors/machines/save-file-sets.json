@@ -1298,7 +1298,8 @@
                 "values": [
                   "per-game-file",
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "per-game",
@@ -1307,7 +1308,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -1401,7 +1403,8 @@
                 "values": [
                   "per-game-file",
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "per-game",
@@ -1410,7 +1413,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -2560,7 +2564,8 @@
                   "per-game-file",
                   "shared-card",
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -2721,7 +2726,8 @@
                   "per-game-file",
                   "shared-card",
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -2853,7 +2859,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -4099,7 +4106,8 @@
                 "values": [
                   "per-game-file",
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-4meg-per-game",
@@ -4109,7 +4117,8 @@
                 "values": [
                   "shared-file",
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram",
@@ -4118,7 +4127,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-128k",
@@ -4127,7 +4137,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-256k",
@@ -4136,7 +4147,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-512k",
@@ -4145,7 +4157,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-1meg",
@@ -4154,7 +4167,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "cd-bios-bram+cart-2meg",
@@ -4163,7 +4177,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -4506,7 +4521,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -4607,7 +4623,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -4717,7 +4734,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -4913,7 +4931,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -5321,7 +5340,8 @@
                 "values": [
                   "per-game-file",
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-shared+card2-shared",
@@ -5330,7 +5350,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-title+card2-shared",
@@ -5340,7 +5361,8 @@
                 "values": [
                   "per-game-file",
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-none+card2-shared",
@@ -5349,7 +5371,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-code+card2-none",
@@ -5358,7 +5381,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-code+card2-per-code",
@@ -5367,7 +5391,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-code+card2-per-title",
@@ -5376,7 +5401,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -5493,7 +5519,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-shared+card2-none",
@@ -5502,7 +5529,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-code+card2-none",
@@ -5511,7 +5539,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-per-title+card2-none",
@@ -5520,7 +5549,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-none+card2-shared",
@@ -5529,7 +5559,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-none+card2-per-code",
@@ -5538,7 +5569,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "card1-none+card2-per-title",
@@ -5547,7 +5579,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -6582,7 +6615,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "floppy-redirected",
@@ -6591,7 +6625,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -6755,7 +6790,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "floppy-redirected",
@@ -6764,7 +6800,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -6929,7 +6966,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -7113,7 +7151,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "floppy-writeback",
@@ -7122,7 +7161,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -7290,7 +7330,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -7461,7 +7502,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -7621,7 +7663,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -8320,7 +8363,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -8484,7 +8528,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -8649,7 +8694,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -8833,7 +8879,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "floppy-format-discarded",
@@ -8842,7 +8889,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9002,7 +9050,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9162,7 +9211,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9339,7 +9389,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9503,7 +9554,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "floppy-redirected",
@@ -9512,7 +9564,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9680,7 +9733,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -9873,7 +9927,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -9882,7 +9937,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -10080,7 +10136,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -10089,7 +10146,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -10282,7 +10340,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -10291,7 +10350,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -10479,7 +10539,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -10488,7 +10549,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -10669,7 +10731,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -10678,7 +10741,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -10867,7 +10931,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-files",
@@ -10876,7 +10941,8 @@
                 },
                 "values": [
                   "per-game-directory"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -11056,7 +11122,8 @@
                 },
                 "values": [
                   "per-game-directory"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -11065,7 +11132,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -11385,7 +11453,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "archived-floppy-redirected",
@@ -11394,7 +11463,8 @@
                 },
                 "values": [
                   "per-game-files"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -11575,7 +11645,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "archived-floppy-writeback-lost",
@@ -11584,7 +11655,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -11755,7 +11827,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -11925,7 +11998,8 @@
                 },
                 "values": [
                   "shared-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -12097,7 +12171,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -12290,7 +12365,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -12299,7 +12375,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -12770,7 +12847,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -12779,7 +12857,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -13677,7 +13756,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -13686,7 +13766,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -13879,7 +13960,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -13888,7 +13970,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -14080,7 +14163,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -14089,7 +14173,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -14282,7 +14367,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -14291,7 +14377,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -14484,7 +14571,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -14493,7 +14581,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -14681,7 +14770,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -14690,7 +14780,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -14877,7 +14968,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -14886,7 +14978,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -15217,7 +15310,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -15226,7 +15320,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -15413,7 +15508,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -15422,7 +15518,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -16317,7 +16414,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -16326,7 +16424,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -16818,7 +16917,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -16827,7 +16927,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -17019,7 +17120,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -17028,7 +17130,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -18724,7 +18827,8 @@
                 },
                 "values": [
                   "none"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -18733,7 +18837,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }
@@ -18921,7 +19026,8 @@
                 },
                 "values": [
                   "per-game-file"
-                ]
+                ],
+                "caveats": []
               },
               {
                 "mode": "whdload-hdfs",
@@ -18930,7 +19036,8 @@
                 },
                 "values": [
                   "shared-card"
-                ]
+                ],
+                "caveats": []
               }
             ]
           }

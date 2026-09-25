@@ -310,7 +310,7 @@ KNOWN_FIRMWARE_CHECKED = {
 NO_IDENTITY_CHECKED = {"unknown", "unrecognised", "refused", "unread"}
 GRANULARITY_FIELDS = {"value", "mode", "readings", "alternatives"}
 READING_FIELDS = {"key", "value", "options_file"}
-ALTERNATIVE_FIELDS = {"mode", "options", "values"}
+ALTERNATIVE_FIELDS = {"mode", "options", "values", "caveats"}
 # The one granularity value no file group may carry: it says no save data is
 # kept at all (write protection discarding the writes), and a group is a place
 # save data lives. Valid for granularity.value and an alternative's value only.
@@ -1451,7 +1451,7 @@ def _validate_reading(name: str, reading: Any) -> None:
 
 
 def _validate_alternative(name: str, alternative: Any, granularity_values: set[str]) -> None:
-    """One reachable mode: its name, the option combination, its grouping."""
+    """One reachable mode: its name, the option combination, its grouping, its caveats."""
     _require_exact(name, alternative, ALTERNATIVE_FIELDS, "granularity alternative")
     if not isinstance(alternative["mode"], str) or not alternative["mode"]:
         fail(f"{name}: an alternative's mode must be a non-empty string")
@@ -1465,6 +1465,7 @@ def _validate_alternative(name: str, alternative: Any, granularity_values: set[s
         fail(f"{name}: an alternative's values must be a non-empty list — its mode groups somehow")
     if any(value not in granularity_values for value in values):
         fail(f"{name}: every alternative's granularity must be one of {sorted(granularity_values)}")
+    _validate_caveats(name, alternative["caveats"])
 
 
 def _validate_granularity(name: str, granularity: Any) -> None:
