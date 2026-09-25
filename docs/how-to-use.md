@@ -1292,35 +1292,36 @@ save-carded emulator carries a savestate card too — for Cemu and Vita3K it is 
 marks the rows neither family has examined).
 
 **A GameCube card atlas cannot reach is not an empty slot.** A slot whose card path only the emulator's sandbox can
-spell still keeps saves, and the answer says so: no group for that card, because atlas has no directory to state one in,
-`sandbox-path-untranslated` naming the key and the path, and never `save-writes-discarded`. Where no other slot carries
-a group, `granularity.value` is that card's grouping — `shared-file` for a raw card, `per-game-files` for a GCI folder,
-and the first slot's where both slots hold such a card. `dir` is then a stand-in, and the fields say when: in Dolphin's
-GameCube answer and PrimeHack's, the one fork that answers through it, an answer whose `file_set.groups` is empty while
-`granularity.value` is not `none` names `Dolphin.ini`'s own directory as `dir` — not where the card lies — and
-`physical_dir` and any link caveat describe that directory too. The card's configured path is the `data.path` of the
-`sandbox-path-untranslated` caveat whose `data.key` names that slot's path key. That holds for the slots the answer
-reads; the path a flip of slot A would read is in that alternative's `caveats` instead (see **An alternative states its
-own caveats** under "When one save is several kinds of file — `file_set.groups`").
+spell still holds the card the emulator writes to — whether those writes are kept cannot be told from here — and the
+answer says so: no group for that card, because atlas has no directory to state one in, `sandbox-path-untranslated`
+naming the key and the path, and never `save-writes-discarded`. Where no other slot carries a group, `granularity.value`
+is that card's grouping — `shared-file` for a raw card, `per-game-files` for a GCI folder, and the first slot's where
+both slots hold such a card. `dir` is then a stand-in, and the fields say when: in Dolphin's GameCube answer and
+PrimeHack's, the one fork that answers through it, an answer whose `file_set.groups` is empty while `granularity.value`
+is not `none` names `Dolphin.ini`'s own directory as `dir` — not where the card lies — and `physical_dir` and any link
+caveat describe that directory too. The card's configured path is the `data.path` of the `sandbox-path-untranslated`
+caveat whose `data.key` names that slot's path key. That holds for the slots the answer reads; the path a flip of slot A
+would read is in that alternative's `caveats` instead (see **An alternative states its own caveats** under "When one
+save is several kinds of file — `file_set.groups`").
 
 **A GBA cartridge adapter's save is the `.sav` beside its cartridge.** With a slot set to 9, Dolphin loads the cartridge
 `[Core] AgpCartAPath` or `AgpCartBPath` names and, beside it, the same path with its extension swapped for `.sav`, and
 writes that file back at shutdown at the size it already has. A `.sav` with a size is therefore one `battery` group of
 granularity `shared-file`, which every GameCube game run with that configuration writes; an unset key, a missing `.sav`
-or an empty one keeps nothing, and where the other slot keeps no save either, that is `save-writes-discarded`. A `.sav`
-atlas cannot size is stated like a card it cannot reach — no group, and where no other slot carries one,
-`granularity.value` `shared-file`: a path only the sandbox can spell carries `sandbox-path-untranslated` with the
-configured cartridge path in `data.path`, a relative one — opened from the launching process's working directory —
-carries `save-dir-launch-dependent` with the relative `.sav` in `data.path`, and one this host could not examine —
-including one whose size stats while its bytes do not read — carries `core-mode-unestablished` with the reason
-`slot-holds-agp-device`. The PrimeHack revision RetroDECK builds writes `.sav` into that working directory even with the
-key unset, so there an unset key reads as the relative case.
+or an empty one keeps nothing, and where the other slot holds no card and no cartridge save either, that is
+`save-writes-discarded`. A `.sav` atlas cannot size is stated like a card it cannot reach — no group, and where no other
+slot carries one, `granularity.value` `shared-file`: a path only the sandbox can spell carries
+`sandbox-path-untranslated` with the configured cartridge path in `data.path`, a relative one — opened from the
+launching process's working directory — carries `save-dir-launch-dependent` with the relative `.sav` in `data.path`, and
+one this host could not examine — including one whose size stats while its bytes do not read — carries
+`core-mode-unestablished` with the reason `slot-holds-agp-device`. The PrimeHack revision RetroDECK builds writes `.sav`
+into that working directory even with the key unset, so there an unset key reads as the relative case.
 
-**A slot device atlas cannot interpret refuses the question when nothing else keeps a save.** What such a device keeps,
-and where, is unknown, so where the other slot keeps no save atlas can state — no group, and no card or cartridge save
-it cannot reach — the question refuses with `slot-device-uninterpreted`, `data` naming the `token`, the `slot`, the
-`value` as configured and the `config` file. Beside a slot that does keep one the answer stands, and the device rides it
-as `core-mode-unestablished` with the reason of the same spelling.
+**A slot device atlas cannot interpret refuses the question when the other slot gives the answer nothing to stand on.**
+What such a device keeps, and where, is unknown, so when the other slot carries no group and no card or cartridge save
+atlas cannot reach, the question refuses with `slot-device-uninterpreted`, `data` naming the `token`, the `slot`, the
+`value` as configured and the `config` file. Beside a slot that carries one of those the answer stands, and the device
+rides it as `core-mode-unestablished` with the reason of the same spelling.
 
 DuckStation's answer states the same shape for a shared card at a path only its sandbox can spell, beside the
 `save-writes-discarded` a `NonPersistent` slot carries for itself; `SavefilePlacement.dir` says which directory stands

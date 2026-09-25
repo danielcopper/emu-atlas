@@ -1990,9 +1990,10 @@ class TestDolphinStandaloneSaves:
         ) == ("folder+card", ("shared-file",))
 
     def test_a_mode_whose_only_card_cannot_be_located_promises_that_cards_grouping(self):
-        # Neither slot would carry a group, but the folder keeps saves at a path
-        # this host cannot locate, so the alternative promises the folder's own
-        # grouping — the word the reached answer states as its granularity value.
+        # Neither slot would carry a group, but the emulator writes to the folder
+        # at a path this host cannot locate, so the alternative promises the
+        # folder's own grouping — the word the reached answer states as its
+        # granularity value.
         assert self._flip(
             "[Core]\nSlotA = 1\nSlotB = 255\nGCIFolderAPath = /var/db/cards/Card A\n"
         ) == ("folder+none", (atlas.GRANULARITY_PER_GAME_FILES,))
@@ -2013,7 +2014,7 @@ class TestDolphinStandaloneSaves:
             [c.data["key"] for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED],
         )
 
-    def test_a_card_slot_b_cannot_locate_keeps_its_saves_beside_an_empty_slot_a(self):
+    def test_a_card_slot_b_cannot_locate_is_not_discarded_beside_an_empty_slot_a(self):
         assert self._ungrouped(
             "[Core]\nSlotA = 255\nSlotB = 1\nMemcardBPath = /var/db/cards/mine.USA.raw\n"
         ) == (atlas.GRANULARITY_SHARED_FILE, "none+card", False, ["MemcardBPath"])

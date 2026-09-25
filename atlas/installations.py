@@ -6426,11 +6426,12 @@ class _DolphinSlot:
     """One card slot's contribution to the answer: groups, readings, caveats.
 
     ``unreachable`` is the grouping of a card the slot holds at a path this
-    host cannot locate: the emulator keeps saves there, so the slot is not
-    empty, but atlas has no directory to state a group in. A GBA cartridge's
-    save that cannot be located or examined is stated the same way. ``None``
-    wherever the slot's groups say everything, or it keeps nothing atlas can
-    establish.
+    host cannot locate: the emulator writes its saves there, so the slot is
+    not empty, but atlas has no directory to state a group in and cannot tell
+    whether those writes are kept. A GBA cartridge's save that cannot be
+    located or examined is stated the same way. ``None`` wherever the slot's
+    groups say everything, or it holds no device, or what it holds is known
+    to keep nothing, or is a device atlas cannot interpret.
     """
 
     mode: str
@@ -6889,15 +6890,15 @@ def _dolphin_ungrouped_value(slots: Sequence[_DolphinSlot]) -> str:
     """The granularity a GameCube answer carrying no group states.
 
     The card of the first slot whose path this host cannot locate groups the
-    way its device does — the emulator keeps saves on it, atlas only cannot
-    reach them — so the answer states that grouping with no group beside it,
-    and :data:`GRANULARITY_NONE` is left for where no slot keeps a save: none
-    holds a raw card or a GCI folder, and no GBA cartridge adapter's ``.sav``
-    has a size or sits where this host cannot examine it. Where two such
-    cards group differently the first slot's word is stated, the way
-    ``groups[0]`` decides the value of an answer that carries groups. The
-    answer and the alternative naming its mode both read it here, so what the
-    alternative promises is what the reached answer states.
+    way its device does — it is still where the emulator writes, atlas only
+    cannot reach it — so the answer states that grouping with no group beside
+    it, and :data:`GRANULARITY_NONE` is left for where no slot holds a card
+    or a save: none holds a raw card or a GCI folder, and no GBA cartridge
+    adapter's ``.sav`` has a size or sits where this host cannot examine it.
+    Where two such cards group differently the first slot's word is stated,
+    the way ``groups[0]`` decides the value of an answer that carries groups.
+    The answer and the alternative naming its mode both read it here, so what
+    the alternative promises is what the reached answer states.
     """
     return next((slot.unreachable for slot in slots if slot.unreachable), GRANULARITY_NONE)
 
@@ -6911,10 +6912,11 @@ def _dolphin_uninterpreted_refusal(
     """The refusal where a device atlas cannot interpret is all the slots say.
 
     A slot holding such a device may keep saves anywhere, so where no other
-    slot keeps one atlas can state — a group, or a card or cartridge save it
-    cannot reach — neither a location nor "nothing is kept" is true to say.
-    Beside a slot that does keep one, the answer stands and the device rides
-    it as ``core-mode-unestablished``. The first such slot is named.
+    slot gives the answer something to stand on — a group, or a card or
+    cartridge save atlas cannot reach — neither a location nor "nothing is
+    kept" is true to say. Beside a slot that does, the answer stands and the
+    device rides it as ``core-mode-unestablished``. The first such slot is
+    named.
     """
     if any(slot.groups or slot.unreachable for slot in slots):
         return None
@@ -6927,9 +6929,9 @@ def _dolphin_uninterpreted_refusal(
         return Unresolved(
             UNRESOLVED_SLOT_DEVICE_UNINTERPRETED,
             f'Dolphin.ini sets Slot{letter} to "{value}", a device this card cannot '
-            "interpret, and no other slot keeps a save this answer can state — what that "
-            "device keeps and where is unestablished, so neither a location nor that "
-            "nothing is kept can be said",
+            "interpret, and no other slot states anything this answer could stand on — "
+            "what that device keeps and where is unestablished, so neither a location nor "
+            "that nothing is kept can be said",
             {"token": token, "slot": letter, "value": value, "config": config},
         )
     return None
@@ -6986,10 +6988,10 @@ def _dolphin_gc_answer(
                 if g.files is None
             )
     else:
-        # No slot carries a group: either no slot keeps a save, and no save
-        # data lands anywhere until the configuration changes, or a card or a
-        # cartridge save sits where this host cannot locate or examine it —
-        # see _dolphin_ungrouped_value.
+        # No slot carries a group: either no slot holds a card or a save, and
+        # no save data lands anywhere until the configuration changes, or a
+        # card or a cartridge save sits where this host cannot locate or
+        # examine it — see _dolphin_ungrouped_value.
         value = _dolphin_ungrouped_value(slots)
         directory = template or (ini_path and os.path.dirname(ini_path)) or "/"
         needs = ()
@@ -8143,7 +8145,8 @@ class _DuckSlot:
     host cannot locate: the emulator writes its saves there, so the slot is
     not configured empty, but atlas has no directory to state a group in and
     cannot tell whether those writes are kept. ``None`` wherever the slot's
-    group says everything, or it holds no card that keeps a save.
+    group says everything, or it holds no card, or a card whose writes are
+    discarded.
     """
 
     mode: str
