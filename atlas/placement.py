@@ -1423,13 +1423,15 @@ class SavefilePlacement:
     dir: str
     """The directory this emulator keeps the save in — concrete where the caller supplied
     the content path, otherwise a template whose holes ``needs`` lists. In the GameCube
-    answer of Dolphin and of PrimeHack, the one fork that answers through it, ``dir`` can
-    name a stand-in: where ``file_set.groups`` is empty and ``granularity.value`` is not
-    ``none``, a slot holds a card at a path this host cannot locate, and ``dir`` is
-    ``Dolphin.ini``'s own directory, not where the card lies — ``physical_dir`` and any
-    link caveat describe that directory too. The card's configured path is the
-    ``data.path`` of the ``sandbox-path-untranslated`` caveat whose ``data.key`` names
-    that slot's path key.
+    answer of Dolphin and of PrimeHack, the one fork that answers through it, and in
+    DuckStation's answer, ``dir`` can name a stand-in: where ``file_set.groups`` is empty
+    and ``granularity.value`` is not ``none``, a slot holds a card at a path this host
+    cannot locate, and ``dir`` is not where the card lies but ``Dolphin.ini``'s own
+    directory, or DuckStation's memory-card directory — the one
+    ``[MemoryCards] Directory`` names, or its default. ``physical_dir`` and any link
+    caveat describe that directory too. The card's configured path is the ``data.path``
+    of the ``sandbox-path-untranslated`` caveat whose ``data.key`` names that slot's path
+    key.
     """
     root_kind: RootKind
     """Which anchor ``dir`` hangs off — one of :data:`ROOT_KINDS`, from the configured

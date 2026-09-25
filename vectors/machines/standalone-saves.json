@@ -8784,6 +8784,357 @@
       }
     },
     {
+      "name": "duckstation-a-shared-card-at-an-unlocatable-path-keeps-its-slot-and-is-not-discarded",
+      "rationale": "Slot 1 holds the shared card at an absolute Card1Path only the emulator's sandbox can read — GetSharedMemoryCardPath takes an absolute value verbatim (settings.cpp:1785-1797 at stenzek/duckstation@64655818e) — and slot 2 holds none. The emulator writes to that card, so the answer does not say saves are discarded: the granularity value is shared-card, and the card carries no group only because atlas has no directory to state one in; sandbox-path-untranslated names the key and the path. dir is the memory-card directory, a stand-in rather than where the card lies.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard1Path = /var/db/cards/shared_card_1.mcd\nCard2Type = None\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "Card1Path",
+                "path": "/var/db/cards/shared_card_1.mcd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+None",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "/var/db/cards/shared_card_1.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-an-unlocatable-shared-card-beside-a-non-persistent-slot-is-not-discarded",
+      "rationale": "Slot 1 holds the shared card at an absolute Card1Path only the emulator's sandbox can read, and slot 2 a non-persistent card. Slot 2's own save-writes-discarded stays — its writes really are thrown away at shutdown (MemoryCardType::NonPersistent) — but the answer-wide one does not appear, because the emulator writes to slot 1's card: the granularity value is shared-card, the card carries no group only because atlas has no directory to state one in, and sandbox-path-untranslated names the key and the path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard1Path = /var/db/cards/shared_card_1.mcd\nCard2Type = NonPersistent\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "Card1Path",
+                "path": "/var/db/cards/shared_card_1.mcd"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DUCKSTATION",
+                "mode": "Card2Type = NonPersistent"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+NonPersistent",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "/var/db/cards/shared_card_1.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "NonPersistent",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-two-unlocatable-shared-cards-are-not-discarded",
+      "rationale": "Both slots hold a shared card, each at an absolute CardNPath only the emulator's sandbox can read. Neither card carries a group, because atlas has no directory to state one in, yet the emulator writes to both: the granularity value is shared-card, each path rides its own sandbox-path-untranslated caveat, and no save-writes-discarded appears. dir is the memory-card directory, a stand-in rather than where either card lies.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard1Path = /var/db/cards/shared_card_1.mcd\nCard2Type = Shared\nCard2Path = /var/db/cards/shared_card_2.mcd\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "Card1Path",
+                "path": "/var/db/cards/shared_card_1.mcd"
+              }
+            },
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "Card2Path",
+                "path": "/var/db/cards/shared_card_2.mcd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+Shared",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "/var/db/cards/shared_card_1.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Path",
+                "value": "/var/db/cards/shared_card_2.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-an-unlocatable-shared-card-in-slot-2-alone-is-not-discarded",
+      "rationale": "Slot 1 holds no card and slot 2 the shared card at an absolute Card2Path only the emulator's sandbox can read. The unlocatable card is not in the first slot, yet the emulator writes to it, so the granularity value is shared-card rather than none: the card carries no group only because atlas has no directory to state one in, sandbox-path-untranslated names the key and the path, and no save-writes-discarded appears.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = None\nCard2Type = Shared\nCard2Path = /var/db/cards/shared_card_2.mcd\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "Card2Path",
+                "path": "/var/db/cards/shared_card_2.mcd"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "None+Shared",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "None",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Path",
+                "value": "/var/db/cards/shared_card_2.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "pcsx2-a-sandbox-only-memcards-directory-refuses-with-the-path",
       "rationale": "The twin on PCSX2's route: PCSX2.ini reads fine and [Folders] MemoryCards states a path only the emulator's sandbox can spell, so no host directory exists for the slots to anchor at. The refusal names the fact that actually happened — emulator-config-path-untranslatable with the stated value in data.path — never the unreadable code, whose claim the successful read contradicts.",
       "input": {
