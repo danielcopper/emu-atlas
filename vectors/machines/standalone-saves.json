@@ -85,7 +85,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -234,7 +236,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -8224,7 +8228,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -8440,7 +8446,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -8673,7 +8681,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -9621,7 +9631,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -9871,7 +9883,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ]
               }
             },
@@ -9883,7 +9897,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -10010,7 +10026,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ]
               }
             },
@@ -10022,7 +10040,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -11877,8 +11897,8 @@
       }
     },
     {
-      "name": "dolphin-a-slot-holding-a-gba-adapter-names-the-slot-it-is-about",
-      "rationale": "EXI device 9 is the GBA cartridge adapter: its saves go onto the cartridge image the emulator is configured with, which this answer does not model. The slot letter is the fact a client acts on, so it is data (`slot`) beside the reason slug rather than a word inside a sentence — the other slot's statement stands on its own.",
+      "name": "dolphin-a-gba-adapter-with-no-cartridge-leaves-the-other-slot-the-answer",
+      "rationale": "Slot A holds the GBA cartridge adapter (EXI device 9) with AgpCartAPath unset, and slot B the GCI folder. With no cartridge configured the adapter writes nothing back at shutdown, so it keeps no save and adds no group: the answer is slot B's folder, and the unset AgpCartAPath is among the readings as the key that names where slot A's cartridge save would be read — a save exists once a cartridge is configured and the .sav beside it has a size.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -11949,17 +11969,11 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
-              }
-            },
-            {
-              "code": "core-mode-unestablished",
-              "data": {
-                "token": "DOLPHIN",
-                "reason": "slot-holds-agp-device",
-                "slot": "A"
               }
             },
             {
@@ -11997,6 +12011,11 @@
               {
                 "key": "SlotA",
                 "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
               },
               {
@@ -12088,7 +12107,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -12254,7 +12275,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -12446,7 +12469,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -12598,7 +12623,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -12719,7 +12746,9 @@
                   "[Core] MemcardAPath",
                   "[Core] MemcardBPath",
                   "[Core] GCIFolderAPath",
-                  "[Core] GCIFolderBPath"
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
                 ],
                 "layer": "GlobalGame"
               }
@@ -12783,6 +12812,1566 @@
                 ]
               }
             ]
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-adapter-with-no-cartridge-keeps-nothing",
+      "rationale": "Slot A holds the GBA cartridge adapter (SlotA = 9) and AgpCartAPath is unset, slot B holds no device. The adapter's save is the .sav beside the configured cartridge, and with no cartridge Dolphin writes nothing back at shutdown (~CEXIAgp skips the write for an empty path, EXI_DeviceAGP.cpp:34-45 at dolphin 2603a), so neither slot keeps a save: granularity none with save-writes-discarded, and the unset AgpCartAPath is among the readings that name the switch to flip.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DOLPHIN",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-adapter-keeps-the-sav-beside-its-cartridge",
+      "rationale": "AgpCartAPath names a cartridge and the .sav beside it (the path with its extension cut the way SplitPath cuts it, .sav appended) already has a size. The adapter sizes the cartridge's save by that file and writes exactly that many bytes back to it at shutdown, so every GameCube game run with this configuration writes the one file: a battery group of granularity shared-file, and nothing is discarded.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.sav": {
+            "md5": "0829f71740aab1ab98b33eae21dee122",
+            "sha1": "0631457264ff7f8d5fb1edc2c0211992a67c73e6",
+            "size": 8192
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/gba",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Ruby.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  "Pokemon Ruby.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-cartridge-with-no-sav-keeps-nothing",
+      "rationale": "AgpCartAPath names a cartridge and no .sav sits beside it. The adapter then sizes the cartridge's save at 0 bytes and writes 0 bytes back at shutdown (LoadFileToEEPROM and SaveFileFromEEPROM, EXI_DeviceAGP.cpp:107-166 at dolphin 2603a), so the configured cartridge keeps nothing and, with slot B empty, save-writes-discarded holds.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DOLPHIN",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-an-empty-gba-cartridge-sav-keeps-nothing",
+      "rationale": "The .sav beside the configured cartridge exists and is empty. Its size is the size of the cartridge's save, so there is nothing to write back — the same answer as a missing .sav: nothing kept, save-writes-discarded.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.sav": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DOLPHIN",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-cartridge-at-a-sandbox-only-path-keeps-its-save-unlocated",
+      "rationale": "AgpCartAPath is a path only the emulator's sandbox can read. The cartridge's .sav beside it cannot be located from here, let alone sized, so — as for a memory card at such a path — the slot is not called empty: no group, sandbox-path-untranslated names the key and the configured path, granularity is the grouping the cartridge save would have (shared-file), and dir is Dolphin.ini's own directory as a stand-in.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /var/db/gba/Pokemon Ruby.gba\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "AgpCartAPath",
+                "path": "/var/db/gba/Pokemon Ruby.gba"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/var/db/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-relative-gba-cartridge-path-is-the-launchs",
+      "rationale": "AgpCartAPath is a relative path, and the emulator opens the .sav beside it relative to the working directory of the launching process — a property of the launch, not of the machine. The save is stated the way an unlocatable one is: no group, granularity shared-file, and save-dir-launch-dependent naming the key and the relative .sav.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = gba/Pokemon Ruby.gba\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "token": "DOLPHIN",
+                "key": "AgpCartAPath",
+                "path": "gba/Pokemon Ruby.sav"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-cartridge-sav-this-host-cannot-examine",
+      "rationale": "The directory holding the configured cartridge cannot be read, so whether its .sav exists and has a size — which is whether the cartridge keeps a save at all — could not be established. The slot is not called empty: no group, granularity shared-file, and core-mode-unestablished with reason slot-holds-agp-device names the slot.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        },
+        "inaccessible": [
+          "/mnt/sd/retrodeck/roms/gba"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "reason": "slot-holds-agp-device",
+                "slot": "A"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-adapter-in-slot-b-beside-a-card-in-slot-a",
+      "rationale": "Slot A holds the raw memory card at its default path and slot B the GBA cartridge adapter with a sized .sav beside its cartridge. Both keep saves, so the answer carries both: the card's three region files and the cartridge's battery file. The alternative flips slot A to the GCI folder and leaves slot B as it stands, so it promises the folder's grouping first and the cartridge's beside it — what the reached answer states.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 1\nSlotB = 9\nAgpCartBPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.sav": {
+            "md5": "0829f71740aab1ab98b33eae21dee122",
+            "sha1": "0631457264ff7f8d5fb1edc2c0211992a67c73e6",
+            "size": 8192
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "MemoryCardA.USA.raw",
+              "MemoryCardA.EUR.raw",
+              "MemoryCardA.JAP.raw"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.USA.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.EUR.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC",
+                "files": [
+                  "MemoryCardA.JAP.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  "Pokemon Ruby.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "card+agp",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "MemcardAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartBPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "folder+agp",
+                "options": {
+                  "SlotA": "8"
+                },
+                "values": [
+                  "per-game-files",
+                  "shared-file"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-an-uninterpreted-slot-device-alone-refuses-the-question",
+      "rationale": "Slot A holds a device id this card cannot interpret (SlotA = 42) and slot B holds no device. What that device keeps, and where, is unestablished, and no other slot keeps a save the answer could stand on, so neither a location nor 'nothing is kept' can be said: the question refuses with slot-device-uninterpreted, naming the slot, the value as configured and the file that states it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 42\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "slot-device-uninterpreted",
+            "data": {
+              "token": "DOLPHIN",
+              "slot": "A",
+              "value": "42",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-an-uninterpreted-slot-device-beside-an-unlocatable-card-answers",
+      "rationale": "Slot A holds a device id this card cannot interpret and slot B a raw memory card at a path only the sandbox can read. That card keeps saves, so the answer stands on it — granularity shared-file with sandbox-path-untranslated — and the uninterpreted device rides it as core-mode-unestablished rather than refusing the question.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 42\nSlotB = 1\nMemcardBPath = /var/db/cards/mine.USA.raw\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "reason": "slot-device-uninterpreted",
+                "slot": "A",
+                "value": "42"
+              }
+            },
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "MemcardBPath",
+                "path": "/var/db/cards/mine.USA.raw"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "unknown+card",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "42",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "MemcardBPath",
+                "value": "/var/db/cards/mine.USA.raw",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "primehack-retrodeck-build-writes-a-cartridge-save-with-no-cartridge",
+      "rationale": "The PrimeHack revision RetroDECK builds (shiiion/dolphin 81bfb96) writes the adapter's save back at shutdown even with no cartridge configured (~CEXIAgp, EXI_DeviceAGP.cpp:35-45 there): with AgpCartAPath unset the path it writes is .sav in the launching process's working directory. So the slot is stated like a relative cartridge path — no group, shared-file, save-dir-launch-dependent naming the key and .sav — where Dolphin's own build keeps nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"PrimeHack (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"PrimeHack (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "PRIMEHACK",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "token": "PRIMEHACK",
+                "key": "AgpCartAPath",
+                "path": ".sav"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "emudeck-the-forks-flathub-build-keeps-nothing-for-an-unconfigured-cartridge",
+      "rationale": "The Flathub PrimeHack (shiiion/dolphin 53f53e0) carries Dolphin's guard: with AgpCartAPath unset nothing is written back (EXI_DeviceAGP.cpp:34-45 there), so the same configuration that RetroDECK's older build answers as launch-dependent keeps nothing here — the difference is the build's, read from the build the launch runs.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nsystem_directory = \"/home/deck/Emulation/bios\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Applications",
+          "/home/deck/.local/share/flatpak/app/io.github.shiiion.primehack",
+          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/GC"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "PRIMEHACK",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "PRIMEHACK",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/io.github.shiiion.primehack/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "primehack-an-uninterpreted-slot-device-beside-a-card-names-the-fork",
+      "rationale": "PrimeHack reads Dolphin.ini through Dolphin's reading, so a device id it cannot interpret (SlotA = 42) beside a raw memory card in slot B leaves the answer standing on the card, with core-mode-unestablished naming the slot and the value. The caveat's token is the emulator the launch runs, PRIMEHACK, not the Dolphin whose reading it shares.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"PrimeHack (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"PrimeHack (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini": "[Core]\nSlotA = 42\nSlotB = 1\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "MemoryCardB.USA.raw",
+              "MemoryCardB.EUR.raw",
+              "MemoryCardB.JAP.raw"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC",
+                "files": [
+                  "MemoryCardB.USA.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC",
+                "files": [
+                  "MemoryCardB.EUR.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/GC",
+                "files": [
+                  "MemoryCardB.JAP.raw"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "PRIMEHACK",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "PRIMEHACK",
+                "reason": "slot-device-uninterpreted",
+                "slot": "A",
+                "value": "42"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "unknown+card",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "42",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              },
+              {
+                "key": "MemcardBPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-gba-cartridge-sav-that-will-not-read-is-unexamined",
+      "rationale": "The .sav beside the configured cartridge states a size and its bytes cannot be read from here. The adapter opens it for reading and a file that does not open loads as a 0-byte save, and whether the emulator can open what atlas cannot is not visible from here — so the file is as unexamined as one whose kind is withheld: no group, granularity shared-file, and core-mode-unestablished with reason slot-holds-agp-device.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.sav": {
+            "status": "unreadable",
+            "size": 8192
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "reason": "slot-holds-agp-device",
+                "slot": "A"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-leading-dot-cartridge-name-keeps-its-sav-in-the-directory",
+      "rationale": "AgpCartAPath is /mnt/sd/retrodeck/roms/gba/.gba. SplitPath takes the extension from the last '.' at or after the last '/', so the filename is empty and the save beside the cartridge is /mnt/sd/retrodeck/roms/gba/.sav — not .gba.sav, which a split that keeps a leading-dot name whole would read. That .sav has a size, so it is the battery group.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/.sav": {
+            "md5": "0829f71740aab1ab98b33eae21dee122",
+            "sha1": "0631457264ff7f8d5fb1edc2c0211992a67c73e6",
+            "size": 8192
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/gba",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              ".sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  ".sav"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-directory-at-the-cartridge-sav-path-keeps-nothing",
+      "rationale": "A directory sits where the .sav beside the configured cartridge would be. The adapter writes the save back by opening that path for writing, which a directory refuses, so nothing is ever kept there: with slot B empty, granularity none and save-writes-discarded.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.sav"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DOLPHIN",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
           }
         }
       }

@@ -674,6 +674,8 @@ REASON_REGION_DECIDED_BY_DISC = "region-decided-by-disc"
 REASON_DATA_ROOT_DECIDED_BY_LAUNCH = "data-root-decided-by-launch"
 # What sits in an emulated slot (Dolphin's EXI devices): ``slot`` names the
 # slot letter, and ``value`` the raw configured device the card cannot read.
+# ``slot-holds-agp-device`` is the GBA cartridge adapter whose cartridge save
+# could not be examined, so whether it holds anything is unestablished.
 REASON_SLOT_HOLDS_AGP_DEVICE = "slot-holds-agp-device"
 REASON_SLOT_DEVICE_UNINTERPRETED = "slot-device-uninterpreted"
 # A per-session override a movie or netplay session sets — ``key`` names it.
@@ -1701,6 +1703,16 @@ def _stated_words(value: "DataValue") -> tuple[str, ...]:
 # order (for xemu: the disk image first, then the EEPROM) — whenever it
 # names more than one.
 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE = "emulator-config-path-untranslatable"
+# The emulator's configuration was read, and a slot in it holds a device atlas
+# cannot interpret while no other slot keeps a save atlas can state: Dolphin's
+# ``SlotA = 42`` beside an empty slot B. What that device keeps, and where, is
+# unestablished, so neither "nothing is kept" nor any location can be said.
+# The same fact the ``core-mode-unestablished`` reason of this spelling states
+# where another slot's statement still stands around it, said as the outcome
+# where nothing else does — one fact, one code. ``data`` names the ``token``,
+# the ``slot``, the configured ``value`` as written, and the ``config`` file
+# that states it.
+UNRESOLVED_SLOT_DEVICE_UNINTERPRETED = "slot-device-uninterpreted"
 
 
 @dataclass(frozen=True, slots=True)

@@ -1831,14 +1831,76 @@ class TestDolphinStandaloneSaves:
         assert stated[0].data["mode"] == "none+none"
 
     def test_an_uninterpreted_slot_device_is_refused_not_guessed(self):
+        # Nothing else keeps a save, so the device the card cannot read is
+        # all the answer would rest on: it refuses rather than say nothing is kept.
         p = self._answer("[Core]\nSlotA = 7\nSlotB = 255\n")
+        assert isinstance(p, atlas.Unresolved)
+        assert p.code == atlas.UNRESOLVED_SLOT_DEVICE_UNINTERPRETED
+        assert p.data == {
+            "token": "DOLPHIN",
+            "slot": "A",
+            "value": "7",
+            "config": DOLPHIN_INI_PATH,
+        }
+
+    @pytest.mark.parametrize(
+        ("configured", "stem"),
+        [
+            ("/gba/Game.gba", "/gba/Game"),
+            ("/gba/Game.v1.gba", "/gba/Game.v1"),
+            # A dot in a directory name is not an extension.
+            ("/gba.d/Game", "/gba.d/Game"),
+            # The last '.' sits right after the last '/': the filename is
+            # empty and the directory is what stays — not os.path.splitext's
+            # reading, which keeps a leading-dot name whole.
+            ("/gba/.gba", "/gba/"),
+            ("Game.gba", "Game"),
+            ("", ""),
+        ],
+    )
+    def test_a_cartridge_path_is_cut_the_way_splitpath_cuts_it(self, configured, stem):
+        from atlas.installations import (
+            _dolphin_split_path_stem,  # pyright: ignore[reportPrivateUsage] - the port of SplitPath is the unit under test
+        )
+
+        assert _dolphin_split_path_stem(configured) == stem
+
+    def test_a_cartridge_save_that_is_a_directory_keeps_nothing(self):
+        # The write-back opens the .sav "wb", which a directory refuses, so
+        # nothing is ever written there.
+        files = dict(self.BASE)
+        files[DOLPHIN_INI_PATH] = "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = /mnt/gba/Game.gba\n"
+        rd = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves", "/mnt/gba/Game.sav"])
+        p = rd.emulators_for("gc").entries[0].savefile_location()
         assert not isinstance(p, atlas.Unresolved)
-        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
-        assert stated
-        assert stated[0].data["reason"] == atlas.REASON_SLOT_DEVICE_UNINTERPRETED
-        # The two facts the sentence used to carry inside the reason string.
-        assert stated[0].data["slot"] == "A"
-        assert stated[0].data["value"] == "7"
+        assert p.granularity is not None
+        assert p.granularity.value == atlas.GRANULARITY_NONE
+        assert atlas.CAVEAT_SAVE_WRITES_DISCARDED in [c.code for c in p.caveats]
+
+    def test_every_build_a_card_cites_states_whether_it_writes_an_unset_cartridge(self):
+        # Whether an unset cartridge key still writes a .sav is the build's,
+        # and the reading raises for a build with no row, so every build a
+        # Dolphin-family card cites — its own and each installation's — has one.
+        from atlas.installations import (
+            _DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
+        )
+        from atlas.standalone_saves import lookup_standalone_save_card
+
+        builds: set[str] = set()
+        for token in ("DOLPHIN", "PRIMEHACK"):
+            card = lookup_standalone_save_card(token)
+            assert card is not None
+            builds.add(card.cite("build", flatpak=None))
+            builds.update(card.cite("build", flatpak=app) for app in card.citation_installations)
+        assert builds - set(_DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE) == set()
+
+    def test_a_build_the_cartridge_table_does_not_state_fails_loudly(self):
+        from atlas.installations import (
+            _dolphin_agp_writes_unset_cartridge,  # pyright: ignore[reportPrivateUsage] - the drift guard is the unit under test
+        )
+
+        with pytest.raises(ValueError, match="shipped out of step"):
+            _dolphin_agp_writes_unset_cartridge(lambda slot: "dolphin 0000")
 
     def test_a_configured_card_path_is_a_region_template(self):
         # The emulator replaces the region code in a configured filename
@@ -2171,6 +2233,8 @@ class TestDolphinPerGameSettingsLayer:
             "[Core] MemcardBPath",
             "[Core] GCIFolderAPath",
             "[Core] GCIFolderBPath",
+            "[Core] AgpCartAPath",
+            "[Core] AgpCartBPath",
         )
 
     def test_the_wii_answer_names_the_nand_root_key(self):

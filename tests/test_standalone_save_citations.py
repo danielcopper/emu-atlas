@@ -84,7 +84,15 @@ class TestTheCardStatesWhatTheReadingNames:
 # `session_overrides` nor `wii_dir`, so requiring their spans in it would ask
 # for sentences nobody needs. It does cite the same *files* for other facts,
 # which is why this is a list of slots rather than a rule about files.
-SLOTS_THE_PROSE_REPEATS = ("gci_names", "nand_tree", "slot_defaults", "slot_devices")
+SLOTS_THE_PROSE_REPEATS = (
+    "agp_paths",
+    "agp_save",
+    "gci_names",
+    "nand_tree",
+    "slot_defaults",
+    "slot_devices",
+    "split_path",
+)
 
 
 class TestTheProseAndTheSlotsAgree:
