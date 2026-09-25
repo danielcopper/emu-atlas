@@ -119,6 +119,7 @@ from .firmware import firmware_inventory as _resolve_inventory
 from .firmware import identify_firmware as _resolve_identification
 from .machine import (
     ARCHIVE_MISSING,
+    DIGEST_MD5,
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
     KIND_DIRECTORY,
@@ -268,6 +269,7 @@ from .placement import (
     UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_MOD_WIRING_UNESTABLISHED,
+    UNRESOLVED_SLOT_DEVICE_UNINTERPRETED,
     UNRESOLVED_STANDALONE,
     UNRESOLVED_STANDALONE_VARIANT_UNESTABLISHED,
     UNRESOLVED_TEXTURE_WIRING_UNESTABLISHED,
@@ -6122,6 +6124,9 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
         "gci_names",  # how a .gci file inside a folder card is named
         "nand_tree",  # the Wii NAND's title/<hi>/<lo>/data shape
         "wii_dir",  # the NAND's default directory below the user directory
+        "agp_paths",  # the AgpCartA/BPath keys a GBA cartridge adapter reads
+        "agp_save",  # how the adapter loads, sizes and writes back its .sav
+        "split_path",  # how the cartridge path's extension is cut for that .sav
     }
 )
 
@@ -6212,6 +6217,10 @@ _DOLPHIN_FORK_LINES = {
 # build row raises.
 _DOLPHIN_FAMILY = frozenset({"DOLPHIN", "PRIMEHACK"})
 
+# The Dolphin build the cards cite, the same string as their
+# ``citations.build``.
+_DOLPHIN_BUILD = "dolphin 2603a"
+
 # Keyed the way every standalone registry is: the token, and the flatpak app id
 # where the build differs per installation (#246). ``None`` covers an
 # arrangement's own bundled build. Stating 81bfb96's lines for the Flathub
@@ -6219,10 +6228,10 @@ _DOLPHIN_FAMILY = frozenset({"DOLPHIN", "PRIMEHACK"})
 # block exists to prevent, which is why that row is keyed separately.
 _DOLPHIN_GAME_LAYERS: dict[tuple[str, str | None], _DolphinGameLayer] = {
     ("DOLPHIN", None): _DolphinGameLayer(
-        name="Dolphin", build="dolphin 2603a", **_DOLPHIN_MODERN_LINES
+        name="Dolphin", build=_DOLPHIN_BUILD, **_DOLPHIN_MODERN_LINES
     ),
     ("DOLPHIN", "org.DolphinEmu.dolphin-emu"): _DolphinGameLayer(
-        name="Dolphin", build="dolphin 2603a", **_DOLPHIN_MODERN_LINES
+        name="Dolphin", build=_DOLPHIN_BUILD, **_DOLPHIN_MODERN_LINES
     ),
     ("PRIMEHACK", None): _DolphinGameLayer(
         name="PrimeHack", build="shiiion/dolphin 81bfb96", **_DOLPHIN_FORK_LINES
@@ -6268,7 +6277,7 @@ def _dolphin_game_settings_caveats(
     this answer cannot name — never that any file does so.
 
     *keys* are section-qualified the way a game ini must spell them: the
-    memory-card keys live in ``[Core]``, but ``NANDRootPath`` and ``LoadPath``
+    slot path keys live in ``[Core]``, but ``NANDRootPath`` and ``LoadPath``
     are reached through the free-form ``<System>.<Section>`` parse, and the
     name that parse resolves for ``System::Main`` is ``Dolphin`` — so the
     section is ``[Dolphin.General]``, and ``[Main.General]`` is dropped with a
@@ -6350,8 +6359,10 @@ def _dolphin_game_settings_caveats(
     return caveats
 
 
-# The section-qualified keys each Dolphin-family answer depends on. The memory
-# card keys map through the legacy section table ([Core] -> {Main, "Core"});
+# The section-qualified keys each Dolphin-family answer depends on. The slot
+# path keys — the memory cards', the GCI folders' and the GBA cartridges'
+# (MainSettings.cpp:92-93 at dolphin 2603a) — map through the legacy section
+# table ([Core] -> {Main, "Core"});
 # the General ones only through the free-form <System>.<Section> parse, whose
 # name for System::Main is "Dolphin" — [Main.General] resolves to nothing.
 _DOLPHIN_GC_LAYER_KEYS = (
@@ -6359,6 +6370,8 @@ _DOLPHIN_GC_LAYER_KEYS = (
     "[Core] MemcardBPath",
     "[Core] GCIFolderAPath",
     "[Core] GCIFolderBPath",
+    "[Core] AgpCartAPath",
+    "[Core] AgpCartBPath",
 )
 _DOLPHIN_WII_LAYER_KEYS = ("[Dolphin.General] NANDRootPath",)
 # One key moves both the texture tree and the graphics-mod tree: it re-points
@@ -6414,8 +6427,10 @@ class _DolphinSlot:
 
     ``unreachable`` is the grouping of a card the slot holds at a path this
     host cannot locate: the emulator keeps saves there, so the slot is not
-    empty, but atlas has no directory to state a group in. ``None`` wherever
-    the slot's groups say everything, or it holds no card atlas recognizes.
+    empty, but atlas has no directory to state a group in. A GBA cartridge's
+    save that cannot be located or examined is stated the same way. ``None``
+    wherever the slot's groups say everything, or it keeps nothing atlas can
+    establish.
     """
 
     mode: str
@@ -6561,6 +6576,185 @@ def _dolphin_folder_slot(
     )
 
 
+# Whether a build writes the cartridge save back when no cartridge is
+# configured. Dolphin writes it only for a non-empty stem (~CEXIAgp,
+# EXI_DeviceAGP.cpp:43-44 at dolphin 2603a, and at shiiion/dolphin 53f53e0,
+# whose file is Dolphin's byte for byte); the PrimeHack revision RetroDECK
+# builds writes it unconditionally (:44 at shiiion/dolphin 81bfb96), so there
+# an unset key writes ``.sav`` into the launching process's working directory,
+# sized by whatever ``.sav`` LoadRom found there (:73-85). Keyed by the card's
+# ``build`` citation, and a build with no row raises the way the per-game layer
+# table does: a default would state one build's behaviour for another's answer.
+_DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE = {
+    _DOLPHIN_BUILD: False,
+    "shiiion/dolphin 53f53e0": False,
+    "shiiion/dolphin 81bfb96": True,
+}
+
+
+def _dolphin_agp_writes_unset_cartridge(cite: "_Cite") -> bool:
+    build = cite("build")
+    writes = _DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE.get(build)
+    if writes is None:
+        raise ValueError(
+            f"{build!r} is a build the GBA cartridge table states nothing for — whether it "
+            "writes a cartridge save with no cartridge configured is unread, and the cards "
+            "and the code shipped out of step"
+        )
+    return writes
+
+
+def _dolphin_split_path_stem(full_path: str) -> str:
+    """*full_path* with its extension cut the way Dolphin's ``SplitPath`` cuts it.
+
+    ``path + filename`` of the split: the extension starts at the last ``.``
+    at or after the last ``/``, so a dot in a directory name stays, and
+    ``/d/.gba`` has an empty filename and leaves ``/d/``; an empty value
+    splits into nothing (``split_path`` on the card). Not
+    :func:`os.path.splitext`, which keeps a leading-dot name whole.
+    """
+    dir_end = full_path.rfind("/") + 1
+    fname_end = full_path.rfind(".")
+    if fname_end < dir_end:
+        fname_end = len(full_path)
+    return full_path[:fname_end]
+
+
+def _dolphin_sav_size(machine: Machine, path: str) -> int | None:
+    """The size a cartridge save loads with — ``None`` where this host cannot tell.
+
+    The adapter opens the ``.sav`` ``"rb"`` and takes the open file's size, 0
+    where it does not open. Nothing opens at a missing path, and a directory
+    is never written back, so both keep nothing. A file whose size stats but
+    whose bytes do not read is one the emulator may not open either, and
+    whether it can is not atlas's to see from here — so it is as unexamined
+    as a path whose kind the machine withholds.
+    """
+    kind = machine.path_kind(path)
+    if kind == KIND_INACCESSIBLE:
+        return None
+    if kind != KIND_FILE:
+        return 0
+    size = machine.file_size(path)
+    if not size:
+        return size
+    return size if machine.file_digest(path, DIGEST_MD5) is not None else None
+
+
+def _dolphin_agp_slot(
+    letter: str,
+    values: Mapping[tuple[str, str], str],
+    machine: Machine,
+    sandbox: _Sandbox,
+    cite: "_Cite",
+    *,
+    token: str,
+) -> _DolphinSlot:
+    """A GBA cartridge adapter in one slot: the ``.sav`` beside the configured cartridge.
+
+    The adapter loads ``AgpCart<slot>Path`` and, beside it, that path with its
+    extension swapped for ``.sav``; the cartridge's save is as large as that
+    file, 0 where it does not open, and at shutdown exactly that many bytes
+    are written back to it (``agp_save`` on the card). So a ``.sav`` that is
+    missing, empty or a directory keeps nothing — a missing or empty one gives
+    the cartridge no size to save with, and a directory cannot be written back
+    — and one with a size is one file every GameCube game run with this
+    configuration writes: ``shared-file``, a battery save.
+
+    The ``.sav`` is read the way the slot's card paths are: the key matched
+    the emulator's way, the path translated out of the sandbox, and a
+    spelling only the sandbox has leaves the save where this host cannot
+    locate it (#523). A relative spelling is opened from the launching
+    process's working directory — the launch's, not the machine's — and is
+    stated the same way with the launch named as the reason; so is the unset
+    key of a build that writes ``.sav`` back regardless
+    (:data:`_DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE`). A ``.sav`` this host could
+    not examine — its kind withheld, or a size stated for a file that would
+    not read (:func:`_dolphin_sav_size`) — leaves whether it holds anything
+    unestablished.
+    """
+    key = f"AgpCart{letter}Path"
+    configured, spelled = _simpleini_value(values, "Core", key)
+    # The unset key's default is its own registration, not the slot defaults
+    # the shared default sentence cites.
+    unset = (
+        f'[Core] {key} is unset — the compiled-in default "" governs '
+        f"({cite('agp_paths')} at {cite('build')})"
+    )
+    readings = (
+        _dolphin_reading(key, configured, None if configured is not None else unset, spelled=spelled),
+    )
+    stem = _dolphin_split_path_stem(configured or "")
+    if not stem and not _dolphin_agp_writes_unset_cartridge(cite):
+        return _DolphinSlot(mode="agp", readings=readings)
+    save = stem + ".sav"
+    where = f"{cite('agp_save')} with {cite('split_path')} at {cite('build')}"
+    if not save.startswith("/"):
+        return _DolphinSlot(
+            mode="agp",
+            readings=readings,
+            unreachable=GRANULARITY_SHARED_FILE,
+            caveats=(
+                Caveat(
+                    CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+                    f"slot {letter}'s GBA cartridge save is the relative path {save!r}, which "
+                    f"the emulator opens and writes back relative to the working directory of "
+                    f"the launching process ({where}) — a property of the launch, not of the "
+                    "machine, so where it lies and whether it holds anything is not stated here",
+                    {"token": token, "key": key, "path": save},
+                ),
+            ),
+        )
+    resolved = sandbox.host(key, save)
+    if resolved.path is None:
+        return _DolphinSlot(
+            mode="agp",
+            readings=readings,
+            unreachable=GRANULARITY_SHARED_FILE,
+            caveats=(
+                Caveat(
+                    CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+                    f"Dolphin.ini sets {key} to {configured!r}, a path only the emulator's "
+                    f"sandbox can read — the cartridge's save beside it, {save!r} ({where}), "
+                    "could not be located from here",
+                    {"key": key, "path": configured or ""},
+                ),
+            ),
+        )
+    size = _dolphin_sav_size(machine, resolved.path)
+    if size is None:
+        return _DolphinSlot(
+            mode="agp",
+            readings=readings,
+            unreachable=GRANULARITY_SHARED_FILE,
+            caveats=(
+                Caveat(
+                    CAVEAT_CORE_MODE_UNESTABLISHED,
+                    f"slot {letter} holds a GBA cartridge adapter (AGP, EXI device 9) whose "
+                    f"cartridge save is {resolved.path}, and this host could not examine that "
+                    f"file — the save is only as large as the file already is ({where}), so "
+                    "whether the cartridge save holds anything is unestablished",
+                    {"token": token, "reason": REASON_SLOT_HOLDS_AGP_DEVICE, "slot": letter},
+                ),
+            ),
+        )
+    if not size:
+        return _DolphinSlot(mode="agp", readings=readings)
+    directory, name = os.path.split(resolved.path)
+    return _DolphinSlot(
+        mode="agp",
+        groups=(
+            FileGroup(
+                dir=directory,
+                files=(name,),
+                granularity=GRANULARITY_SHARED_FILE,
+                role=ROLE_BATTERY,
+            ),
+        ),
+        readings=readings,
+    )
+
+
 def _dolphin_reading(
     key: str,
     value: str | None,
@@ -6632,15 +6826,21 @@ def _dolphin_carded_slot(
 def _dolphin_slot(
     letter: str,
     values: Mapping[tuple[str, str], str],
+    machine: Machine,
     sandbox: _Sandbox,
     gc_root: str,
     cite: "_Cite",
+    *,
+    token: str,
 ) -> _DolphinSlot:
     """One slot read the way the emulator reads it: device id first, then the path.
 
     Every key is matched ASCII case-insensitively, last occurrence winning,
     because that is the emulator's own matching (the chain is on
-    :func:`_parse_sectioned_ini`, #295).
+    :func:`_parse_sectioned_ini`, #295). The GBA cartridge adapter is read
+    here rather than in :func:`_dolphin_carded_slot`, because it keeps no card
+    and no flip names it: whether it keeps a save is its ``.sav``'s size,
+    which only this machine answers (:func:`_dolphin_agp_slot`).
     """
     raw_value, slot_spelled = _simpleini_value(values, "Core", f"Slot{letter}")
     try:
@@ -6651,6 +6851,8 @@ def _dolphin_slot(
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     slot = _dolphin_carded_slot(letter, device, values, sandbox, gc_root, cite)
+    if slot is None and device == _DOLPHIN_DEVICE_AGP:
+        slot = _dolphin_agp_slot(letter, values, machine, sandbox, cite, token=token)
     if slot is not None:
         return _DolphinSlot(
             mode=slot.mode,
@@ -6659,24 +6861,6 @@ def _dolphin_slot(
             caveats=slot.caveats,
             template_dir=slot.template_dir,
             unreachable=slot.unreachable,
-        )
-    if device == _DOLPHIN_DEVICE_AGP:
-        return _DolphinSlot(
-            mode="agp",
-            readings=(slot_reading,),
-            caveats=(
-                Caveat(
-                    CAVEAT_CORE_MODE_UNESTABLISHED,
-                    f"Dolphin's slot {letter} holds a GBA cartridge adapter (AGP, EXI device 9) — "
-                    "its saves go onto the cartridge image the emulator is configured with, which "
-                    "this answer does not model; the other slot's statement stands on its own",
-                    {
-                        "token": "DOLPHIN",
-                        "reason": REASON_SLOT_HOLDS_AGP_DEVICE,
-                        "slot": letter,
-                    },
-                ),
-            ),
         )
     return _DolphinSlot(
         mode="unknown",
@@ -6687,7 +6871,7 @@ def _dolphin_slot(
                 f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
                 "interpret — what sits in that slot and where it saves is unestablished",
                 {
-                    "token": "DOLPHIN",
+                    "token": token,
                     "reason": REASON_SLOT_DEVICE_UNINTERPRETED,
                     "slot": letter,
                     # A slot whose key is absent takes the compiled default,
@@ -6707,14 +6891,48 @@ def _dolphin_ungrouped_value(slots: Sequence[_DolphinSlot]) -> str:
     The card of the first slot whose path this host cannot locate groups the
     way its device does — the emulator keeps saves on it, atlas only cannot
     reach them — so the answer states that grouping with no group beside it,
-    and :data:`GRANULARITY_NONE` is left for where no slot holds a card atlas
-    recognizes: a raw card or a GCI folder. Where two such cards group
-    differently the first slot's word is stated, the way ``groups[0]`` decides
-    the value of an answer that carries groups. The answer and the alternative
-    naming its mode both read it here, so what the alternative promises is what
-    the reached answer states.
+    and :data:`GRANULARITY_NONE` is left for where no slot keeps a save: none
+    holds a raw card or a GCI folder, and no GBA cartridge adapter's ``.sav``
+    has a size or sits where this host cannot examine it. Where two such
+    cards group differently the first slot's word is stated, the way
+    ``groups[0]`` decides the value of an answer that carries groups. The
+    answer and the alternative naming its mode both read it here, so what the
+    alternative promises is what the reached answer states.
     """
     return next((slot.unreachable for slot in slots if slot.unreachable), GRANULARITY_NONE)
+
+
+def _dolphin_uninterpreted_refusal(
+    slots: tuple[_DolphinSlot, _DolphinSlot],
+    *,
+    token: str,
+    config: str,
+) -> Unresolved | None:
+    """The refusal where a device atlas cannot interpret is all the slots say.
+
+    A slot holding such a device may keep saves anywhere, so where no other
+    slot keeps one atlas can state — a group, or a card or cartridge save it
+    cannot reach — neither a location nor "nothing is kept" is true to say.
+    Beside a slot that does keep one, the answer stands and the device rides
+    it as ``core-mode-unestablished``. The first such slot is named.
+    """
+    if any(slot.groups or slot.unreachable for slot in slots):
+        return None
+    for letter, slot in zip(("A", "B"), slots):
+        if slot.mode != "unknown":
+            continue
+        # The slot key's reading comes first; this device's value is set,
+        # because an absent key falls to a default this card reads.
+        value = slot.readings[0].value or ""
+        return Unresolved(
+            UNRESOLVED_SLOT_DEVICE_UNINTERPRETED,
+            f'Dolphin.ini sets Slot{letter} to "{value}", a device this card cannot '
+            "interpret, and no other slot keeps a save this answer can state — what that "
+            "device keeps and where is unestablished, so neither a location nor that "
+            "nothing is kept can be said",
+            {"token": token, "slot": letter, "value": value, "config": config},
+        )
+    return None
 
 
 def _dolphin_gc_answer(
@@ -6768,10 +6986,10 @@ def _dolphin_gc_answer(
                 if g.files is None
             )
     else:
-        # No slot carries a group: either no slot holds a card atlas
-        # recognizes, and no save write lands anywhere atlas models until a
-        # slot is configured again, or a card sits at a path this host cannot
-        # locate — see _dolphin_ungrouped_value.
+        # No slot carries a group: either no slot keeps a save, and no save
+        # data lands anywhere until the configuration changes, or a card or a
+        # cartridge save sits where this host cannot locate or examine it —
+        # see _dolphin_ungrouped_value.
         value = _dolphin_ungrouped_value(slots)
         directory = template or (ini_path and os.path.dirname(ini_path)) or "/"
         needs = ()
@@ -6781,9 +6999,10 @@ def _dolphin_gc_answer(
         caveats.append(
             Caveat(
                 CAVEAT_SAVE_WRITES_DISCARDED,
-                "no memory card sits in either slot (Dolphin.ini [Core] SlotA/SlotB) — a "
-                "GameCube game finds nowhere to save and nothing is kept; the granularity "
-                "block names the switches that would change that",
+                "neither slot keeps a save (Dolphin.ini [Core] SlotA/SlotB) — no memory card "
+                "sits in either one, and a GBA cartridge adapter keeps one only in a .sav that "
+                "has a size — so a GameCube game finds nowhere to save and nothing is kept; the "
+                "granularity block names the switches that would change that",
                 {"token": card.token, "mode": mode},
             )
         )
@@ -7075,9 +7294,12 @@ def _dolphin_savefile_placement(
         if _simpleini_value(values, "Core", key)[0]
     )
     slots = (
-        _dolphin_slot("A", values, sandbox, gc_root, cite),
-        _dolphin_slot("B", values, sandbox, gc_root, cite),
+        _dolphin_slot("A", values, machine, sandbox, gc_root, cite, token=card.token),
+        _dolphin_slot("B", values, machine, sandbox, gc_root, cite, token=card.token),
     )
+    refusal = _dolphin_uninterpreted_refusal(slots, token=card.token, config=ini_path)
+    if refusal is not None:
+        return refusal
     return _dolphin_gc_answer(
         slots,
         machine=machine,
@@ -7093,7 +7315,7 @@ def _dolphin_savefile_placement(
                 token=card.token,
                 homes=homes,
                 keys=_DOLPHIN_GC_LAYER_KEYS,
-                governs="which file or folder each memory card slot reads",
+                governs="which file or folder each slot reads",
             ),
         ),
     )

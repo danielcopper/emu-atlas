@@ -565,6 +565,7 @@ KNOWN_UNRESOLVED_CODES = {
     "mod-wiring-unestablished",
     "emulator-config-unreadable",
     "emulator-config-path-untranslatable",
+    "slot-device-uninterpreted",
 }
 
 

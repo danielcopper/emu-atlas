@@ -1085,49 +1085,49 @@ others the constructor closes — `firmware-search-candidates`'s `readings` and 
 `core-mode-unestablished.reason` — why the card's selection rule could not decide. The sentence that used to sit here is
 in `message`, and what it embedded is a key of its own (named in the third column):
 
-| reason                                | what could not be decided                                                               | what the sentence embedded |
-| ------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------- |
-| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it                    | —                          |
-| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                      | —                          |
-| `no-user-directory`                   | no user directory was found at all                                                      | —                          |
-| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them                | —                          |
-| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                          | —                          |
-| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                       | —                          |
-| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                          | —                          |
-| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                                  | —                          |
-| `configured-user-has-no-tree`         | nothing here answers to the configured id                                               | —                          |
-| `no-user-preselected`                 | the configuration preselects no user                                                    | —                          |
-| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                     | —                          |
-| `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                 | —                          |
-| `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds | —                          |
-| `region-decided-by-disc`              | which console region boots is the running disc's                                        | — [^rd]                    |
-| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                               | —                          |
-| `slot-holds-agp-device`               | the slot holds a GBA cartridge adapter this answer does not model                       | `slot`                     |
-| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                 | `slot`, `value`            |
-| `session-override-set`                | a per-session override (a movie or netplay session) is set                              | `key`                      |
-| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                      | —                          |
-| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                       | —                          |
-| `virtual-sd-disabled`                 | the emulated SD card is switched off                                                    | —                          |
-| `content-class-unnamed`               | the answer splits on the content's class and no content was named                       | —                          |
-| `content-class-unrecorded`            | the content's extension is outside every class the card records                         | `extension`                |
-| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                                   | `extension`                |
-| `archive-unread`                      | the loaded archive's member list did not come back                                      | `status`                   |
-| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one            | `volumes`                  |
-| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states               | `member`                   |
-| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted      | `entries`                  |
-| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist          | `classes`                  |
-| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it        | `extension`                |
-| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots       | —                          |
-| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on               | `savepath`, `savedir`      |
-| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                           | —                          |
-| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                     | `container`                |
-| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all        | `model`                    |
-| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                            | —                          |
-| `savepath-untranslatable`             | the configured save path has no host spelling                                           | `path`                     |
-| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover                   | `options` (an object)      |
-| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                       | `members`                  |
-| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read        | —                          |
-| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal      | `members`                  |
+| reason                                | what could not be decided                                                                                                | what the sentence embedded |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it                                                     | —                          |
+| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                                                       | —                          |
+| `no-user-directory`                   | no user directory was found at all                                                                                       | —                          |
+| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them                                                 | —                          |
+| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                                                           | —                          |
+| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                                                        | —                          |
+| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                                                           | —                          |
+| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                                                                   | —                          |
+| `configured-user-has-no-tree`         | nothing here answers to the configured id                                                                                | —                          |
+| `no-user-preselected`                 | the configuration preselects no user                                                                                     | —                          |
+| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                                                      | —                          |
+| `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                                                  | —                          |
+| `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds                                  | —                          |
+| `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | — [^rd]                    |
+| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                                                                | —                          |
+| `slot-holds-agp-device`               | the slot's GBA cartridge adapter reads a `.sav` this host could not examine, so whether it holds a save is unestablished | `slot`                     |
+| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                                                  | `slot`, `value`            |
+| `session-override-set`                | a per-session override (a movie or netplay session) is set                                                               | `key`                      |
+| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                                                       | —                          |
+| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                                                        | —                          |
+| `virtual-sd-disabled`                 | the emulated SD card is switched off                                                                                     | —                          |
+| `content-class-unnamed`               | the answer splits on the content's class and no content was named                                                        | —                          |
+| `content-class-unrecorded`            | the content's extension is outside every class the card records                                                          | `extension`                |
+| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                                                                    | `extension`                |
+| `archive-unread`                      | the loaded archive's member list did not come back                                                                       | `status`                   |
+| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one                                             | `volumes`                  |
+| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states                                                | `member`                   |
+| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted                                       | `entries`                  |
+| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist                                           | `classes`                  |
+| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it                                         | `extension`                |
+| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots                                        | —                          |
+| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on                                                | `savepath`, `savedir`      |
+| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                                                            | —                          |
+| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                                                      | `container`                |
+| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all                                         | `model`                    |
+| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                                                             | —                          |
+| `savepath-untranslatable`             | the configured save path has no host spelling                                                                            | `path`                     |
+| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover                                                    | `options` (an object)      |
+| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                                                        | `members`                  |
+| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read                                         | —                          |
+| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal                                       | `members`                  |
 
 [^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
     lifted out of the sentence.
@@ -1292,6 +1292,25 @@ GameCube answer and PrimeHack's, the one fork that answers through it, an answer
 `physical_dir` and any link caveat describe that directory too. The card's configured path is the `data.path` of the
 `sandbox-path-untranslated` caveat whose `data.key` names that slot's path key.
 
+**A GBA cartridge adapter's save is the `.sav` beside its cartridge.** With a slot set to 9, Dolphin loads the cartridge
+`[Core] AgpCartAPath` or `AgpCartBPath` names and, beside it, the same path with its extension swapped for `.sav`, and
+writes that file back at shutdown at the size it already has. A `.sav` with a size is therefore one `battery` group of
+granularity `shared-file`, which every GameCube game run with that configuration writes; an unset key, a missing `.sav`
+or an empty one keeps nothing, and where the other slot keeps no save either, that is `save-writes-discarded`. A `.sav`
+atlas cannot size is stated like a card it cannot reach — no group, and where no other slot carries one,
+`granularity.value` `shared-file`: a path only the sandbox can spell carries `sandbox-path-untranslated` with the
+configured cartridge path in `data.path`, a relative one — opened from the launching process's working directory —
+carries `save-dir-launch-dependent` with the relative `.sav` in `data.path`, and one this host could not examine —
+including one whose size stats while its bytes do not read — carries `core-mode-unestablished` with the reason
+`slot-holds-agp-device`. The PrimeHack revision RetroDECK builds writes `.sav` into that working directory even with the
+key unset, so there an unset key reads as the relative case.
+
+**A slot device atlas cannot interpret refuses the question when nothing else keeps a save.** What such a device keeps,
+and where, is unknown, so where the other slot keeps no save atlas can state — no group, and no card or cartridge save
+it cannot reach — the question refuses with `slot-device-uninterpreted`, `data` naming the `token`, the `slot`, the
+`value` as configured and the `config` file. Beside a slot that does keep one the answer stands, and the device rides it
+as `core-mode-unestablished` with the reason of the same spelling.
+
 DuckStation's answer states the same shape for a shared card at a path only its sandbox can spell, beside the
 `save-writes-discarded` a `NonPersistent` slot carries for itself; `SavefilePlacement.dir` says which directory stands
 in there.
@@ -1301,10 +1320,11 @@ load `<id>.ini` from _two_ GameSettings directories over the whole configuration
 `<data home>/<user dir>/GameSettings/` and a second one below the build's `Sys` tree — and both outrank `Dolphin.ini`
 itself (LocalGame, then GlobalGame, then Base). Nothing filters what such a file may set: the loader writes every mapped
 key into the layer, and the saveability filter runs only on the way out. So `[Core] MemcardAPath`, `MemcardBPath`,
-`GCIFolderAPath` and `GCIFolderBPath` can move the GameCube cards for one game, `[Dolphin.General] NANDRootPath` the Wii
-NAND, and `[Dolphin.General] LoadPath` the `Load` directory that the texture tree _and_ the graphics-mod tree both hang
-below — one key, both answers. (The section is `[Dolphin.General]`, not `[Main.General]`: a `General` key arrives only
-through the free-form `<System>.<Section>` spelling, and the name Dolphin resolves for that system is `Dolphin`.)
+`GCIFolderAPath` and `GCIFolderBPath` can move the GameCube cards for one game, `AgpCartAPath` and `AgpCartBPath` the
+GBA cartridges and the `.sav` beside each, `[Dolphin.General] NANDRootPath` the Wii NAND, and
+`[Dolphin.General] LoadPath` the `Load` directory that the texture tree _and_ the graphics-mod tree both hang below —
+one key, both answers. (The section is `[Dolphin.General]`, not `[Main.General]`: a `General` key arrives only through
+the free-form `<System>.<Section>` spelling, and the name Dolphin resolves for that system is `Dolphin`.)
 
 Which game runs is not a fact atlas holds, so the answers stay the **global** reading and state the layer beside it —
 and the two directories are two different statements, because one of them is a check atlas can make and the other never
