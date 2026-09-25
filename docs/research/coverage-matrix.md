@@ -10,7 +10,7 @@ proven; ? = not established. This is capability, not the active mode on one mach
 matrix. Verdicts and evidence levels are defined in `docs/research/core-audit.md`. Those columns describe the libretro
 half; the standalone half is one column per question, filled from the packaged cards.
 
-Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 3) sha256 `3502dc7ede8f`.
+Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 4) sha256 `a0b4e208a5a6`.
 
 **Status:** libretro 61/159 audited · standalone save 11/22 · savestate 19/22 · texture 7/22 · mod 7/22 · firmware 5/22
 

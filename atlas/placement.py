@@ -537,6 +537,28 @@ CAVEAT_CORE_GENERATION_UNESTABLISHED = "core-generation-unestablished"
 # the *setting* is unknown — and exclusive with both of the two above it, since
 # each of them has already retired the card before an option can be read.
 CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED = "core-option-value-unestablished"
+# The card applies and the answer is the card's, unchanged — but the installed
+# core registers option keys the card's audit record does not list
+# (``registration`` in core_audit.json). The audit never examined those options,
+# so whether one of them changes where or how this core saves is unknown; the
+# statement is about the audit, not a verdict that the answer is wrong. ``data``
+# names the core and the sorted ``added`` keys, and with them the sorted
+# ``removed`` ones — recorded keys the core no longer registers, ``[]`` where
+# there are none — so the difference is stated whole.
+#
+# What it sees is added keys, and only those. A removal alone never raises it:
+# a removed governing or rule key has already retired the card under
+# core-generation-mismatch, and any other removed key is silent by choice — the
+# caveat speaks where a core offers something the audit never examined. Not
+# seen at all: a changed default or value set of a recorded key, and a build
+# whose save behaviour changes while its options do not. The tripwire in
+# tests/test_oddities.py holds the full recorded registration (keys, defaults,
+# values) against the deployed RetroDECK build, so a removed key and a changed
+# default or value set in THAT build fail the suite on a machine carrying it;
+# only live verification covers a behaviour change with no option change.
+# Silent where either side is unread: a record that says not-captured, or a core
+# whose registration the probe did not capture.
+CAVEAT_CORE_OPTIONS_UNAUDITED = "core-options-unaudited"
 # The governing options file carries an entry for a key this card's core
 # generation retired — an older generation wrote it, the rename or split left
 # it behind, and RetroArch never prunes the file, so the value someone set
