@@ -1292,6 +1292,10 @@ GameCube answer and PrimeHack's, the one fork that answers through it, an answer
 `physical_dir` and any link caveat describe that directory too. The card's configured path is the `data.path` of the
 `sandbox-path-untranslated` caveat whose `data.key` names that slot's path key.
 
+DuckStation's answer states the same shape for a shared card at a path only its sandbox can spell, beside the
+`save-writes-discarded` a `NonPersistent` slot carries for itself; `SavefilePlacement.dir` says which directory stands
+in there.
+
 **Dolphin and PrimeHack read every answer above through a per-game layer, and they say so.** While a game runs, both
 load `<id>.ini` from _two_ GameSettings directories over the whole configuration — the user's own
 `<data home>/<user dir>/GameSettings/` and a second one below the build's `Sys` tree — and both outrank `Dolphin.ini`

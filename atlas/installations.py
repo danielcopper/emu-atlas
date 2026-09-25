@@ -7908,12 +7908,20 @@ def _duckstation_settings(
 
 @dataclass(frozen=True, slots=True)
 class _DuckSlot:
-    """One memory-card slot's contribution to the answer."""
+    """One memory-card slot's contribution to the answer.
+
+    ``unreachable`` is the grouping of a card the slot holds at a path this
+    host cannot locate: the emulator writes its saves there, so the slot is
+    not configured empty, but atlas has no directory to state a group in and
+    cannot tell whether those writes are kept. ``None`` wherever the slot's
+    group says everything, or it holds no card that keeps a save.
+    """
 
     mode: str
     group: FileGroup | None = None
     readings: tuple[OptionReading, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    unreachable: str | None = None
 
 
 def _duckstation_shared_slot(
@@ -7965,6 +7973,7 @@ def _duckstation_shared_slot(
         if host.path is None:
             return _DuckSlot(
                 mode="Shared",
+                unreachable=GRANULARITY_SHARED_CARD,
                 readings=(type_reading, path_reading),
                 caveats=(
                     Caveat(
@@ -8119,6 +8128,21 @@ def _duckstation_slot(
     return _duckstation_per_game_slot(
         slot, mode, values, memcards_dir, card, type_reading, content_path
     )
+
+
+def _duckstation_ungrouped_value(slots: Sequence[_DuckSlot]) -> str:
+    """The granularity a DuckStation answer carrying no group states.
+
+    A shared card at a path this host cannot locate groups the way any shared
+    card does — it is still where the emulator writes, atlas only cannot reach
+    it — so the answer states that grouping with no group beside it, and
+    :data:`GRANULARITY_NONE` is left for where no slot keeps a card: ``None``
+    and ``NonPersistent`` alike. Only a shared card's own path is translated
+    per slot — a per-game card sits in the memory-card directory, and a
+    directory with no host spelling refuses the whole answer before any slot
+    is read — so every such slot names the same word.
+    """
+    return next((slot.unreachable for slot in slots if slot.unreachable), GRANULARITY_NONE)
 
 
 def _first_directory_files(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
@@ -8320,13 +8344,19 @@ def _duckstation_savefile_placement(
     caveats.extend(c for slot in slots for c in slot.caveats)
     mode = "+".join(slot.mode for slot in slots)
     if groups:
+        value = groups[0].granularity
         directory = groups[0].dir
         files = _first_directory_files(groups)
         needs = _duckstation_needs(groups)
     else:
+        # No slot carries a group: either no slot keeps a card, and nothing a
+        # game writes is kept until a slot is given one, or a shared card sits
+        # at a path this host cannot locate — see _duckstation_ungrouped_value.
+        value = _duckstation_ungrouped_value(slots)
         directory = memcards_dir
         files = ()
         needs = ()
+    if value == GRANULARITY_NONE:
         caveats.append(
             Caveat(
                 CAVEAT_SAVE_WRITES_DISCARDED,
@@ -8336,10 +8366,12 @@ def _duckstation_savefile_placement(
                 {"token": card.token, "mode": mode},
             )
         )
-    # The answer's own directory, which is the memory-card one only while no
-    # slot points elsewhere: a slot with an absolute CardXPath moves `dir`, and
-    # `physical_dir` is a statement about `dir` (a dead link on the directory
-    # the answer names is what makes writes fail).
+    # The answer's own directory, which is the memory-card one unless the
+    # first group sits elsewhere, as a shared card whose CardXPath names
+    # another directory does; a shared card this host cannot locate carries
+    # no group, and where no slot carries one the memory-card directory
+    # stands in. `physical_dir` is a statement about `dir` (a dead link on the
+    # directory the answer names is what makes writes fail).
     physical, link_caveats = _link_view(machine, directory)
     caveats.extend(link_caveats)
     return SavefilePlacement(
@@ -8358,7 +8390,7 @@ def _duckstation_savefile_placement(
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
-            value=groups[0].granularity if groups else GRANULARITY_NONE,
+            value=value,
             mode=mode,
             readings=tuple(_reading_with_file(r, stated_ini) for r in readings),
             alternatives=(),
