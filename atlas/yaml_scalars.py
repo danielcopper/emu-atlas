@@ -289,9 +289,11 @@ def _substitute(
     A token the file leaves empty or does not define at all falls to
     *fallbacks*, which is where the caller puts what the emulator itself would
     use — RPCS3 takes its config directory when ``$(EmulatorDir)`` is empty
-    (vfs_config.cpp:32-39). Without a fallback such a token is a refusal
-    rather than an empty string: the emulator would resolve it and atlas
-    cannot, so answering the unexpanded text would state a path nothing uses.
+    (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed
+    at :483 into vfs_config.cpp:50 at build 7c6b3dcd). Without a fallback such
+    a token is a refusal rather than an empty string: the emulator would
+    resolve it and atlas cannot, so answering the unexpanded text would state a
+    path nothing uses.
 
     A token whose defining key the file states more than once resolves against
     the first statement. That is this reader's own rule rather than an

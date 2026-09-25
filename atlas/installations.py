@@ -9124,6 +9124,14 @@ def _melonds_savefile_placement(
 _RPCS3_EMULATOR_DIR_KEY = "$(EmulatorDir)"
 _RPCS3_HDD0_KEY = "/dev_hdd0/"
 _RPCS3_HDD0_DEFAULT = "$(EmulatorDir)dev_hdd0/"
+# The route the drive is mounted by, which is where $(EmulatorDir) is settled:
+# Emulator::Init asks get_emu_dir() for it (System.cpp:395) and hands the answer,
+# never empty, to cfg_vfs::get — so that function's own fallback for an empty
+# argument (vfs_config.cpp:32-48) is never taken for this drive.
+_RPCS3_EMULATOR_DIR_ROUTE = (
+    "get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at "
+    ":483 into vfs_config.cpp:50 at build 7c6b3dcd"
+)
 # The user home the emulator starts with (Emulator::m_usr, System.h:164), used
 # where no home directory can be listed — never as a claim that it is the one
 # in force, which the caveat states.
@@ -9779,29 +9787,105 @@ def _rpcs3_listing_claim(survey: _PerUserSurvey) -> str:
     )
 
 
-def _rpcs3_drive_provenance(stated: str | None, *, null_node: bool) -> str:
-    """Where the drive came from: the file's own value, or the compiled default.
+@dataclass(frozen=True, slots=True)
+class _Rpcs3Drive:
+    """The drive vfs.yml leaves RPCS3, and the two ways an answer speaks of it.
 
-    Three sentences for three files, and the middle one is why there are three
-    rather than two: a key stated as a null node reaches the same directory as
-    a key nobody wrote, and a reader who opens vfs.yml sees a key. Each
-    sentence carries its own citations.
+    ``raw`` is the drive before host translation: the value vfs.yml states for
+    ``/dev_hdd0/`` as the scalar reader resolved it, or, where that key is
+    unset, empty or null, atlas's substitution of ``$(EmulatorDir)`` into the
+    compiled default ``$(EmulatorDir)dev_hdd0/``. ``provenance`` is the
+    reading's sentence about where it came from. ``origin`` names it inside a
+    sentence of its own — the drive the file names, or the compiled default
+    and what it was composed off — so a refusal about the drive never calls a
+    composed default a drive the file names.
     """
+
+    raw: str
+    provenance: str
+    origin: str
+
+
+def _rpcs3_default_drive(read: YamlScalars, config_dir: str) -> tuple[str, str, str]:
+    """The compiled default with ``$(EmulatorDir)`` replaced: the drive, its clause, its name.
+
+    The replacement is the one the mount makes: ``get_emu_dir()`` answers the
+    value vfs.yml states, as written — no separator is added to it, so a value
+    without a trailing ``/`` runs straight into ``dev_hdd0/`` — or the config
+    directory, which carries its own (fs::get_config_dir, Utilities/File.cpp:2284-2292
+    at build 7c6b3dcd), where the node holds nothing. It holds nothing where
+    ``$(EmulatorDir)`` is unset, empty or a null node, which no cfg::string
+    takes a value from — the citations ride the null-node sentence
+    :func:`_rpcs3_drive` emits. The caller has refused a ``$(EmulatorDir)`` the
+    reader skipped before it asks (see :func:`_rpcs3_vfs_refusal`).
+
+    Returns the drive, the clause the provenance sentence ends with, and the
+    drive's name for :attr:`_Rpcs3Drive.origin`.
+    """
+    emulator_dir = read.get(_RPCS3_EMULATOR_DIR_KEY)
+    if emulator_dir:
+        composed_off = f"the {_RPCS3_EMULATOR_DIR_KEY} vfs.yml states ({emulator_dir!r})"
+        clause = (
+            f', with {_RPCS3_EMULATOR_DIR_KEY} the "{emulator_dir}" vfs.yml states, '
+            f"substituted as written ({_RPCS3_EMULATOR_DIR_ROUTE})"
+        )
+    else:
+        emulator_dir = f"{config_dir}/"
+        composed_off = "the config directory"
+        clause = (
+            f", with {_RPCS3_EMULATOR_DIR_KEY} the config directory an unset, empty or null "
+            f"one means ({_RPCS3_EMULATOR_DIR_ROUTE})"
+        )
+    raw = _RPCS3_HDD0_DEFAULT.replace(_RPCS3_EMULATOR_DIR_KEY, emulator_dir)
+    origin = (
+        f"the compiled default {_RPCS3_HDD0_DEFAULT}, composed off {composed_off} "
+        f"into {raw!r},"
+    )
+    return raw, clause, origin
+
+
+def _rpcs3_drive(read: YamlScalars, config_dir: str) -> _Rpcs3Drive:
+    """The drive vfs.yml leaves RPCS3, and where it came from.
+
+    A stated ``/dev_hdd0/`` is returned as the scalar reader resolved it: the
+    reader substitutes ``$(EmulatorDir)`` itself, with the config directory
+    standing in for an empty, null, absent or skipped one, and where that departs
+    from the emulator's own substitution is open (#511). Anything else — the
+    key unset, stated empty, or stated as a null node — leaves the compiled
+    default governing, composed as :func:`_rpcs3_default_drive` composes it.
+
+    Four sentences for four files, and two of them — an empty value and a null
+    node — are why there are four rather than two: both reach the same
+    directory as a key nobody wrote, and a reader who opens vfs.yml sees a
+    key. Each sentence carries its own citations, and the three that fall to
+    the compiled default name the ``$(EmulatorDir)`` it was composed off,
+    because the same default lands in two different places.
+    """
+    stated = read.get(_RPCS3_HDD0_KEY)
     if stated:
-        return f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"'
-    if null_node:
-        return (
+        return _Rpcs3Drive(
+            raw=stated,
+            provenance=f'vfs.yml: {_RPCS3_HDD0_KEY} = "{stated}"',
+            origin=f"the drive RPCS3's VFS configuration names ({stated!r})",
+        )
+    raw, clause, origin = _rpcs3_default_drive(read, config_dir)
+    governs = f"the compiled default {_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13){clause}"
+    if _RPCS3_HDD0_KEY in read.null:
+        provenance = (
             f"{_RPCS3_HDD0_KEY} is stated as a null node, which RPCS3's reader passes over "
             "— a cfg::string takes a value only where convert<std::string>::decode accepts "
             "it (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no "
             "scalar for it to accept (convert.h:73-75 at the yaml-cpp fork 51a5d623, the "
-            "submodule that build pins) — so the compiled default "
-            f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
+            f"submodule that build pins) — so {governs}"
         )
-    return (
-        f"{_RPCS3_HDD0_KEY} is unset — the compiled default "
-        f"{_RPCS3_HDD0_DEFAULT} governs (vfs_config.h:13)"
-    )
+    elif stated is not None:
+        provenance = (
+            f"{_RPCS3_HDD0_KEY} is stated empty, and cfg_vfs::get falls to the default "
+            f"for an empty path (vfs_config.cpp:18-28 at build 7c6b3dcd) — so {governs}"
+        )
+    else:
+        provenance = f"{_RPCS3_HDD0_KEY} is unset — {governs}"
+    return _Rpcs3Drive(raw=raw, provenance=provenance, origin=origin)
 
 
 def _rpcs3_repeated_drive_key(read: YamlScalars) -> str | None:
@@ -9834,12 +9918,24 @@ def _rpcs3_vfs_refusal(
 ) -> Unresolved | None:
     """Why vfs.yml settles nothing about the drive, or ``None`` where it does.
 
-    Three ways, in the order they take precedence. A construct the scalar
+    Four ways, in the order they take precedence. A construct the scalar
     reader refuses stops the whole file. A key stated more than once is read by
     the emulator and by this reader from two different statements, so neither
     can be published as the drive. A ``/dev_hdd0/`` the reader passed over is
     stated and unread, which is not the unset key whose compiled default the
-    answer would otherwise name.
+    answer would otherwise name. And where the drive does fall to that default,
+    a ``$(EmulatorDir)`` the reader passed over is the same gap one step later:
+    the default is composed off it, and RPCS3 takes a multi-line scalar there
+    as the directory while it passes over a block or a list and keeps the
+    config directory, because a cfg::string takes a value from a scalar and
+    nothing else — cited in the null-node sentence :func:`_rpcs3_drive` emits.
+    The reader records all three as skipped, so which of them the file states
+    is exactly what was not read.
+
+    A drive stated with the ``$(EmulatorDir)`` token beside a skipped one is
+    the same gap and is not refused here: the reader has already substituted
+    its config-directory fallback into the drive, so the token is gone by the
+    time this check could look for it. That case is open (#511).
     """
     if read.refusal is not None:
         return Unresolved(
@@ -9880,6 +9976,20 @@ def _rpcs3_vfs_refusal(
                 "key": _RPCS3_HDD0_KEY,
             },
         )
+    if _RPCS3_EMULATOR_DIR_KEY in read.skipped and not read.get(_RPCS3_HDD0_KEY):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"RPCS3's VFS configuration ({vfs_path}) leaves {_RPCS3_HDD0_KEY} unset, empty "
+            f"or null and states {_RPCS3_EMULATOR_DIR_KEY} as a construct atlas does not "
+            f"read — the compiled default {_RPCS3_HDD0_DEFAULT} is composed off a value that "
+            "is unread, not absent, so which drive its saves live on is unknowable here",
+            {
+                "token": card.token,
+                "config": vfs_path,
+                "reason": REASON_KEY_UNREAD,
+                "key": _RPCS3_EMULATOR_DIR_KEY,
+            },
+        )
     return None
 
 
@@ -9898,8 +10008,11 @@ def _rpcs3_savefile_placement(
 
     Two steps, both the emulator's own. ``cfg_vfs::get`` takes the configured
     ``/dev_hdd0/`` or its compiled default, replaces ``$(EmulatorDir)``
-    everywhere — an empty one meaning the config directory — and appends a
-    separator (vfs_config.cpp:14-62). Below the drive the tree is
+    everywhere and ends the resulting path with a separator where it has none
+    (vfs_config.cpp:14-62). What it replaces the token with is
+    ``get_emu_dir()``'s answer — the stated value as written, or the config
+    directory where it is empty (system_utils.cpp:146-150, called at
+    System.cpp:395 and passed at :483). Below the drive the tree is
     ``home/<user>/savedata``, one directory per title id.
 
     The user is where this answer stops short of certainty: it is a runtime
@@ -9932,15 +10045,14 @@ def _rpcs3_savefile_placement(
     if refused is not None:
         return refused
     stated = read.get(_RPCS3_HDD0_KEY)
-    provenance = _rpcs3_drive_provenance(stated, null_node=_RPCS3_HDD0_KEY in read.null)
-    raw = stated or f"{config_dir}/dev_hdd0/"
-    host = sandbox.host(_RPCS3_HDD0_KEY, raw)
+    drive = _rpcs3_drive(read, config_dir)
+    host = sandbox.host(_RPCS3_HDD0_KEY, drive.raw)
     if host.path is None:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-            f"the drive RPCS3's VFS configuration names ({raw!r}) has no spelling on "
-            f"this host — {vfs_path} read fine, and nothing this answer could anchor at",
-            {"token": card.token, "config": vfs_path, "path": raw},
+            f"{drive.origin} has no spelling on this host — {vfs_path} read fine, and "
+            "nothing this answer could anchor at",
+            {"token": card.token, "config": vfs_path, "path": drive.raw},
         )
     hdd0 = host.path
     vmc = os.path.join(hdd0, _RPCS3_VMC_SUBDIR)
@@ -10006,7 +10118,7 @@ def _rpcs3_savefile_placement(
             skipped=survey.skipped,
             unestablished=survey.unestablished,
             mode="hdd0",
-            readings=(OptionReading(_RPCS3_HDD0_KEY, stated, provenance, None),),
+            readings=(OptionReading(_RPCS3_HDD0_KEY, stated, drive.provenance, None),),
             reading_file=vfs_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the drive from vfs.yml "

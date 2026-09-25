@@ -3104,7 +3104,7 @@
     },
     {
       "name": "rpcs3-an-unset-drive-is-the-compiled-default-below-the-config-directory",
-      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (vfs_config.cpp:32-39). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use. Nothing has saved into it yet, and the caveat says so rather than presenting the compiled default user as a home found on this machine: it is the tree the emulator would create.",
+      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use. Nothing has saved into it yet, and the caveat says so rather than presenting the compiled default user as a home found on this machine: it is the tree the emulator would create.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3202,7 +3202,7 @@
     },
     {
       "name": "rpcs3-a-drive-stated-as-a-null-node-is-the-compiled-default",
-      "rationale": "A drive stated as a null node is a statement RPCS3's own reader passes over: cfg::decode takes a value only where YAML::convert<std::string>::decode accepts it (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar for it to accept (3rdparty/yaml-cpp/yaml-cpp/include/yaml-cpp/node/convert.h:73-75 at 51a5d623, the submodule that build pins), so the cfg node keeps the default it was declared with (Config.h:674-686) and the compiled $(EmulatorDir)dev_hdd0/ governs (vfs_config.h:13), below the config directory an empty $(EmulatorDir) means (vfs_config.cpp:32-39). The directory is the unset key's and the reading is not: the file states this key, so the reading carries the empty text the node leaves rather than the absent key's null. Read as the text it is written with, the drive was a relative directory named ~.",
+      "rationale": "A drive stated as a null node is a statement RPCS3's own reader passes over: cfg::decode takes a value only where YAML::convert<std::string>::decode accepts it (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar for it to accept (3rdparty/yaml-cpp/yaml-cpp/include/yaml-cpp/node/convert.h:73-75 at 51a5d623, the submodule that build pins), so the cfg node keeps the default it was declared with (Config.h:674-686) and the compiled $(EmulatorDir)dev_hdd0/ governs (vfs_config.h:13), below the config directory an empty $(EmulatorDir) means (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd). The directory is the unset key's and the reading is not: the file states this key, so the reading carries the empty text the node leaves rather than the absent key's null. Read as the text it is written with, the drive was a relative directory named ~.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3295,6 +3295,287 @@
               }
             ],
             "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-an-unset-drive-composes-off-the-emulator-dir-the-file-states",
+      "rationale": "An unset /dev_hdd0/ falls to the compiled default $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), which is a directory only once $(EmulatorDir) is replaced in it. The mount asks get_emu_dir() for the replacement (system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into the substitution at vfs_config.cpp:50, build 7c6b3dcd): the value the same file states, as written, or the config directory where the node holds nothing, as it does under no $(EmulatorDir), an empty one or a null node. This file states one, so the drive is dev_hdd0/ below it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "reason": "no-user-directory",
+                "users": [
+                  "00000001"
+                ]
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "token": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": []
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-drive-stated-as-a-null-node-composes-off-the-emulator-dir-the-file-states",
+      "rationale": "A /dev_hdd0/ stated as a null node keeps the compiled default: a cfg::string takes a value only where convert<std::string>::decode accepts it (Utilities/Config.cpp:645-655 at build 7c6b3dcd), and that accepts a scalar and nothing else (convert.h:73-75 at the yaml-cpp fork 51a5d623, the submodule that build pins). The default is composed off the $(EmulatorDir) the file states exactly as an unset key's is (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50), so the drive is dev_hdd0/ below the stated value. The reading still carries the empty text the node leaves, since the file does state this key.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n/dev_hdd0/: ~\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": null,
+                "granularity": "per-game-file",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
+                "role": "battery",
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "RPCS3",
+                "reason": "no-user-directory",
+                "users": [
+                  "00000001"
+                ]
+              }
+            },
+            {
+              "code": "file-set-spans-roots",
+              "data": {
+                "token": "RPCS3",
+                "mode": "hdd0",
+                "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/savedata/vmc",
+                "files": []
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "hdd0",
+            "readings": [
+              {
+                "key": "/dev_hdd0/",
+                "value": "",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-an-emulator-dir-stated-as-a-block-under-an-unset-drive-is-unread-not-absent",
+      "rationale": "vfs.yml states no /dev_hdd0/, so the drive is the compiled default composed off $(EmulatorDir) — and the file states $(EmulatorDir) as a nested block, which the scalar reader does not read. RPCS3 takes a value there only where convert<std::string>::decode accepts it (Utilities/Config.cpp:645-655 at build 7c6b3dcd), which is a scalar and nothing else (convert.h:73-75 at the yaml-cpp fork 51a5d623): a block or a list leaves the config directory standing, a multi-line scalar becomes the directory. The reader records all three alike as skipped, so it cannot tell which one the file states, and the refusal names $(EmulatorDir) under `key` beside the `key-unread` reason.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir):\n  path: /mnt/sd/retrodeck/storage/rpcs3/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "token": "RPCS3",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
+              "reason": "key-unread",
+              "key": "$(EmulatorDir)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "rpcs3-a-default-drive-composed-off-a-sandbox-only-emulator-dir-is-untranslatable",
+      "rationale": "vfs.yml states no /dev_hdd0/ and states $(EmulatorDir) as /run/user/1000/rpcs3/, so the drive RPCS3 mounts is the compiled default $(EmulatorDir)dev_hdd0/ (vfs_config.h:13) composed off that value as written, /run/user/1000/rpcs3/dev_hdd0/ (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd). That path lies under /run/user/, a prefix atlas's sandbox model treats as sandbox-only (_SANDBOX_ONLY_PREFIXES), so the answer refuses it as emulator-config-path-untranslatable with the composed drive in data.path — the refusal a /dev_hdd0/ stated with that path reaches too.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /run/user/1000/rpcs3/\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "ps3"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "token": "RPCS3",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml",
+              "path": "/run/user/1000/rpcs3/dev_hdd0/"
+            }
           }
         }
       }

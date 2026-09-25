@@ -583,7 +583,8 @@ built-in migration, an unparseable TOML yielding factory defaults — and the em
 ROM itself (root `content_directory`); the stem is filled from named content, held open as `<rom_stem>` for archives,
 whose saves are named after the file inside. RPCS3 (build 7c6b3dcd): the save tree hangs off the emulated PS3's internal
 drive, and `vfs.yml` states where that drive lives — `/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get`
-replaces everywhere it appears and which means the emulator's config directory when empty (vfs_config.cpp:14-62). It is
+replaces everywhere it appears (vfs_config.cpp:14-62) with the value as written, or with the emulator's config directory
+when that value is empty (`get_emu_dir`, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483). It is
 the first card read through the YAML scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does
 not read rather than guessing at it. Below the drive the unit is `home/<user>/savedata`, one directory per title id; the
 active user is a runtime selection no file records, so **every user home RPCS3's own `GetUserAccounts` would list
