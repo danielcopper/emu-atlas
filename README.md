@@ -71,7 +71,7 @@ Four principles, fixed before any code.
   the core could not be queried, `<save_id>` where the emulator keys the save off a serial or title id it reads from the
   ROM itself — in file names (Flycast's per-game VMUs) and in directory segments alike (Cemu's per-title MLC subtree),
   because a file set and a tree are templates too. Whoever can fill a hole fills it;
-  [sigil](https://github.com/rommforge/argosy-sigil) is one supplier of `save_id`, not a dependency.
+  [sigil](https://github.com/rommapp/argosy-sigil) is one supplier of `save_id`, not a dependency.
 - **Every answer carries provenance.** Which config file said so, which default applied. Debugging a user's broken setup
   is the daily reality of every consumer; explainability is a feature, not a log line.
 
@@ -228,7 +228,10 @@ The boundary rule that decides every "table or live?" question, and the reasonin
 ## What does not live here
 
 - **ROM identification** — which game a file is, and the platform-native id atlas leaves as the `<save_id>` hole in a
-  declared file name rather than opening a ROM to read it: sigil's territory.
+  declared file name rather than opening a ROM to read it: sigil's territory. sigil's own README names three calls,
+  "identify the game, locate its saves, hash them", but atlas answers which files make up a save itself: sigil's layout
+  table states one revision of each core for every build, while atlas reads the options the installed core registers.
+  The comparison, row by row, is [`docs/research/sigil-territory.md`](docs/research/sigil-territory.md).
 - **Sync decisions** — what to do when local and server disagree: gavel's territory.
 - **File transfer, UI, per-client policy** — the client's territory.
 

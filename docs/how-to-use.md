@@ -900,11 +900,21 @@ whole answer atlas can give: identifying content is not locating a save, so atla
 it.
 
 **Composing the two.** Fill `save_id` from whatever supplier knows the platform's id scheme — for example
-[argosy-sigil](https://github.com/rommforge/argosy-sigil), which derives platform-native ids from ROM binaries and
+[argosy-sigil](https://github.com/rommapp/argosy-sigil), which derives platform-native ids from ROM binaries and
 deliberately leaves the emulator-side prefix and suffix to its consumer. It is _one_ supplier, not a dependency: atlas
-neither imports it nor assumes it, and it does not cover Dreamcast today, so this particular hole stays yours to fill
-(the id is the 10-byte product number in the disc header, trailing blanks trimmed, with each of `/\:*?|<>` — the leading
-space included — replaced by `_`). Where no supplier knows the id, an unfilled template still tells you the shape, the
+neither imports it nor assumes it. For this hole sigil reads the product number in the Dreamcast disc header
+(`T-8111N`), marked experimental, and trims it; Flycast, at `1dac369`, the build atlas reads, also replaces a space and
+each of `/\:*?|<>` in the id with `_`, while sigil replaces nothing, so replace those in the id first, then fill. Where
+sigil's id and a hole's spelling part in other ways, for Flycast and for the other holes, the comparison is §5 of
+[`sigil-territory.md`](research/sigil-territory.md). A RomM server from 5.3.0 on runs sigil over its library during a
+scan and serves what it read on every ROM whose scan read an id: `title_id`, `save_target` (sigil's `save_id`) and
+`save_target_layout` (its `usage`) — a second way to the `save_id` without opening the ROM, though not to sigil's
+`raw_serial`, which the Cemu hole needs (§5). sigil also resolves which files under a save root belong to a game; atlas
+answers that question itself (§3 there says why), so a client takes only the id from sigil. atlas's answer is not a
+claim about every file a core writes past the frontend. Of the cores sigil's table covers, three are where the two part
+on this: for Handy, SAME CDi and Nestopia on FDS, sigil's rows name files they attribute to the core itself, while atlas
+names only what the frontend writes — nothing for Handy and SAME CDi, `<stem>.srm` for Nestopia — and whether the core
+writes more is open (§2 there). Where no supplier knows the id, an unfilled template still tells you the shape, the
 count and the directory — enough to recognize the files once they exist.
 
 **When there is no id, the names change — and atlas says so.** The emulator uses the id only if the content carries one:
@@ -922,7 +932,9 @@ c.data["citation"]                # the source behind both, for when you need to
 ```
 
 The branch rule is the same question as filling the hole: ask your id supplier: an id → the first set with `save_id`
-substituted; no id for this content → the second set, which needs nothing from you.
+substituted; no id for this content → the second set, which needs nothing from you. No id from the supplier is not
+always no id in the content: sigil gives none for some product numbers Flycast still names the file after (§5 of
+[`sigil-territory.md`](research/sigil-territory.md)).
 
 `files_established_for` is the second half, and it is about _which files exist_, not how they are spelled: Flycast
 connects four VMUs on a Dreamcast and two on a Naomi board, so for arcade content two of the four stated names never
@@ -945,10 +957,11 @@ key at all, the answer is RetroArch's platform default (`system` under the confi
 is never something you are asked to fill.
 
 **The layering trap.** An id from such a supplier describes the platform's own structure, which is not automatically a
-structure on the host. sigil's PS2 `save_id` (`BASLUS-…`) names a directory _inside_ a memory card image; whether
-anything of that is visible as a file at all is decided by the emulator's mode — which is what atlas's `granularity`
-answers (`shared-card` for LRPS2's default: one `Mcd001.ps2` for every game, no per-game path anywhere). Ask atlas
-first, then decide whether the identifier is relevant to a filesystem operation at all.
+structure on the host. sigil's PS2 `save_id` (`BASLUS-…`, RomM's `save_target` for the same disc) names a directory
+_inside_ a memory card image; whether anything of that is visible as a file at all is decided by the emulator's mode —
+which is what atlas's `granularity` answers (`shared-card` for LRPS2's default: one `Mcd001.ps2` for every game, no
+per-game path anywhere). Ask atlas first, then decide whether the identifier is relevant to a filesystem operation at
+all.
 
 ### Placement caveats worth branching on
 
