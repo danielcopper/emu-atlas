@@ -22,7 +22,7 @@ publish alternatives of their own, so the walk continues from them until no
 distinct ``(mode, edits)`` pair is left — the first hop is not the claim, the
 closure is.
 
-Five things are stated rather than assumed, each held by its own test below. An
+Six things are stated rather than assumed, each held by its own test below. An
 edit the fixture cannot state has its name in :data:`UNAPPLIABLE_BY_FIXTURE` —
 the set holds names, and the reason it was refused rides in the walk's own
 message and in the comment beside the entry — so it is exempted rather than
@@ -35,7 +35,7 @@ than redder. And the answers the walk starts from are counted a second time by
 shape, so an answer shape the enumerator does not read cannot pass for one that
 is not there.
 
-The fifth is the alternative's other claim, held beside the mode (issue #409). A
+The fifth is the alternative's second claim, held beside the mode (issue #409). A
 :class:`~atlas.ModeAlternative` also publishes ``values``, the distinct
 groupings of the mode it names with the mode's own first, and a card that named
 the right mode with a wrong list used to pass. So the answer reached is asked
@@ -60,6 +60,19 @@ off that name — so the unknown-role reading is part of why the observed road i
 out rather than a filter over the declared one. A hop whose answer selected some
 other mode is not asked at all, because the groupings it states are that other
 mode's.
+
+The sixth is the alternative's ``caveats`` (issue #524): what the answer reached
+will say about a switch the mode newly reads, stated before the edit. Dolphin's
+flipped slot reading a card path only the emulator's sandbox can spell is the
+case — the card carries no group there, so beside a slot that carries groups
+``values`` is short of what the mode keeps, and the caveat is what says why. The
+switches the mode newly reads are the reading keys the answer reached has and
+the answer in force does not — Dolphin's slot-A path key, and elsewhere in this
+corpus option switches such as ``reicast_device_port1_slot2`` — and the caveats
+the answer reached states whose ``data.key`` names one of them must be exactly
+the alternative's, in order. Only Dolphin's path keys have such a caveat today.
+Every hop that selected its mode is held, whatever its file set, because a
+caveat is not a reading of the fixture's contents.
 """
 
 from __future__ import annotations
@@ -259,6 +272,13 @@ class Hop:
     """The distinct groupings the answer reached declares, in order — ``None`` where it
     declares none to hold ``values`` against, and where no answer was reached at all.
     """
+    caveats: tuple[str, ...] = ()
+    """The caveats the alternative publishes, each serialized with sorted keys."""
+    stated: tuple[str, ...] | None = None
+    """The caveats the answer reached states about a switch the answer in force does not
+    read, serialized the same way — ``None`` where no answer with a granularity block was
+    reached.
+    """
 
     @property
     def where(self) -> str:
@@ -296,6 +316,14 @@ class Hop:
         return (
             f"{self.where}: the alternative naming mode {self.mode!r} says to set "
             f"{self.written}; {outcome}"
+        )
+
+    def caveats_message(self) -> str:
+        """The whole ``caveats`` finding in one sentence — both lists, and the rule to fix."""
+        return (
+            f"{self.where}: the alternative naming mode {self.mode!r} says to set {self.written} and "
+            f"publishes caveats {list(self.caveats)}; applied, the answer states about the switches "
+            f"it newly reads {list(self.stated or ())}"
         )
 
     def values_message(self) -> str:
@@ -362,6 +390,34 @@ def _groupings(answer: dict[str, Any]) -> tuple[str, ...] | None:
     return groupings or (answer["granularity"]["value"],)
 
 
+def _serialized(caveats: Any) -> tuple[str, ...]:
+    """Each ``{code, data}`` block of *caveats*, as JSON with sorted keys, in order."""
+    return tuple(json.dumps(caveat, sort_keys=True) for caveat in caveats)
+
+
+def _stated_about_new_switches(standing: dict[str, Any], answer: dict[str, Any]) -> tuple[str, ...] | None:
+    """The caveats *answer* states about a switch *standing* does not read — ``None`` without a granularity.
+
+    A switch is a reading key; the ones the answer reached reads and the answer
+    in force does not are the switches the edit newly makes the emulator read —
+    Dolphin's flipped slot reading ``MemcardAPath`` where it read
+    ``GCIFolderAPath`` is the one that carries a caveat today. A caveat whose
+    ``data.key`` names one of them is about that switch, and is what the
+    alternative promised to state beforehand.
+    """
+    granularity = answer.get("granularity")
+    if not isinstance(granularity, dict):
+        return None
+    new = set(_readings_of(answer)) - set(_readings_of(standing))
+    # A caveat about several keys names them as a list — the per-game layer
+    # caveat lists every card key whatever the mode — and is about no one path.
+    return _serialized(
+        caveat
+        for caveat in answer["caveats"]
+        if isinstance(caveat["data"].get("key"), str) and caveat["data"]["key"] in new
+    )
+
+
 def _ask(state: dict[str, Any], question: str, where: str) -> dict[str, Any]:
     """The vector's own question, put to a machine rebuilt from *state* and serialized."""
     query_key, asker = QUESTIONS[question]
@@ -406,7 +462,16 @@ def _apply(
         files = _files_stating(state["files"], readings, alternative["options"])
     except Unappliable as why:
         refused = Hop(
-            origin, in_force, named, edits, switches, "", str(why), values=values, groupings=None
+            origin,
+            in_force,
+            named,
+            edits,
+            switches,
+            "",
+            str(why),
+            values=values,
+            groupings=None,
+            caveats=_serialized(alternative["caveats"]),
         )
         return refused, None
     reached = copy.deepcopy(state)
@@ -423,6 +488,8 @@ def _apply(
         "",
         values=values,
         groupings=_groupings(answer),
+        caveats=_serialized(alternative["caveats"]),
+        stated=_stated_about_new_switches(standing, answer),
     )
     return hop, (reached, answer)
 
@@ -532,6 +599,11 @@ class Walk:
         """
         return tuple(hop for hop in self.applied if not hop.verdict and hop.groupings is not None)
 
+    @property
+    def cautioned(self) -> tuple[Hop, ...]:
+        """The hops whose ``caveats`` the reached answer is asked for — every one that selected its mode."""
+        return tuple(hop for hop in self.applied if not hop.verdict)
+
     def coverage(self) -> dict[str, Any]:
         """What the walk reached — the numbers :data:`COVERAGE_FLOOR` pins."""
         modes: dict[tuple[str, ...], set[str]] = {}
@@ -541,6 +613,7 @@ class Walk:
             "answers": len({hop.origin for hop in self.hops} | set(self.silent)),
             "edits applied": len(self.applied),
             "values held": len(self.judged),
+            "caveats carried": sum(1 for hop in self.cautioned if hop.caveats),
             "switch sets": len(modes),
             "modes per switch set": {" ".join(s): sorted(reached) for s, reached in modes.items()},
         }
@@ -591,7 +664,7 @@ def walk() -> Walk:
 # have to come with an edit here; what they catch is the opposite move, a walk
 # that stops applying anything and passes green over an empty run.
 #
-# "values held" is the measurement itself, 489, rather than a number under it.
+# "values held" is the measurement itself, 497, rather than a number under it.
 # The three above sit under theirs so that a vector added tomorrow needs no
 # edit here; this one can be exact for a different reason, that the test
 # compares with ``<``, so anything which raises it passes untouched. What
@@ -601,10 +674,23 @@ def walk() -> Walk:
 # a red floor here is a prompt to measure again and write the new count with
 # the rule it was counted by — never on its own a proof that the check broke.
 # Counted as the applied hops that selected their mode and reached a declared
-# answer, over a closure of 545: 428 reach one declaring at least one group and
-# 61 one that decomposed into no group, held against its granularity value; of
-# the other 56 hops, 54 reach an observed answer and 2 an unknown one.
-COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "values held": 489, "switch sets": 16}
+# answer, over a closure of 560: 434 reach one declaring at least one group and
+# 63 one that decomposed into no group, held against its granularity value; of
+# the other 63 hops, 61 reach an observed answer and 2 an unknown one.
+#
+# "caveats carried" is a measurement too, 6, exact for the same reason. Counted
+# as the hops that selected their mode — the ones the caveats check holds —
+# whose alternative carries at least one caveat: every one a Dolphin slot-A
+# flip to a card or a folder at a path only the sandbox can spell. Every other
+# hop holds an empty list against an empty list, so without this floor a
+# corpus losing those six would leave the caveats check green over nothing.
+COVERAGE_FLOOR = {
+    "answers": 55,
+    "edits applied": 400,
+    "values held": 497,
+    "caveats carried": 6,
+    "switch sets": 16,
+}
 
 # The names of edits no fixture machine can state. The reason each was refused
 # is the walk's own message; the comment beside an entry is where a person says
@@ -643,6 +729,18 @@ def test_every_alternative_states_the_groupings_of_the_mode_it_names():
     # Held only where the answer reached is declared — :func:`_groupings` is
     # where that road is chosen and the module docstring says why.
     missed = sorted(hop.values_message() for hop in walk().judged if hop.groupings != hop.values)
+    assert missed == [], "\n".join(("", *missed))
+
+
+def test_every_alternative_states_the_caveats_of_the_switches_it_newly_reads():
+    # The alternative's third claim: what the answer reached will say about a
+    # switch the mode newly reads — today a card path this host cannot locate —
+    # the alternative says first, exactly, and says nothing that answer does
+    # not. Held on every hop that selected its mode, declared or not, since
+    # a caveat is no reading of one machine's contents.
+    missed = sorted(
+        hop.caveats_message() for hop in walk().cautioned if hop.caveats != hop.stated
+    )
     assert missed == [], "\n".join(("", *missed))
 
 

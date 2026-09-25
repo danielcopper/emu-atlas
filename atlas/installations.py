@@ -7083,6 +7083,12 @@ def _dolphin_alternatives(
     never :data:`GRANULARITY_NONE`. An empty tuple would say it differently and
     worse: nothing refuses one, and a client reading ``values[0]`` the way
     :class:`ModeAlternative` tells it to would raise instead of reading a word.
+
+    The flipped slot's caveats ride the alternative as its ``caveats``: they are
+    what the reached answer says about the path that slot would read — today
+    only ``sandbox-path-untranslated`` for a path this host cannot locate — and
+    they say why that slot carries no group there. Slot B's stay on the answer,
+    whose own slot it is.
     """
     a, b = slots
     alternatives: list[ModeAlternative] = []
@@ -7101,6 +7107,7 @@ def _dolphin_alternatives(
                 mode=f"{other}+{b.mode}",
                 options=(("SlotA", str(device)),),
                 values=groupings,
+                caveats=flipped.caveats,
             )
         )
     return tuple(alternatives)
