@@ -989,6 +989,7 @@ all.
 | `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
 | `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
 | `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |
+| `core-options-unaudited`          | card applied, answer unchanged: the core registers options its audit never examined (`data["added"]`)     |
 | `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied              |
 | `option-entry-retired`            | the options file carries a key this core generation retired — the value there stopped applying            |
 | `save-inside-content`             | no separate save file exists: the loaded content file itself takes the writes — your call                 |
@@ -1055,24 +1056,24 @@ that code name several and a client must not have to test the type first. The sa
 `file-set-across-systems.systems`, `core-mode-unestablished`'s `users` / `skipped` / `unestablished`,
 `per-game-layer-unread`'s `key` / `files` / `unlistable`, `per-game-overrides-present.key`,
 `per-game-build-layer-unread.key`, `core-multi-option.options`, `core-generation-mismatch.options`,
-`core-mode-unestablished.members`, `unverified-version.missing` and `patch-formats-unestablished.formats`. The firmware
-side spells `regions` (on `firmware-path-names-no-file`, `firmware-search-unverified` and `core-mode-unestablished`),
-`firmware-declaration-unread.declared`, `firmware-directory-holds-no-image.paths`,
-`firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`, `system-not-in-catalogue` and
-`system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on both `core-without-systemname`
-and `system-assignment-derived`. Order is contractual: it is the order the answer states, and two caveats naming the
-same names in different orders are two statements.
+`core-mode-unestablished.members`, `core-options-unaudited`'s `added` and `removed`, `unverified-version.missing` and
+`patch-formats-unestablished.formats`. The firmware side spells `regions` (on `firmware-path-names-no-file`,
+`firmware-search-unverified` and `core-mode-unestablished`), `firmware-declaration-unread.declared`,
+`firmware-directory-holds-no-image.paths`, `firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`,
+`system-not-in-catalogue` and `system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on
+both `core-without-systemname` and `system-assignment-derived`. Order is contractual: it is the order the answer states,
+and two caveats naming the same names in different orders are two statements.
 
 An empty list and an absent key are different answers, and which a pair gives is fixed. `[]` says this answer states no
 names under that key; whether none exist, none were read, or a listing failed is the code's business and the message's,
 not the empty array's. Read off the emitters, and measured wherever the corpus reaches it: the pairs always stated and
-carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-assignment-derived.database` and
-`core-without-systemname.database`; the ones present only when they have something to say, and simply absent otherwise,
-are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`, `unverified-version.missing` and the per-user
-`skipped` and `unestablished`. `per-game-layer-unread.files` is neither, because that code has four emulators' emitters
-and they do not agree: MAME's states it, `[]` there when only a failed listing is left to state, and states no `token`,
-while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir` and `key` and no `files`. Test for the key before
-reading it.
+carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-assignment-derived.database`,
+`core-without-systemname.database` and `core-options-unaudited.removed`; the ones present only when they have something
+to say, and simply absent otherwise, are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`,
+`unverified-version.missing` and the per-user `skipped` and `unestablished`. `per-game-layer-unread.files` is neither,
+because that code has four emulators' emitters and they do not agree: MAME's states it, `[]` there when only a failed
+listing is left to state, and states no `token`, while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir`
+and `key` and no `files`. Test for the key before reading it.
 
 A key a client **branches** on is a value from a closed set, never a sentence. Five of them are set out below; the two
 others the constructor closes — `firmware-search-candidates`'s `readings` and `system-firmware-world-knowledge`'s

@@ -29,7 +29,7 @@ def test_matrix_renders_per_game_capability_and_notes(tmp_path, monkeypatch):
     audit_path.write_text(
         json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "yes": {
                         "verdict": "standard",
@@ -163,7 +163,7 @@ def test_the_standalone_half_counts_every_question(tmp_path, monkeypatch):
         json.dumps({"emulators": {"DEMO": {}}}), encoding="utf-8"
     )
     audit_path = tmp_path / "core_audit.json"
-    audit_path.write_text(json.dumps({"schema": 3, "cores": {}}), encoding="utf-8")
+    audit_path.write_text(json.dumps({"schema": 4, "cores": {}}), encoding="utf-8")
     output_path = tmp_path / "coverage-matrix.md"
     monkeypatch.setattr(matrix, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(matrix, "DATA_DIR", data)

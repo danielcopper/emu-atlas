@@ -58,7 +58,7 @@ _RUNNER_RE = re.compile(r"%EMULATOR_([A-Z0-9_\-]+)%")
 
 ARRANGEMENTS = ("retrodeck", "emudeck", "bare")
 ARRANGEMENT_HEADERS = {"retrodeck": "RetroDECK", "emudeck": "EmuDeck", "bare": "RetroArch (bare)"}
-AUDIT_SCHEMA = 3
+AUDIT_SCHEMA = 4
 
 # One column per question a standalone entry can be asked, and the card file
 # that answers it. ``systems`` is the path to the list a card states where it

@@ -316,11 +316,13 @@ reading live configuration where a runtime rule exists; today that is complete f
 (`docs/tasks/save-detection.md`) — where the `None` is deliberate rather than incidental, the `core-multi-option` caveat
 says so and names the options. A shared default can therefore coexist with `per_game_capable: true`.
 
-Three mechanisms keep the data honest instead of hoping someone maintains it:
+These mechanisms keep the data honest instead of hoping someone maintains it:
 
 - strict loading requires every audit entry to state both `per_game_capable` and `note`
 - strict loading requires a `multi-option` entry to list its `save_options`, and rejects them on any other verdict
 - a test fails when a rule card lacks an audit entry
+- strict loading requires a rule card's entry to record its core's option keys (`registration`) or `not-captured`, and
+  rejects them on any other verdict; how they are recorded is step 5 of the method below
 - the resolver attaches an `unverified-version` caveat when a card is applied on an arrangement that is `null` in the
   matrix, or whose live-read versions (RetroDECK's `retrodeck.json` `version`, the core's own `library_version` via
   `query_core`) differ from the verified ones
@@ -361,6 +363,13 @@ Method per core:
    shipped binary names — cited as `file:line`
 3. live observation on a real machine where save data exists
 4. verdict + (if deviant) rule card with provenance, per-mode status, and an anchor for every name the card records
+5. for a rule card, after the verdict: re-record the option registration of the deployed build the steps above read,
+   with `python scripts/snapshot_core_registrations.py`. It writes the sorted keys into `core_audit.json`
+   (`registration`, what the resolver compares an installed core with) and the whole registration — defaults and values,
+   under the build it was read from — into `tests/data/core_registrations.json`, which the tripwire in
+   `tests/test_oddities.py` holds against the deployed core. It skips a card whose `retrodeck` record pins another
+   RetroDECK or core version than the deployed one, so a new build is re-audited and its pin moved first. Re-recording
+   copies what the build registers; it examines nothing, which is why it follows the re-audit and never stands in for it
 
 **A string the scan cannot find is not a code path that does not exist** — step 1 bounds what a name scan can prove,
 step 2 is what establishes a path. Three ways a shipped build hides what it does, each of which has produced a wrong

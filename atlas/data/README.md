@@ -326,8 +326,10 @@ going stale in silence.
 ## `core_audit.json`
 
 The machine-readable core of `docs/research/core-audit.md`: per core, the verdict, the evidence `note`, whether per-game
-saves are a proven capability, and — per arrangement — the versions the knowledge was verified against. The file's own
-`spec` field carries the rules; the research doc carries the method.
+saves are a proven capability, and — per arrangement — the versions the knowledge was verified against. A rule card's
+entry also carries `registration`, the option keys its core registered in the deployed build the record was taken from;
+how it is re-recorded is step 5 of the method in `docs/research/core-audit.md`. The file's own `spec` field carries the
+rules; the research doc carries the method.
 
 ## `texture_packs.json` — where each emulator reads texture packs
 

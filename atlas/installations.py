@@ -189,6 +189,7 @@ from .placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_OWN_WRITES_UNESTABLISHED,
     CAVEAT_CORE_OPTION_VALUE_UNESTABLISHED,
+    CAVEAT_CORE_OPTIONS_UNAUDITED,
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_OPTION_ENTRY_RETIRED,
@@ -1734,6 +1735,31 @@ def _rule_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption])
             f"feature-detected: core registers {', '.join(card.rule_options or ())} — card "
             "generation confirmed by observation, not by version comparison",
         ),
+    )
+
+
+def _options_unaudited(card: CoreCard, core_info: CoreInfo | None) -> Caveat | None:
+    """The ``core-options-unaudited`` statement for an applied card, where it holds.
+
+    Keys against keys: the ones the card's audit record lists and the ones the
+    installed core registers. What the caveat sees, what it leaves to other
+    checks and why, is stated once, at :data:`CAVEAT_CORE_OPTIONS_UNAUDITED`.
+    """
+    audit = lookup_audit(card.key)
+    recorded = audit.registration if audit is not None else None
+    registered = core_info.options if core_info is not None else None
+    if recorded is None or registered is None:
+        return None
+    added = sorted(set(registered) - set(recorded))
+    if not added:
+        return None
+    return Caveat(
+        CAVEAT_CORE_OPTIONS_UNAUDITED,
+        f"core {card.key!r} registers options its recorded save behaviour was never audited "
+        f"against ({', '.join(added)}) — the audit never examined them, so whether one of them "
+        "changes where or how this core saves is unknown; the answer below is the recorded "
+        "behaviour, stated as it stands",
+        {"core": card.key, "added": added, "removed": sorted(set(recorded) - set(registered))},
     )
 
 
@@ -4542,6 +4568,8 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
         )
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
+        if card is not None:
+            caveats.extend(_optional(_options_unaudited(card, core.info)))
 
     if card is not None and card_mode is not None and card_mode.root != ROOT_SAVEFILE_DIRECTORY:
         diverted = {

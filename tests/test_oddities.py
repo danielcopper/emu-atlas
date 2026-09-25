@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import functools
 import importlib.resources
 import json
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
 import pytest
 
@@ -85,6 +86,24 @@ DEPLOYED_CORES = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
     "/retroarch/rd_extras/cores"
 )
+# Each card's whole recorded registration (keys, defaults, values) and the build
+# it was read from — test-side, since the package carries only the keys — and the
+# command that re-records it (docs/research/core-audit.md, the audit method).
+RECORDED_REGISTRATIONS = Path(__file__).parent / "data" / "core_registrations.json"
+RE_RECORD_COMMAND = "python scripts/snapshot_core_registrations.py"
+
+
+@functools.cache
+def _recorded_registrations() -> dict[str, dict[str, Any]]:
+    """The test-side record, card key to entry — read once per run, not once per card."""
+    return json.loads(RECORDED_REGISTRATIONS.read_text(encoding="utf-8"))["cores"]
+
+
+def _recorded_registration(key: str) -> tuple[str | None, dict[str, dict[str, object]] | None]:
+    """A card's recorded build and whole registration — ``None`` for the second where not captured."""
+    entry = _recorded_registrations()[key]
+    registration = entry["registration"]
+    return entry["build"], None if registration == "not-captured" else registration
 
 
 def _mode(granularity: str, **group: object) -> dict[str, object]:
@@ -2366,6 +2385,122 @@ class TestARuleSelectedCard:
         assert stated[0].data["options"] == ("beetle_saturn_shared_ext",)
 
 
+def _audited_registration(key: str) -> dict[str, dict[str, object]]:
+    """A card's recorded registration, spelled as a fixture core registers it."""
+    registration = _recorded_registration(key)[1]
+    assert registration is not None
+    return registration
+
+
+# The switch added upstream in a0c1c52, after the audited Beetle Saturn build
+# (ccba526), as 1382b85 registers it (libretro_core_options.h:826-837).
+SATURN_SAVE_METHOD = {"default": "libretro", "values": ["libretro", "mednafen"]}
+
+
+class TestAnOptionTheAuditNeverSaw:
+    """A card applied to a core that registers keys its audit record lacks says so.
+
+    What the caveat sees and what it leaves to other checks is stated at
+    :data:`atlas.CAVEAT_CORE_OPTIONS_UNAUDITED`; these tests hold that statement.
+    """
+
+    @staticmethod
+    def _saturn(options: Mapping[str, object]) -> atlas.SavefilePlacement:
+        core = {"library_name": "Beetle Saturn", "options": dict(options)}
+        rd = _retrodeck(
+            TestARuleSelectedCard.FILES, cores={f"{DEPLOY}/mednafen_saturn_libretro.so": core}
+        )
+        return placed(rd.savefile_location(content_path=SATURN_ROM, core_so="mednafen_saturn_libretro.so"))
+
+    @staticmethod
+    def _unaudited(p: atlas.SavefilePlacement) -> list[atlas.Caveat]:
+        return [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_OPTIONS_UNAUDITED]
+
+    def test_an_added_key_is_named_and_the_card_still_applies(self):
+        p = self._saturn(
+            {**_audited_registration("mednafen_saturn"), "beetle_saturn_save_method": SATURN_SAVE_METHOD}
+        )
+        [caveat] = self._unaudited(p)
+        assert caveat.data["core"] == "mednafen_saturn"
+        assert _names(caveat, "added") == ("beetle_saturn_save_method",)
+        assert _names(caveat, "removed") == ()
+        # The card's answer, exactly as without the extra key.
+        assert p.granularity is not None
+        assert p.granularity.mode == "per-game"
+        assert p.file_set.files == self._saturn(_audited_registration("mednafen_saturn")).file_set.files
+
+    def test_the_removed_keys_ride_along_once_an_added_key_speaks(self):
+        p = self._saturn({**SATURN_REGISTERED, "beetle_saturn_save_method": SATURN_SAVE_METHOD})
+        [caveat] = self._unaudited(p)
+        assert _names(caveat, "added") == ("beetle_saturn_save_method",)
+        expected_removed = sorted(set(_audited_registration("mednafen_saturn")) - set(SATURN_REGISTERED))
+        assert _names(caveat, "removed") == tuple(expected_removed)
+        assert len(expected_removed) > 0
+
+    def test_removals_alone_say_nothing(self):
+        assert self._unaudited(self._saturn(SATURN_REGISTERED)) == []
+
+    def test_the_audited_registration_itself_says_nothing(self):
+        assert self._unaudited(self._saturn(_audited_registration("mednafen_saturn"))) == []
+
+    @staticmethod
+    def _pokemini(core: Mapping[str, object]) -> atlas.SavefilePlacement:
+        # PokeMini's card has no governing option, so it applies on the core's
+        # answer alone — with or without a captured registration.
+        rom = "/mnt/sd/retrodeck/roms/pokemini/Game.min"
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, rom: "", SAVES_KEEP: ""},
+            cores={f"{DEPLOY}/pokemini_libretro.so": dict(core)},
+        )
+        return placed(rd.savefile_location(content_path=rom, core_so="pokemini_libretro.so"))
+
+    def test_a_core_whose_registration_was_not_captured_is_not_compared(self):
+        p = self._pokemini({"library_name": "PokeMini"})
+        assert p.file_set.files == ("Game.eep",)
+        assert self._unaudited(p) == []
+
+    def test_the_same_card_with_a_captured_registration_is_compared(self):
+        # The contrast that makes the test above mean something: the card and
+        # the answer are the same, and only the live registration was added.
+        registered = {**_audited_registration("pokemini"), "pokemini_new_switch": SATURN_SAVE_METHOD}
+        p = self._pokemini({"library_name": "PokeMini", "options": registered})
+        assert p.file_set.files == ("Game.eep",)
+        [caveat] = self._unaudited(p)
+        assert _names(caveat, "added") == ("pokemini_new_switch",)
+
+    def test_a_card_whose_audit_captured_no_registration_is_not_compared(self):
+        # pcsx2's record is "not-captured": a live key the record cannot hold is no evidence.
+        registered = {
+            "pcsx2_shared_memory_cards": {"default": "enabled", "values": ["enabled", "disabled"]},
+            "pcsx2_new_switch": {"default": "off", "values": ["off", "on"]},
+        }
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, "/mnt/sd/retrodeck/roms/ps2/Game.iso": ""},
+            cores={f"{DEPLOY}/pcsx2_libretro.so": {"library_name": "LRPS2", "options": registered}},
+        )
+        p = placed(
+            rd.savefile_location(content_path="/mnt/sd/retrodeck/roms/ps2/Game.iso", core_so="pcsx2_libretro.so")
+        )
+        assert p.granularity is not None
+        assert not any(c.code == atlas.CAVEAT_CORE_OPTIONS_UNAUDITED for c in p.caveats)
+
+    def test_a_card_retired_for_its_generation_is_not_reported_twice(self):
+        # The governing key is gone and a new one arrived: the mismatch decides alone.
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, ROM: ""},
+            cores={
+                f"{DEPLOY}/flycast_libretro.so": {
+                    "library_name": "Flycast",
+                    "options": {"flycast_new_switch": {"default": "off", "values": ["off", "on"]}},
+                }
+            },
+        )
+        p = placed(rd.savefile_location(content_path=ROM, core_so="flycast_libretro.so"))
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_CORE_GENERATION_MISMATCH in codes
+        assert atlas.CAVEAT_CORE_OPTIONS_UNAUDITED not in codes
+
+
 HATARI_REGISTERED = {
     "hatari_writeprotect_floppy": {"default": "off", "values": ["on", "off", "auto"]},
     "hatari_writeprotect_hd": {"default": "off", "values": ["on", "off", "auto"]},
@@ -3247,7 +3382,7 @@ class TestStrictLoaders:
     def test_unknown_verdict_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "fine-probably",
@@ -3264,7 +3399,7 @@ class TestStrictLoaders:
     def test_audit_capability_and_note_are_loaded(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -3282,7 +3417,7 @@ class TestStrictLoaders:
     def test_missing_per_game_capability_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {"x": {"verdict": "standard", "note": "source-verified", "verified": {}}},
             }
         )
@@ -3292,7 +3427,7 @@ class TestStrictLoaders:
     def test_non_boolean_per_game_capability_is_rejected(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -3310,7 +3445,7 @@ class TestStrictLoaders:
     def test_invalid_audit_note_is_rejected(self, note):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -3327,7 +3462,7 @@ class TestStrictLoaders:
     def test_multi_option_save_options_are_loaded(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "multi-option",
@@ -3346,7 +3481,7 @@ class TestStrictLoaders:
         # that cannot name them would make the caveat say "unknown" again.
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "multi-option",
@@ -3363,7 +3498,7 @@ class TestStrictLoaders:
     def test_save_options_on_another_verdict_are_rejected(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "standard",
@@ -3381,7 +3516,7 @@ class TestStrictLoaders:
     def test_non_string_save_options_are_rejected(self):
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "multi-option",
@@ -3394,6 +3529,67 @@ class TestStrictLoaders:
             }
         )
         with pytest.raises(ValueError, match="save_options"):
+            load_audit(text)
+
+    @staticmethod
+    def _registered(verdict: str, registration: object) -> str:
+        return json.dumps(
+            {
+                "schema": 4,
+                "cores": {
+                    "x": {
+                        "verdict": verdict,
+                        "per_game_capable": True,
+                        "note": "source-verified",
+                        "verified": {},
+                        "registration": registration,
+                    }
+                },
+            }
+        )
+
+    def test_a_card_registration_is_loaded_as_its_keys(self):
+        registration = load_audit(self._registered("card", ["x_save", "x_video"]))["x"].registration
+        assert registration == ("x_save", "x_video")
+
+    def test_a_registration_the_probe_never_captured_is_said_so(self):
+        # Not an empty list: a core that registers nothing and a core whose
+        # registration was never captured are two different records.
+        assert load_audit(self._registered("card", "not-captured"))["x"].registration is None
+
+    def test_an_empty_registration_is_a_captured_one(self):
+        assert load_audit(self._registered("card", []))["x"].registration == ()
+
+    def test_a_card_without_a_registration_is_rejected(self):
+        text = json.dumps(
+            {
+                "schema": 4,
+                "cores": {"x": {"verdict": "card", "per_game_capable": True, "note": "n", "verified": {}}},
+            }
+        )
+        with pytest.raises(ValueError, match="registration"):
+            load_audit(text)
+
+    def test_a_registration_on_another_verdict_is_rejected(self):
+        text = self._registered("suspect", [])
+        with pytest.raises(ValueError, match="registration"):
+            load_audit(text)
+
+    @pytest.mark.parametrize(
+        "registration",
+        [
+            "captured",
+            None,
+            {"x_save": {"default": "on", "values": ["on"]}},
+            ["x_video", "x_save"],
+            ["x_save", "x_save"],
+            ["x_save", ""],
+            ["x_save", 1],
+        ],
+    )
+    def test_a_malformed_registration_is_rejected(self, registration):
+        text = self._registered("card", registration)
+        with pytest.raises(ValueError, match="registration"):
             load_audit(text)
 
     def test_non_boolean_complete_is_rejected(self):
@@ -4002,13 +4198,14 @@ class TestStrictLoaders:
         """
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "card",
                         "per_game_capable": True,
                         "note": "source-verified",
                         "verified": {"retrodeck": record},
+                        "registration": [],
                     }
                 },
             }
@@ -4021,13 +4218,14 @@ class TestStrictLoaders:
         # bounds what was checked — this shape ships today.
         text = json.dumps(
             {
-                "schema": 3,
+                "schema": 4,
                 "cores": {
                     "x": {
                         "verdict": "card",
                         "per_game_capable": True,
                         "note": "source-verified",
                         "verified": {"retrodeck": {"version": "0.10.9b", "core_library_version": None}},
+                        "registration": [],
                     }
                 },
             }
@@ -4172,6 +4370,28 @@ class TestVerificationMatrix:
                 f"rule card {card.key!r} has no entry in atlas/data/core_audit.json — "
                 "add its verification record (see the file's spec)"
             )
+
+    def test_the_package_and_the_test_side_record_carry_the_same_keys(self):
+        # The package ships only the keys; the whole registration the tripwire
+        # measures lives test-side. Both are written by one command, and they
+        # must never describe two different registrations.
+        audit = load_audit()
+        recorded_keys, card_keys = set(_recorded_registrations()), {card.key for card in CARDS}
+        assert recorded_keys == card_keys, (
+            f"{RECORDED_REGISTRATIONS.name} records no entry for {sorted(card_keys - recorded_keys)} "
+            f"and one no rule card is keyed by for {sorted(recorded_keys - card_keys)} — run "
+            f"{RE_RECORD_COMMAND}, and remove the entries of cards that are gone"
+        )
+        disagreeing = []
+        for card in CARDS:
+            _, recorded = _recorded_registration(card.key)
+            keys = None if recorded is None else tuple(sorted(recorded))
+            if audit[card.key].registration != keys:
+                disagreeing.append(card.key)
+        assert disagreeing == [], (
+            f"cards {disagreeing}: the keys in atlas/data/core_audit.json and "
+            f"{RECORDED_REGISTRATIONS.name} differ — run {RE_RECORD_COMMAND}"
+        )
 
     def test_matching_versions_carry_no_staleness_caveat(self):
         rd = _retrodeck(
@@ -4467,6 +4687,15 @@ class TestACoreTheLoaderRefusedCountsAsUnread:
         # written to catch.
         assert _measured_or_skip_where_the_loader_refused_them_all(_LoadingMachine()) == []
 
+    def test_the_registration_guard_skips_where_the_loader_refused_every_card(self):
+        machine = _RefusingLoader()
+        with pytest.raises(pytest.skip.Exception) as skipped:
+            _registrations_measured_or_skip_where_the_loader_refused_them_all(machine)
+        assert _RefusingLoader.REFUSAL in str(skipped.value)
+
+    def test_the_registration_guard_still_fails_a_probe_that_captured_nothing(self):
+        assert _registrations_measured_or_skip_where_the_loader_refused_them_all(_LoadingMachine()) == []
+
 
 class TestADefaultIsRecordedOnlyWhereTheCoreStatesNone:
     """``governing_option.default`` exists for one reason: nothing else states it.
@@ -4631,6 +4860,122 @@ class TestTheModeKeysAreTheDeployedCoresOwn:
             f"cores are deployed at {DEPLOYED_CORES} and not one card's mode keys were read from a "
             "binary — either every card is a generation behind what is installed, or the probe "
             "(atlas._core_probe) stopped capturing registrations"
+        )
+
+
+def _registration_differences(
+    recorded: Mapping[str, Mapping[str, object]], live: Mapping[str, CoreOption]
+) -> list[str]:
+    """Every way the deployed registration departs from the recorded one, one line each."""
+    lines = [f"added {key!r}" for key in sorted(set(live) - set(recorded))]
+    lines += [f"removed {key!r}" for key in sorted(set(recorded) - set(live))]
+    for key in sorted(set(recorded) & set(live)):
+        was, now = recorded[key], live[key]
+        if was["default"] != now.default:
+            lines.append(f"{key!r} default {was['default']!r} -> {now.default!r}")
+        if was["values"] != list(now.values):
+            lines.append(f"{key!r} values {was['values']} -> {list(now.values)}")
+    return lines
+
+
+def _registrations_measured_or_skip_where_the_loader_refused_them_all(
+    machine: RealMachine,
+) -> list[str]:
+    """The cards whose deployed core's whole registration this run captured, or a skip.
+
+    The same guard the governing-option readings keep, for the same reason: an
+    all-skip run passes exactly like a run that compared every card, and a probe
+    that stopped capturing registrations empties this list without a failure.
+    A loader that refused every core empties it too, for a reason that is
+    neither the cards' nor the probe's, and only that case skips.
+    """
+    readings = {card.key: machine.read_core(str(DEPLOYED_CORES / card.so_name)) for card in CARDS}
+    measured = sorted(
+        key
+        for key, reading in readings.items()
+        if reading.info is not None and reading.info.options is not None
+    )
+    if measured:
+        return measured
+    refused = [(key, reading.unloadable) for key, reading in readings.items() if reading.unloadable]
+    if refused and len(refused) == len(readings):
+        key, reason = refused[0]
+        pytest.skip(f"the loader refuses every deployed card core, {key!r} among them: {reason}")
+    return measured
+
+
+class TestTheRecordedRegistrationIsTheDeployedCoresOwn:
+    """Each card's recorded registration, measured against the one the deployed binary makes.
+
+    The record's keys are what the resolver compares an installed core's keys
+    with (``core-options-unaudited``). A record that no longer matches the build
+    it was taken from turns that statement into noise on every machine running
+    the build, or into silence where it should speak, so the whole registration
+    is held here — every key, its default and its values — from the test-side
+    file (``tests/data/core_registrations.json``). A difference is a re-audit
+    of the card against the deployed build and then a re-recording, never an
+    edit by hand; the order is the audit method's (``docs/research/core-audit.md``).
+
+    Skipped where the cores are not deployed, per card where the loader refuses
+    one (#408) as the measurements above are, and per card where the deployed
+    core could not be read at all.
+    """
+
+    @pytest.mark.parametrize("card", CARDS, ids=[card.key for card in CARDS])
+    def test_a_cards_recorded_registration_is_the_deployed_cores(
+        self, prober: RealMachine, card: CoreCard
+    ):
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        _skip_where_the_deployed_core_does_not_load(prober, card)
+        info = _deployed_core_info(prober, card)
+        if info is None:
+            pytest.skip(f"the deployed core for card {card.key!r} could not be read")
+        build, recorded = _recorded_registration(card.key)
+        advice = f"re-audit the card against this build, then run {RE_RECORD_COMMAND}"
+        if info.options is None or recorded is None:
+            mismatch = (
+                f"card {card.key!r}: the registration recorded from build {build!r} was "
+                f"{'not captured' if recorded is None else 'captured'}, and the deployed core's "
+                f"({info.library_version!r}) was {'not captured' if info.options is None else 'captured'} "
+                f"— {advice}"
+            )
+            assert info.options is None, mismatch
+            assert recorded is None, mismatch
+            return
+        differences = _registration_differences(recorded, info.options)
+        assert differences == [], (
+            f"card {card.key!r}: the deployed core ({info.library_version!r}) registers its options "
+            f"differently from the record taken from build {build!r} — {'; '.join(differences)}; "
+            f"{advice}"
+        )
+
+    def test_every_part_of_a_registration_is_compared(self):
+        # Held without a deployment: keys both ways, the default and the values.
+        recorded: dict[str, dict[str, object]] = {
+            "kept": {"default": "a", "values": ["a", "b"]},
+            "gone": {"default": None, "values": []},
+        }
+        live = {
+            "kept": CoreOption(key="kept", default="b", values=("b", "a")),
+            "new": CoreOption(key="new", default="x", values=("x",)),
+        }
+        assert _registration_differences(recorded, live) == [
+            "added 'new'",
+            "removed 'gone'",
+            "'kept' default 'a' -> 'b'",
+            "'kept' values ['a', 'b'] -> ['b', 'a']",
+        ]
+
+    def test_the_registrations_are_really_measured_where_the_cores_are_deployed(
+        self, prober: RealMachine
+    ):
+        if not DEPLOYED_CORES.is_dir():
+            pytest.skip(f"no cores are deployed at {DEPLOYED_CORES}")
+        measured = _registrations_measured_or_skip_where_the_loader_refused_them_all(prober)
+        assert measured, (
+            f"cores are deployed at {DEPLOYED_CORES} and not one card's registration was captured "
+            "from a binary — the probe (atlas._core_probe) stopped capturing registrations"
         )
 
 

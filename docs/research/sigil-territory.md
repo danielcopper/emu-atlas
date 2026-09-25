@@ -1189,6 +1189,12 @@ the RetroDECK installation as a whole (`atlas/evidence.py:163`), not about the c
 **[D]** Such a build writes `<stem>.srm` through the frontend by default and no `.bkr` (Beetle Saturn §4 above), so
 atlas's answer for it names a `.bkr` that never appears and leaves out the `.srm`. **[O]** Not observed on a machine.
 
+Past atlas's pin (`cfb5f0d`), #525 makes such an answer say so: a card applied to a core that registers option keys its
+audit record does not list carries `core-options-unaudited`, naming them (`CAVEAT_CORE_OPTIONS_UNAUDITED` in
+`atlas/placement.py` states what it sees and what it does not). The answer is otherwise the card's, so it still names
+the `.bkr`. The same change pins the Saturn record's core version, `"v1.29.0 ccba526"`, which the text above finds
+missing, so the core's version is now compared; with the card feature-confirmed, a differing one is still a source note.
+
 ## 5. Identification: sigil's ids in atlas's `<save_id>` holes
 
 Where an emulator keys a save on an id it reads from the content and atlas states the name, atlas leaves that id as a
