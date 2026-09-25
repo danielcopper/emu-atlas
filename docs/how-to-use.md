@@ -835,9 +835,10 @@ An alternative names the **full option combination** that reaches its mode, so "
 edit of concrete keys in a concrete file, not a guess — and a test holds it there: every alternative the conformance
 corpus publishes, except any the test names as unappliable, is written into the fixture it came from and the question
 asked again, and the answer has to select exactly the mode the alternative named — and, wherever that answer declares
-its groups, state exactly the groupings its `values` named. One special value: `g.value == atlas.GRANULARITY_NONE` (only
-ever beside `save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are
-then exactly the way out.
+its groups, state exactly the groupings its `values` named, and where it declares none, state the one word `values`
+names as its `granularity.value`. One special value: `g.value == atlas.GRANULARITY_NONE` (only ever beside
+`save-writes-discarded`) means this configuration keeps no save at all — the readings and alternatives are then exactly
+the way out.
 
 **A mixed mode states every grouping.** `granularity.value` is _one_ word — the first group's — and for the mode in
 force that is exact, because `file_set.groups` carries every part with its own grouping and role. An alternative has no
@@ -845,7 +846,8 @@ groups to show, so its `values` lists every distinct grouping of the mode it nam
 FinalBurn Neo's shared mode adds a card every game shares beside the per-game save, and
 `('per-game-file',
 'shared-card')` says so where a single word used to hide it. A client that wants one word reads
-`values[0]`.
+`values[0]`. A mode that carries no group has no groupings to list; its `values` is then the one word the paragraph
+above describes.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
 set has no files to decompose, the standard rule states one list in one directory, and a **savestate** answer is never
@@ -1279,6 +1281,16 @@ family (`standalone_savestates.json`, #225): the same entry answers `savestate_l
 without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
 save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
 marks the rows neither family has examined).
+
+**A GameCube card atlas cannot reach is not an empty slot.** A slot whose card path only the emulator's sandbox can
+spell still keeps saves, and the answer says so: no group for that card, because atlas has no directory to state one in,
+`sandbox-path-untranslated` naming the key and the path, and never `save-writes-discarded`. Where no other slot carries
+a group, `granularity.value` is that card's grouping — `shared-file` for a raw card, `per-game-files` for a GCI folder,
+and the first slot's where both slots hold such a card. `dir` is then a stand-in, and the fields say when: in Dolphin's
+GameCube answer and PrimeHack's, the one fork that answers through it, an answer whose `file_set.groups` is empty while
+`granularity.value` is not `none` names `Dolphin.ini`'s own directory as `dir` — not where the card lies — and
+`physical_dir` and any link caveat describe that directory too. The card's configured path is the `data.path` of the
+`sandbox-path-untranslated` caveat whose `data.key` names that slot's path key.
 
 **Dolphin and PrimeHack read every answer above through a per-game layer, and they say so.** While a game runs, both
 load `<id>.ini` from _two_ GameSettings directories over the whole configuration — the user's own

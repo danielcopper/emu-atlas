@@ -1927,13 +1927,47 @@ class TestDolphinStandaloneSaves:
             "[Core]\nSlotA = 1\nSlotB = 1\nGCIFolderAPath = /var/db/cards/Card A\n"
         ) == ("folder+card", ("shared-file",))
 
-    def test_a_mode_where_neither_slot_would_group_states_that_it_keeps_none(self):
-        # Both contribute nothing, so the mode keeps no save this answer can
-        # place. `none` is the word the reached answer's own granularity value
-        # carries there, and it keeps `values[0]` a word a client can read.
+    def test_a_mode_whose_only_card_cannot_be_located_promises_that_cards_grouping(self):
+        # Neither slot would carry a group, but the folder keeps saves at a path
+        # this host cannot locate, so the alternative promises the folder's own
+        # grouping — the word the reached answer states as its granularity value.
         assert self._flip(
             "[Core]\nSlotA = 1\nSlotB = 255\nGCIFolderAPath = /var/db/cards/Card A\n"
-        ) == ("folder+none", (atlas.GRANULARITY_NONE,))
+        ) == ("folder+none", (atlas.GRANULARITY_PER_GAME_FILES,))
+
+    def _ungrouped(self, ini):
+        # An answer carrying no group, as the facts a client reads off it: the
+        # grouping it states, the mode, whether it says saves are discarded,
+        # and the keys its untranslated-path caveats name.
+        p = self._answer(ini)
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.granularity is not None
+        assert p.file_set.groups == ()
+        codes = [c.code for c in p.caveats]
+        return (
+            p.granularity.value,
+            p.granularity.mode,
+            atlas.CAVEAT_SAVE_WRITES_DISCARDED in codes,
+            [c.data["key"] for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED],
+        )
+
+    def test_a_card_slot_b_cannot_locate_keeps_its_saves_beside_an_empty_slot_a(self):
+        assert self._ungrouped(
+            "[Core]\nSlotA = 255\nSlotB = 1\nMemcardBPath = /var/db/cards/mine.USA.raw\n"
+        ) == (atlas.GRANULARITY_SHARED_FILE, "none+card", False, ["MemcardBPath"])
+
+    def test_two_cards_this_host_cannot_locate_state_the_first_slots_grouping(self):
+        # Slot A's grouping, the way groups[0] decides an answer that carries
+        # groups; both paths ride their own caveat.
+        assert self._ungrouped(
+            "[Core]\nSlotA = 8\nSlotB = 1\nGCIFolderAPath = /var/db/cards/Card A\n"
+            "MemcardBPath = /var/db/cards/mine.USA.raw\n"
+        ) == (
+            atlas.GRANULARITY_PER_GAME_FILES,
+            "folder+card",
+            False,
+            ["GCIFolderAPath", "MemcardBPath"],
+        )
 
     def test_a_session_override_says_the_cards_live_elsewhere_while_it_runs(self):
         p = self._answer(

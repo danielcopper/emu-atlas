@@ -46,9 +46,13 @@ is what ``values`` is a list of, so those are held. An ``observed`` one is a
 reading of one machine, where a grouping whose file nobody has written yet is
 absent by construction, so holding a card's list against it would measure the
 fixture's contents rather than the card — and every divergence this corpus
-produced sat there. A set that is ``unknown``, or one that carries no group at
-all, states no grouping to compare: that is the road a carded core takes when
-nothing named the content, and the alternative is right about the card. No
+produced sat there. A declared set that decomposed into no group has no
+groupings to list, and ``values`` then promises the one word the answer states
+as its ``granularity.value`` — in this corpus ``none`` where nothing is kept,
+the grouping of a save written inside the content itself, and the grouping of a
+card atlas cannot reach — so that word is what is held. A set that is
+``unknown`` states no grouping to compare: that is the road a carded core takes
+when nothing named the content, and the alternative is right about the card. No
 declared set in this corpus carries a group whose role is
 :data:`atlas.ROLE_UNKNOWN`, and the shape says why — such a group is a file an
 *observation* found that the declaration does not name, and its grouping is read
@@ -340,12 +344,13 @@ def _verdict(answer: dict[str, Any], mode: str, before: set[str]) -> str:
 
 
 def _groupings(answer: dict[str, Any]) -> tuple[str, ...] | None:
-    """The distinct groupings *answer* declares, in order — ``None`` where it declares none.
+    """The distinct groupings *answer* declares, in order — ``None`` where the file set is not declared.
 
     The roads the module docstring's fifth paragraph gives its reasons for: a
-    set that is ``observed``, one that is ``unknown``, and a declared set that
-    decomposed into no group. Only a declaration is the card's own word about
-    its shape, and only that is what ``values`` claims. A refusal carries no
+    set that is ``observed`` or ``unknown`` declares nothing, and a declared set
+    that decomposed into no group declares the one word its
+    ``granularity.value`` states. Only a declaration is the card's own word
+    about its shape, and only that is what ``values`` claims. A refusal carries no
     file set at all and is read here as stating no grouping either; no
     alternative in this corpus reaches one, and its own verdict would keep the
     hop out of the comparison before this reading were used.
@@ -353,7 +358,8 @@ def _groupings(answer: dict[str, Any]) -> tuple[str, ...] | None:
     file_set = cast("dict[str, Any] | None", answer.get("file_set"))
     if not isinstance(file_set, dict) or file_set["state"] != atlas.FILE_SET_DECLARED:
         return None
-    return tuple(dict.fromkeys(group["granularity"] for group in file_set["groups"])) or None
+    groupings = tuple(dict.fromkeys(group["granularity"] for group in file_set["groups"]))
+    return groupings or (answer["granularity"]["value"],)
 
 
 def _ask(state: dict[str, Any], question: str, where: str) -> dict[str, Any]:
@@ -521,7 +527,7 @@ class Walk:
         """The hops whose ``values`` the reached answer states enough to hold it against.
 
         The conditions the module docstring's fifth paragraph names — the
-        answer declares its groups, and it selected the mode the alternative
+        answer's file set is declared, and it selected the mode the alternative
         named — over the hops the fixture could apply.
         """
         return tuple(hop for hop in self.applied if not hop.verdict and hop.groupings is not None)
@@ -585,7 +591,7 @@ def walk() -> Walk:
 # have to come with an edit here; what they catch is the opposite move, a walk
 # that stops applying anything and passes green over an empty run.
 #
-# "values held" is the measurement itself, 426, rather than a number under it.
+# "values held" is the measurement itself, 489, rather than a number under it.
 # The three above sit under theirs so that a vector added tomorrow needs no
 # edit here; this one can be exact for a different reason, that the test
 # compares with ``<``, so anything which raises it passes untouched. What
@@ -594,11 +600,11 @@ def walk() -> Walk:
 # stops decomposing into groups, and so does a vector legitimately removed. So
 # a red floor here is a prompt to measure again and write the new count with
 # the rule it was counted by — never on its own a proof that the check broke.
-# Counted as the applied hops that selected their mode and reached an answer
-# declaring at least one group, over a closure of 541; of the other 115 hops,
-# 59 reach a declared answer that decomposed into no group, 54 an observed one
-# and 2 an unknown one.
-COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "values held": 426, "switch sets": 16}
+# Counted as the applied hops that selected their mode and reached a declared
+# answer, over a closure of 545: 428 reach one declaring at least one group and
+# 61 one that decomposed into no group, held against its granularity value; of
+# the other 56 hops, 54 reach an observed answer and 2 an unknown one.
+COVERAGE_FLOOR = {"answers": 55, "edits applied": 400, "values held": 489, "switch sets": 16}
 
 # The names of edits no fixture machine can state. The reason each was refused
 # is the walk's own message; the comment beside an entry is where a person says
@@ -634,8 +640,8 @@ def test_every_alternative_states_the_groupings_of_the_mode_it_names():
     # assertion listing every miss, for the same reason the mode's has one;
     # each message names the vector, the question, the mode in force, the
     # edit, the values published and the groupings the answer declared.
-    # Held only where the answer reached declares its groups — :func:`_groupings`
-    # is where that road is chosen and the module docstring says why.
+    # Held only where the answer reached is declared — :func:`_groupings` is
+    # where that road is chosen and the module docstring says why.
     missed = sorted(hop.values_message() for hop in walk().judged if hop.groupings != hop.values)
     assert missed == [], "\n".join(("", *missed))
 
