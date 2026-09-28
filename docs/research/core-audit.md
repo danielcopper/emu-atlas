@@ -150,7 +150,7 @@ rest:
 2. ~~`opera`~~ — audited 2026-07-24 (card, see table)
 3. ~~`neocd`~~ — audited 2026-07-24 (multi-option, double persistence, see table)
 4. `fbneo` — own subtree `%s%cfbneo%c%s.fs` / `.memcard`, plus `%s%s.nv(ram)`: ~~`.nv`~~ read 2026-09-25 and carded
-   (#526), `.nvram` still open
+   (#526), `.nvram` still open; `%s%s.hi` read and carded (#547)
 5. `kronos` — own subtree `%s%ckronos%csaturn%c%s(-ext*).ram`, `%s%ckronos%cstv%c%s.ram`
 6. `scummvm` — own save scheme (`pegasus-%s.sav`; ScummVM savepath semantics)
 7. `dosbox_pure` — `.pure.zip` saves, "Save Difference Per Content" (manual check; scan hit only weakly)
