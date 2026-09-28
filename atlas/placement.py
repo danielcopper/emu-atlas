@@ -1352,7 +1352,7 @@ class ModeAlternative:
     only that mode reads — each one exactly as that answer states it, so a client learns
     before the edit what that answer will qualify. Today the one such caveat is Dolphin's
     ``sandbox-path-untranslated`` for a flipped slot's path this host cannot locate, which
-    says the mode keeps saves atlas cannot reach here; empty everywhere else.
+    says the mode writes to a path atlas cannot reach here; empty everywhere else.
     """
 
 
@@ -1716,14 +1716,14 @@ def _stated_words(value: "DataValue") -> tuple[str, ...]:
 # names more than one.
 UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE = "emulator-config-path-untranslatable"
 # The emulator's configuration was read, and a slot in it holds a device atlas
-# cannot interpret while no other slot keeps a save atlas can state: Dolphin's
-# ``SlotA = 42`` beside an empty slot B. What that device keeps, and where, is
-# unestablished, so neither "nothing is kept" nor any location can be said.
-# The same fact the ``core-mode-unestablished`` reason of this spelling states
-# where another slot's statement still stands around it, said as the outcome
-# where nothing else does — one fact, one code. ``data`` names the ``token``,
-# the ``slot``, the configured ``value`` as written, and the ``config`` file
-# that states it.
+# cannot interpret while no other slot states anything the answer could stand
+# on: Dolphin's ``SlotA = 42`` beside an empty slot B. What that device keeps,
+# and where, is unestablished, so neither "nothing is kept" nor any location
+# can be said. The same fact the ``core-mode-unestablished`` reason of this
+# spelling states where another slot's statement still stands around it, said
+# as the outcome where nothing else does — one fact, one code. ``data`` names
+# the ``token``, the ``slot``, the configured ``value`` as written, and the
+# ``config`` file that states it.
 UNRESOLVED_SLOT_DEVICE_UNINTERPRETED = "slot-device-uninterpreted"
 
 
