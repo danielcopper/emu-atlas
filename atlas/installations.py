@@ -6119,7 +6119,8 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
     {
         "build",  # the release label an answer says its evidence is "at"
         "slot_devices",  # the EXI device ids a slot key spells
-        "slot_defaults",  # what an unset SlotA/SlotB falls back to
+        "slot_defaults",  # what an unset or unparsed SlotA/SlotB falls back to
+        "slot_parse",  # how a SlotA/SlotB value is parsed, and when the default wins
         "session_overrides",  # the GCIFolder*PathOverride keys a session sets
         "gci_names",  # how a .gci file inside a folder card is named
         "nand_tree",  # the Wii NAND's title/<hi>/<lo>/data shape
@@ -6386,10 +6387,15 @@ _DOLPHIN_DEVICE_FOLDER = 8
 _DOLPHIN_DEVICE_AGP = 9
 _DOLPHIN_DEVICE_NONE = 255
 _DOLPHIN_SLOT_DEFAULTS = {"A": _DOLPHIN_DEVICE_FOLDER, "B": _DOLPHIN_DEVICE_NONE}
+# What a sentence calls each slot's default device.
+_DOLPHIN_DEFAULT_DEVICE_NAMES = {
+    _DOLPHIN_DEVICE_FOLDER: "the GCI folder",
+    _DOLPHIN_DEVICE_NONE: "no device",
+}
 
 
 def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
-    """``key = value`` lines under ``[section]`` headers — Dolphin.ini, kept as written.
+    """``key = value`` under ``[section]`` headers — Dolphin.ini, keys as written, values as ``ParseLine`` stores them.
 
     The mapping keeps the file's own spellings in file order; *matching* is
     the lookup's job, and it is ASCII case-insensitive with the last
@@ -6405,6 +6411,19 @@ def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
     exact-duplicate key collapses at parse here the way it does upstream;
     case-variant duplicates stay separate entries and the lookup
     (:func:`atlas.qt_ini.simpleini_value`) takes the last in file order.
+
+    A value is stored the way ``ParseLine`` stores it: whitespace stripped
+    (``str.strip``, wider than StripWhitespace's `` \\t\\r\\n``; the two
+    differ only for a value beginning or ending in another whitespace
+    character), then one pair of surrounding double quotes — both ends or
+    neither, and nothing inside them (``StripQuotes(StripWhitespace(...))``,
+    IniFile.cpp:34 with StringUtil.cpp:219-225 at dolphin 2603a and at
+    shiiion/dolphin@53f53e0, IniFile.cpp:34 with StringUtil.cpp:228-234 at
+    @81bfb96). Every ini file a value can come from is read through that
+    parse — ``Dolphin.ini`` by BaseConfigLoader.cpp:156-173 and both per-game
+    layers' files by GameConfigLoader.cpp:187-196 at 2603a and @53f53e0
+    (:105-123 and :178-187 at @81bfb96) — so
+    ``MemcardAPath = "/mnt/cards/a.raw"`` names the path without its quotes.
     """
     parsed: dict[tuple[str, str], str] = {}
     section = ""
@@ -6417,8 +6436,90 @@ def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
             continue
         key, sep, value = line.partition("=")
         if sep:
-            parsed[(section, key.strip())] = value.strip()
+            parsed[(section, key.strip())] = _dolphin_strip_quotes(value.strip())
     return parsed
+
+
+def _dolphin_strip_quotes(value: str) -> str:
+    """*value* without one pair of surrounding double quotes — ``StripQuotes``.
+
+    Only where the first and the last character are both ``"``; a lone ``"``
+    is both, and leaves nothing.
+    """
+    if value.startswith('"') and value.endswith('"'):
+        return value[1:-1]
+    return value
+
+
+# What strtoll skips before a number: C's isspace in the C locale.
+_C_WHITESPACE = " \t\n\v\f\r"
+_C_DIGITS = "0123456789abcdef"
+_C_HEX_DIGITS = _C_DIGITS + _C_DIGITS[10:].upper()
+# ``EXIDeviceType`` is ``enum class ... : int`` (EXI_Device.h:25 at every pin),
+# and the enum overload of TryParse parses its underlying type.
+_C_INT_MIN = -(2**31)
+_C_INT_MAX = 2**31 - 1
+
+
+def _dolphin_literal_base(text: str) -> tuple[str, int]:
+    """Base 0's reading of an unsigned literal: its digits, and their base.
+
+    ``0x``/``0X`` before a hex digit is hexadecimal, ``0b``/``0B`` before a
+    binary digit is binary, a leading ``0`` is octal (and is itself a digit,
+    so ``0`` alone reads as zero), everything else decimal. The binary prefix
+    is C23's, read here because the deployed builds call the C23 strtoll:
+    every Dolphin-family binary this answer describes — RetroDECK's
+    ``dolphin/bin/dolphin-emu`` and ``primehack/bin/primehack``, the Flathub
+    ``org.DolphinEmu.dolphin-emu`` and ``io.github.shiiion.primehack``
+    ``bin/dolphin-emu`` — imports ``__isoc23_strtoll@GLIBC_2.38`` and no
+    plain ``strtoll``. The source alone does not say it;
+    ``tests/test_dolphin_strtoll_tripwire.py`` holds the deployed binaries to
+    it and says why the import is a fact of the build.
+    """
+    if not text.startswith("0"):
+        return text, 10
+    prefix, first = text[1:2], text[2:3]
+    if prefix in ("x", "X") and first and first in _C_HEX_DIGITS:
+        return text[2:], 16
+    if prefix in ("b", "B") and first in ("0", "1"):
+        return text[2:], 2
+    return text, 8
+
+
+def _dolphin_try_parse_int(raw: str) -> int | None:
+    """What Dolphin's ``TryParse`` makes of a slot value — ``None`` where it fails.
+
+    ``GetUncached`` parses the stored string and takes the setting's default
+    where the parse fails (Config.h:82-88 at dolphin 2603a); an enum setting
+    parses its underlying ``int`` (Layer.h:36-43), through ``strtoll`` in base
+    0 (StringUtil.h:63-100): leading whitespace is skipped and a sign read, the
+    whole string must be consumed, and the value must fit the ``int`` — an
+    out-of-range value fails like a word does, so the default governs. An
+    empty value is the one spelling that parses with no digit at all:
+    ``strtoll`` leaves its end at the start of the string, which is its end,
+    so ``SlotA =`` reads as 0. The same lines are the fork's at
+    shiiion/dolphin@53f53e0 and sit at Config.h:83-89, Layer.h:30-37 and
+    StringUtil.h:75-113 at @81bfb96.
+    """
+    rest = raw.lstrip(_C_WHITESPACE)
+    negative = rest.startswith("-")
+    if rest.startswith(("+", "-")):
+        rest = rest[1:]
+    if not rest:
+        return 0 if not raw else None
+    digits, base = _dolphin_literal_base(rest)
+    allowed = _C_DIGITS[:base] + _C_DIGITS[10:base].upper()
+    if not all(char in allowed for char in digits):
+        return None
+    try:
+        magnitude = int(digits, base)
+    except ValueError:
+        # CPython refuses a decimal string longer than its digit limit
+        # (sys.get_int_max_str_digits); every such value is far outside the
+        # int, where strtoll answers ERANGE and TryParse fails.
+        return None
+    value = -magnitude if negative else magnitude
+    return value if _C_INT_MIN <= value <= _C_INT_MAX else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -6432,6 +6533,10 @@ class _DolphinSlot:
     located or examined is stated the same way. ``None`` wherever the slot's
     groups say everything, or it holds no device, or what it holds is known
     to keep nothing, or is a device atlas cannot interpret.
+
+    ``device`` is the EXI id Dolphin reads out of a slot value naming a device
+    atlas cannot interpret, so a sentence about it can say which id the value
+    became; ``None`` for every other slot.
     """
 
     mode: str
@@ -6440,6 +6545,7 @@ class _DolphinSlot:
     caveats: tuple[Caveat, ...] = ()
     template_dir: str | None = None
     unreachable: str | None = None
+    device: int | None = None
 
 
 def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
@@ -6842,13 +6948,16 @@ def _dolphin_slot(
     here rather than in :func:`_dolphin_carded_slot`, because it keeps no card
     and no flip names it: whether it keeps a save is its ``.sav``'s size,
     which only this machine answers (:func:`_dolphin_agp_slot`).
+
+    The device id is the value parsed the way ``TryParse`` parses it
+    (:func:`_dolphin_try_parse_int`), and a value that does not parse is the
+    slot's compiled default, as it is in the emulator — so only a value that
+    parses to an id atlas does not model leaves the slot uninterpreted.
     """
     raw_value, slot_spelled = _simpleini_value(values, "Core", f"Slot{letter}")
-    try:
-        device = int(raw_value) if raw_value is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
-    except ValueError:
-        device = None
-    slot_reading = _dolphin_reading(f"Slot{letter}", raw_value, None, cite, spelled=slot_spelled)
+    parsed = _dolphin_try_parse_int(raw_value) if raw_value is not None else None
+    device = parsed if parsed is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
+    slot_reading = _dolphin_slot_reading(letter, raw_value, parsed, cite, spelled=slot_spelled)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     slot = _dolphin_carded_slot(letter, device, values, sandbox, gc_root, cite)
@@ -6869,21 +6978,63 @@ def _dolphin_slot(
         caveats=(
             Caveat(
                 CAVEAT_CORE_MODE_UNESTABLISHED,
-                f'Dolphin.ini sets Slot{letter} to "{raw_value}", a device this card cannot '
-                "interpret — what sits in that slot and where it saves is unestablished",
+                f'Dolphin.ini sets Slot{letter} to "{raw_value}", which Dolphin reads as EXI '
+                f"device {device}, one this card cannot interpret — what sits in that slot "
+                "and where it saves is unestablished",
                 {
                     "token": token,
                     "reason": REASON_SLOT_DEVICE_UNINTERPRETED,
                     "slot": letter,
-                    # A slot whose key is absent takes the compiled default,
-                    # which this card reads, so the raw value is a string
-                    # wherever this branch is reached; the empty spelling is
-                    # the one a blank ``Slot<letter> =`` has.
+                    # A value that does not parse, and an absent key, both
+                    # take the compiled default, which this card reads — so
+                    # the raw value is one that parsed wherever this branch
+                    # is reached; the empty spelling is the one a blank
+                    # ``Slot<letter> =`` has, which parses as 0.
                     "value": raw_value or "",
                 },
             ),
         ),
+        device=device,
     )
+
+
+def _dolphin_slot_reading(
+    letter: str,
+    raw_value: str | None,
+    parsed: int | None,
+    cite: "_Cite",
+    *,
+    spelled: str,
+) -> OptionReading:
+    """The slot key's reading, saying which device id its value became.
+
+    A value spelled other than the plain decimal of the id it parses to says
+    the id, and a value that does not parse says that the default governs and
+    why, the way DuckStation's ``Card{n}Type`` reading does for a name it does
+    not know. An unset key is :func:`_dolphin_reading`'s own default sentence.
+    """
+    key = f"Slot{letter}"
+    if raw_value is None:
+        return _dolphin_reading(key, None, None, cite)
+    parse = f"{cite('slot_parse')} at {cite('build')}"
+    if parsed is None:
+        default = _DOLPHIN_SLOT_DEFAULTS[letter]
+        return _dolphin_reading(
+            key,
+            raw_value,
+            f'Dolphin.ini sets [Core] {spelled} to "{raw_value}", a value TryParse does not '
+            f"read as an EXI device id ({parse}) — the compiled default, "
+            f"{_DOLPHIN_DEFAULT_DEVICE_NAMES[default]} ({default}), governs "
+            f"({cite('slot_defaults')} at {cite('build')})",
+        )
+    if str(parsed) != raw_value:
+        return _dolphin_reading(
+            key,
+            raw_value,
+            f'Dolphin.ini: [Core] {spelled} = "{raw_value}" — EXI device {parsed}, the value '
+            f"read the way TryParse reads it ({parse})",
+        )
+    return _dolphin_reading(key, raw_value, None, cite, spelled=spelled)
 
 
 def _dolphin_ungrouped_value(slots: Sequence[_DolphinSlot]) -> str:
@@ -6924,12 +7075,14 @@ def _dolphin_uninterpreted_refusal(
         if slot.mode != "unknown":
             continue
         # The slot key's reading comes first; this device's value is set,
-        # because an absent key falls to a default this card reads.
+        # because an absent key and a value that does not parse both fall to
+        # a default this card reads.
         value = slot.readings[0].value or ""
         return Unresolved(
             UNRESOLVED_SLOT_DEVICE_UNINTERPRETED,
-            f'Dolphin.ini sets Slot{letter} to "{value}", a device this card cannot '
-            "interpret, and no other slot states anything this answer could stand on — "
+            f'Dolphin.ini sets Slot{letter} to "{value}", which Dolphin reads as EXI device '
+            f"{slot.device}, one this card cannot interpret, and no other slot states "
+            "anything this answer could stand on — "
             "what that device keeps and where is unestablished, so neither a location nor "
             "that nothing is kept can be said",
             {"token": token, "slot": letter, "value": value, "config": config},

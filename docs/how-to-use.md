@@ -1320,8 +1320,14 @@ into that working directory even with the key unset, so there an unset key reads
 **A slot device atlas cannot interpret refuses the question when the other slot gives the answer nothing to stand on.**
 What such a device keeps, and where, is unknown, so when the other slot carries no group and no card or cartridge save
 atlas cannot reach, the question refuses with `slot-device-uninterpreted`, `data` naming the `token`, the `slot`, the
-`value` as configured and the `config` file. Beside a slot that carries one of those the answer stands, and the device
-rides it as `core-mode-unestablished` with the reason of the same spelling.
+`value` as configured, without surrounding quotes, and the `config` file. Beside a slot that carries one of those the
+answer stands, and the device rides it as `core-mode-unestablished` with the reason of the same spelling. The device is
+the value read the way Dolphin reads it, as a whole C integer literal — decimal, `0x` hexadecimal, leading-`0` octal,
+and `0b` binary through the C library the deployed builds call — so `0x9`, `011` and `0b1001` are all the GBA cartridge
+adapter, and an empty value is device 0. A value that is not such a literal (`abc`, `09`, `1_0`) or lies outside the
+range of an `int` is the slot's default device, not a device atlas cannot interpret: `SlotA = abc` answers slot A's GCI
+folder, and the slot's reading keeps `abc` as its `value`. Every `Dolphin.ini` value is read without one pair of
+surrounding double quotes, as Dolphin reads it, so `MemcardAPath = "/mnt/cards/a.raw"` names `/mnt/cards/a.raw`.
 
 DuckStation's answer states the same shape for a shared card at a path only its sandbox can spell, beside the
 `save-writes-discarded` a `NonPersistent` slot carries for itself; `SavefilePlacement.dir` says which directory stands
