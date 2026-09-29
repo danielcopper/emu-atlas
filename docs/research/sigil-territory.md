@@ -1151,7 +1151,8 @@ Past atlas's pin (`cfb5f0d`), #526 names `<rom_stem>.nv` in every mode of the ca
 the `.fs` group, stated for every driver as an upper bound. The device that writes it is the serial EEPROM
 (`src/burn/devices/eeprom.cpp`); the I2C EEPROM, the Atari EA-ROM, the Intel flash and the DS2404 scan their contents as
 NVRAM, into the `.fs` (`i2ceeprom.cpp:135`, `earom.cpp:55`, `intelfsh.cpp:499`, `ds2404.cpp:322`). Which drivers carry
-the serial device stays **[O]**.
+the serial device stays **[O]**. #547 adds `<rom_stem>.hi` in every mode, a high-score group of its own after the `.nv`,
+stated for every driver as an upper bound; sigil's rows (`:142-146`) do not list it.
 
 **The save root (S2).** **[V]** At `libretro/RetroArch` `a79435a` — the pin of
 `docs/research/retrodeck-save-placement.md` — the sorted save directory appends the content directory's name under
