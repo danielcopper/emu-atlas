@@ -14,9 +14,11 @@ name: SonarCloud fork PRs
 # are replaced; its tree and the coverage report reach the scanner as the data
 # it analyses.
 #
-# The coverage report, and the CI success that starts this workflow, come from
-# the fork's own copy of ci.yml, so both can be forged: on a fork's PR the
-# Sonar verdict informs the review; it does not replace it.
+# On a fork's PR, this scan's analysis is what the required check reports; the
+# comment on ci.yml's `sonarcloud` job says which check that is and when it
+# blocks. The coverage report, and the CI success that starts this workflow,
+# come from the fork's own copy of ci.yml, so both can be forged: a passing
+# verdict on a fork's PR informs the review; it does not replace it.
 
 on:
   workflow_run:
