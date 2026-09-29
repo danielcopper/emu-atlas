@@ -91,6 +91,7 @@ SLOTS_THE_PROSE_REPEATS = (
     "nand_tree",
     "slot_defaults",
     "slot_devices",
+    "slot_parse",
     "split_path",
 )
 

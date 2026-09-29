@@ -9467,6 +9467,128 @@ class TestDolphinIniParse:
         parsed = _parse_sectioned_ini("[Core]\nSlotA = 8\n[core]\nslota = 1\n")
         assert _simpleini_value(parsed, "Core", "SlotA") == ("1", "slota")
 
+    def test_a_quoted_value_is_stored_without_its_quotes(self):
+        from atlas.installations import (
+            _parse_sectioned_ini,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        parsed = _parse_sectioned_ini('[Core]\nMemcardAPath = "/mnt/cards/a.raw"\nSlotA = " 9"\n')
+        assert parsed == {("Core", "MemcardAPath"): "/mnt/cards/a.raw", ("Core", "SlotA"): " 9"}
+
+
+# StripQuotes (StringUtil.cpp:219-225 at dolphin 2603a): one pair, both ends
+# or neither, and nothing inside the pair is touched.
+_DOLPHIN_QUOTE_CASES = (
+    ('"/a"', "/a"),
+    ('""', ""),
+    ('"', ""),
+    ('" a "', " a "),
+    ('""a""', '"a"'),
+    ('"a', '"a'),
+    ('a"', 'a"'),
+    ("'a'", "'a'"),
+    ("a", "a"),
+    ("", ""),
+)
+
+# TryParse<int> over strtoll in base 0 (StringUtil.h:63-100 at dolphin 2603a),
+# with the binary prefix of the C23 strtoll the deployed builds import.
+_DOLPHIN_INT_CASES = (
+    ("9", 9),
+    ("0x9", 9),
+    ("0X9", 9),
+    ("0xa", 10),
+    ("0XA", 10),
+    ("011", 9),
+    ("0b1001", 9),
+    ("0B1001", 9),
+    ("0", 0),
+    ("00", 0),
+    ("", 0),
+    ("+9", 9),
+    ("-1", -1),
+    ("-0x9", -9),
+    (" 9", 9),
+    ("\t9", 9),
+    ("\v9", 9),
+    ("2147483647", 2147483647),
+    ("-2147483648", -2147483648),
+    ("0x7fffffff", 2147483647),
+    ("abc", None),
+    ("9 ", None),
+    ("08", None),
+    ("0x", None),
+    ("0xg", None),
+    ("0b", None),
+    ("0b2", None),
+    ("+", None),
+    ("-", None),
+    ("- 9", None),
+    (" ", None),
+    ("1_0", None),
+    ("٩", None),
+    ("2147483648", None),
+    ("-2147483649", None),
+    ("0x80000000", None),
+    ("4294967305", None),
+    ("99999999999999999999", None),
+    # Longer than CPython's int-string limit, which refuses to convert it.
+    ("9" * 4301, None),
+)
+
+
+class TestDolphinReadsAValueTheWayItsParseDoes:
+    """Quotes the way ``StripQuotes`` strips them, numbers the way ``TryParse`` reads them (#540)."""
+
+    @pytest.mark.parametrize(("value", "stripped"), _DOLPHIN_QUOTE_CASES)
+    def test_one_pair_of_surrounding_quotes_is_stripped(self, value, stripped):
+        from atlas.installations import (
+            _dolphin_strip_quotes,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _dolphin_strip_quotes(value) == stripped
+
+    @pytest.mark.parametrize(("raw", "parsed"), _DOLPHIN_INT_CASES)
+    def test_a_slot_value_parses_the_way_tryparse_parses_it(self, raw, parsed):
+        from atlas.installations import (
+            _dolphin_try_parse_int,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
+        )
+
+        assert _dolphin_try_parse_int(raw) == parsed
+
+    def test_the_cases_agree_with_the_c23_strtoll_itself(self):
+        # The table above is a claim about glibc; this asks glibc. The whole
+        # TryParse is spelled out over the real function — whole string,
+        # ERANGE, then the int limits — and every case must agree. Skipped
+        # where the C library has no C23 strtoll to ask.
+        import ctypes
+        import ctypes.util
+
+        libc_name = ctypes.util.find_library("c")
+        if libc_name is None:
+            pytest.skip("no C library to ask")
+        libc = ctypes.CDLL(libc_name, use_errno=True)
+        strtoll = getattr(libc, "__isoc23_strtoll", None)
+        if strtoll is None:
+            pytest.skip("this C library has no __isoc23_strtoll")
+        strtoll.restype = ctypes.c_longlong
+        strtoll.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int]
+
+        def try_parse(raw: str) -> int | None:
+            buffer = ctypes.create_string_buffer(raw.encode("utf-8"))
+            end = ctypes.c_char_p()
+            ctypes.set_errno(0)
+            value = strtoll(buffer, ctypes.byref(end), 0)
+            errno = ctypes.get_errno()
+            consumed = ctypes.cast(end, ctypes.c_void_p).value
+            if consumed != ctypes.addressof(buffer) + len(raw.encode("utf-8")):
+                return None
+            if errno == 34:  # ERANGE
+                return None
+            return value if -(2**31) <= value <= 2**31 - 1 else None
+
+        assert [(raw, try_parse(raw)) for raw, _ in _DOLPHIN_INT_CASES] == list(_DOLPHIN_INT_CASES)
+
 
 class TestPcsx2EmptyFolderKeys:
     """A present-but-empty [Folders] line moves the directory to the DataRoot.
