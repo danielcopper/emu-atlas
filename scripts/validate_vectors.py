@@ -324,7 +324,26 @@ EMULATOR_FIELDS = {
     "emulator",
     DECLARED_INDEX,
     "selection",
+    "availability",
+    "launcher",
+    "core_path",
     "caveats",
+}
+# The entry's launch answer (#84): its verdict, what the frontend would run, and
+# the one reason caveat each verdict but ``startable`` carries — keyed by the
+# verdict it gives. ``find-rules-unreadable`` is a reason only for the bundled
+# layer; on the custom one it is a note beside any verdict.
+KNOWN_AVAILABILITIES = {"startable", "not-installed", "unestablished"}
+LAUNCHER_FIELDS = {"path", "replacement_command", "app_id", "rule", "entry"}
+KNOWN_LAUNCH_RULES = {"systempath", "staticpath"}
+LAUNCH_REASONS = {
+    "emulator-not-found": "not-installed",
+    "core-not-installed": "not-installed",
+    "emulator-rules-missing": "unestablished",
+    "core-rules-missing": "unestablished",
+    "find-rules-unreadable": "unestablished",
+    "launch-resolution-unsupported": "unestablished",
+    "launch-path-unestablished": "unestablished",
 }
 # The three ways a catalogue answer carries no entries, each a different claim:
 # the arrangement has none, its one could not be read, or atlas has not
@@ -401,6 +420,13 @@ KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", 
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone", "retroarch-foreign-core"}
 KNOWN_CAVEAT_CODES = {
+    "core-rules-missing",
+    "emulator-not-found",
+    "emulator-rules-missing",
+    "find-rules-unreadable",
+    "launch-resolution-unsupported",
+    "launch-path-unestablished",
+    "run-game-differs",
     "no-core",
     "core-unqueryable",
     "sorted-dir-missing",
@@ -2705,6 +2731,48 @@ def _validate_emulator(name: str, entry: Any) -> None:
     if not isinstance(entry["system"], str) or not entry["system"]:
         fail(f"{name}: emulator system must be a non-empty string")
     _validate_caveats(name, entry["caveats"])
+    _validate_launch(name, entry)
+
+
+def _launch_reasons(caveats: list[Any]) -> list[str]:
+    """The reason codes among an entry's caveats — the custom layer's skip is a note, not one."""
+    return [
+        c["code"]
+        for c in caveats
+        if c["code"] in LAUNCH_REASONS
+        and not (c["code"] == "find-rules-unreadable" and c["data"].get("layer") == "custom")
+    ]
+
+
+def _validate_launcher(name: str, launcher: Any) -> None:
+    _require_exact(name, launcher, LAUNCHER_FIELDS, "an emulator's launcher")
+    for key in ("path", "entry"):
+        if not isinstance(launcher[key], str) or not launcher[key]:
+            fail(f"{name}: launcher.{key} must be a non-empty string")
+    for key in ("replacement_command", "app_id"):
+        if launcher[key] is not None and not isinstance(launcher[key], str):
+            fail(f"{name}: launcher.{key} must be a string or null")
+    if launcher["rule"] not in KNOWN_LAUNCH_RULES:
+        fail(f"{name}: launcher.rule must be one of {sorted(KNOWN_LAUNCH_RULES)}")
+
+
+def _validate_launch(name: str, entry: dict[str, Any]) -> None:
+    """The launch answer: a known verdict, a launcher exactly when startable, one reason otherwise."""
+    availability = entry["availability"]
+    if availability not in KNOWN_AVAILABILITIES:
+        fail(f"{name}: emulator availability must be one of {sorted(KNOWN_AVAILABILITIES)}")
+    startable = availability == "startable"
+    if startable != (entry["launcher"] is not None):
+        fail(f"{name}: an emulator carries a launcher exactly when its availability is startable")
+    if entry["launcher"] is not None:
+        _validate_launcher(name, entry["launcher"])
+    if entry["core_path"] is not None and (not startable or entry["kind"] != "libretro"):
+        fail(f"{name}: core_path stands only on a startable libretro entry")
+    reasons = _launch_reasons(entry["caveats"])
+    if startable and reasons:
+        fail(f"{name}: a startable emulator states the reason caveats {reasons}")
+    if not startable and [LAUNCH_REASONS[code] for code in reasons] != [availability]:
+        fail(f"{name}: availability {availability!r} needs exactly one reason caveat for it, got {reasons}")
 
 
 def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:

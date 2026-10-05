@@ -91,7 +91,7 @@ import sys
 import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, TypeAlias
+from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, TypeAlias, runtime_checkable
 
 from . import lha, ps2_bios, squashfs, whdload
 
@@ -874,6 +874,23 @@ def _plain_bytes(path: str) -> bytes:
         raise _ArchiveOutcome(ARCHIVE_UNREADABLE) from None
 
 
+class FileStamp(NamedTuple):
+    """A file's modification time and size, as ``stat`` reports them — the key a cached parse is checked against."""
+
+    mtime_ns: int
+    size: int
+
+
+@runtime_checkable
+class StampingMachine(Protocol):
+    """A machine whose files can change underneath a handle, and which can say whether one did.
+
+    :class:`RealMachine` is one; a fixture machine is not, and needs not be.
+    """
+
+    def file_stamp(self, path: str) -> FileStamp | None: ...
+
+
 class Machine(Protocol):
     """Narrow machine port: read a file, glob, classify a path, follow links, ask a core.
 
@@ -1156,6 +1173,23 @@ class RealMachine:
         except OSError:
             return None
         return st.st_size if _stat.S_ISREG(st.st_mode) else None
+
+    def file_stamp(self, path: str) -> FileStamp | None:
+        """``(st_mtime_ns, st_size)`` of the file *path* names, links followed — ``None`` where it cannot be stat'ed.
+
+        The key the core cache above uses, offered to a caller that keeps a
+        parse of a file between questions: a parse is reused only while the
+        stamp it was made under is the file's stamp now, so a rewrite moves
+        the key and is read again (a replacement preserving both, ``cp -p``,
+        keeps it, exactly as for a core). Not part of :class:`Machine`: a
+        fixture machine's files cannot change underneath a handle, so it has
+        nothing to stamp, and a caller that finds no stamp reads every time.
+        """
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None
+        return FileStamp(st.st_mtime_ns, st.st_size)
 
     def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None:
         if algorithm not in DIGEST_ALGORITHMS or (first_bytes is not None and first_bytes < 1):

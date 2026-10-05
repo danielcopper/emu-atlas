@@ -2044,11 +2044,16 @@ entry.emulator                     # 'mupen64plus_next_libretro.so' — the iden
 entry.system                       # 'n64' — an entry says what it launches, wherever it travels
 entry.declared_index               # 0 — where the layer that declared the system put it, promotion aside
 entry.selection                    # why it is first, when a user promoted it — None for declared order
+entry.availability                 # 'startable' — whether the frontend finds what it launches
+entry.launcher, entry.core_path    # what it would run, where, and the core
 entry.caveats                      # this entry's own degradations, e.g. games selecting another emulator
 entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
 inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
 ```
+
+Whether each entry starts, and with what, is its launch answer:
+[`availability`, `launcher` and `core_path`](#does-it-start-and-with-what--availability-launcher-core_path).
 
 **`kind` is one of three words** — `atlas.CATALOGUE_KINDS` — and each states what the launch command was read to say:
 
@@ -2420,6 +2425,110 @@ itself cannot move, because it comes through `EmuFolders::LoadConfig` on the bas
 ini can turn the everything-searched state above into a named image for its region, and nothing about the directory
 changes.
 
+### Does it start, and with what? — `availability`, `launcher`, `core_path`
+
+Every catalogue entry also says whether the frontend's own lookup finds what it launches, and where (issue #84). This is
+ES-DE's lookup — the find rules in `es_find_rules.xml`, evaluated the way `FileData::findEmulator` evaluates them — and
+**not a promise that the program runs**: a launcher can be found and still crash, miss its firmware or refuse the file.
+
+```python
+entry.availability   # 'startable' | 'not-installed' | 'unestablished' — atlas.AVAILABILITIES
+entry.launcher       # what ES-DE would run for the emulator token, and where — None unless startable
+entry.core_path      # the core file the corepath rules find, on a startable libretro entry — None otherwise
+```
+
+| `availability`  | what it means                                                                                 | its reason caveat                          |
+| --------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `startable`     | the launcher is found, and for a libretro entry its core too                                  | none                                       |
+| `not-installed` | rules exist and nothing they name is there, or the core is missing                            | `emulator-not-found`, `core-not-installed` |
+| `unestablished` | atlas cannot tell — no rules, an unread rules file, a path it cannot see, an unevaluated case | one of the five below                      |
+
+Every value other than `startable` comes with **exactly one** reason caveat on the entry, and the entry's caveats list
+the catalogue's own first and the launch answer's last. Read any value you do not know as `unestablished`: a later
+release adds words (`needs-setup` is the next one), and that reading stays correct.
+
+| reason code                     | verdict         | `data`                                                               | what to do                                                                                                                    |
+| ------------------------------- | --------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order) | say the emulator is not installed; `searched` is where the frontend looked                                                    |
+| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath directories)                     | say the core is missing — the same code the placement routes use                                                              |
+| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                     | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                    |
+| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                     | the same for the core: a custom layer defined the core with no corepath entries                                               |
+| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                   | the shipped rules could not be read or parsed — what the frontend searches is unknown                                         |
+| `launch-path-unestablished`     | `unestablished` | `path`                                                               | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either         |
+| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape           | not evaluated in this release: EmuDeck and bare RetroArch entries, derived entries, and commands with no `%EMULATOR_X%` token |
+
+Two keys name what the frontend looked for, each in the spelling the command carries: `emulator_token` is the `X` of
+`%EMULATOR_X%` (the name `es_find_rules.xml` keys its `<emulator>` by, `RYUBING`), and `core_token` the `X` of
+`%CORE_X%` (its `<core>`, `RETROARCH`). Neither is a card's `token` — the frontend's word, not atlas's — so join them to
+nothing but the find rules and the command.
+
+Two caveats are **notes**, never reasons, and ride beside any verdict:
+
+- `find-rules-unreadable` with `layer: custom` — the user's `custom_systems/es_find_rules.xml` exists and does not
+  parse. ES-DE skips such a file and reads the bundled one, and so does the verdict beside it.
+- `run-game-differs` beside `startable` — RetroDECK's own direct start, `run_game.sh`, would run something else
+  (`run_game_path`), or nothing (`""`). It reads only the shipped rules, never expands `~` and takes no `|` entry. The
+  verdict stays ES-DE's; the note is for a client that starts games through `run_game.sh` today.
+
+**`launcher`** carries what ES-DE would substitute for the `%EMULATOR_X%` token, in the frontend's own spelling:
+
+| key                   | carries                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `path`                | the file the rule found — for RetroDECK a path **inside its sandbox**, such as `/app/retrodeck/components/…` |
+| `replacement_command` | for a rule entry with a `\|`, the command after it as written, which ES-DE runs instead; otherwise `null`    |
+| `app_id`              | the sandbox `path` is valid in — `net.retrodeck.retrodeck`; `null` for a frontend on the host                |
+| `rule`                | `systempath` (found on the frontend's `PATH`) or `staticpath` (a path) — `atlas.LAUNCH_RULES`                |
+| `entry`               | the rule entry that matched, as written, before `~`, `%ESPATH%` or a wildcard was expanded                   |
+
+A path is valid only where `app_id` says: start a RetroDECK launcher with `flatpak run --command=<path> <app_id>`, never
+from the host. `~` in a rule is ES-DE's home, which RetroDECK sets with `--home "${XDG_CONFIG_HOME}"` — the app's config
+directory, not the user's — so an AppImage in the user's own `~/Applications` is not one RetroDECK's frontend finds. For
+a libretro entry the launcher is RetroArch, the runner, and **`core_path`** names the core file the `corepath` rules
+find, in the same spelling (`/var/config/retroarch/cores/<core>.so` for RetroDECK).
+
+From the vectors (`launch.json`), a component found, then an emulator that is not there (other fields elided):
+
+```json
+{
+  "label": "Dolphin (Standalone)",
+  "kind": "standalone",
+  "emulator": "DOLPHIN",
+  "availability": "startable",
+  "launcher": {
+    "path": "/app/retrodeck/components/dolphin/component_launcher.sh",
+    "replacement_command": null,
+    "app_id": "net.retrodeck.retrodeck",
+    "rule": "staticpath",
+    "entry": "/app/retrodeck/components/dolphin/component_launcher.sh"
+  },
+  "core_path": null,
+  "caveats": []
+}
+```
+
+```json
+{
+  "label": "Ryubing (Standalone)",
+  "kind": "standalone",
+  "emulator": "RYUBING",
+  "availability": "not-installed",
+  "launcher": null,
+  "core_path": null,
+  "caveats": [
+    {
+      "code": "emulator-not-found",
+      "data": {
+        "emulator_token": "RYUBING",
+        "searched": ["ryubing", "/var/data/retrodeck/external_components/ryubing/Ryujinx.sh"]
+      }
+    }
+  ]
+}
+```
+
+The launchability answer's `entry` is the same entry and carries the same three fields. EmuDeck and bare RetroArch
+answer `unestablished` with `launch-resolution-unsupported` on every entry until a later release evaluates their lookup.
+
 ## Where do this system's ROMs live? (and what launches them)
 
 The same catalogue declares, per system, the directory its ROMs sit in and the file extensions the frontend will launch.
@@ -2519,9 +2628,13 @@ answer = inst.launchable("dreamcast", "/run/media/deck/roms/dreamcast/Game (Trac
 answer.verdict       # 'launchable' | 'not-accepted' | 'entry-not-accepted' | 'needs-installation' | 'unknown'
 answer.extension     # '.bin' — the token ES-DE derives (name from the last dot, case preserved)
 answer.accepted      # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
-answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted'
+answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted', with its launch answer
 answer.alternatives  # entry labels established to take the file — on 'entry-not-accepted' alone
 ```
+
+`entry` carries the catalogue entry's [launch answer](#does-it-start-and-with-what--availability-launcher-core_path)
+too: whether the frontend finds what it launches is a different question from whether it takes this file, and both are
+answered.
 
 The match is exactly ES-DE's: the file name's token from its **last** dot, case preserved, compared **exactly** against
 the declared tokens — which is why catalogues list `.z64` and `.Z64` separately, and why a `.CHD` file on a `.chd`-only

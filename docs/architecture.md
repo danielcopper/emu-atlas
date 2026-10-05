@@ -194,6 +194,7 @@ classDiagram
     }
     class EmulatorEntry {
         +system / label / kind / core_so
+        +availability / launcher / core_path
         +savefile_location(content_path)
         +savestate_location(content_path)
         +texture_pack_location(content_path)

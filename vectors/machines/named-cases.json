@@ -2558,7 +2558,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -2568,7 +2578,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2614,7 +2634,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -2624,7 +2654,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2670,7 +2710,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2716,7 +2766,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2763,7 +2823,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -2773,7 +2843,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2820,7 +2900,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"ParaLLEl N64\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -2830,7 +2920,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -2877,7 +2977,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": "gamelist.xml: alternativeEmulator = \"Mupen64Plus-Next\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -2887,7 +2997,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -3251,6 +3371,9 @@
             "emulator": null,
             "declared_index": 0,
             "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
             "caveats": [
               {
                 "code": "core-file-foreign",
@@ -3258,6 +3381,12 @@
                   "core_file": "citra_libretro.dll",
                   "label": "Citra",
                   "system": "n3ds"
+                }
+              },
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {
+                  "installation": "emudeck"
                 }
               }
             ]
@@ -7389,7 +7518,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -7399,7 +7538,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -7483,7 +7632,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -7493,7 +7652,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -7585,7 +7754,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: altemulator = \"ParaLLEl N64\" (per-game)",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -7595,7 +7774,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -8505,7 +8694,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -9293,7 +9492,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -9777,6 +9986,9 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
               "caveats": [
                 {
                   "code": "per-game-alternative-emulator",
@@ -9785,6 +9997,12 @@
                     "emulators": {
                       "ParaLLEl N64": "1"
                     }
+                  }
+                },
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -9797,6 +10015,9 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
               "caveats": [
                 {
                   "code": "per-game-alternative-emulator",
@@ -9805,6 +10026,12 @@
                     "emulators": {
                       "ParaLLEl N64": "1"
                     }
+                  }
+                },
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -10264,7 +10491,17 @@
               "emulator": "PPSSPP",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "psp",
@@ -10274,7 +10511,17 @@
               "emulator": "ppsspp_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -10365,6 +10612,9 @@
               "emulator": null,
               "declared_index": 0,
               "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
               "caveats": [
                 {
                   "code": "core-file-foreign",
@@ -10372,6 +10622,12 @@
                     "core_file": "citra_libretro.dll",
                     "label": "Citra",
                     "system": "n3ds"
+                  }
+                },
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
                   }
                 }
               ]
@@ -10384,7 +10640,17 @@
               "emulator": "AZAHAR",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -11292,7 +11558,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -11841,7 +12117,17 @@
               "emulator": "virtualjaguar_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             },
             {
               "system": "atarijaguar",
@@ -11851,7 +12137,17 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -12011,7 +12307,17 @@
               "emulator": "virtualjaguar_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             },
             {
               "system": "atarijaguar",
@@ -12021,7 +12327,17 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -12412,7 +12728,17 @@
               "emulator": "gambatte_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -12646,7 +12972,17 @@
               "emulator": "gambatte_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -12842,7 +13178,17 @@
               "emulator": "gambatte_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -12895,7 +13241,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -12905,7 +13261,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -12974,7 +13340,17 @@
               "emulator": "virtualjaguar_libretro.so",
               "declared_index": 1,
               "selection": "gamelist.xml: alternativeEmulator = \"Virtual Jaguar\"",
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             },
             {
               "system": "atarijaguar",
@@ -12984,7 +13360,17 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "emudeck"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [
@@ -13208,7 +13594,17 @@
               "emulator": "mupen64plus_next_libretro.so",
               "declared_index": 0,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             },
             {
               "system": "n64",
@@ -13218,7 +13614,17 @@
               "emulator": "parallel_n64_libretro.so",
               "declared_index": 1,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
             }
           ],
           "caveats": []
@@ -14824,7 +15230,15 @@
             "emulator": "flycast_libretro.so",
             "declared_index": 0,
             "selection": null,
-            "caveats": []
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {}
+              }
+            ]
           },
           "alternatives": [],
           "caveats": []
@@ -15028,7 +15442,17 @@
             "emulator": "AZAHAR",
             "declared_index": 0,
             "selection": null,
-            "caveats": []
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
           },
           "alternatives": [
             "Citra"
@@ -15091,7 +15515,15 @@
             "emulator": "gambatte_libretro.so",
             "declared_index": 0,
             "selection": null,
-            "caveats": []
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {}
+              }
+            ]
           },
           "alternatives": [],
           "caveats": [
@@ -15160,7 +15592,15 @@
             "emulator": "gambatte_libretro.so",
             "declared_index": 0,
             "selection": null,
-            "caveats": []
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {}
+              }
+            ]
           },
           "alternatives": [],
           "caveats": [
@@ -15223,7 +15663,17 @@
             "emulator": "RPCS3",
             "declared_index": 0,
             "selection": null,
-            "caveats": []
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
           },
           "alternatives": [],
           "caveats": [
@@ -15282,7 +15732,17 @@
               "emulator": "mgba_libretro.so",
               "declared_index": null,
               "selection": null,
-              "caveats": []
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {
+                    "installation": "bare_retroarch_flatpak"
+                  }
+                }
+              ]
             }
           ],
           "caveats": [

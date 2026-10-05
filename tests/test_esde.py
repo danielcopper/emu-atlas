@@ -769,7 +769,8 @@ class TestPerGameAltemulator:
                 )
             }
         )
-        assert all(not e.caveats for e in _entries(rd.emulators_for("n64")))
+        for entry in _entries(rd.emulators_for("n64")):
+            assert atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR not in [c.code for c in entry.caveats]
 
     def test_wrong_entry_savefile_location_gets_override_caveat(self):
         # caller picked the system default, but THIS game's altemulator points elsewhere
