@@ -145,8 +145,8 @@ class Launcher:
     For a ``systempath`` hit it is the ``PATH`` directory joined to the entry.
     """
     replacement_command: str | None
-    """The command ES-DE runs instead of ``path`` when the rule entry carries one after a ``|``, as written there; ``null``
-    when it carries none.
+    """The command ES-DE runs instead of ``path`` when the rule entry carries one after a ``|``, as written there;
+    ``null`` when it carries none.
 
     ``path`` is then the file whose presence selected that command, and
     nothing ES-DE starts.
@@ -238,7 +238,10 @@ def _es_replace(text: str, old: str, new: str) -> str:
 
 
 def generic_path(path: str) -> str:
-    """ES-DE's ``getGenericPath``: doubled separators collapsed, a trailing one dropped (``FileSystemUtil.cpp:453-476``)."""
+    """ES-DE's ``getGenericPath``: doubled separators collapsed, a trailing one dropped.
+
+    ``FileSystemUtil.cpp:453-476`` @ v3.4.1.
+    """
     path = path.replace("\\", "/")
     while "//" in path:
         path = path.replace("//", "/")

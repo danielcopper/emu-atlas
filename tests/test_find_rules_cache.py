@@ -123,7 +123,6 @@ class TestAChangedFileIsParsedAgain:
         assert launcher(handle) == OTHER
         assert len(parses) == 2
 
-
     def test_a_replaced_file_under_the_same_size_and_mtime(self, tmp_path: Path, parses: list[str]):
         # What a Flatpak update does to a deploy file: OSTree checks out a new
         # object — a new inode — and every deploy file carries mtime 0, so a

@@ -967,16 +967,22 @@ def _keyfile_groups(text: str) -> dict[str, dict[str, str]]:
 class _FlatpakGrants:
     """What the deploy's metadata grants the sandbox of the host's filesystem, as far as the launch view reads it.
 
-    ``host``, ``home``, ``host_os`` and ``host_etc`` are the special tokens;
-    ``paths`` the host paths every other granted entry binds (``~/…``,
+    ``host``, ``home``, ``host_os`` and ``host_etc`` are the special tokens.
+    ``paths`` are the host paths every other granted entry binds (``~/…``,
     ``/…`` and the three ``xdg-*`` bases, resolved by
-    :func:`_fs_resolve_entry`) — bound whatever their ``:ro``/``:create``
-    mode (flatpak-context.c:2981-3011). ``unplaced`` is a granted entry the
-    model cannot place (an ``xdg-*`` user directory, a revocation in the
-    metadata itself): it may bind anything, so no path is taken to be masked
+    :func:`_fs_resolve_entry`), whatever their ``:ro``/``:create`` mode
+    (flatpak-context.c:2930-3011) — less those flatpak refuses to export
+    (:func:`_flatpak_refuses`), which bind nothing. ``hidden`` are the host
+    paths a revoked entry names: a negated entry has mode NONE
+    (``parse_negated``, flatpak-context.c:1720) and is exported as a tmpfs
+    (flatpak-exports.c:1104-1105), so it hides what is under it rather than
+    binding anything.
+
+    ``unplaced`` is a granted entry the model cannot place (an ``xdg-*``
+    user directory): it may bind anything, so no path is taken to be masked
     while one stands. ``refiled`` is an overrides file that sets
-    ``filesystems`` at all, which may have revoked or widened every one of
-    these and is not composed here.
+    ``filesystems`` at all, or a revocation the model cannot place: either
+    may have revoked or widened every one of these and is not composed here.
     """
 
     host: bool = False
@@ -984,6 +990,7 @@ class _FlatpakGrants:
     host_os: bool = False
     host_etc: bool = False
     paths: tuple[str, ...] = ()
+    hidden: tuple[str, ...] = ()
     unplaced: bool = False
     refiled: bool = False
 
@@ -992,35 +999,67 @@ class _FlatpakGrants:
 # ($XDG_RUNTIME_DIR), where every path is unknown to the view anyway.
 _FS_XDG_RUN = "xdg-run"
 
+# Where flatpak refuses to export a path, or a parent of one: its own trees
+# and the host spellings it does not share (``dont_export_in``,
+# flatpak-exports.c:64-74, checked both ways at :973-997 @ 1.16.6).
+_FLATPAK_DONT_EXPORT_IN = (
+    "/.flatpak-info",
+    "/app",
+    "/dev",
+    "/etc",
+    "/proc",
+    "/run/flatpak",
+    "/run/host",
+    "/usr",
+)
+
+
+def _flatpak_refuses(path: str) -> bool:
+    """Whether flatpak refuses a ``filesystems`` entry for *path*, so that it binds nothing.
+
+    At or under a ``dont_export_in`` entry, a parent of one (``/run``,
+    ``/``), or under a merged-``/usr`` directory (flatpak-exports.c:973-1011
+    @ 1.16.6). A path there is answered by its own branch of the view, never
+    as a granted host read.
+    """
+    return any(_under(path, reserved) or _under(reserved, path) for reserved in _FLATPAK_DONT_EXPORT_IN) or any(
+        _under(path, "/" + merged) for merged in _FLATPAK_USRMERGED
+    )
+
 
 def _flatpak_grants(
     metadata: Mapping[str, Mapping[str, str]] | None, home: str, *, refiled: bool
 ) -> _FlatpakGrants:
-    """The metadata's ``[Context] filesystems`` read into :class:`_FlatpakGrants`."""
+    """The metadata's ``[Context] filesystems`` read into :class:`_FlatpakGrants`.
+
+    The entries go into one table, each key's last spelling winning — the
+    per-key hash insert flatpak merges a context with (flatpak-context.c:1092-1096).
+    """
     if metadata is None:
         return _FlatpakGrants(refiled=refiled)
-    tokens: set[str] = set()
-    paths: list[str] = []
-    unplaced = False
+    table: dict[str, bool] = {}
     for entry in _gkeyfile_list(metadata.get("Context", {}).get("filesystems", "")):
         key, negated = _fs_entry_key(entry)
-        resolved = None if negated else _fs_resolve_entry(key, home)
-        if negated:
-            unplaced = True
-        elif key in _FS_SPECIAL_TOKENS:
-            tokens.add(key)
-        elif resolved is not None:
-            paths.append(resolved.rstrip("/") or "/")
-        elif key.split("/", 1)[0] != _FS_XDG_RUN:
-            unplaced = True
+        table[key] = negated
+    tokens = {key for key, negated in table.items() if key in _FS_SPECIAL_TOKENS and not negated}
+    placed = {
+        key: _fs_resolve_entry(key, home)
+        for key in table
+        if key not in _FS_SPECIAL_TOKENS and key.split("/", 1)[0] != _FS_XDG_RUN
+    }
+    unplaced_keys = [key for key, resolved in placed.items() if resolved is None]
+    resolved_paths = {key: (resolved.rstrip("/") or "/") for key, resolved in placed.items() if resolved is not None}
+    paths = [path for key, path in resolved_paths.items() if not table[key] and not _flatpak_refuses(path)]
+    hidden = [path for key, path in resolved_paths.items() if table[key]]
     return _FlatpakGrants(
         host="host" in tokens,
         home="home" in tokens,
         host_os="host-os" in tokens,
         host_etc="host-etc" in tokens,
         paths=tuple(paths),
-        unplaced=unplaced,
-        refiled=refiled,
+        hidden=tuple(hidden),
+        unplaced=any(not table[key] for key in unplaced_keys),
+        refiled=refiled or any(table[key] for key in unplaced_keys),
     )
 
 
@@ -1064,26 +1103,31 @@ class _SandboxLaunchView:
       (flatpak-context.c:3033-3044 @ 1.16.6);
     - an explicit grant of the metadata (``~/…``, ``/…``, ``xdg-data`` and
       its siblings — :class:`_FlatpakGrants`) is the host's own path, and so
-      are the directories leading to it, which flatpak creates to bind it;
+      are the directories leading to it, which flatpak creates to bind it — a
+      grant flatpak refuses (:func:`_flatpak_refuses`) binds nothing;
     - under the ``host`` grant (or ``host-os`` / ``host-etc``) ``/run/host``
       holds the host's ``/usr``, ``/etc`` and merged-``/usr`` directories
       (:data:`_RUN_HOST`); without it they are not there, and anything else
       under ``/run/host`` is not established;
-    - the rest of ``~/.var/app`` and the user's own Flatpak installation are
-      masked (flatpak hides each with a tmpfs, flatpak-context.c:3019-3031 and
-      :3131-3143), and the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and
-      ``/root`` are not bound (:data:`_FLATPAK_HOST_HIDDEN`), so a path there
-      is an established miss — ``/var/home`` and ``/run/media`` excepted,
-      which the ``host`` grant binds (flatpak-context.c:2884-2888);
+    - the rest of ``~/.var/app``, the user's own Flatpak installation and
+      every revoked entry are masked with a tmpfs, and the host's ``/var``,
+      ``/run``, ``/boot``, ``/efi`` and ``/root`` are not bound
+      (:meth:`_mask_root`) — ``/run/media`` excepted, which the ``host`` grant
+      binds (flatpak-context.c:2884-2888), and ``/var/home``, the host's homes
+      on an ostree system (:data:`_OSTREE_HOME`). Only a grant at or under such
+      a root lifts it. Under the ``host`` grant a path there is an established
+      miss;
     - everything else is the host's own path under the ``host`` grant
       (under ``home``, the home directory alone). The sandbox's own ``/etc``,
       ``/tmp``, ``/dev``, ``/proc`` and ``/sys``, its private ``/run/user``,
       a relative path — ES-DE tests one against its working directory
-      (``FileSystemUtil.cpp:1018-1033`` @ v3.4.1), which is nothing on this
-      disk — and, where the grants are not established (no ``host`` grant,
-      an overrides file that sets ``filesystems``, an entry the model cannot
-      place), every path outside the app's own trees: atlas cannot say what is
-      there, so the walk stops unestablished rather than guess a miss.
+      (``FileSystemUtil.cpp:1018-1033`` @ v3.4.1), which atlas cannot know —
+      and, where the grants are not established (no ``host`` grant, an
+      overrides file that sets ``filesystems``, a revocation the model cannot
+      place), every path outside the app's own trees, a masked one included,
+      and where a grant the model cannot place stands, every masked path:
+      atlas cannot say what is there, so the walk stops unestablished rather
+      than guess a miss.
 
     Links are followed **inside** the sandbox: a link's target is a sandbox
     path and is translated again, which is the case that decides RetroDECK's
@@ -1121,29 +1165,56 @@ class _SandboxLaunchView:
         grants = self.grants
         if grants.refiled or _under(path, "/run/user"):
             return None
-        if any(_under(path, granted) or granted.startswith(path + "/") for granted in grants.paths):
-            return path
         if _under(path, _RUN_HOST):
             return self._run_host(path)
+        explicit = self._granted_or_masked(path)
+        if not isinstance(explicit, _NotOwn):
+            return explicit
         if not grants.host:
-            return path if grants.home and _under(path, self.real_home) and not self._masked(path) else None
-        masked = self._masked(path)
-        if masked is not None:
-            return None if grants.unplaced else masked
+            return path if grants.home and _under(path, self.real_home) else None
         first = path.split("/")[1] if path != "/" else ""
         return None if first in _FLATPAK_SANDBOX_OWN else path
 
-    def _masked(self, path: str) -> _Hidden | None:
-        """:data:`_HIDDEN` where flatpak masks or never binds *path* — ``None`` where it does not."""
-        apps_dir = os.path.join(self.real_home, ".var", "app")
-        if _under(path, apps_dir) or _under(path, os.path.join(self.real_home, _FLATPAK_USER_BASE)):
-            return _HIDDEN
+    def _granted_or_masked(self, path: str) -> str | _Hidden | None | _NotOwn:
+        """*path* as an explicit grant or a mask decides it — :data:`_NOT_OWN` where neither does."""
+        grants = self.grants
+        if any(granted.startswith(path + "/") for granted in grants.paths):
+            # A directory leading to a grant, which flatpak creates to bind it.
+            return path
+        granted = max((g for g in grants.paths if _under(path, g)), key=len, default=None)
+        mask = self._mask_root(path)
+        if mask is not None and (granted is None or not _under(granted, mask)):
+            return _HIDDEN if grants.host and not grants.unplaced else None
+        return _NOT_OWN if granted is None else path
+
+    def _mask_root(self, path: str) -> str | None:
+        """The innermost masked or unbound root over *path* — ``None`` where nothing masks it.
+
+        Masked with a tmpfs: the rest of ``~/.var/app``, the user's own
+        Flatpak installation, and every revoked entry (flatpak-context.c:3019-3031,
+        :3131-3143; flatpak-exports.c:1104-1105). Not bound under the ``host``
+        grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and ``/root``
+        (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and ``/run/media`` aside.
+        Only a grant at or under such a root lifts it: the tmpfs is added after
+        the grants (flatpak-context.c:3024, :3136) and a parent's bind does not
+        reach beneath it (flatpak-exports.c:309-337, :487-506, :772-790).
+        """
+        roots = [
+            os.path.join(self.real_home, ".var", "app"),
+            os.path.join(self.real_home, _FLATPAK_USER_BASE),
+            *self.grants.hidden,
+        ]
         first = path.split("/")[1] if path != "/" else ""
         shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, "/run/media")
-        return _HIDDEN if not shared and first in _FLATPAK_HOST_HIDDEN else None
+        if self.grants.host and not shared and first in _FLATPAK_HOST_HIDDEN:
+            roots.append("/" + first)
+        return max((root for root in roots if _under(path, root)), key=len, default=None)
 
     def _run_host(self, path: str) -> str | _Hidden | None:
-        """The host path a ``/run/host`` spelling binds — :data:`_HIDDEN` without the grant, ``None`` beyond the model."""
+        """The host path a ``/run/host`` spelling binds.
+
+        :data:`_HIDDEN` without the grant, ``None`` beyond the model.
+        """
         grants = self.grants
         if path == _RUN_HOST:
             return path
@@ -1175,7 +1246,8 @@ class _SandboxLaunchView:
         return _NOT_OWN
 
     def _target(self, candidate: str) -> str | _Hidden | None | _NotOwn:
-        """The link *candidate* is in the sandbox — :data:`_NOT_OWN` where it is no link (or a directory flatpak builds).
+        """The link *candidate* is in the sandbox — :data:`_NOT_OWN` where it is no link (or a directory flatpak
+        builds).
 
         ``/bin`` and its merged-``/usr`` siblings are links flatpak itself
         creates (``usr/bin``), so they answer without asking the host.
@@ -16829,9 +16901,9 @@ class EmulatorEntry:
 
     @property
     def core_path(self) -> str | None:
-        """The core file ES-DE's core lookup finds for a libretro entry — the first ``corepath`` directory holding the
-        file its ``%CORE_X%`` names — spelled where ``launcher.app_id`` reads it; ``null`` on every other entry and wherever
-        none is found.
+        """The core file ES-DE's core lookup finds for a libretro entry — the first ``corepath`` directory holding
+        the file its ``%CORE_X%`` names — spelled where ``launcher.app_id`` reads it; ``null`` on every other entry
+        and wherever none is found.
 
         That lookup is ``launchGame``'s, not ``findEmulator``'s
         (``es-app/src/FileData.cpp:1466-1568`` @ v3.4.1), and runs once the
@@ -18326,8 +18398,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         replaced one — a Flatpak update, whose files all carry mtime 0, swaps
         the inode — is read and parsed again, and one that is gone, or cannot
         be stat'ed, is read the ordinary way, so it answers missing or
-        unreadable rather than what it held. A machine that cannot stamp — a fixture's files do not change
-        underneath a handle — reads and parses every time.
+        unreadable rather than what it held. A machine that cannot stamp — a
+        fixture's files do not change underneath a handle — reads and parses
+        every time.
         """
         stamp = self._machine.file_stamp(path) if isinstance(self._machine, StampingMachine) else None
         held = self._find_rules_parsed.get(path)
@@ -18343,7 +18416,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return READ_OK, parsed
 
     def _launch_view(self) -> _SandboxLaunchView:
-        """The frontend's sandbox as the launch lookup reads it — the deploy resolved once, each file it needs read once.
+        """The frontend's sandbox as the launch lookup reads it — the deploy resolved once, each file it needs read
+        once.
 
         The deploy's ``metadata`` names the runtime behind ``/usr`` and grants
         the filesystem; the overrides files (:func:`_flatpak_override_files_for`,
