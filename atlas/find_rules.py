@@ -2,26 +2,28 @@
 
 ``es_find_rules.xml`` is the file ES-DE reads to turn ``%EMULATOR_X%`` into a
 program and ``%CORE_X%`` into a directory holding the core
-(``FindRules::loadFindRules``, ``es-app/src/SystemData.cpp:43-213`` @ ES-DE
+(``FindRules::loadFindRules``, ``es-app/src/SystemData.cpp:43-215`` @ ES-DE
 v3.4.1). Two layers, in this order:
 
 1. the custom file ``<app-data>/custom_systems/es_find_rules.xml``, taken
    where it exists (``:46-51``), then
-2. the bundled file, resolved as a program resource (``:59-60``).
+2. the bundled file, resolved as a program resource (``:59-61``).
 
 The first definition of a name wins **whole**: an ``<emulator>`` or ``<core>``
 whose name is already held is skipped, in the same file or the next one
-(``:115-120``, ``:182-188``). Rules are not merged, so a custom definition
+(``:122-128``, ``:185-191``). Rules are not merged, so a custom definition
 replaces the bundled one entirely — an empty one included. A layer that does
 not parse, or carries no ``<ruleList>``, is skipped and the next one read
-(``:97-107``).
+(``:97-110``).
 
 Inside one ``<emulator>``, ES-DE keeps two lists in document order: the
 ``systempath`` entries and the ``staticpath`` entries; every other rule type is
-skipped on this platform (``:131-141``), and a rule with no ``type`` is too.
+skipped on this platform (``:143-149``), and a rule with no ``type`` is too
+(``:131-136``).
 Entry text is kept **as written** — pugixml does not trim it — so an entry
 spread over several lines carries its line break and its indentation, and is a
-path no file has. The deployed bundled file has one such corepath entry.
+path no file has. RetroDECK's bundled file at ``retrodeck-main-20260926-172324``
+has one such corepath entry.
 
 Pure text in, rules out. No I/O. Parsing goes through :mod:`atlas._xml` for
 the reasons :mod:`atlas.esde` states.
@@ -68,7 +70,9 @@ LAUNCH_RULES = (RULE_SYSTEMPATH, RULE_STATICPATH)
 FindRulesLayer = Literal["bundled", "custom"]
 
 LAYER_BUNDLED: FindRulesLayer = "bundled"
-"""The find rules the frontend ships — the layer every emulator falls back on."""
+"""The find rules the frontend ships, or the copy under its app-data ``resources/`` that stands in for them — the
+layer every name the custom one does not define comes from.
+"""
 LAYER_CUSTOM: FindRulesLayer = "custom"
 """The user's ``custom_systems/es_find_rules.xml``, whose definitions replace the bundled ones of the same name."""
 
@@ -76,11 +80,14 @@ LAYER_CUSTOM: FindRulesLayer = "custom"
 # names.
 FIND_RULES_LAYERS = (LAYER_BUNDLED, LAYER_CUSTOM)
 
-# The entry of one catalogue row could not be told: no rules, an unread
-# bundled layer, an arrangement this cut does not evaluate, a path atlas
-# cannot see the way the frontend sees it. Each is a reason caveat for an
-# ``unestablished`` verdict, one per entry; ``find-rules-unreadable`` on the
-# custom layer is the exception and rides beside whatever verdict the bundled
+# Why a catalogue row's launch answer is not ``startable``, one reason per
+# entry: nothing the rules name was found or the core is missing
+# (``emulator-not-found`` beside the shared ``core-not-installed``, both
+# ``not-installed``), or the answer cannot be told — no rules for the
+# emulator or the core, an unread bundled layer, a case the evaluation does
+# not cover, a path atlas cannot see the way the frontend sees it (all
+# ``unestablished``). ``find-rules-unreadable`` on the custom layer is the
+# exception: it is no reason but a note beside whatever verdict the bundled
 # layer reached, because ES-DE skips that layer and reads on.
 CAVEAT_EMULATOR_NOT_FOUND = "emulator-not-found"
 CAVEAT_EMULATOR_RULES_MISSING = "emulator-rules-missing"
@@ -132,7 +139,7 @@ def parse_find_rules(text: str) -> FindRules | None:
     """One ``es_find_rules.xml`` as ES-DE reads it, or ``None`` where ES-DE skips the file.
 
     ``None`` is both of the frontend's skips: the text does not parse, or no
-    document-level ``<ruleList>`` is there (``SystemData.cpp:97-107``). The
+    document-level ``<ruleList>`` is there (``SystemData.cpp:97-110``). The
     document is read at the document level the way :func:`atlas.esde.parse_es_systems`
     reads ``es_systems.xml`` — wrapped in a synthetic root, BOM and XML
     declaration off first — because pugixml's ``doc.child`` is what ES-DE asks,
@@ -140,7 +147,7 @@ def parse_find_rules(text: str) -> FindRules | None:
 
     Within the file the first ``<emulator>`` (or ``<core>``) of a name wins and
     a later one is skipped, as is one with an empty ``name``
-    (``:110-120``, ``:177-188``).
+    (``:115-128``, ``:179-191``).
     """
     rule_list = _rule_list(text)
     if rule_list is None:
@@ -176,7 +183,7 @@ def _rule_list(text: str) -> ET.Element | None:
 
 
 def _core_paths(core_el: ET.Element) -> tuple[str, ...]:
-    """One ``<core>``'s ``corepath`` entries as written, every other rule type dropped (``SystemData.cpp:189-209``)."""
+    """One ``<core>``'s ``corepath`` entries as written, every other rule type dropped (``SystemData.cpp:192-210``)."""
     return tuple(
         entry.text or ""
         for rule in core_el.findall("rule")

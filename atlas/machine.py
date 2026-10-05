@@ -875,17 +875,26 @@ def _plain_bytes(path: str) -> bytes:
 
 
 class FileStamp(NamedTuple):
-    """A file's modification time and size, as ``stat`` reports them — the key a cached parse is checked against."""
+    """A file's identity and shape as ``stat`` reports them — the key a cached parse is checked against.
+
+    The inode and device are in it because the time and size are not enough
+    on their own where a file is replaced rather than rewritten: an OSTree
+    deploy, which is what a Flatpak's files are, carries every file at mtime
+    0, so an update that keeps a file's size would keep its key — while the
+    changed file is a new object with a new inode.
+    """
 
     mtime_ns: int
     size: int
+    ino: int
+    dev: int
 
 
 @runtime_checkable
 class StampingMachine(Protocol):
     """A machine whose files can change underneath a handle, and which can say whether one did.
 
-    :class:`RealMachine` is one; a fixture machine is not, and needs not be.
+    :class:`RealMachine` is one; a fixture machine is not, and need not be.
     """
 
     def file_stamp(self, path: str) -> FileStamp | None: ...
@@ -1175,21 +1184,21 @@ class RealMachine:
         return st.st_size if _stat.S_ISREG(st.st_mode) else None
 
     def file_stamp(self, path: str) -> FileStamp | None:
-        """``(st_mtime_ns, st_size)`` of the file *path* names, links followed — ``None`` where it cannot be stat'ed.
+        """The :class:`FileStamp` of the file *path* names, links followed — ``None`` where it cannot be stat'ed.
 
-        The key the core cache above uses, offered to a caller that keeps a
-        parse of a file between questions: a parse is reused only while the
-        stamp it was made under is the file's stamp now, so a rewrite moves
-        the key and is read again (a replacement preserving both, ``cp -p``,
-        keeps it, exactly as for a core). Not part of :class:`Machine`: a
-        fixture machine's files cannot change underneath a handle, so it has
-        nothing to stamp, and a caller that finds no stamp reads every time.
+        For a caller that keeps a parse of a file between questions: a parse
+        is reused only while the stamp it was made under is the file's stamp
+        now, so a rewrite or a replacement moves the key and is read again. It
+        is the core cache's key in :meth:`read_core` with the file's inode and
+        device added. Not part of :class:`Machine`: a fixture machine's files
+        cannot change underneath a handle, so it has nothing to stamp, and a
+        caller that finds no stamp reads every time.
         """
         try:
             st = os.stat(path)
         except OSError:
             return None
-        return FileStamp(st.st_mtime_ns, st.st_size)
+        return FileStamp(st.st_mtime_ns, st.st_size, st.st_ino, st.st_dev)
 
     def file_digest(self, path: str, algorithm: str, *, first_bytes: int | None = None) -> str | None:
         if algorithm not in DIGEST_ALGORITHMS or (first_bytes is not None and first_bytes < 1):

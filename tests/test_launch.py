@@ -413,5 +413,6 @@ class TestTheAnswerTypesRefuseWhatTheyCannotMean:
             LaunchResolution("needs-setup")  # pyright: ignore[reportArgumentType] - the refused word
         with pytest.raises(ValueError, match="exactly where the verdict is startable"):
             LaunchResolution(atlas.AVAILABILITY_STARTABLE)
+        launcher = atlas.Launcher("/x", None, None, "staticpath", "/x")
         with pytest.raises(ValueError, match="exactly where the verdict is startable"):
-            LaunchResolution(atlas.AVAILABILITY_NOT_INSTALLED, atlas.Launcher("/x", None, None, "staticpath", "/x"))
+            LaunchResolution(atlas.AVAILABILITY_NOT_INSTALLED, launcher)

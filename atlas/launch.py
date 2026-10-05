@@ -36,8 +36,8 @@ because the entry after it might be the one ES-DE would take: the verdict is
 then ``unestablished`` with the path that stopped it, never a guessed hit or
 miss.
 
-The cost is the find rules' one parse per answer (the caller's) and ``stat``,
-``lstat`` and directory listings here: no core is probed, nothing is hashed.
+The cost is ``stat``, ``lstat`` and directory listings here, over find rules
+the caller hands in already parsed: no core is probed, nothing is hashed.
 """
 
 from __future__ import annotations
@@ -136,7 +136,8 @@ class Launcher:
 
     path: str
     """The file the rule found, in the frontend's own spelling — for RetroDECK a path inside its sandbox, such as
-    ``/app/retrodeck/components/dolphin/component_launcher.sh``, which ``flatpak run --command=<path> <app_id>`` starts.
+    ``/app/retrodeck/components/dolphin/component_launcher.sh``; it is what ES-DE runs unless ``replacement_command`` is
+    set.
 
     The path ES-DE checked, normalized the way it normalizes one (doubled
     separators collapsed, a trailing one dropped) and never shell-escaped:
@@ -283,10 +284,14 @@ def _matching_files(pattern: str, view: LaunchView) -> tuple[str, ...] | None:
     is matched against a regular expression built from the pattern — ``*``
     becomes ``.*``, parentheses and brackets are escaped, and nothing else is,
     so a ``.`` in the pattern matches any character there too. A pattern that
-    does not compile matches nothing, as ES-DE catches the same failure. One
-    difference is left: ECMAScript's ``.`` also refuses ``\\r`` and the two
-    Unicode line separators, Python's only ``\\n``, which no file name a find
-    rule targets carries.
+    does not compile matches nothing, as ES-DE catches the same failure. The
+    expression is ``std::regex``'s ECMAScript grammar there and Python's here;
+    the differences found are that ECMAScript's ``.`` also refuses ``\\r`` and
+    the two Unicode line separators where Python's refuses only ``\\n``, and
+    that a ``{`` which does not open a valid quantifier is not established to
+    be read the same way by both. No file name a find rule targets carries
+    those separators, and no entry of the shipped Linux rules at v3.4.1 or of
+    RetroDECK's build carries a ``{``.
     """
     star = pattern.find("*")
     parent = _parent(pattern)
@@ -566,6 +571,11 @@ class LaunchLookup:
         nothing the rules name was found, which is what decides whether the
         launch can work, so the verdict here is ``not-installed`` with
         ``emulator-not-found``.
+
+        A ``%PRECOMMAND_X%`` is searched first, over the same rules
+        (``:1166-1220``), and its refusal is the answer: the reason caveat's
+        ``emulator_token`` then names the pre-command (``WINE``), not the
+        emulator the entry launches.
         """
         return _with_custom_note(self._resolve(command, loads_core=loads_core), self._rules)
 

@@ -889,14 +889,26 @@ _FLATPAK_BUILT_DIRS = frozenset(("/var", "/run"))
 
 # Under a ``host`` grant flatpak binds every directory of the host's root into
 # the sandbox except these (``dont_mount_in_root``, flatpak-context.c:2765-2786,
-# the loop at :2855-2881 @ 1.16.6). Of the ones not answered more precisely
-# elsewhere, ``var`` and ``run`` hold nothing of the host's — their content in
-# the sandbox is flatpak's own, which no find rule points into — so a path
-# there is no file the frontend sees. The rest (``etc``, ``tmp``, ``dev``,
-# ``proc``, ``sys``) hold the runtime's or the kernel's files in the sandbox,
-# which atlas does not read, so a path there is not established.
+# the loop at :2855-2881 @ 1.16.6). The host's own ``/var``, ``/run``,
+# ``/boot``, ``/efi`` and ``/root`` are therefore not where the sandbox's
+# paths of those names lead: what the sandbox has there is what flatpak binds
+# into them on purpose — the per-app directories, ``/var/home``,
+# ``/run/media`` and ``/run/host``, each answered by name — and an explicit
+# grant, which the view checks first. Anything else there is no file the
+# frontend sees, the host's copy included: the host's
+# ``/var/lib/flatpak/exports`` entries the shipped find rules name never hit.
+# The sandbox's ``/etc``, ``/tmp``, ``/dev``, ``/proc`` and ``/sys`` are not
+# that: they hold the runtime's, flatpak's or the kernel's files, which atlas
+# does not read, so a path there is not established rather than a miss.
 _FLATPAK_HOST_HIDDEN = frozenset(("var", "run", "boot", "efi", "root"))
 _FLATPAK_SANDBOX_OWN = frozenset(("etc", "tmp", "dev", "proc", "sys"))
+
+# Where the host's operating system shows inside the sandbox under a ``host``
+# (or ``host-os`` / ``host-etc``) grant: its ``/usr`` and ``/etc`` bound at
+# ``/run/host/usr`` and ``/run/host/etc`` (flatpak-context.c:2891-2901;
+# flatpak-exports.c:547-550, :640-643 @ 1.16.6), and each merged-``/usr``
+# root directory recreated there the way the host has it (:559-597).
+_RUN_HOST = "/run/host"
 
 
 class _Hidden:
@@ -951,12 +963,65 @@ def _keyfile_groups(text: str) -> dict[str, dict[str, str]]:
     return groups
 
 
-def _grants_host(metadata: Mapping[str, Mapping[str, str]] | None) -> bool:
-    """Whether the app's metadata grants ``host`` — the whole host filesystem, read-write or read-only."""
+@dataclass(frozen=True, slots=True)
+class _FlatpakGrants:
+    """What the deploy's metadata grants the sandbox of the host's filesystem, as far as the launch view reads it.
+
+    ``host``, ``home``, ``host_os`` and ``host_etc`` are the special tokens;
+    ``paths`` the host paths every other granted entry binds (``~/…``,
+    ``/…`` and the three ``xdg-*`` bases, resolved by
+    :func:`_fs_resolve_entry`) — bound whatever their ``:ro``/``:create``
+    mode (flatpak-context.c:2981-3011). ``unplaced`` is a granted entry the
+    model cannot place (an ``xdg-*`` user directory, a revocation in the
+    metadata itself): it may bind anything, so no path is taken to be masked
+    while one stands. ``refiled`` is an overrides file that sets
+    ``filesystems`` at all, which may have revoked or widened every one of
+    these and is not composed here.
+    """
+
+    host: bool = False
+    home: bool = False
+    host_os: bool = False
+    host_etc: bool = False
+    paths: tuple[str, ...] = ()
+    unplaced: bool = False
+    refiled: bool = False
+
+
+# The granted entry whose binding lands under the sandbox's private /run/user
+# ($XDG_RUNTIME_DIR), where every path is unknown to the view anyway.
+_FS_XDG_RUN = "xdg-run"
+
+
+def _flatpak_grants(
+    metadata: Mapping[str, Mapping[str, str]] | None, home: str, *, refiled: bool
+) -> _FlatpakGrants:
+    """The metadata's ``[Context] filesystems`` read into :class:`_FlatpakGrants`."""
     if metadata is None:
-        return False
-    granted = _gkeyfile_list(metadata.get("Context", {}).get("filesystems", ""))
-    return any(entry.split(":", 1)[0] == "host" for entry in granted)
+        return _FlatpakGrants(refiled=refiled)
+    tokens: set[str] = set()
+    paths: list[str] = []
+    unplaced = False
+    for entry in _gkeyfile_list(metadata.get("Context", {}).get("filesystems", "")):
+        key, negated = _fs_entry_key(entry)
+        resolved = None if negated else _fs_resolve_entry(key, home)
+        if negated:
+            unplaced = True
+        elif key in _FS_SPECIAL_TOKENS:
+            tokens.add(key)
+        elif resolved is not None:
+            paths.append(resolved.rstrip("/") or "/")
+        elif key.split("/", 1)[0] != _FS_XDG_RUN:
+            unplaced = True
+    return _FlatpakGrants(
+        host="host" in tokens,
+        home="home" in tokens,
+        host_os="host-os" in tokens,
+        host_etc="host-etc" in tokens,
+        paths=tuple(paths),
+        unplaced=unplaced,
+        refiled=refiled,
+    )
 
 
 def _runtime_files(machine: Machine, home: str, metadata: Mapping[str, Mapping[str, str]] | None) -> str | None:
@@ -997,19 +1062,28 @@ class _SandboxLaunchView:
       directories (:data:`_SANDBOX_XDG_BINDS`), and ``~/.var/app/<app id>``
       is that same tree under its home spelling, which flatpak always binds
       (flatpak-context.c:3033-3044 @ 1.16.6);
+    - an explicit grant of the metadata (``~/…``, ``/…``, ``xdg-data`` and
+      its siblings — :class:`_FlatpakGrants`) is the host's own path, and so
+      are the directories leading to it, which flatpak creates to bind it;
+    - under the ``host`` grant (or ``host-os`` / ``host-etc``) ``/run/host``
+      holds the host's ``/usr``, ``/etc`` and merged-``/usr`` directories
+      (:data:`_RUN_HOST`); without it they are not there, and anything else
+      under ``/run/host`` is not established;
     - the rest of ``~/.var/app`` and the user's own Flatpak installation are
       masked (flatpak hides each with a tmpfs, flatpak-context.c:3019-3031 and
-      :3131-3143) and ``/var`` and ``/run``
-      hold nothing of the host's (:data:`_FLATPAK_HOST_HIDDEN`), so a path
-      there is an established miss, ``/run/media`` excepted, which flatpak
-      binds (flatpak-context.c:2884-2888);
-    - everything else is the host's own path, under the ``host`` grant
-      (``host_grant``) — without it, or under the sandbox's own ``/etc``,
-      ``/tmp``, ``/dev``, ``/proc`` and ``/sys`` and its private ``/run/user``,
-      atlas cannot say what is there. Without the grant that holds for every
-      path outside ``/app``, ``/usr`` and the per-app directories, the masked
-      and unbound ones included: their being hidden is a fact of the ``host``
-      grant's binding, and a filesystem atlas did not compose may bind them.
+      :3131-3143), and the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and
+      ``/root`` are not bound (:data:`_FLATPAK_HOST_HIDDEN`), so a path there
+      is an established miss — ``/var/home`` and ``/run/media`` excepted,
+      which the ``host`` grant binds (flatpak-context.c:2884-2888);
+    - everything else is the host's own path under the ``host`` grant
+      (under ``home``, the home directory alone). The sandbox's own ``/etc``,
+      ``/tmp``, ``/dev``, ``/proc`` and ``/sys``, its private ``/run/user``,
+      a relative path — ES-DE tests one against its working directory
+      (``FileSystemUtil.cpp:1018-1033`` @ v3.4.1), which is nothing on this
+      disk — and, where the grants are not established (no ``host`` grant,
+      an overrides file that sets ``filesystems``, an entry the model cannot
+      place), every path outside the app's own trees: atlas cannot say what is
+      there, so the walk stops unestablished rather than guess a miss.
 
     Links are followed **inside** the sandbox: a link's target is a sandbox
     path and is translated again, which is the case that decides RetroDECK's
@@ -1025,7 +1099,7 @@ class _SandboxLaunchView:
     es_path: str
     deploy_files: str | None
     runtime_files: str | None
-    host_grant: bool
+    grants: _FlatpakGrants
     rom_root: Callable[[], str | None]
     # Each host path's readlink, asked once: the walks of one answer share
     # every directory above the files they test.
@@ -1044,16 +1118,45 @@ class _SandboxLaunchView:
         own = self._own_tree(path)
         if not isinstance(own, _NotOwn):
             return own
-        if not self.host_grant or _under(path, "/run/user"):
+        grants = self.grants
+        if grants.refiled or _under(path, "/run/user"):
             return None
+        if any(_under(path, granted) or granted.startswith(path + "/") for granted in grants.paths):
+            return path
+        if _under(path, _RUN_HOST):
+            return self._run_host(path)
+        if not grants.host:
+            return path if grants.home and _under(path, self.real_home) and not self._masked(path) else None
+        masked = self._masked(path)
+        if masked is not None:
+            return None if grants.unplaced else masked
+        first = path.split("/")[1] if path != "/" else ""
+        return None if first in _FLATPAK_SANDBOX_OWN else path
+
+    def _masked(self, path: str) -> _Hidden | None:
+        """:data:`_HIDDEN` where flatpak masks or never binds *path* — ``None`` where it does not."""
         apps_dir = os.path.join(self.real_home, ".var", "app")
         if _under(path, apps_dir) or _under(path, os.path.join(self.real_home, _FLATPAK_USER_BASE)):
             return _HIDDEN
         first = path.split("/")[1] if path != "/" else ""
         shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, "/run/media")
-        if not shared and first in _FLATPAK_HOST_HIDDEN:
-            return _HIDDEN
-        return None if first in _FLATPAK_SANDBOX_OWN else path
+        return _HIDDEN if not shared and first in _FLATPAK_HOST_HIDDEN else None
+
+    def _run_host(self, path: str) -> str | _Hidden | None:
+        """The host path a ``/run/host`` spelling binds — :data:`_HIDDEN` without the grant, ``None`` beyond the model."""
+        grants = self.grants
+        if path == _RUN_HOST:
+            return path
+        name = path[len(_RUN_HOST) + 1 :].split("/", 1)[0]
+        if name == "etc":
+            granted = grants.host or grants.host_etc
+        elif name == "usr" or name in _FLATPAK_USRMERGED:
+            granted = grants.host or grants.host_os
+        else:
+            return None
+        if not granted:
+            return None if grants.unplaced else _HIDDEN
+        return path[len(_RUN_HOST) :]
 
     def _own_tree(self, path: str) -> str | None | _NotOwn:
         """*path* in one of the trees flatpak binds for the app whatever its grants — :data:`_NOT_OWN` elsewhere."""
@@ -1077,15 +1180,30 @@ class _SandboxLaunchView:
         ``/bin`` and its merged-``/usr`` siblings are links flatpak itself
         creates (``usr/bin``), so they answer without asking the host.
         """
-        if candidate in _FLATPAK_BUILT_DIRS:
+        if candidate in _FLATPAK_BUILT_DIRS or candidate == _RUN_HOST:
             return _NOT_OWN
         if candidate.lstrip("/") in _FLATPAK_USRMERGED:
             return "usr" + candidate
+        if os.path.dirname(candidate) == _RUN_HOST and os.path.basename(candidate) in _FLATPAK_USRMERGED:
+            return self._run_host_link(candidate)
         host = self._host_of(candidate)
         if not isinstance(host, str):
             return host
         target = self._readlink(host)
         return _NOT_OWN if target is None else target
+
+    def _run_host_link(self, candidate: str) -> _Hidden | None | _NotOwn:
+        """``/run/host/bin`` and its siblings, which the walk must not follow as a sandbox link.
+
+        Flatpak recreates each the way the host has it — a link into ``usr/``
+        made relative even where the host's is absolute, a directory bound as
+        itself (flatpak-exports.c:559-597 @ 1.16.6) — so in every case it
+        leads where the host's own ``/bin`` leads, which is what reading the
+        host's path does. Taken as a sandbox link, the host's absolute
+        ``/usr/bin`` would lead into the runtime instead.
+        """
+        host = self._run_host(candidate)
+        return host if not isinstance(host, str) else _NOT_OWN
 
     def _resolve(self, path: str, *, follow_last: bool) -> str | _Hidden | None:
         """*path* with every link on the way followed in the sandbox, as a host path.
@@ -1118,9 +1236,15 @@ class _SandboxLaunchView:
         return self._host_of(current)
 
     def found(self, path: str) -> Probe:
-        """ES-DE's ``isRegularFile || isSymlink`` on the sandbox's *path* (``FileSystemUtil.cpp:1018-1071``)."""
-        if not path.startswith("/"):
+        """ES-DE's ``isRegularFile || isSymlink`` on the sandbox's *path* (``FileSystemUtil.cpp:1018-1071``).
+
+        An empty path is no file; a relative one is tested against ES-DE's
+        working directory, which atlas cannot read, so it cannot be told.
+        """
+        if not path:
             return PROBE_MISS
+        if not path.startswith("/"):
+            return PROBE_UNKNOWN
         host = self._resolve(path, follow_last=False)
         if host is None:
             return PROBE_UNKNOWN
@@ -1146,9 +1270,13 @@ class _SandboxLaunchView:
         return PROBE_HIT if kind == KIND_FILE else PROBE_MISS
 
     def listing(self, directory: str) -> tuple[str, ...] | None:
-        """The names in the sandbox's *directory*, read through the host — all of them, hidden ones included."""
+        """The names in the sandbox's *directory*, read through the host — all of them, hidden ones included.
+
+        A relative directory is ES-DE's working directory's business, so its
+        listing cannot be told.
+        """
         if not directory.startswith("/"):
-            return ()
+            return None
         host = self._resolve(directory, follow_last=True)
         if host is None:
             return None
@@ -16679,10 +16807,9 @@ class EmulatorEntry:
     @property
     def availability(self) -> Availability:
         """Whether the frontend's own lookup finds what this entry launches: ``startable``, ``not-installed`` or
-        ``unestablished`` — ES-DE's lookup, not a promise that the program runs.
+        ``unestablished`` — ES-DE's lookup, not a promise that the program runs; every value but ``startable`` carries
+        exactly one reason caveat on the entry, and a value you do not know reads as ``unestablished``.
 
-        Every value but ``startable`` comes with exactly one reason caveat on
-        the entry, and a client reads an unknown value as ``unestablished``.
         The lookup is the frontend's own, mirrored from its find rules
         (:meth:`atlas.launch.LaunchLookup.resolve`); an arrangement it is not yet
         evaluated for answers ``unestablished`` with
@@ -16702,8 +16829,13 @@ class EmulatorEntry:
 
     @property
     def core_path(self) -> str | None:
-        """The core file the frontend's ``corepath`` rules find for a libretro entry, spelled where ``launcher.app_id``
-        reads it; ``null`` on every other entry and wherever none is found.
+        """The core file ES-DE's core lookup finds for a libretro entry — the first ``corepath`` directory holding the
+        file its ``%CORE_X%`` names — spelled where ``launcher.app_id`` reads it; ``null`` on every other entry and wherever
+        none is found.
+
+        That lookup is ``launchGame``'s, not ``findEmulator``'s
+        (``es-app/src/FileData.cpp:1466-1568`` @ v3.4.1), and runs once the
+        launcher is found.
         """
         return self._launch.core_path
 
@@ -17727,9 +17859,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     seam. Every query re-reads the governing sources — each exactly once — and
     derives all decisions from that one snapshot, so a concurrent config edit
     can never mix two revisions inside one answer (REVIEW M4). The one thing it
-    keeps is the parse of ES-DE's find rules, and only under the stat stamp the
-    file was read at: every query still stats each find-rules file, and a
-    changed one is read again (:meth:`_parsed_find_rules`).
+    keeps is the parse of ES-DE's find rules, and only under the stat identity
+    the file was read at: an answer that evaluates its entries' launch stats
+    each find-rules file it consults, and a changed one is read again
+    (:meth:`_parsed_find_rules`).
     """
 
     kind = "retrodeck"
@@ -18122,10 +18255,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     # (es-app/src/FileData.cpp:2398-2763 there, :2285-2650 upstream). The
     # deploy names its build in components/es-de/component_version.
     ESDE_FORK_BUILD = "retrodeck-main-20260926-172324"
-    # Every deployed line the launch lookup stands on, as (file under the
-    # deploy's files/, line, text the line holds): ES-DE's --home, the find
-    # rules run_game.sh reads, and run_game.sh's own token reading and search.
-    # tests/test_launch_resolution_tripwire.py holds each against the deploy.
+    # The deployed lines the launch lookup's reading of RetroDECK's scripts
+    # rests on, as (file under the deploy's files/, line, text the line
+    # holds): ES-DE's --home, the find rules run_game.sh reads, and
+    # run_game.sh's token reading, its line-wise entry read and its two tests.
+    # tests/test_launch_resolution_tripwire.py holds each of these lines
+    # against the deploy; the rest of find_emulator (run_game.sh:369-410,
+    # cited as a span in atlas.launch) is held only through them.
     LAUNCH_CITATIONS: tuple[tuple[str, int, str], ...] = (
         ("retrodeck/components/es-de/component_launcher.sh", 10, '--home "${XDG_CONFIG_HOME}"'),
         (
@@ -18137,8 +18273,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ("libexec/run_game.sh", 293, '"%EMULATOR_OS-SHELL%"/"/bin/sh"'),
         ("libexec/run_game.sh", 369, "find_emulator() {"),
         ("libexec/run_game.sh", 374, "xmllint --xpath \"//emulator[@name='$emulator_name']\" \"$es_find_rules\""),
+        ("libexec/run_game.sh", 383, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
         ("libexec/run_game.sh", 385, 'if [ -x "$(command -v "$command_path")" ]; then'),
         ("libexec/run_game.sh", 389, "//rule[@type='systempath']/entry"),
+        ("libexec/run_game.sh", 394, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
         ("libexec/run_game.sh", 395, 'if [ -x "$command_path" ]; then'),
         ("libexec/run_game.sh", 399, "//rule[@type='staticpath']/entry"),
     )
@@ -18148,7 +18286,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         The custom file is taken where it exists, and one that exists and
         cannot be read or parsed is skipped the way ES-DE skips it
-        (SystemData.cpp:97-107). The bundled layer is the resource override
+        (SystemData.cpp:97-110). The bundled layer is the resource override
         where one exists (``exists()`` follows links and answers false on an
         error, ResourceManager.cpp:34-37, FileSystemUtil.cpp:970-984) and the
         shipped file otherwise. The shipped file is read either way, because
@@ -18181,13 +18319,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _parsed_find_rules(self, path: str) -> tuple[ReadStatus, FindRules | None]:
         """One find-rules file's read status and parse — ``None`` where it was not read or did not parse.
 
-        The parse is kept on this handle under the file's stat stamp (path,
-        ``st_mtime_ns``, ``st_size`` — :meth:`atlas.machine.RealMachine.file_stamp`,
-        the key the core cache uses) and reused only while the file still
-        carries that stamp: every answer stats the file, a changed one is read
-        and parsed again, and one that is gone, or cannot be stat'ed, is read
-        the ordinary way, so it answers missing or unreadable rather than what
-        it held. A machine that cannot stamp — a fixture's files do not change
+        The parse is kept on this handle under the file's stat identity (path,
+        ``st_mtime_ns``, ``st_size``, ``st_ino``, ``st_dev`` —
+        :meth:`atlas.machine.RealMachine.file_stamp`) and reused only while the
+        file still carries it: every lookup stats the file, a changed or
+        replaced one — a Flatpak update, whose files all carry mtime 0, swaps
+        the inode — is read and parsed again, and one that is gone, or cannot
+        be stat'ed, is read the ordinary way, so it answers missing or
+        unreadable rather than what it held. A machine that cannot stamp — a fixture's files do not change
         underneath a handle — reads and parses every time.
         """
         stamp = self._machine.file_stamp(path) if isinstance(self._machine, StampingMachine) else None
@@ -18233,6 +18372,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if "PATH" in environment:
             search_path = tuple((environment["PATH"][0] or "").split(":"))
         refiled = any(text is not None and _context_filesystems(text) is not None for _, text in overrides)
+        grants = _flatpak_grants(metadata, self._home, refiled=refiled)
         return _SandboxLaunchView(
             machine=self._machine,
             real_home=self._home,
@@ -18242,7 +18382,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             es_path=self._ESDE_BINARY_DIR,
             deploy_files=None if deploy is None else deploy.files,
             runtime_files=_runtime_files(self._machine, self._home, metadata),
-            host_grant=_grants_host(metadata) and not refiled,
+            grants=grants,
             rom_root=self._launch_rom_directory,
         )
 

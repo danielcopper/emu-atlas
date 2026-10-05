@@ -124,6 +124,26 @@ class TestAChangedFileIsParsedAgain:
         assert len(parses) == 2
 
 
+    def test_a_replaced_file_under_the_same_size_and_mtime(self, tmp_path: Path, parses: list[str]):
+        # What a Flatpak update does to a deploy file: OSTree checks out a new
+        # object — a new inode — and every deploy file carries mtime 0, so a
+        # file of unchanged size keeps both the time and the size.
+        tree = Tree(tmp_path)
+        os.utime(tree.shipped, ns=(0, 0))
+        handle = tree.handle()
+        assert launcher(handle) == COMPONENT
+        before = tree.shipped.stat()
+        replacement = tree.shipped.with_name("es_find_rules.xml.new")
+        replacement.write_text(rules(OTHER))
+        os.utime(replacement, ns=(0, 0))
+        os.replace(replacement, tree.shipped)
+        after = tree.shipped.stat()
+        assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
+        assert after.st_ino != before.st_ino
+        assert launcher(handle) == OTHER
+        assert len(parses) == 2
+
+
 class TestALayerThatComesOrGoesChangesTheAnswer:
     def test_a_custom_layer(self, tmp_path: Path, parses: list[str]):
         tree = Tree(tmp_path)
