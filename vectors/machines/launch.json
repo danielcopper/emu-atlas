@@ -2619,6 +2619,529 @@
       }
     },
     {
+      "name": "launch-a-grant-under-an-unbound-root-is-a-host-read",
+      "rationale": "The host grant leaves the host's /var unbound, but a grant of /var/lib/emus binds that tree, and flatpak creates the directories leading to it: a rule entry there is the host's file and is found.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;/var/lib/emus;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/var/lib/emus/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/emus/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/var/lib/emus/foo",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "staticpath",
+                "entry": "/var/lib/emus/foo"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-grant-of-run-is-refused",
+      "rationale": "flatpak refuses a grant that is a parent of a path it reserves (/run/host, /run/flatpak), so a grant of /run binds nothing; the sandbox's /run is flatpak's own, the host's /run unbound under the host grant, so a rule entry there misses, the host's file included.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;/run;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/run/emus/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/run/emus/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "emulator-not-found",
+                  "data": {
+                    "emulator_token": "FOO",
+                    "searched": [
+                      "/run/emus/foo"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-revocation-the-model-cannot-place-leaves-host-paths-unestablished",
+      "rationale": "A revoked xdg-documents names a directory the model cannot place, which might hide anything: every host path is then unestablished, so the walk stops at the first rule entry, before the component launcher the deploy holds.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;!xdg-documents;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/bin/foo</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/bin/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "/home/deck/bin/foo"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-the-last-spelling-of-an-entry-wins",
+      "rationale": "~/Applications is granted and then revoked in the same metadata; flatpak keeps one spelling per entry, the last, so the tree is hidden and a rule entry there misses, the host's file included.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;~/Applications;!~/Applications;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Applications/Foo.AppImage</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Applications/Foo.AppImage": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "emulator-not-found",
+                  "data": {
+                    "emulator_token": "FOO",
+                    "searched": [
+                      "/home/deck/Applications/Foo.AppImage"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-negated-host-grants-nothing",
+      "rationale": "!host is no grant: the sandbox sees nothing of the host's beyond the app's own trees, so a host path is unestablished rather than found.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=!host;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/opt/foo/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/opt/foo/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "/opt/foo/foo"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-the-innermost-mask-and-the-longest-grant-decide",
+      "rationale": "The metadata grants ~/.var, another app's tree under the ~/.var/app mask, and revokes one directory inside that tree. The innermost mask and the longest grant decide: Foo's entry inside the revoked directory misses, and Bar's beside it is found through the grant at the app's tree, which ~/.var alone would not lift.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n    <command label=\"Bar\">%EMULATOR_BAR% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;~/.var;~/.var/app/org.example.Foo;!~/.var/app/org.example.Foo/sub;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/.var/app/org.example.Foo/sub/foo</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"BAR\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/.var/app/org.example.Foo/other/bar</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/.var/app/org.example.Foo/sub/foo": "",
+          "/home/deck/.var/app/org.example.Foo/other/bar": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "emulator-not-found",
+                  "data": {
+                    "emulator_token": "FOO",
+                    "searched": [
+                      "/home/deck/.var/app/org.example.Foo/sub/foo"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "system": "ports",
+              "label": "Bar",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "BAR",
+              "declared_index": 1,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/.var/app/org.example.Foo/other/bar",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "staticpath",
+                "entry": "/home/deck/.var/app/org.example.Foo/other/bar"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-revocation-flatpak-refuses-masks-nothing",
+      "rationale": "flatpak refuses a revocation under /etc as it refuses a grant there, so !/etc/emus masks nothing. What decides the entry is the sandbox's own /etc, the runtime's and flatpak's, which atlas does not read: the walk stops there, so the entry is unestablished, not a miss under the revoked path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;!/etc/emus;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/etc/emus/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/etc/emus/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "/etc/emus/foo"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-revocation-of-the-root-masks-nothing",
+      "rationale": "flatpak drops a revocation of / before it reaches the exports: its parse rejects / as an entry (flatpak-context.c:996-1005 @ 1.16.6) and the metadata load skips the entry it rejects (:1866-1870). Were it kept, / is a parent of every path flatpak reserves, so it would be refused and mask nothing. Under the host grant the host's file is found.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;!/;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/opt/foo/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/opt/foo/foo": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/opt/foo/foo",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "staticpath",
+                "entry": "/opt/foo/foo"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
       "name": "launch-an-emudeck-entry-is-not-evaluated-yet",
       "rationale": "EmuDeck's frontend runs on the host with its own home and a find-rules layer sealed in the AppImage; this release evaluates no lookup for it, so each entry answers unestablished with launch-resolution-unsupported naming the installation.",
       "input": {

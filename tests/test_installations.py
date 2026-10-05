@@ -11027,3 +11027,25 @@ class TestARowNamingACoreFileOfAnotherHost:
         )
         kinds = {e.kind for e in rd.emulators_for("n3ds").entries}
         assert kinds == {atlas.KIND_STANDALONE, atlas.KIND_LIBRETRO}
+
+
+class TestTheSandboxPathPrefixRule:
+    """``_under``, the prefix test the sandbox view and flatpak's refusal rule stand on."""
+
+    def test_every_absolute_path_lies_beneath_the_root(self):
+        from atlas.installations import _under  # pyright: ignore[reportPrivateUsage] - the helper under test
+
+        assert _under("/", "/")
+        assert _under("/run/host", "/")
+        assert not _under("relative", "/")
+        assert _under("/a/b", "/a")
+        assert not _under("/ab", "/a")
+
+    def test_a_grant_of_the_root_is_refused(self):
+        from atlas.installations import _flatpak_refuses  # pyright: ignore[reportPrivateUsage] - the rule under test
+
+        # flatpak refuses an export that is a parent of a reserved path
+        # (flatpak-exports.c:991-997), and / is the parent of all of them.
+        assert _flatpak_refuses("/")
+        assert _flatpak_refuses("/run")
+        assert not _flatpak_refuses("/opt/emus")

@@ -931,6 +931,9 @@ def _components(path: str) -> list[str]:
 
 
 def _under(path: str, prefix: str) -> bool:
+    """Whether *path* is *prefix* or lies beneath it — every absolute path lies beneath ``/``."""
+    if prefix == "/":
+        return path.startswith("/")
     return path == prefix or path.startswith(prefix + "/")
 
 
@@ -976,7 +979,7 @@ class _FlatpakGrants:
     paths a revoked entry names: a negated entry has mode NONE
     (``parse_negated``, flatpak-context.c:1720) and is exported as a tmpfs
     (flatpak-exports.c:1104-1105), so it hides what is under it rather than
-    binding anything.
+    binding anything — less those flatpak refuses, which hide nothing.
 
     ``unplaced`` is a granted entry the model cannot place (an ``xdg-*``
     user directory): it may bind anything, so no path is taken to be masked
@@ -1018,9 +1021,11 @@ def _flatpak_refuses(path: str) -> bool:
     """Whether flatpak refuses a ``filesystems`` entry for *path*, so that it binds nothing.
 
     At or under a ``dont_export_in`` entry, a parent of one (``/run``,
-    ``/``), or under a merged-``/usr`` directory (flatpak-exports.c:973-1011
-    @ 1.16.6). A path there is answered by its own branch of the view, never
-    as a granted host read.
+    ``/``), or at or under a merged-``/usr`` directory
+    (flatpak-exports.c:973-1011 @ 1.16.6). A path there is answered by its
+    own branch of the view, never as a granted host read — and a revocation
+    there is refused the same way (a tmpfs goes through the same check,
+    flatpak-exports.c:1088-1092 into :889), so it masks nothing either.
     """
     return any(_under(path, reserved) or _under(reserved, path) for reserved in _FLATPAK_DONT_EXPORT_IN) or any(
         _under(path, "/" + merged) for merged in _FLATPAK_USRMERGED
@@ -1033,7 +1038,9 @@ def _flatpak_grants(
     """The metadata's ``[Context] filesystems`` read into :class:`_FlatpakGrants`.
 
     The entries go into one table, each key's last spelling winning — the
-    per-key hash insert flatpak merges a context with (flatpak-context.c:1092-1096).
+    per-key insert ``flatpak_context_take_filesystem`` makes
+    (flatpak-context.c:1042-1055), which ``load_metadata`` reads each entry
+    through (:1876).
     """
     if metadata is None:
         return _FlatpakGrants(refiled=refiled)
@@ -1050,7 +1057,10 @@ def _flatpak_grants(
     unplaced_keys = [key for key, resolved in placed.items() if resolved is None]
     resolved_paths = {key: (resolved.rstrip("/") or "/") for key, resolved in placed.items() if resolved is not None}
     paths = [path for key, path in resolved_paths.items() if not table[key] and not _flatpak_refuses(path)]
-    hidden = [path for key, path in resolved_paths.items() if table[key]]
+    # A refused revocation masks nothing. ``!/`` is the one that would mask
+    # every path; flatpak drops it earlier still, its parse rejecting ``/``
+    # (flatpak-context.c:996-1005) and the load skipping it (:1866-1870).
+    hidden = [path for key, path in resolved_paths.items() if table[key] and not _flatpak_refuses(path)]
     return _FlatpakGrants(
         host="host" in tokens,
         home="home" in tokens,
@@ -1195,9 +1205,12 @@ class _SandboxLaunchView:
         :3131-3143; flatpak-exports.c:1104-1105). Not bound under the ``host``
         grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and ``/root``
         (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and ``/run/media`` aside.
-        Only a grant at or under such a root lifts it: the tmpfs is added after
-        the grants (flatpak-context.c:3024, :3136) and a parent's bind does not
-        reach beneath it (flatpak-exports.c:309-337, :487-506, :772-790).
+        Only a grant at or under such a root lifts it. At the root itself the
+        higher mode wins and a tmpfs is mode NONE (flatpak-exports.c:102,
+        :772-790), so a grant there binds it; beneath the root, exports are
+        emitted parents first (:309-337, :445-447, :487-506), so a parent's
+        bind is mounted before the tmpfs over the root and does not reach
+        beneath it.
         """
         roots = [
             os.path.join(self.real_home, ".var", "app"),
