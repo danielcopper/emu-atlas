@@ -171,7 +171,10 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   status, parse status, root state, and required-companion state into individual finding caveats with stable codes — a
   present-but-broken installation (unreadable marker, unmounted SD card, stale EmuDeck whose claimed RetroArch config is
   gone) is detected and states its findings, never invisible and never "ok". The config is the truth, never the
-  existence of a folder — a stale secondary root must not win.
+  existence of a folder — a stale secondary root must not win. One installation is found without its marker: a RetroDECK
+  whose Flatpak is deployed and which has not been started, or left its first-run setup at the storage step, which
+  deletes the marker it wrote, has none, so detection finds it by the deploy; its health is `not-set-up` alone, and
+  every other answer refuses with that finding instead of naming what setup has not written yet.
 - **A health finding is a caveat, and travels as one.** It serializes `{code, data}` like every other caveat — the path
   it is about, the read status behind it, the marker key that is wrong — and **every** answer computed on a broken
   installation carries the findings themselves in its `caveats`, under their own codes: placement, catalogue, systems

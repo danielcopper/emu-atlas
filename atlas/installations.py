@@ -410,6 +410,28 @@ HEALTH_ISSUE_CATALOGUE_INVALID = "catalogue-invalid"
 # names exactly the version the wiring table was read at — any other version
 # made promises atlas never read, so no row is checked there (fail closed).
 HEALTH_ISSUE_CONTENT_TREE_UNWIRED = "content-tree-unwired"
+# RetroDECK is installed and its marker is not there: its Flatpak is deployed
+# and ``retrodeck.json`` is missing. RetroDECK writes that marker at the start of
+# every launch that finds none (libexec/global.sh:159-197, the copy at :184 @
+# 0.10.10b), ahead of its first-run setup, and that setup deletes it again when
+# the user leaves at the storage step (``rm -f "$rd_conf"`` in finit,
+# libexec/other_functions.sh:674-678, and the other cancel paths at :712, :724,
+# :737 and :756). So its absence beside a deploy says RetroDECK has not been
+# started for this home, or left its first-run setup at the storage step —
+# start it once. Nothing of the app's own need exist under the home before a
+# first run: flatpak creates the app's ``~/.var/app`` tree on that run
+# (flatpak_ensure_data_dir, common/flatpak-run.c:759-790, called from
+# flatpak_run_app at :3287 @ 1.16.6). The setup's own end is a later file
+# (``.lock``, create_lock in libexec/other_functions.sh:842-846), which atlas
+# does not check. Distinct from ``marker-missing``: that one is a marker gone
+# from a handle detected by it, this one a handle detected by its deploy, which
+# therefore answers nothing else — every other question refuses with this
+# finding rather than name a directory or a catalogue setup has not made yet.
+HEALTH_ISSUE_NOT_SET_UP = "not-set-up"
+# One fact, one code on every route, the sharing ``core-not-installed`` has:
+# the placement routes refuse a not-set-up installation with this outcome,
+# health and every other answer state it as the finding of the same spelling.
+UNRESOLVED_NOT_SET_UP = HEALTH_ISSUE_NOT_SET_UP
 
 
 def _content_tree_unwired_finding(
@@ -564,6 +586,16 @@ def _running_deploy(machine: Machine, home: str, app_id: str) -> _Deploy | None:
         if machine.path_kind(deployed) == KIND_DIRECTORY:
             return _Deploy(os.path.join(deployed, "files"), system)
     return None
+
+
+def retrodeck_deployed(machine: Machine, home: str) -> bool:
+    """Whether a RetroDECK Flatpak deploy runs on this machine for *home*.
+
+    The one resolution every other read of the deploy goes through
+    (:func:`_running_deploy`), asked for RetroDECK — which is how detection
+    finds an installation whose marker is not there yet, or not any more.
+    """
+    return _running_deploy(machine, home, RETRODECK_APP_ID) is not None
 
 
 # Config markers, as ``home``-relative suffixes.
@@ -17971,6 +18003,20 @@ class _CatalogueQueries:
         return RomPlacement(caveats=(*self.health().issues, self._catalogue_absence())), None
 
 
+def _not_set_up(marker_issues: tuple[Caveat, ...]) -> Caveat | None:
+    """The ``not-set-up`` finding among one marker read's issues, or ``None``."""
+    return next((issue for issue in marker_issues if issue.code == HEALTH_ISSUE_NOT_SET_UP), None)
+
+
+def _not_set_up_message(marker: str) -> str:
+    """What the not-set-up finding and the refusal of the same spelling both say."""
+    return (
+        f"RetroDECK is installed but {marker} is not there: it has not been started for this "
+        "home, or left its first-run setup at the storage step, which deletes the marker it "
+        "wrote (libexec/other_functions.sh:674-678 @ 0.10.10b); start it once"
+    )
+
+
 class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     """A RetroDECK installation — cfg is the truth, ``retrodeck.json`` is context.
 
@@ -17988,9 +18034,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     kinds = ("retrodeck",)
     _APP_ID = RETRODECK_APP_ID
 
-    def __init__(self, home: str, machine: Machine) -> None:
+    def __init__(self, home: str, machine: Machine, *, detected_by_deploy: bool = False) -> None:
         self._home = home
         self._machine = machine
+        # Detection found the deploy and no marker: a missing marker then reads
+        # as not set up (not-set-up), not as one that went away.
+        self._detected_by_deploy = detected_by_deploy
         # The one parse this handle keeps between questions: each find-rules
         # file's, under the stat stamp it was read at (_parsed_find_rules).
         self._find_rules_parsed: dict[str, tuple[FileStamp, FindRules | None]] = {}
@@ -18003,7 +18052,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         Missing, unreadable, and invalid are distinct states — a marker that
         exists but cannot be read or parsed is a *present, broken* RetroDECK,
-        never an absent one (REVIEW H10).
+        never an absent one (REVIEW H10). A missing marker is
+        ``marker-missing`` on a handle detected by it, and ``not-set-up`` on
+        one detected by its deploy; the handle is live, so once RetroDECK has
+        been started the same handle reads the marker it wrote.
 
         A defect is scoped to what it actually costs. A ``paths`` value atlas
         cannot read as a path takes the whole snapshot down, because every root
@@ -18014,6 +18066,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         path = self._marker_path()
         result = self._machine.read_text(path)
+        if result.status == READ_MISSING and self._detected_by_deploy:
+            return {}, (
+                Caveat(
+                    HEALTH_ISSUE_NOT_SET_UP,
+                    _not_set_up_message(path),
+                    {"path": path, "app_id": RETRODECK_APP_ID},
+                ),
+            )
         if result.status == READ_MISSING:
             return {}, (Caveat(HEALTH_ISSUE_MARKER_MISSING, f"marker {path} does not exist", {"path": path}),)
         if result.text is None:
@@ -18055,6 +18115,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             )
         return data, ()
 
+    def _not_set_up_refusal(self) -> Unresolved:
+        """A placement question's refusal on a RetroDECK that is not set up."""
+        path = self._marker_path()
+        return Unresolved(
+            UNRESOLVED_NOT_SET_UP, _not_set_up_message(path), {"path": path, "app_id": RETRODECK_APP_ID}
+        )
+
     def _config_path(self, config: dict[str, Any], key: str, fallback_subdir: str) -> tuple[str, str]:
         """Resolve a RetroDECK path and its provenance from a marker snapshot.
 
@@ -18080,7 +18147,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return fallback, f"default: {key} unset → {fallback}"
 
     def root(self) -> str:
-        """The RetroDECK home directory (``rd_home_path`` or the fallback)."""
+        """The RetroDECK home directory (``rd_home_path`` or the fallback).
+
+        On a not-set-up installation there is no marker to read it from, so
+        this is ``<home>/retrodeck``: the root RetroDECK's first-run setup
+        chooses for internal storage (``rd_home_path="$HOME/retrodeck"``,
+        libexec/other_functions.sh:683 @ 0.10.10b) — the shipped
+        ``retrodeck.json`` names a literal ``/home/deck/retrodeck`` instead —
+        and one the setup's other choices move; the ``not-set-up`` finding
+        beside it says so.
+        """
         return self._config_path(self._read_marker()[0], "rd_home_path", "")[0]
 
     def saves_root(self) -> str:
@@ -18111,11 +18187,19 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         configured value is not an absolute path even after the frontend's own
         ``~`` expansion. A bare string cannot carry which, and raising is not
         this domain's grammar, so a caller who needs the reason asks
-        ``rom_location(system)`` and reads its caveats.
+        ``rom_location(system)`` and reads its caveats. A not-set-up
+        installation refuses too: the frontend has no settings of RetroDECK's
+        making yet.
         """
+        if _not_set_up(self._read_marker()[1]) is not None:
+            return None
         return self._rom_root().directory
 
     def _health_from(self, config: dict[str, Any], marker_issues: tuple[Caveat, ...]) -> Health:
+        # Never started: the roots are paths setup has not created yet, so
+        # their absence is no finding of its own.
+        if _not_set_up(marker_issues) is not None:
+            return Health(marker_issues)
         issues = list(marker_issues)
         root = self._config_path(config, "rd_home_path", "")[0]
         if self._machine.path_kind(root) != KIND_DIRECTORY:
@@ -18141,10 +18225,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         health computation must not open sources the question itself never
         reads, so the catalogue-invalid finding rides the health question
         (its own single read here) and every answer whose question reads the
-        catalogue anyway — never the others.
+        catalogue anyway — never the others. A not-set-up installation stops
+        at its finding: nothing past the missing marker is RetroDECK's yet.
         """
         config, marker_issues = self._read_marker()
         health = self._health_from(config, marker_issues)
+        if _not_set_up(marker_issues) is not None:
+            return health
         root = self._config_path(config, "rd_home_path", "")[0]
         catalogue_invalid = self._read_catalogue(root)[3]
         issues = health.issues
@@ -18680,6 +18767,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         against are one revision of the file.
         """
         config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return SystemsAnswer(caveats=(finding,)), None
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
@@ -18705,6 +18794,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         same read (:meth:`_read_catalogue_full`), never a second one.
         """
         config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return _PlatformView({}, frozenset(), {}, (), (finding,)), None
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid, disabled = self._read_catalogue_full(root)
@@ -18733,7 +18824,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return parse_gamelist(text)
 
     def gamelist_selections(self, system: str) -> GamelistSelections:
-        config, _ = self._read_marker()
+        config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return GamelistSelections(system_label=None, per_game={})
         return self._gamelist_selections_at(self._config_path(config, "rd_home_path", "")[0], system)
 
     def _catalogue_answer(
@@ -18749,6 +18842,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         The marker's version travels back with the answer for the same reason.
         """
         config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return CatalogueAnswer(caveats=(finding,)), None
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
@@ -18797,6 +18892,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         extension = esde_extension(content_path)
         config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return LaunchabilityAnswer(verdict=VERDICT_UNKNOWN, extension=extension, caveats=(finding,)), None
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
@@ -18862,6 +18959,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         them would throw away a fact atlas holds.
         """
         config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return RomPlacement(caveats=(finding,)), None
         findings = self._health_from(config, marker_issues).issues
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
@@ -19020,6 +19119,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         guesses.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return self._savefile_location_from(
             config,
             marker_issues,
@@ -19038,6 +19139,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         instead of the savefile one.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return self._savestate_location_from(
             config,
             marker_issues,
@@ -19075,6 +19178,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         the content-rooted answers keep their hole.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return self._screenshot_location_from(
             config, marker_issues, content_path=content_path, core_so=core_so
         )
@@ -19113,10 +19218,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         The link is not what atlas reads the location *from*. The directory
         comes from the root RetroArch hands the core plus the fragment the core
         itself appends; whether an arrangement has redirected that directory is
-        then an observation on top, which is why a machine that never ran
-        RetroDECK's setup still answers.
+        then an observation on top, which is why a machine whose RetroDECK
+        setup never created those links still answers.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return self._texture_pack_location_from(
             config,
             marker_issues,
@@ -19155,6 +19262,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         because the hub links them one by one.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return self._mod_location_from(
             config, marker_issues, content_path=content_path, core_so=core_so
         )
@@ -19170,6 +19279,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         when the shipped build moves.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         return _retroarch_soft_patch_candidates(
             self._machine,
             self._query_from(config, marker_issues, content_path=content_path, core_so=core_so),
@@ -19196,7 +19307,15 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         the two uses are the same fact: it is how a standalone emulator's
         configured paths read from this host, and it is how the ``/app`` tree
         RetroDECK copies its own firmware out of does.
+
+        A not-set-up installation gets the rootless context, its finding the
+        statement of why there is no root, so every firmware answer refuses
+        the way a rootless one does.
         """
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return FirmwareContext(
+                root=None, cores=(), hashes=load_hashes(), cores_read=False, caveats=(finding,)
+            )
         sandbox, environment_sources = self._cfg_sandbox()
         deploy = self._sandbox()
         return _retroarch_firmware_context(
@@ -19233,6 +19352,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         read once here and handed on, never re-read.
         """
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            context = self._stated(self._firmware_context_from(config, marker_issues))
+            return _resolve_for_system(self._machine, context, system=system, verify=verify)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
         catalogue = Catalogue(
@@ -19366,6 +19488,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
             if content_path is not None
@@ -19425,6 +19549,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
             if content_path is not None
@@ -19511,6 +19637,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_TEXTURE_PACKS)
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
             if content_path is not None
@@ -19558,6 +19686,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_MODS)
         config, marker_issues = self._read_marker()
+        if _not_set_up(marker_issues) is not None:
+            return self._not_set_up_refusal()
         extra = (
             self._entry_caveats_for(config, spec, content_path)
             if content_path is not None

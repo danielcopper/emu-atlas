@@ -328,6 +328,7 @@ works on it. What each finding carries:
 | code                       | `data`                                         | what it says                                                        |
 | -------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
 | `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there      |
+| `not-set-up`               | `path`, `app_id`                               | RetroDECK is installed and its marker is not there — start it once  |
 | `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)    |
 | `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry    |
 | `root-missing`             | `path`                                         | the installation's own root is not an existing directory            |
@@ -357,6 +358,20 @@ never read), only for a hub tree that exists (nothing can be filed in one that i
 deliberately weak — a link settling _anywhere_ in the family's hub counts as wired, because older RetroDECK versions
 linked coarser hub layouts and those links still route. Unlike `catalogue-invalid` it rides the `health()` question
 alone: no other answer's question reads the wiring state.
+
+`not-set-up` is the one finding that is an installation's whole answer (issue #579). RetroDECK writes `retrodeck.json`
+at the start of its first launch, before its first-run setup, and that setup deletes it again when it is left at the
+storage step (`other_functions.sh:674-678`). So a RetroDECK Flatpak that is deployed — in the user installation or the
+system one — with no marker has not been started for this home, or left its first-run setup at the storage step.
+`detect()` finds it by that deploy rather than reporting no RetroDECK, so you can tell the person to start it once. Its
+health is this finding alone (`path` is the marker it expected, `app_id` the Flatpak), and every other question refuses
+with it: the catalogue answers are empty, `rom_location` names no directory and `roms_dir()` is `None`, the placements
+answer an `Unresolved` with the same code, and the firmware answers have no root. Each of those is decided by what
+RetroDECK's setup writes, so none is stated before setup has run. The paths it still gives are `root()`, `saves_root()`
+and `bios_dir()`: `<home>/retrodeck` and the `saves` and `bios` folders under it, the root setup chooses for internal
+storage — which setup may put elsewhere. `marker-missing` stays what it was: a marker gone from an installation that was
+detected by it. A setup quit at the storage step leaves no marker and answers `not-set-up`; a setup left after that step
+keeps its marker and answers as a set-up RetroDECK does (#590).
 
 The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
 catalogue answer, a systems listing, any of the four firmware answers — carries them in its own `caveats`, ahead of what
@@ -598,9 +613,10 @@ else:
 ```
 
 This is per arrangement, not per machine: on a two-arrangement machine one installation can answer while the other
-refuses, which is what the aggregate route is for. A core that _is_ installed and will not load is a different case and
-still answers with a placement — see `core-generation-unestablished` in the caveat table. So is a core directory atlas
-could not read: nothing was established there, so nothing is claimed.
+refuses, which is what the aggregate route is for. A RetroDECK that is not set up refuses every placement the same way,
+with the code `not-set-up` (see the health findings above). A core that _is_ installed and will not load is a different
+case and still answers with a placement — see `core-generation-unestablished` in the caveat table. So is a core
+directory atlas could not read: nothing was established there, so nothing is claimed.
 
 Without `content_path`, the answer is a template and `needs` names the holes:
 
@@ -1012,6 +1028,7 @@ all.
 | `content-dir-observation`         | the files were observed in the ROM's own directory — content files share the name, see below              |
 | `content-path-unnamed`            | the content path names no file; no file names stated, nothing observed                                    |
 | `marker-missing`                  | health: the config marker this installation is detected by is gone                                        |
+| `not-set-up`                      | health: RetroDECK is installed and its marker is not there — every other answer refuses with this         |
 | `marker-unreadable`               | health: the marker exists and its bytes could not be read                                                 |
 | `marker-invalid`                  | health: the marker parsed to something unusable                                                           |
 | `root-missing`                    | health: the installation's own root is not an existing directory                                          |

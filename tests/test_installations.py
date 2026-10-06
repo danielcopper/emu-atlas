@@ -816,11 +816,12 @@ class TestAMarkerThatIsGoneIsStatedNotDetected:
     """``marker-missing`` is the one health code no vector can reach.
 
     Detection triggers on the marker, so a machine without one has no
-    installation to ask — the code exists for the caller who kept a handle (or
-    built one) across the marker being moved, renamed, or unmounted, and that
-    is a direct-handle question by construction. Hence a test rather than a
-    fixture machine: the corpus would have to state an installation that
-    ``detect()`` cannot find.
+    installation to ask — or, for RetroDECK, one found by its deploy, whose
+    missing marker is ``not-set-up`` instead. The code exists for the caller
+    who kept a handle (or built one) across the marker being moved, renamed,
+    or unmounted, and that is a direct-handle question by construction. Hence
+    a test rather than a fixture machine: the corpus would have to state an
+    installation that ``detect()`` cannot find.
     """
 
     def test_a_retrodeck_handle_whose_marker_is_gone_says_so(self):
@@ -841,6 +842,169 @@ class TestAMarkerThatIsGoneIsStatedNotDetected:
         # marker" and "unreadable config" are two findings there, not one.
         bare = atlas.BareRetroArchNative(HOME, FixtureMachine({}))
         assert bare.health().codes == (atlas.HEALTH_ISSUE_MARKER_MISSING,)
+
+
+RD_SYSTEM_DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active"
+RD_USER_DEPLOY = f"{HOME}/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active"
+
+
+class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
+    """Issue #579: a deployed RetroDECK without its marker is ``not-set-up``.
+
+    RetroDECK writes ``retrodeck.json`` at the start of its first launch, and
+    its first-run setup deletes it when left at the storage step, so a deploy
+    without one has not been started for this home, or left that setup at the
+    storage step. Detection finds it by the deploy; its health is the one
+    finding, and every other question refuses with it — even where the deploy
+    ships a catalogue that declares the system asked about, because what
+    RetroDECK's setup writes decides the answers and setup has not run.
+    """
+
+    # The deploy's own catalogue declares gb, so an answer naming nothing is a
+    # refusal rather than an empty read.
+    FILES = {RD_BUNDLED_ESDE: GB_SYSTEM}
+    FINDING_DATA = {"path": RETRODECK_JSON, "app_id": "net.retrodeck.retrodeck"}
+    GB_SPEC_COMMAND = "retroarch -L /app/cores/gambatte_libretro.so %ROM%"
+
+    def _handle(self, files=None, **kwargs):
+        installs = atlas.detect(HOME, FixtureMachine(self.FILES if files is None else files, **kwargs))
+        assert [i.kind for i in installs] == ["retrodeck"]
+        rd = installs[0]
+        assert isinstance(rd, atlas.RetroDeck)
+        return rd
+
+    def _assert_the_finding(self, caveats):
+        assert [(c.code, dict(c.data)) for c in caveats] == [
+            (atlas.HEALTH_ISSUE_NOT_SET_UP, self.FINDING_DATA)
+        ]
+
+    def _assert_refused(self, outcome):
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.code == atlas.UNRESOLVED_NOT_SET_UP
+        assert dict(outcome.data) == self.FINDING_DATA
+
+    def test_health_is_the_finding_alone(self):
+        # No root-missing or saves-root-missing beside it: those roots are
+        # paths setup has not created yet.
+        self._assert_the_finding(self._handle().health().issues)
+
+    def test_a_catalogue_the_frontend_would_refuse_adds_no_finding(self):
+        # Neither health nor the system's firmware answer reads the deploy's
+        # catalogue: a file ES-DE would refuse its whole load on is no finding
+        # on an installation that is not set up.
+        rd = self._handle({RD_BUNDLED_ESDE: "<systemList>"})
+        self._assert_the_finding(rd.health().issues)
+        self._assert_the_finding(rd.firmware_for_system("gb").caveats)
+
+    def test_a_user_deploy_is_found_the_same_way(self):
+        rd = self._handle({}, dirs=[RD_USER_DEPLOY])
+        self._assert_the_finding(rd.health().issues)
+
+    def test_the_root_is_retrodecks_shipped_default(self):
+        rd = self._handle()
+        assert (rd.root(), rd.saves_root(), rd.bios_dir()) == (
+            f"{HOME}/retrodeck",
+            f"{HOME}/retrodeck/saves",
+            f"{HOME}/retrodeck/bios",
+        )
+
+    def test_the_catalogue_questions_refuse(self):
+        rd = self._handle()
+        systems = rd.systems()
+        assert systems.systems == ()
+        self._assert_the_finding(systems.caveats)
+        catalogue = rd.emulators_for("gb")
+        assert catalogue.entries == ()
+        self._assert_the_finding(catalogue.caveats)
+        rom = rd.rom_location("gb")
+        assert (rom.dir, rom.extensions) == (None, ())
+        self._assert_the_finding(rom.caveats)
+        assert rd.roms_dir() is None
+        launch = rd.launchable("gb", f"{HOME}/retrodeck/roms/gb/Game.gb")
+        assert (launch.verdict, launch.entry, launch.accepted) == (atlas.VERDICT_UNKNOWN, None, ())
+        self._assert_the_finding(launch.caveats)
+
+    def test_the_platform_questions_read_no_catalogue(self):
+        rd = self._handle()
+        ids = rd.platform_ids("gb")
+        assert ids.status == atlas.PLATFORM_STATUS_ABSENT
+        self._assert_the_finding(ids.caveats)
+        matches = rd.systems_for_platform("igdb", "33").matches
+        assert {m.status for m in matches} == {atlas.PLATFORM_STATUS_ABSENT}
+
+    def test_the_gamelist_is_not_read(self):
+        gamelist = f"{HOME}/retrodeck/ES-DE/gamelists/gb/gamelist.xml"
+        rd = self._handle(
+            {
+                **self.FILES,
+                gamelist: "<alternativeEmulator><label>Gambatte</label></alternativeEmulator>\n<gameList/>\n",
+            }
+        )
+        selections = rd.gamelist_selections("gb")
+        assert (selections.system_label, dict(selections.per_game)) == (None, {})
+
+    def test_the_placement_questions_refuse(self):
+        rd = self._handle()
+        content = f"{HOME}/retrodeck/roms/gb/Game.gb"
+        core = "gambatte_libretro.so"
+        self._assert_refused(rd.savefile_location(content_path=content, core_so=core))
+        self._assert_refused(rd.savestate_location(content_path=content, core_so=core))
+        self._assert_refused(rd.screenshot_location(content_path=content, core_so=core))
+        self._assert_refused(rd.texture_pack_location(content_path=content, core_so=core))
+        self._assert_refused(rd.mod_location(content_path=content, core_so=core))
+        self._assert_refused(rd.soft_patch_candidates(content, core_so=core))
+
+    def test_the_entry_routes_refuse(self):
+        from atlas.esde import KIND_LIBRETRO, EmulatorSpec
+
+        spec = EmulatorSpec(
+            system="gb",
+            label="Gambatte",
+            kind=KIND_LIBRETRO,
+            core_so="gambatte_libretro.so",
+            command=self.GB_SPEC_COMMAND,
+            provenance="es_systems.xml (bundled)",
+        )
+        rd = self._handle()
+        content = f"{HOME}/retrodeck/roms/gb/Game.gb"
+        self._assert_refused(rd.entry_savefile_location(spec, content_path=content))
+        self._assert_refused(rd.entry_savestate_location(spec, content_path=content))
+        self._assert_refused(rd.entry_texture_pack_location(spec, content_path=content))
+        self._assert_refused(rd.entry_mod_location(spec, content_path=content))
+
+    def test_the_firmware_questions_refuse(self):
+        rd = self._handle()
+        for answer in (
+            rd.firmware_for_core("gambatte_libretro.so"),
+            rd.firmware_for_system("gb"),
+            rd.firmware_inventory(),
+        ):
+            assert (answer.root, answer.cores, answer.unclaimed) == (None, (), ())
+            self._assert_the_finding(answer.caveats)
+
+    def test_identification_keeps_the_packaged_identity_and_names_no_destination(self):
+        identification = self._handle().identify_firmware(md5="a860e8c0b6d573d191e4ec7db1b1e4f6")
+        assert identification.known_as == ("gba_bios.bin",)
+        assert identification.requirements == ()
+        self._assert_the_finding(identification.caveats)
+
+    def test_a_marker_beside_the_deploy_changes_nothing(self):
+        # Detected by the marker: the deploy adds no second handle and no finding.
+        rd = self._handle(
+            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""}
+        )
+        assert rd.health() == atlas.Health()
+        assert [e.label for e in rd.emulators_for("gb").entries] == ["Gambatte"]
+
+    def test_the_handle_reads_the_marker_once_retrodeck_has_written_it(self):
+        # The handle is live: detected by the deploy, it answers normally once
+        # the first launch has written the marker.
+        machine = FixtureMachine(
+            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""}
+        )
+        rd = atlas.RetroDeck(HOME, machine, detected_by_deploy=True)
+        assert rd.health() == atlas.Health()
+        assert rd.root() == "/mnt/sd/retrodeck"
 
 
 class TestTheMarkerVersionIsAKeyAtlasReads:

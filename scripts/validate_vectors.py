@@ -384,6 +384,7 @@ KNOWN_HEALTH_ISSUES = {
     "config-unreadable",
     "catalogue-invalid",
     "content-tree-unwired",
+    "not-set-up",
 }
 KNOWN_ROOT_KINDS = {
     "savefile_directory",
@@ -592,6 +593,7 @@ KNOWN_UNRESOLVED_CODES = {
     "emulator-config-unreadable",
     "emulator-config-path-untranslatable",
     "slot-device-uninterpreted",
+    "not-set-up",
 }
 
 

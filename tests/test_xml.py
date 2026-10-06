@@ -23,6 +23,7 @@ import pytest
 
 import atlas
 from atlas._xml import ParseError, fromstring
+from tests.empty_home import assert_nothing_the_empty_home_holds_is_detected
 
 # One tree with everything the navigation tests need: repeated children, a
 # nested element whose name repeats a shallower one, and text beside markup.
@@ -340,11 +341,11 @@ class TestTheRuntimeItHasToRunOn:
 
         assert result.returncode == 0, result.stderr
         answer = json.loads(result.stdout)
-        # `detect` over an empty home is the contract's answer for "nothing
-        # installed here"; the two parses are the XML the shim actually reads.
+        # `detect` over an empty home detects nothing the home holds; the two
+        # parses are the XML the shim actually reads.
+        assert_nothing_the_empty_home_holds_is_detected(answer.pop("detect"), str(home))
         assert answer == {
             "rc": 0,
-            "detect": [],
             "systems": ["n64"],
             "settings": {"ROMDirectory": "/roms"},
         }

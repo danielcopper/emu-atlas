@@ -16518,6 +16518,178 @@
           ]
         }
       }
+    },
+    {
+      "name": "retrodeck-deployed-without-its-marker-is-not-set-up",
+      "rationale": "The RetroDECK Flatpak is deployed in the system installation and retrodeck.json is not there: RetroDECK writes that marker at the start of its first launch, and its first-run setup deletes it again when left at the storage step, so it has not been started for this home or left that setup there. That is an installation, and its one health finding is not-set-up — no root-missing or saves-root-missing beside it, because those roots are paths setup has not created yet. Every other question refuses with the finding: the catalogue the deploy ships declares gba, and still no system, entry, ROM directory, save directory or firmware root is named, because what RetroDECK's setup writes decides them.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\ncommand=retrodeck\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path><extension>.gba .zip</extension>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "catalogue_query": {
+          "system": "gba"
+        },
+        "rom_location_query": {
+          "system": "gba"
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/retrodeck/roms/gba/Game.gba",
+          "core_so": "mgba_libretro.so"
+        },
+        "firmware_query": {
+          "kind": "system",
+          "system": "gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              {
+                "code": "not-set-up",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "app_id": "net.retrodeck.retrodeck"
+                }
+              }
+            ]
+          }
+        ],
+        "catalogue": {
+          "entries": [],
+          "caveats": [
+            {
+              "code": "not-set-up",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ]
+        },
+        "rom_location": {
+          "dir": null,
+          "physical_dir": null,
+          "extensions": [],
+          "caveats": [
+            {
+              "code": "not-set-up",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ]
+        },
+        "savefile_location": {
+          "unresolved": {
+            "code": "not-set-up",
+            "data": {
+              "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+              "app_id": "net.retrodeck.retrodeck"
+            }
+          }
+        },
+        "firmware": {
+          "root": null,
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "not-set-up",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-deployed-for-the-user-without-its-marker-is-not-set-up",
+      "rationale": "The same state under the user installation, which flatpak searches first: a deploy there is the one that runs, and with no retrodeck.json it is not-set-up the same way. The systems question, a savestate and the firmware inventory each refuse with the finding.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\ncommand=retrodeck\n",
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path><extension>.gba .zip</extension>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "systems_query": {},
+        "savestate_query": {
+          "content_path": "/home/deck/retrodeck/roms/gba/Game.gba",
+          "core_so": "mgba_libretro.so"
+        },
+        "firmware_query": {
+          "kind": "inventory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": [
+              {
+                "code": "not-set-up",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                  "app_id": "net.retrodeck.retrodeck"
+                }
+              }
+            ]
+          }
+        ],
+        "systems": {
+          "systems": [],
+          "caveats": [
+            {
+              "code": "not-set-up",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ]
+        },
+        "savestate_location": {
+          "unresolved": {
+            "code": "not-set-up",
+            "data": {
+              "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+              "app_id": "net.retrodeck.retrodeck"
+            }
+          }
+        },
+        "firmware": {
+          "root": null,
+          "hash_checked": false,
+          "cores": [],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "not-set-up",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json",
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

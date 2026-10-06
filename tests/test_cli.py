@@ -22,6 +22,7 @@ from atlas import __version__
 from atlas.cli import run
 from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine
+from tests.empty_home import assert_nothing_the_empty_home_holds_is_detected
 from tests.test_machine_vectors import fixture_machine, load_vectors
 
 # expected key → the input key carrying its query (the library runner's own
@@ -205,7 +206,7 @@ def test_the_version_flag_answers_the_package_version(capsys):
 
 
 def test_python_dash_m_atlas_speaks_from_a_real_machine(tmp_path):
-    """The ``python -m atlas`` wiring, end to end: real machine, empty home, [] answer."""
+    """The ``python -m atlas`` wiring, end to end: real machine, empty home, nothing it holds detected."""
     completed = subprocess.run(
         [sys.executable, "-m", "atlas", "detect", "--home", str(tmp_path)],
         capture_output=True,
@@ -213,4 +214,4 @@ def test_python_dash_m_atlas_speaks_from_a_real_machine(tmp_path):
         check=False,
     )
     assert completed.returncode == 0
-    assert json.loads(completed.stdout) == []
+    assert_nothing_the_empty_home_holds_is_detected(json.loads(completed.stdout), str(tmp_path))

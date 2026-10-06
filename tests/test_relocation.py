@@ -32,6 +32,7 @@ import sys
 from pathlib import Path
 
 import atlas
+from tests.empty_home import assert_nothing_the_empty_home_holds_is_detected
 
 _PACKAGE_DIR = Path(atlas.__file__).resolve().parent
 
@@ -166,5 +167,5 @@ def test_directory_copy_answers_under_a_parent_package(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr
     answer = json.loads(proc.stdout)
     assert answer["rc"] == 0
-    assert answer["detect"] == []  # the contract's answer for an empty home
+    assert_nothing_the_empty_home_holds_is_detected(answer["detect"], str(home))
     assert answer["known_systems"] > 0  # a packaged read resolved under the parent
