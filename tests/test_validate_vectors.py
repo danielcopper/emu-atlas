@@ -308,6 +308,25 @@ def _base_systems(**overrides) -> Vector:
     return _vector({"systems": block}, installed=True, systems_query={})
 
 
+def _base_platform_systems(**overrides) -> Vector:
+    block = {
+        "vocabulary": "screenscraper",
+        "value": "6",
+        "platforms": [],
+        "systems": ["cps1"],
+        "matches": [
+            {"system": "cps1", "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}
+        ],
+        "caveats": [],
+        **overrides,
+    }
+    return _vector(
+        {"systems_for_platform": block},
+        installed=True,
+        platform_systems_query={"vocabulary": "screenscraper", "value": "6"},
+    )
+
+
 def _texture(**overrides) -> Vector:
     return {
         "dir": f"{HOME}/bios/dc/textures",
@@ -423,6 +442,7 @@ BASES = {
     "identification": _base_identification,
     "catalogue": _base_catalogue,
     "systems": _base_systems,
+    "platform_systems": _base_platform_systems,
     "entry": _base_entry,
     "texture": _base_texture,
     "entry_texture": _base_entry_texture,
@@ -967,6 +987,25 @@ SYSTEMS_CASES = [
          "states systems and", id="systems-and-unread"),
 ]
 
+# Issue #584: an id resolves through the per-system table or the crosswalk,
+# never both, or states platform-unmapped.
+UNMAPPED = {"code": "platform-unmapped", "data": {"vocabulary": "screenscraper", "value": "6"}}
+PLATFORM_SYSTEMS_CASES = [
+    case(_base_platform_systems(systems="cps1"),
+         "expected.systems_for_platform.systems must be a list", id="platform-systems-not-list"),
+    case(_base_platform_systems(platforms=["arcade"]),
+         "resolves platforms or systems, never both", id="platform-systems-and-platforms"),
+    case(_base_platform_systems(systems=["cps1", "cps2"]),
+         "names one system at most", id="platform-systems-two-systems"),
+    case(_base_platform_systems(caveats=[UNMAPPED]),
+         "or state platform-unmapped", id="platform-systems-and-unmapped"),
+    case(_base_platform_systems(systems=[], matches=[]),
+         "or state platform-unmapped", id="platform-systems-neither-nor-unmapped"),
+    case(_base_platform_systems(matches=[{"system": "cps2", "status": "declared", "platforms": ["arcade"],
+                                          "tags_source": "catalogue"}]),
+         "matches a system its systems field does not name", id="platform-systems-foreign-match"),
+]
+
 AGGREGATE_CASES = [
     case(_base_aggregate(answers={}), "expected.aggregate must be a list", id="aggregate-not-list"),
     case(_base_aggregate(answers=[{"installation": dict(INSTALLATION)}]),
@@ -1427,6 +1466,7 @@ ALL_CASES = [
     *ENTRY_CASES,
     *CATALOGUE_CASES,
     *SYSTEMS_CASES,
+    *PLATFORM_SYSTEMS_CASES,
     *AGGREGATE_CASES,
     *FIRMWARE_SHAPE_CASES,
     *FIRMWARE_CORE_CASES,

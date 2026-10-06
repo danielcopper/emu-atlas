@@ -467,6 +467,13 @@ id publicly _is_ lives nowhere on any machine and is packaged with provenance. W
 system slugs (RomM publishes its own `igdb_slug` per platform, so a client joins on the IGDB id and needs no RomM column
 here), and anything atlas would have to invent rather than cite.
 
+_Settled (issue #584):_ a public id can stand for one **system** whose tag it shares with others — ScreenScraper's CPS1
+id names `cps1`, which ES-DE tags `arcade` like every arcade system — and a platform-keyed row would hand it to all of
+them. Such ids sit in a second table keyed by system (`atlas/data/platform_ids_by_system.json`, same provenance rules,
+its own generator), and an id listed there wins over the crosswalk: the forward answer names the system in `systems` and
+leaves `platforms` empty, and the system is qualified by this machine like any tag match. A row may name only an atlas
+system id, so a system's `absent` match always has vocabulary tags to carry.
+
 _Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
 (map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`
 files), so a catalogue-less arrangement answers `firmware_for_system("dreamcast")` exactly like a catalogued one, and
