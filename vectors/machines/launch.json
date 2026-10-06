@@ -2873,7 +2873,7 @@
     },
     {
       "name": "launch-a-negated-host-grants-nothing",
-      "rationale": "!host is no grant: the sandbox sees nothing of the host's beyond the app's own trees, so a host path is unestablished rather than found.",
+      "rationale": "!host is no grant: without the host grant atlas does not establish what the sandbox sees outside the app's own trees, so a host path is unestablished rather than found or missed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3082,7 +3082,7 @@
     },
     {
       "name": "launch-a-revocation-of-the-root-masks-nothing",
-      "rationale": "flatpak drops a revocation of / before it reaches the exports: its parse rejects / as an entry (flatpak-context.c:996-1005 @ 1.16.6) and the metadata load skips the entry it rejects (:1866-1870). Were it kept, / is a parent of every path flatpak reserves, so it would be refused and mask nothing. Under the host grant the host's file is found.",
+      "rationale": "flatpak drops a revocation of / before it reaches the exports: its parse rejects / as an entry (flatpak-context.c:997-1006 @ 1.16.6) and the metadata load skips the entry it rejects (:1867-1871). Were it kept, / is a parent of every path flatpak reserves, so it would be refused and mask nothing. Under the host grant the host's file is found.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3132,6 +3132,196 @@
                 "app_id": "net.retrodeck.retrodeck",
                 "rule": "staticpath",
                 "entry": "/opt/foo/foo"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-revoked-file-masks-nothing",
+      "rationale": "flatpak mounts a revocation's tmpfs only on a directory and skips anything else, so a revoked AppImage hides nothing: under the host grant the rule entry naming it is the host's file and is found.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;!~/Applications/Foo.AppImage;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Applications/Foo.AppImage</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Applications/Foo.AppImage": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Applications/Foo.AppImage",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "staticpath",
+                "entry": "/home/deck/Applications/Foo.AppImage"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-revoked-path-of-unread-kind-is-unestablished",
+      "rationale": "Whether flatpak masks a revoked path turns on whether it is a directory. ~/Applications cannot be read here, so atlas cannot tell what the sandbox shows under it: the rule entry there is unestablished, not a miss.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_FOO% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;!~/Applications;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Applications/Foo.AppImage</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "inaccessible": [
+          "/home/deck/Applications"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "FOO",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "/home/deck/Applications/Foo.AppImage"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-standalone-entry-naming-a-core-states-no-core-path",
+      "rationale": "ES-DE looks for the core of any command that names one, so this standalone entry of a custom es_systems overlay, which hands RetroArch a foo.so that is no libretro core name, is startable once RetroArch and foo.so are found. core_path is stated on a libretro entry alone, so it is null here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"Dolphin\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/dolphin_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/foo.so": "",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/foo.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
+        },
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Foo",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": null,
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/app/retrodeck/components/retroarch/component_launcher.sh",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "staticpath",
+                "entry": "/app/retrodeck/components/retroarch/component_launcher.sh"
               },
               "core_path": null,
               "caveats": []

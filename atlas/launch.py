@@ -564,6 +564,12 @@ class LaunchLookup:
         a command carrying ``%EMUPATH%`` (checked against the emulator's
         directory, ``:1399-1464``) or a malformed ``%CORE_X%``.
 
+        ES-DE looks for the core of any command naming a ``%CORE_X%``,
+        whatever the entry is (``:1145-1161``, ``:1466-1568``), so a standalone
+        entry naming one waits on that core too: its verdict is the one the
+        launcher and the core reach together. The core's path is stated on a
+        libretro entry alone; on any other it stays ``None``.
+
         When rules exist and none matches, ES-DE does not stop there: it falls
         through to that second method with the token still in the command —
         the first word, up to a space or between quotes (``:2600-2608``), is
@@ -606,7 +612,7 @@ class LaunchLookup:
             core = _find_core(reference, found, self._rules, self._view)
             if isinstance(core, LaunchResolution):
                 return core
-            core_path = core
+            core_path = core if loads_core else None
         notes = self._run_game_note(token, found.launcher)
         return LaunchResolution(AVAILABILITY_STARTABLE, found.launcher, core_path, notes)
 

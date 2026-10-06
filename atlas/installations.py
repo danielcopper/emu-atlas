@@ -980,6 +980,10 @@ class _FlatpakGrants:
     (``parse_negated``, flatpak-context.c:1720) and is exported as a tmpfs
     (flatpak-exports.c:1104-1105), so it hides what is under it rather than
     binding anything — less those flatpak refuses, which hide nothing.
+    Read on the machine (:func:`_revocations_read`), only the directories
+    among them stay, since flatpak mounts that tmpfs on a directory alone
+    (flatpak-exports.c:494, :508-510), and ``unread`` are those whose kind
+    the machine cannot read, under which nothing is established.
 
     ``unplaced`` is a granted entry the model cannot place (an ``xdg-*``
     user directory): it may bind anything, so no path is taken to be masked
@@ -994,6 +998,7 @@ class _FlatpakGrants:
     host_etc: bool = False
     paths: tuple[str, ...] = ()
     hidden: tuple[str, ...] = ()
+    unread: tuple[str, ...] = ()
     unplaced: bool = False
     refiled: bool = False
 
@@ -1059,7 +1064,7 @@ def _flatpak_grants(
     paths = [path for key, path in resolved_paths.items() if not table[key] and not _flatpak_refuses(path)]
     # A refused revocation masks nothing. ``!/`` is the one that would mask
     # every path; flatpak drops it earlier still, its parse rejecting ``/``
-    # (flatpak-context.c:996-1005) and the load skipping it (:1866-1870).
+    # (flatpak-context.c:997-1006) and the load skipping it (:1867-1871).
     hidden = [path for key, path in resolved_paths.items() if table[key] and not _flatpak_refuses(path)]
     return _FlatpakGrants(
         host="host" in tokens,
@@ -1070,6 +1075,22 @@ def _flatpak_grants(
         hidden=tuple(hidden),
         unplaced=any(not table[key] for key in unplaced_keys),
         refiled=refiled or any(table[key] for key in unplaced_keys),
+    )
+
+
+def _revocations_read(machine: Machine, grants: _FlatpakGrants) -> _FlatpakGrants:
+    """*grants* with each revoked path read on the machine: a directory stays masked, a file or nothing masks nothing.
+
+    flatpak mounts a revocation's tmpfs only where a directory stands
+    (``path_is_dir``, flatpak-exports.c:494), and skips anything else
+    (:508-510 @ 1.16.6). A path whose kind the machine cannot read goes to
+    ``unread``: whether it masks is not known.
+    """
+    kinds = {path: machine.path_kind(path) for path in grants.hidden}
+    return _dc_replace(
+        grants,
+        hidden=tuple(path for path, kind in kinds.items() if kind == KIND_DIRECTORY),
+        unread=tuple(path for path, kind in kinds.items() if kind == KIND_INACCESSIBLE),
     )
 
 
@@ -1120,7 +1141,7 @@ class _SandboxLaunchView:
       (:data:`_RUN_HOST`); without it they are not there, and anything else
       under ``/run/host`` is not established;
     - the rest of ``~/.var/app``, the user's own Flatpak installation and
-      every revoked entry are masked with a tmpfs, and the host's ``/var``,
+      every revoked directory are masked with a tmpfs, and the host's ``/var``,
       ``/run``, ``/boot``, ``/efi`` and ``/root`` are not bound
       (:meth:`_mask_root`) — ``/run/media`` excepted, which the ``host`` grant
       binds (flatpak-context.c:2884-2888), and ``/var/home``, the host's homes
@@ -1135,7 +1156,8 @@ class _SandboxLaunchView:
       and, where the grants are not established (no ``host`` grant, an
       overrides file that sets ``filesystems``, a revocation the model cannot
       place), every path outside the app's own trees, a masked one included,
-      and where a grant the model cannot place stands, every masked path:
+      and where a grant the model cannot place stands, every masked path, as
+      is every path under a revoked one whose kind the machine cannot read:
       atlas cannot say what is there, so the walk stops unestablished rather
       than guess a miss.
 
@@ -1194,6 +1216,8 @@ class _SandboxLaunchView:
         granted = max((g for g in grants.paths if _under(path, g)), key=len, default=None)
         mask = self._mask_root(path)
         if mask is not None and (granted is None or not _under(granted, mask)):
+            if mask in grants.unread:
+                return None
             return _HIDDEN if grants.host and not grants.unplaced else None
         return _NOT_OWN if granted is None else path
 
@@ -1201,8 +1225,10 @@ class _SandboxLaunchView:
         """The innermost masked or unbound root over *path* — ``None`` where nothing masks it.
 
         Masked with a tmpfs: the rest of ``~/.var/app``, the user's own
-        Flatpak installation, and every revoked entry (flatpak-context.c:3019-3031,
-        :3131-3143; flatpak-exports.c:1104-1105). Not bound under the ``host``
+        Flatpak installation, and every revoked directory (flatpak-context.c:3019-3031,
+        :3131-3143; flatpak-exports.c:1104-1105); a revoked path whose kind is
+        unread is a root too, which :meth:`_granted_or_masked` answers as
+        unknown. Not bound under the ``host``
         grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and ``/root``
         (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and ``/run/media`` aside.
         Only a grant at or under such a root lifts it. At the root itself the
@@ -1216,6 +1242,7 @@ class _SandboxLaunchView:
             os.path.join(self.real_home, ".var", "app"),
             os.path.join(self.real_home, _FLATPAK_USER_BASE),
             *self.grants.hidden,
+            *self.grants.unread,
         ]
         first = path.split("/")[1] if path != "/" else ""
         shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, "/run/media")
@@ -18459,7 +18486,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         if "PATH" in environment:
             search_path = tuple((environment["PATH"][0] or "").split(":"))
         refiled = any(text is not None and _context_filesystems(text) is not None for _, text in overrides)
-        grants = _flatpak_grants(metadata, self._home, refiled=refiled)
+        grants = _revocations_read(self._machine, _flatpak_grants(metadata, self._home, refiled=refiled))
         return _SandboxLaunchView(
             machine=self._machine,
             real_home=self._home,
