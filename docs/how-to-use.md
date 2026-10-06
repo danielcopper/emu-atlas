@@ -3209,11 +3209,14 @@ the tree:
 | a candidate SwanStation's directory search keeps                             | the core   | `core_so`, `link`, `target`, `dir`                      |
 | a file in the tree that nothing claims                                       | the answer | `link`, `target`                                        |
 
-`link` is the place the core opens, inside the root; `target` is where the chain ends, the same path `path` states. Each
-row carries the keys its route's other statements carry — the first three are the keys `firmware-path-escapes-root`
-carries on that route — so a consumer finds the subject under the same keys whether the name was followed or refused.
-Whether a link leaves the root is decided on two ends — the directory the name lies in, and where the chain ends — so a
-link to another name inside the root that links out from there is one link out, with `link` the declared place.
+`link` is the place the core opens, inside the root; `target` is where the chain ends, the same path `path` states. An
+identification hands requirements back without their core, so it carries each such statement whose `target` is the
+`path` of a requirement in its answer, whatever that requirement's system source — and none about a file it does not
+hand back. Each row carries the keys its route's other statements carry — the first three are the keys
+`firmware-path-escapes-root` carries on that route — so a consumer finds the subject under the same keys whether the
+name was followed or refused. Whether a link leaves the root is decided on two ends — the directory the name lies in,
+and where the chain ends — so a link to another name inside the root that links out from there is one link out, with
+`link` the declared place.
 
 **One link can be named once per route that read it.** Beetle PSX opens `scph5501.bin` as a declared `.info` row and
 again while walking its own spellings; SwanStation opens it as a declared row, through its region key, and as a

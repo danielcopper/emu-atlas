@@ -5500,6 +5500,111 @@
       }
     },
     {
+      "name": "firmware-an-identification-carries-the-link-behind-a-path-outside-the-root",
+      "rationale": "An identification hands requirements back without their core, so the statement that one of them is reached through a link leading out of the root must travel with it — matched by its target, whatever the requirement's system source. gba_bios.bin is filed by the system override, the case whose core caveats an identification never carried: its requirement's path is the store file, and firmware-file-linked-outside-root with that target rides the answer, so a client finds the link it would otherwise overwrite through path. The Game Boy BIOS is linked out the same way, but it is not in this answer, so its statement stays on its own core.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\nsystemname = \"Nintendo - Game Boy Advance\"\nfirmware_count = 1\nfirmware0_desc = \"gba_bios.bin (Game Boy Advance BIOS)\"\nfirmware0_path = \"gba_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mgba_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/gba_bios.bin": {
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+            "size": 16384
+          },
+          "/home/deck/.local/share/firmware-store/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/gba_bios.bin": "/home/deck/.local/share/firmware-store/gba_bios.bin",
+          "/home/deck/.config/retroarch/system/gb_bios.bin": "/home/deck/.local/share/firmware-store/gb_bios.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "identify_query": {
+          "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": {
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+            "size": 16384,
+            "kind": "file"
+          },
+          "known_as": [
+            "gba_bios.bin"
+          ],
+          "requirements": [
+            {
+              "core_so": "mgba_libretro.so",
+              "system": "gba",
+              "system_source": "override",
+              "need": "optional",
+              "file_name": "gba_bios.bin",
+              "path": "/home/deck/.local/share/firmware-store/gba_bios.bin",
+              "declared": "gba_bios.bin",
+              "declared_kind": "file",
+              "identity": {
+                "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                "size": 16384,
+                "kind": "file"
+              },
+              "found": "file",
+              "present": true,
+              "checked": "unchecked",
+              "satisfied": null,
+              "supplied_by": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-file-linked-outside-root",
+              "data": {
+                "core_so": "mgba_libretro.so",
+                "declared": "gba_bios.bin",
+                "need": "optional",
+                "root": "/home/deck/.config/retroarch/system",
+                "link": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                "target": "/home/deck/.local/share/firmware-store/gba_bios.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-a-folder-declaration-with-nothing-there-is-a-folder-to-create",
       "rationale": "The consumer-visible half of declared_kind: with the folder absent, found=missing is the same word an absent FILE gets, and only declared_kind separates 'fetch this dump' from 'create this directory'. The declaration's shape is a property of the declaration, so it survives an empty destination — which is exactly the user who needs the instruction. A required folder that is not there is unmet: satisfied=false and requirements_met=false, no hedging caveat anywhere.",
       "input": {

@@ -10445,6 +10445,41 @@ def _destination_for(
     return row is not None and hashes.for_content_under(row.identities, identity.md5) is not None
 
 
+def _travelling_with(
+    cores: Sequence[CoreFirmware], wanted: Sequence[FirmwareRequirement]
+) -> list[Caveat]:
+    """The core caveats an identification carries beside the requirements it hands back.
+
+    An identification hands back requirements without their emulator, so a
+    caveat about one of them has to travel with it or it is lost. Only about
+    *these* requirements, though, and two rules say which those are.
+
+    A requirement whose system was derived takes its core's caveats along,
+    because a caveat about how it got its system names no file to match on;
+    attaching them because some other file of the same core was derived would
+    put warnings about files that are not in this answer, so a core with only
+    an override-filed requirement here carries none.
+
+    :data:`CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT` names its file, so it is
+    matched by that instead, whatever the requirement's system source: it
+    travels exactly where its ``target`` is the ``path`` of a requirement in
+    this answer — which is how a client finds the link behind a ``path``
+    outside the root — and never by the derived rule, so no link statement
+    about a file outside this answer rides along and none is carried twice.
+    """
+    paths = {requirement.path for requirement in wanted}
+    derived = {r.core_so for r in wanted if r.system_source != SOURCE_OVERRIDE}
+    carried: list[Caveat] = []
+    for core in cores:
+        for caveat in core.caveats:
+            if caveat.code == CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT:
+                if caveat.data.get("target") in paths:
+                    carried.append(caveat)
+            elif core.core_so in derived:
+                carried.append(caveat)
+    return carried
+
+
 def identify_firmware(
     machine: Machine,
     context: FirmwareContext,
@@ -10550,15 +10585,7 @@ def identify_firmware(
                 data={"md5": identity.md5},
             )
         )
-    # An identification hands back requirements without their emulator, so a
-    # caveat about how one of them got its system has to travel with it or it is
-    # lost. Only about *these* requirements, though: a core's caveat names the
-    # files it is about, and attaching it because some other file of the same
-    # core was derived puts warnings about files that are not in this answer.
-    derived_in_answer = {r.core_so for r in wanted if r.system_source != SOURCE_OVERRIDE}
-    for core in cores:
-        if core.core_so in derived_in_answer:
-            caveats.extend(core.caveats)
+    caveats.extend(_travelling_with(cores, wanted))
     return FirmwareIdentification(
         identity=identity, requirements=wanted, sources=context.sources, caveats=tuple(caveats)
     )
