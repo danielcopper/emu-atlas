@@ -15978,6 +15978,7 @@
             "snes",
             "snes-msu1"
           ],
+          "systems": [],
           "matches": [
             {
               "system": "snes",
@@ -16077,6 +16078,7 @@
           "platforms": [
             "xbox360"
           ],
+          "systems": [],
           "matches": [
             {
               "system": "xbox360",
@@ -16151,6 +16153,7 @@
           "vocabulary": "igdb",
           "value": "not-a-platform",
           "platforms": [],
+          "systems": [],
           "matches": [],
           "caveats": [
             {
@@ -16218,6 +16221,7 @@
           "platforms": [
             "ps4"
           ],
+          "systems": [],
           "matches": [
             {
               "system": "ps4-homebrew",
@@ -16256,6 +16260,503 @@
               }
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "a-board-id-answers-its-one-system-not-every-arcade-system",
+      "rationale": "ScreenScraper 6 is the CPS1 board (RomM 5.3.1 ss_handler.py:223, :1124). ES-DE tags cps1 'arcade' like every arcade system (es_systems.xml:489 @ v3.4.1), so a platform-level reading would hand back cps2 and mame too. The per-system table names cps1 alone: 'systems' carries it, 'platforms' stays empty because no platform was resolved, and the one match is qualified exactly as a tag match is — declared, its tags read off the catalogue.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "screenscraper",
+          "value": "6"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "screenscraper",
+          "value": "6",
+          "platforms": [],
+          "systems": [
+            "cps1"
+          ],
+          "matches": [
+            {
+              "system": "cps1",
+              "status": "declared",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "the-generic-arcade-id-still-answers-every-arcade-system",
+      "rationale": "ScreenScraper 75 is the generic arcade id ES-DE's own scraper maps to the arcade platform (and to lcdgames). The per-system table does not list it, so the crosswalk answers as before: every system tagged arcade or lcdgames — the declared cps1, cps2 and mame, then every such system of the vocabulary this catalogue does not declare, cps3 among them. The board ids winning for their own systems takes nothing away from the platform id.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "screenscraper",
+          "value": "75"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "screenscraper",
+          "value": "75",
+          "platforms": [
+            "arcade",
+            "lcdgames"
+          ],
+          "systems": [],
+          "matches": [
+            {
+              "system": "cps1",
+              "status": "declared",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "catalogue"
+            },
+            {
+              "system": "cps2",
+              "status": "declared",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "catalogue"
+            },
+            {
+              "system": "mame",
+              "status": "declared",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "catalogue"
+            },
+            {
+              "system": "arcade",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "atomiswave",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "consolearcade",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "cps",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "cps3",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "daphne",
+              "status": "absent",
+              "platforms": [
+                "daphne",
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "fba",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "fbneo",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "laserdisc",
+              "status": "absent",
+              "platforms": [
+                "daphne",
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "lcdgames",
+              "status": "absent",
+              "platforms": [
+                "lcdgames",
+                "gameandwatch"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "model2",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "naomi",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "naomi2",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "naomigd",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "stv",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "triforce",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-id-standing-for-doom-answers-doom-not-every-pc-system",
+      "rationale": "ScreenScraper 290 is Doom (RomM 5.3.1 ss_handler.py:1129). ES-DE tags doom 'pc, pcwindows' (es_systems.xml:575 @ v3.4.1), the tags of the DOS and Windows systems too, so no platform row can carry the id. The per-system table names doom, and the match keeps the system's whole tag list as read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "screenscraper",
+          "value": "290"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "screenscraper",
+          "value": "290",
+          "platforms": [],
+          "systems": [
+            "doom"
+          ],
+          "matches": [
+            {
+              "system": "doom",
+              "status": "declared",
+              "platforms": [
+                "pc",
+                "pcwindows"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-libretro-name-standing-for-one-system-answers-it",
+      "rationale": "libretro's database name ScummVM (libretro-database rdb/ScummVM.rdb; RomM 5.3.1 libretro_handler.py:242) answers scummvm through the per-system table. The crosswalk's scummvm row carries no libretro name — its join is a decided null because RomM's ScummVM record holds an IGDB keyword id — so before the table this answered platform-unmapped.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "libretro",
+          "value": "ScummVM"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "libretro",
+          "value": "ScummVM",
+          "platforms": [],
+          "systems": [
+            "scummvm"
+          ],
+          "matches": [
+            {
+              "system": "scummvm",
+              "status": "declared",
+              "platforms": [
+                "scummvm"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-igdb-keyword-id-stays-unmapped",
+      "rationale": "IGDB 50501 is what RomM carries for ScummVM, and RomM's own note says it is an IGDB keyword id, not a platform id (igdb.py:2017 @ 5.3.1). Neither table lists it, so the answer stays what it was: no systems, no platforms, platform-unmapped — even on a catalogue that declares scummvm.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "igdb",
+          "value": "50501"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "igdb",
+          "value": "50501",
+          "platforms": [],
+          "systems": [],
+          "matches": [],
+          "caveats": [
+            {
+              "code": "platform-unmapped",
+              "data": {
+                "vocabulary": "igdb",
+                "value": "50501"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-system-id-whose-system-is-not-declared-answers-absent",
+      "rationale": "ScreenScraper 8 is the CPS3 board (RomM 5.3.1 ss_handler.py:225, :1126), and this catalogue declares no cps3. A system the per-system table names answers the way a tag match for an undeclared system does: absent, its tags taken from the vocabulary snapshot — known, not here, so nothing is placed for it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "screenscraper",
+          "value": "8"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "screenscraper",
+          "value": "8",
+          "platforms": [],
+          "systems": [
+            "cps3"
+          ],
+          "matches": [
+            {
+              "system": "cps3",
+              "status": "absent",
+              "platforms": [
+                "arcade"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-system-id-whose-system-is-switched-off-answers-disabled",
+      "rationale": "libretro's database name DOOM (libretro-database rdb/DOOM.rdb; RomM 5.3.1 libretro_handler.py:207) names doom, and this catalogue carries doom only inside an XML comment. The per-system route qualifies it as a tag match would: disabled, its tags read off the commented block — present and deliberately off.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "platform_systems_query": {
+          "vocabulary": "libretro",
+          "value": "DOOM"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "vocabulary": "libretro",
+          "value": "DOOM",
+          "platforms": [],
+          "systems": [
+            "doom"
+          ],
+          "matches": [
+            {
+              "system": "doom",
+              "status": "disabled",
+              "platforms": [
+                "pc",
+                "pcwindows"
+              ],
+              "tags_source": "catalogue"
+            }
+          ],
+          "caveats": []
         }
       }
     },

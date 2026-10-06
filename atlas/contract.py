@@ -738,18 +738,21 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
 
 
 def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
-    """The stable form of a forward platform answer — resolved platforms, matches, statuses.
+    """The stable form of a forward platform answer — resolved platforms or system, matches, statuses.
 
-    ``platforms`` empty means the id resolved to nothing and the
-    ``platform-unmapped`` caveat says so; an empty ``matches`` under resolved
-    platforms is the different statement that nothing on this machine answers
-    to a real platform. Every match carries its status and where its tags came
-    from — the two fields a consumer branches on.
+    ``systems`` names the one system an id stands for alone (the per-system
+    table, which wins), ``platforms`` what the crosswalk resolved it to
+    otherwise — never both. Both empty means the id resolved to nothing and
+    the ``platform-unmapped`` caveat says so; an empty ``matches`` under
+    resolved platforms is the different statement that nothing on this
+    machine answers to a real platform. Every match carries its status and
+    where its tags came from — the two fields a consumer branches on.
     """
     return {
         "vocabulary": answer.vocabulary,
         "value": answer.value,
         "platforms": list(answer.platforms),
+        "systems": list(answer.systems),
         "matches": [
             {
                 "system": m.system,

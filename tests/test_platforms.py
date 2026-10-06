@@ -1,4 +1,4 @@
-"""Tests for atlas.platforms — the crosswalk loader and the pure lookups.
+"""Tests for atlas.platforms — the crosswalk and per-system loaders and the pure lookups.
 
 Two things are held down: the loader refuses a table it cannot place (every
 refusal is an identity a question could otherwise answer out of), and the
@@ -16,15 +16,20 @@ import json
 import pytest
 
 import atlas
+import atlas.platforms
 from atlas.machine import FixtureMachine
 from atlas.platforms import (
     KNOWN_PLATFORM_VOCABULARIES,
     PLATFORM_CROSSWALK_SCHEMA,
+    SYSTEM_PLATFORM_IDS_SCHEMA,
     load_platform_crosswalk,
+    load_system_platform_ids,
     known_platforms,
     platform_identities,
     platforms_for,
+    systems_for,
 )
+from scripts import generate_platform_ids_by_system as generator
 
 
 def _row(**overrides):
@@ -197,3 +202,167 @@ class TestTheValueBoundaryRefusesRatherThanCoerces:
         handle = atlas.RetroDeck("/home/deck", FixtureMachine({}))
         with pytest.raises(ValueError, match="expected a string"):
             handle.systems_for_platform("igdb", 7)  # type: ignore[arg-type]
+
+
+def _id(vocabulary="screenscraper", value="6", **overrides):
+    return {"vocabulary": vocabulary, "value": value, "source": "a pinned line", **overrides}
+
+
+def _system_row(*ids, **overrides):
+    return {
+        "comment": "Capcom Play System I",
+        "system": "es_systems.xml:475",
+        "ids": list(ids) or [_id()],
+        **overrides,
+    }
+
+
+def _system_document(**systems) -> str:
+    return json.dumps(
+        {
+            "schema": SYSTEM_PLATFORM_IDS_SCHEMA,
+            "spec": "spec",
+            "description": "description",
+            "sources": {},
+            "systems": systems or {"cps1": _system_row()},
+        }
+    )
+
+
+class TestThePerSystemLoaderRefusesATableItCannotPlace:
+    """Issue #584: every refusal is an answer a malformed row would otherwise give."""
+
+    def test_an_unknown_schema_is_rejected(self):
+        with pytest.raises(ValueError, match="schema"):
+            load_system_platform_ids('{"schema": 99}')
+
+    def test_an_empty_table_is_rejected(self):
+        document = json.dumps({"schema": 1, "systems": {}})
+        with pytest.raises(ValueError, match="non-empty"):
+            load_system_platform_ids(document)
+
+    def test_a_system_the_vocabulary_does_not_know_is_rejected(self):
+        # model3 is real upstream but not an atlas id: the vocabulary list
+        # (RetroDECK 0.10.9b's catalogue) has no model3, and RetroDECK's
+        # shipped es_systems.xml carries it only commented out. Its absent
+        # match would have no tags to carry, and the answer would name a non-id.
+        document = _system_document(model3=_system_row(_id(value="55")))
+        with pytest.raises(ValueError, match="vocabulary"):
+            load_system_platform_ids(document)
+
+    def test_a_row_with_stray_keys_is_rejected(self):
+        document = _system_document(cps1=_system_row(extra=1))
+        with pytest.raises(ValueError, match="exactly comment, system and ids"):
+            load_system_platform_ids(document)
+
+    def test_a_row_without_ids_is_rejected(self):
+        document = _system_document(cps1={**_system_row(), "ids": []})
+        with pytest.raises(ValueError, match="non-empty list"):
+            load_system_platform_ids(document)
+
+    def test_an_id_with_stray_keys_is_rejected(self):
+        document = _system_document(cps1=_system_row(_id(extra=1)))
+        with pytest.raises(ValueError, match="exactly vocabulary, value and source"):
+            load_system_platform_ids(document)
+
+    def test_an_id_without_a_source_is_rejected(self):
+        document = _system_document(cps1=_system_row(_id(source="")))
+        with pytest.raises(ValueError, match="source"):
+            load_system_platform_ids(document)
+
+    def test_an_unknown_vocabulary_is_rejected(self):
+        document = _system_document(cps1=_system_row(_id(vocabulary="romm")))
+        with pytest.raises(ValueError, match="unknown vocabulary"):
+            load_system_platform_ids(document)
+
+    @pytest.mark.parametrize("value", ["CPS1", "06", "6.0", "٦", "²"])
+    def test_a_numeric_id_that_is_not_its_decimal_digits_is_rejected(self, value):
+        # A question asks with str(id): a row spelled any other way is a row
+        # no question reaches, which is a silent gap rather than an answer.
+        # "²" is a digit to str.isdigit that int() cannot parse: only the
+        # ASCII check turns it into this refusal rather than int()'s own.
+        document = _system_document(cps1=_system_row(_id(value=value)))
+        with pytest.raises(ValueError, match="decimal digits"):
+            load_system_platform_ids(document)
+
+    def test_a_value_with_surrounding_whitespace_is_rejected(self):
+        # The lookup strips what it is asked, so a padded row never matches.
+        document = _system_document(doom=_system_row(_id(vocabulary="libretro", value="DOOM ")))
+        with pytest.raises(ValueError, match="whitespace"):
+            load_system_platform_ids(document)
+
+    def test_one_id_standing_for_two_systems_is_rejected(self):
+        # The table's whole claim is "this id stands for one system alone".
+        document = _system_document(cps1=_system_row(), cps2=_system_row())
+        with pytest.raises(ValueError, match="stands for both"):
+            load_system_platform_ids(document)
+
+    def test_a_wellformed_table_loads(self):
+        assert load_system_platform_ids(_system_document()) == {("screenscraper", "6"): "cps1"}
+
+
+class TestThePerSystemLookupAnswersOneSystem:
+    # The ids issue #584 decided, each with the one system it stands for.
+    DECIDED = (
+        ("screenscraper", "6", "cps1"),
+        ("screenscraper", "7", "cps2"),
+        ("screenscraper", "8", "cps3"),
+        ("screenscraper", "54", "model2"),
+        ("screenscraper", "69", "stv"),
+        ("screenscraper", "290", "doom"),
+        ("libretro", "ScummVM", "scummvm"),
+        ("libretro", "DOOM", "doom"),
+    )
+
+    @pytest.mark.parametrize(("vocabulary", "value", "system"), DECIDED)
+    def test_each_decided_id_answers_its_system(self, vocabulary, value, system):
+        assert systems_for(vocabulary, value) == (system,)
+
+    def test_the_packaged_table_carries_exactly_the_decided_ids(self):
+        table = load_system_platform_ids()
+        assert table == {(vocabulary, value): system for vocabulary, value, system in self.DECIDED}
+
+    def test_the_packaged_table_is_what_the_generator_joins(self):
+        # The data file is generated; a hand edit beside HAND_JOIN, or a join
+        # changed without regenerating, shows here rather than in review.
+        joined = {
+            (vocabulary, system)
+            for system, join in generator.HAND_JOIN.items()
+            for vocabulary in join
+        }
+        assert {(v, s) for (v, _), s in load_system_platform_ids().items()} == joined
+
+    def test_the_generic_arcade_id_is_left_to_the_crosswalk(self):
+        assert systems_for("screenscraper", "75") == ()
+        assert "arcade" in platforms_for("screenscraper", "75")
+
+    def test_an_igdb_keyword_id_is_in_neither_table(self):
+        # RomM's ScummVM record carries 50501, an IGDB keyword id rather than a
+        # platform id (igdb.py:2017 @ 5.3.1).
+        assert systems_for("igdb", "50501") == ()
+        assert platforms_for("igdb", "50501") == ()
+
+    def test_the_asked_value_is_stripped_as_the_crosswalk_strips_it(self):
+        assert systems_for("screenscraper", " 6 ") == ("cps1",)
+
+    def test_an_unknown_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="vocabulary"):
+            systems_for("romm", "6")
+
+    def test_a_non_string_value_is_refused(self):
+        with pytest.raises(ValueError, match="expected a string"):
+            systems_for("screenscraper", 6)  # type: ignore[arg-type]
+
+
+class TestAListedIdWinsOverTheCrosswalk:
+    """Decision 2 of issue #584, held where no packaged id overlaps yet."""
+
+    def test_the_system_table_answers_and_the_crosswalk_is_not_asked(self, monkeypatch):
+        monkeypatch.setattr(
+            atlas.platforms, "_PACKAGED_SYSTEM_IDS", {("screenscraper", "75"): "cps1"}
+        )
+        answer = atlas.RetroDeck("/home/deck", FixtureMachine({})).systems_for_platform(
+            "screenscraper", "75"
+        )
+        assert (answer.systems, answer.platforms) == (("cps1",), ())
+        assert [m.system for m in answer.matches] == ["cps1"]

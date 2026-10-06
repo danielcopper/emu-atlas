@@ -2875,8 +2875,8 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
 
 
 def _validate_platform_systems(name: str, answer: Any) -> None:
-    """A forward platform answer: resolved platforms, matches with status and provenance."""
-    fields = {"vocabulary", "value", "platforms", "matches", "caveats"}
+    """A forward platform answer: resolved platforms or system, matches with status and provenance."""
+    fields = {"vocabulary", "value", "platforms", "systems", "matches", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.systems_for_platform must carry exactly {sorted(fields)}")
     if answer["vocabulary"] not in KNOWN_PLATFORM_VOCABULARIES:
@@ -2886,21 +2886,40 @@ def _validate_platform_systems(name: str, answer: Any) -> None:
         )
     if not isinstance(answer["value"], str) or not answer["value"]:
         fail(f"{name}: expected.systems_for_platform.value must be a non-empty string")
-    if not isinstance(answer["platforms"], list) or not all(
-        isinstance(p, str) and p for p in answer["platforms"]
-    ):
-        fail(f"{name}: expected.systems_for_platform.platforms must be a list of non-empty strings")
+    for field in ("platforms", "systems"):
+        if not isinstance(answer[field], list) or not all(
+            isinstance(p, str) and p for p in answer[field]
+        ):
+            fail(f"{name}: expected.systems_for_platform.{field} must be a list of non-empty strings")
     if not isinstance(answer["matches"], list):
         fail(f"{name}: expected.systems_for_platform.matches must be a list")
     for match in answer["matches"]:
         _validate_platform_match(name, match)
     _validate_caveats(name, answer["caveats"])
+    _validate_platform_resolution(name, answer)
+
+
+def _validate_platform_resolution(name: str, answer: dict[str, Any]) -> None:
+    """The id resolves one way or states platform-unmapped — and a named system bounds the matches.
+
+    The per-system table wins over the crosswalk, so ``systems`` and
+    ``platforms`` are never both filled; one id stands for one system, so
+    ``systems`` holds at most one; and a system named outright is the only
+    system that can match.
+    """
+    platforms, systems = answer["platforms"], answer["systems"]
+    if platforms and systems:
+        fail(f"{name}: expected.systems_for_platform resolves platforms or systems, never both")
+    if len(systems) > 1:
+        fail(f"{name}: expected.systems_for_platform.systems names one system at most")
     unmapped = any(c["code"] == "platform-unmapped" for c in answer["caveats"])
-    if bool(answer["platforms"]) == unmapped:
+    if bool(platforms or systems) == unmapped:
         fail(
-            f"{name}: expected.systems_for_platform must resolve platforms or state "
+            f"{name}: expected.systems_for_platform must resolve platforms or a system, or state "
             "platform-unmapped — exactly one of the two"
         )
+    if systems and any(m["system"] not in systems for m in answer["matches"]):
+        fail(f"{name}: expected.systems_for_platform matches a system its systems field does not name")
 
 
 def _validate_platform_match(name: str, match: Any) -> None:

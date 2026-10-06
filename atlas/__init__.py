@@ -99,6 +99,7 @@ from .platforms import (
     load_platform_crosswalk,
     platform_identities,
     platforms_for,
+    systems_for,
 )
 
 # --- The handles every question is asked of ----------------------------------
@@ -625,7 +626,7 @@ __all__ = [
     "from_esde_system",
     "known_systems",
     "vocabulary_platform_tags",
-    # Platform translation — the crosswalk half (atlas.platforms)
+    # Platform translation — the world-knowledge half (atlas.platforms)
     "KNOWN_PLATFORM_VOCABULARIES",
     "IgdbIdentity",
     "PlatformIdentities",
@@ -633,6 +634,7 @@ __all__ = [
     "load_platform_crosswalk",
     "platform_identities",
     "platforms_for",
+    "systems_for",
     # The aggregate over detect
     "EveryInstallation",
     "InstallationAnswer",
