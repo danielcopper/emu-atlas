@@ -896,7 +896,10 @@ class TestTheGrammarRefusesContradictions:
                             "emulator": "parallel_n64_libretro.so",
                             "declared_index": 0,
                             "selection": None,
-                            "caveats": [],
+                            "availability": "unestablished",
+                            "launcher": None,
+                            "core_path": None,
+                            "caveats": [{"code": "launch-resolution-unsupported", "data": {}}],
                         }
                     ],
                     "caveats": self._UNREAD,

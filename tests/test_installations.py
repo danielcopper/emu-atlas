@@ -8248,6 +8248,13 @@ class TestOneReadPerSourcePerQuery:
             "firmware_for_system": lambda rd: rd.firmware_for_system(system="n64"),
             "firmware_inventory": lambda rd: rd.firmware_inventory(),
             "identify_firmware": lambda rd: rd.identify_firmware(md5="0" * 32),
+            # The catalogue entries' launch answer (#84) is the other reader:
+            # an override can assign the PATH ES-DE's systempath search runs
+            # over, and one that sets filesystems at all moves what the
+            # frontend's sandbox can see — so the entries compose the files
+            # too, once per answer however many entries there are.
+            "emulators_for": lambda rd: rd.emulators_for("n64"),
+            "emulators_for_content": lambda rd: rd.emulators_for("n64", content_path=content),
         }
         for question, ask in questions.items():
             machine = self._query(ask)
@@ -8259,11 +8266,10 @@ class TestOneReadPerSourcePerQuery:
         # The other half of the same fact: ES-DE's --home is the pinned
         # XDG_CONFIG_HOME, no cfg is read, and an environment that cannot
         # move anything these answers rest on is not a source of theirs.
-        content = self.CONTENT
+        # The entries' launch answer is the exception (above); these three
+        # carry no entries.
         questions = {
             "systems": lambda rd: rd.systems(),
-            "emulators_for": lambda rd: rd.emulators_for("n64"),
-            "emulators_for_content": lambda rd: rd.emulators_for("n64", content_path=content),
             "rom_location": lambda rd: rd.rom_location("n64"),
             "roms_dir": lambda rd: rd.roms_dir(),
         }
@@ -10856,7 +10862,10 @@ class TestARowNamingACoreFileOfAnotherHost:
         entry = self._entry()
         assert entry.kind == atlas.KIND_RETROARCH_FOREIGN_CORE
         assert entry.core_so is None
-        assert [c.code for c in entry.caveats] == [atlas.CAVEAT_CORE_FILE_FOREIGN]
+        assert [c.code for c in entry.caveats] == [
+            atlas.CAVEAT_CORE_FILE_FOREIGN,
+            atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+        ]
         assert entry.caveats[0].data == {
             "core_file": "citra_libretro.dll",
             "label": "Citra",
@@ -10866,8 +10875,12 @@ class TestARowNamingACoreFileOfAnotherHost:
     def test_the_sibling_standalone_row_is_untouched(self):
         entries = self._emudeck(self.FOREIGN_ROW + self.AZAHAR_ROW).emulators_for("n3ds").entries
         assert [(e.label, e.kind, [c.code for c in e.caveats]) for e in entries] == [
-            ("Citra", atlas.KIND_RETROARCH_FOREIGN_CORE, [atlas.CAVEAT_CORE_FILE_FOREIGN]),
-            ("Azahar (Standalone)", atlas.KIND_STANDALONE, []),
+            (
+                "Citra",
+                atlas.KIND_RETROARCH_FOREIGN_CORE,
+                [atlas.CAVEAT_CORE_FILE_FOREIGN, atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED],
+            ),
+            ("Azahar (Standalone)", atlas.KIND_STANDALONE, [atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]),
         ]
 
     def test_all_four_placement_routes_refuse_without_reaching_a_card(self, monkeypatch):
@@ -10920,6 +10933,7 @@ class TestARowNamingACoreFileOfAnotherHost:
         assert [c.code for c in entry.caveats] == [
             atlas.CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
             atlas.CAVEAT_CORE_FILE_FOREIGN,
+            atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
         ]
 
     def test_the_launchability_verdict_is_the_split_the_accept_list_cannot_see(self, monkeypatch):
@@ -10937,7 +10951,10 @@ class TestARowNamingACoreFileOfAnotherHost:
             atlas.CAVEAT_CORE_FILE_FOREIGN,
         ]
         assert answer.entry is not None
-        assert [c.code for c in answer.entry.caveats] == [atlas.CAVEAT_CORE_FILE_FOREIGN]
+        assert [c.code for c in answer.entry.caveats] == [
+            atlas.CAVEAT_CORE_FILE_FOREIGN,
+            atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+        ]
         assert answer.entry.label == "Citra"
 
     def test_a_sibling_that_takes_the_file_is_named_as_the_alternative(self, monkeypatch):
@@ -11010,3 +11027,25 @@ class TestARowNamingACoreFileOfAnotherHost:
         )
         kinds = {e.kind for e in rd.emulators_for("n3ds").entries}
         assert kinds == {atlas.KIND_STANDALONE, atlas.KIND_LIBRETRO}
+
+
+class TestTheSandboxPathPrefixRule:
+    """``_under``, the prefix test the sandbox view and flatpak's refusal rule stand on."""
+
+    def test_every_absolute_path_lies_beneath_the_root(self):
+        from atlas.installations import _under  # pyright: ignore[reportPrivateUsage] - the helper under test
+
+        assert _under("/", "/")
+        assert _under("/run/host", "/")
+        assert not _under("relative", "/")
+        assert _under("/a/b", "/a")
+        assert not _under("/ab", "/a")
+
+    def test_a_grant_of_the_root_is_refused(self):
+        from atlas.installations import _flatpak_refuses  # pyright: ignore[reportPrivateUsage] - the rule under test
+
+        # flatpak refuses an export that is a parent of a reserved path
+        # (flatpak-exports.c:991-997), and / is the parent of all of them.
+        assert _flatpak_refuses("/")
+        assert _flatpak_refuses("/run")
+        assert not _flatpak_refuses("/opt/emus")

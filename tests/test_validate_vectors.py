@@ -37,6 +37,9 @@ import atlas
 from atlas import installations
 from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
+from scripts.validate_vectors import (
+    _validate_emulator,  # pyright: ignore[reportPrivateUsage] - the one entry's rules, without a whole vector
+)
 
 # A vector is plain JSON on the way in — the validator's whole job is to decide
 # whether this shape is one the corpus may carry, so nothing here is narrower.
@@ -248,7 +251,10 @@ def _emulator(**overrides) -> Vector:
         "emulator": overrides.get("core_so", CORE_SO),
         "declared_index": 0,
         "selection": None,
-        "caveats": [],
+        "availability": "unestablished",
+        "launcher": None,
+        "core_path": None,
+        "caveats": [{"code": "launch-resolution-unsupported", "data": {}}],
         **overrides,
     }
 
@@ -2055,3 +2061,87 @@ class TestACodesNameIsItsString:
         # What licenses the exception: the Unresolved outcome and the firmware
         # caveat are one fact, so they are one string.
         assert atlas.UNRESOLVED_STANDALONE == atlas.CAVEAT_STANDALONE_UNSUPPORTED
+
+
+class TestTheLaunchAnswerIsValidated:
+    """An entry's launch answer (#84): a known verdict, a launcher exactly when startable, one reason otherwise."""
+
+    LAUNCHER = {
+        "path": "/app/retrodeck/components/dolphin/component_launcher.sh",
+        "replacement_command": None,
+        "app_id": "net.retrodeck.retrodeck",
+        "rule": "staticpath",
+        "entry": "/app/retrodeck/components/dolphin/component_launcher.sh",
+    }
+    UNSUPPORTED = {"code": "launch-resolution-unsupported", "data": {}}
+
+    def entry(self, **overrides: Any) -> dict[str, Any]:
+        return {
+            "system": "gc",
+            "label": "Dolphin (Standalone)",
+            "kind": "standalone",
+            "core_so": None,
+            "emulator": "DOLPHIN",
+            "declared_index": 0,
+            "selection": None,
+            "availability": "startable",
+            "launcher": self.LAUNCHER,
+            "core_path": None,
+            "caveats": [],
+            **overrides,
+        }
+
+    def test_a_startable_entry_and_an_unestablished_one_with_its_reason_pass(self):
+        _validate_emulator("v", self.entry())
+        _validate_emulator(
+            "v", self.entry(availability="unestablished", launcher=None, caveats=[self.UNSUPPORTED])
+        )
+
+    def test_an_unknown_verdict_is_refused(self):
+        entry = self.entry(availability="needs-setup")
+        with pytest.raises(validate_vectors.VectorError, match="availability must be one of"):
+            _validate_emulator("v", entry)
+
+    def test_a_launcher_beside_another_verdict_is_refused(self):
+        entry = self.entry(availability="unestablished", caveats=[self.UNSUPPORTED])
+        with pytest.raises(validate_vectors.VectorError, match="exactly when its availability is startable"):
+            _validate_emulator("v", entry)
+
+    def test_a_verdict_without_its_reason_is_refused(self):
+        entry = self.entry(availability="unestablished", launcher=None)
+        with pytest.raises(validate_vectors.VectorError, match="exactly one reason caveat"):
+            _validate_emulator("v", entry)
+
+    def test_a_reason_for_the_other_verdict_is_refused(self):
+        entry = self.entry(availability="not-installed", launcher=None, caveats=[self.UNSUPPORTED])
+        with pytest.raises(validate_vectors.VectorError, match="exactly one reason caveat"):
+            _validate_emulator("v", entry)
+
+    def test_two_reasons_are_refused_and_the_custom_layer_note_is_none(self):
+        custom = {"code": "find-rules-unreadable", "data": {"layer": "custom"}}
+        _validate_emulator("v", self.entry(caveats=[custom]))
+        entry = self.entry(
+            availability="unestablished",
+            launcher=None,
+            caveats=[self.UNSUPPORTED, {"code": "find-rules-unreadable", "data": {"layer": "bundled"}}],
+        )
+        with pytest.raises(validate_vectors.VectorError, match="exactly one reason caveat"):
+            _validate_emulator("v", entry)
+
+    def test_a_reason_beside_startable_is_refused(self):
+        entry = self.entry(caveats=[self.UNSUPPORTED])
+        with pytest.raises(validate_vectors.VectorError, match="startable emulator states the reason"):
+            _validate_emulator("v", entry)
+
+    def test_a_core_path_off_a_startable_libretro_entry_is_refused(self):
+        entry = self.entry(core_path="/var/config/retroarch/cores/x.so")
+        with pytest.raises(validate_vectors.VectorError, match="core_path stands only"):
+            _validate_emulator("v", entry)
+
+    def test_a_launcher_of_the_wrong_shape_is_refused(self):
+        wrong_rule = self.entry(launcher={**self.LAUNCHER, "rule": "corepath"})
+        with pytest.raises(validate_vectors.VectorError, match="launcher.rule must be one of"):
+            _validate_emulator("v", wrong_rule)
+        wrong_fields = self.entry(launcher={"path": "/x"})
+        with pytest.raises(validate_vectors.VectorError, match="launcher must be exactly the fields"):
+            _validate_emulator("v", wrong_fields)

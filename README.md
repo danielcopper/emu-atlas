@@ -140,12 +140,14 @@ data, never free text alone and never silence.
   too, through atlas's own pure-stdlib squashfs reader, wherever the runtime has the image's codec (`compression.zstd`
   arrives with Python 3.14; the published `backports.zstd` grants it to older interpreters). Where the codec is absent
   the sealed layer stays exactly that, stated with `emulator-catalogue-sealed` — the capability is the runtime's, never
-  blamed on the machine. Entries carry their core, so placement answers on that path need no core argument; a standalone
-  entry answers with a typed `Unresolved` outcome instead of raising. Where there are no entries the answer says which
-  kind of none: a bare RetroArch ships no catalogue at all, an EmuDeck arrangement with no ES-DE on disk may have one
-  atlas has not established the location of, a catalogue atlas could not read — missing, unreadable, or empty — is not
-  an empty one, and a sealed catalogue's readable layers may simply not declare the system; four codes, because a client
-  must not read the last three as "nothing here".
+  blamed on the machine. Each entry also says whether ES-DE's own find rules locate what it launches, and where — on
+  RetroDECK, evaluated inside its sandbox (`availability`, `launcher`, `core_path`); EmuDeck's and a bare RetroArch's
+  entries answer `unestablished` until a later release evaluates their lookup. Entries carry their core, so placement
+  answers on that path need no core argument; a standalone entry answers with a typed `Unresolved` outcome instead of
+  raising. Where there are no entries the answer says which kind of none: a bare RetroArch ships no catalogue at all, an
+  EmuDeck arrangement with no ES-DE on disk may have one atlas has not established the location of, a catalogue atlas
+  could not read — missing, unreadable, or empty — is not an empty one, and a sealed catalogue's readable layers may
+  simply not declare the system; four codes, because a client must not read the last three as "nothing here".
 - **ROMs** — `rom_location(system)` answers where that system's ROMs live and which file extensions the frontend will
   launch, both off the same `<system>` declaration, so neither has to be recomputed from a table that cannot follow a
   user who moved their library. The directory is the declared `<path>` with `%ROMPATH%` substituted from the setting the

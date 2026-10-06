@@ -1585,6 +1585,7 @@ class TestTheDataRegistryReading:
             ("filenames-content-conditional", "files_established_for"): (
                 "FILES_ESTABLISHED_FOR_TOKENS"
             ),
+            ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",

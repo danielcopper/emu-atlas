@@ -769,7 +769,12 @@ class TestPerGameAltemulator:
                 )
             }
         )
-        assert all(not e.caveats for e in _entries(rd.emulators_for("n64")))
+        # The fixture ships no es_find_rules.xml, so each entry's one caveat
+        # is its launch answer's reason — and no per-game statement beside it.
+        for entry in _entries(rd.emulators_for("n64")):
+            assert [(c.code, dict(c.data)) for c in entry.caveats] == [
+                (atlas.CAVEAT_FIND_RULES_UNREADABLE, {"layer": atlas.LAYER_BUNDLED})
+            ]
 
     def test_wrong_entry_savefile_location_gets_override_caveat(self):
         # caller picked the system default, but THIS game's altemulator points elsewhere

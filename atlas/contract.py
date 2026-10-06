@@ -53,6 +53,7 @@ from .installations import (
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
+from .launch import Launcher
 from .platforms import PlatformIdentities
 from .placement import (
     Caveat,
@@ -657,6 +658,11 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
     is ``null`` on a derived entry (``emulator-list-derived``), which no layer
     declared and which therefore has no declared position.
 
+    ``availability``, ``launcher`` and ``core_path`` are the entry's launch
+    answer (#84): whether the frontend's own lookup finds what the entry
+    launches, and where. A verdict other than ``startable`` carries exactly one
+    reason among the entry's ``caveats``.
+
     ``caveats`` serialize ``{code, data}`` like every other caveat in this
     module. Bare codes were this serializer's own dialect and lost what the
     data says (which game's override was not checked), which is exactly the
@@ -670,7 +676,21 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
         "emulator": entry.emulator,
         "declared_index": entry.declared_index,
         "selection": entry.selection,
+        "availability": entry.availability,
+        "launcher": _launcher_contract(entry.launcher) if entry.launcher is not None else None,
+        "core_path": entry.core_path,
         "caveats": _caveats_contract(entry.caveats),
+    }
+
+
+def _launcher_contract(launcher: Launcher) -> dict[str, Any]:
+    """The stable form of what the frontend would run for an entry, and where that path is valid."""
+    return {
+        "path": launcher.path,
+        "replacement_command": launcher.replacement_command,
+        "app_id": launcher.app_id,
+        "rule": launcher.rule,
+        "entry": launcher.entry,
     }
 
 
