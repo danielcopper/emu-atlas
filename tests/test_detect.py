@@ -14,6 +14,8 @@ RETRODECK_JSON = "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/r
 EMUDECK_SETTINGS = "/home/deck/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 NATIVE_CFG = "/home/deck/.config/retroarch/retroarch.cfg"
+RETRODECK_SYSTEM_DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active"
+RETRODECK_USER_DEPLOY = "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active"
 
 HOME = "/home/deck"
 
@@ -29,6 +31,30 @@ class TestMarkers:
     def test_retrodeck_by_json(self):
         installs = _detect({RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}'})
         assert [i.kind for i in installs] == ["retrodeck"]
+
+    def test_retrodeck_by_its_system_deploy_without_a_marker(self):
+        # Never started: the first launch writes the marker, so the deploy is
+        # what finds it — as an installation that says so (issue #579).
+        installs = _detect({}, dirs=[RETRODECK_SYSTEM_DEPLOY])
+        assert [i.kind for i in installs] == ["retrodeck"]
+        assert installs[0].health().codes == (atlas.HEALTH_ISSUE_NOT_SET_UP,)
+
+    def test_retrodeck_by_its_user_deploy_without_a_marker(self):
+        installs = _detect({}, dirs=[RETRODECK_USER_DEPLOY])
+        assert [i.kind for i in installs] == ["retrodeck"]
+        assert installs[0].health().codes == (atlas.HEALTH_ISSUE_NOT_SET_UP,)
+
+    def test_a_marker_and_a_deploy_are_one_installation_detected_by_the_marker(self):
+        installs = _detect(
+            {RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}'},
+            dirs=[RETRODECK_SYSTEM_DEPLOY],
+        )
+        assert [i.kind for i in installs] == ["retrodeck"]
+        assert atlas.HEALTH_ISSUE_NOT_SET_UP not in installs[0].health().codes
+
+    def test_an_app_tree_without_a_deploy_is_no_installation(self):
+        # The app's ~/.var/app tree alone is no deploy: nothing runs RetroDECK.
+        assert _detect({}, dirs=["/home/deck/.var/app/net.retrodeck.retrodeck/config"]) == []
 
     def test_standalone_flatpak_by_cfg(self):
         installs = _detect({STANDALONE_CFG: ""})

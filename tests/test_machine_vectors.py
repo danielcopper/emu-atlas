@@ -316,8 +316,9 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
 
     # Two exceptions, each with the test that reaches the state behind it.
     # Detection triggers on the marker, so a machine without one has no
-    # installation for a vector to ask at all; it is covered by a direct-handle
-    # test instead
+    # installation for a vector to ask at all — a RetroDECK found by its deploy
+    # states its missing marker as 'not-set-up' instead; it is covered by a
+    # direct-handle test instead
     # (tests/test_installations.py::TestAMarkerThatIsGoneIsStatedNotDetected).
     # 'filenames-unverified' rides on mode.files being None — the mode's
     # PRIMARY NAMED group carrying no 'files' — which is a different shape
