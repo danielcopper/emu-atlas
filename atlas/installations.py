@@ -81,6 +81,7 @@ from .platforms import (
     PlatformIdentities,
     platform_identities,
     platforms_for,
+    systems_for,
 )
 from .systems import known_systems, vocabulary_platform_tags
 from .firmware import (
@@ -15584,11 +15585,14 @@ class PlatformSystemMatch:
 class PlatformSystemsAnswer:
     """Which of this installation's systems answer to a public platform id.
 
-    ``platforms`` is what the crosswalk resolved the id to — empty exactly
-    when the ``platform-unmapped`` caveat states why. ``matches`` is ordered:
-    declared systems first, then disabled, then absent, each alphabetical.
-    An empty match list under resolved platforms is a statement about this
-    machine — the platform is real and nothing here answers to it.
+    The id resolves one of two ways, never both: ``systems`` holds the one
+    system the per-system table says it stands for (ScreenScraper ``6`` is
+    ``cps1``, whose ``arcade`` tag every arcade system shares), and
+    ``platforms`` what the crosswalk resolved it to otherwise. Both are empty
+    exactly when the ``platform-unmapped`` caveat states why. ``matches`` is
+    ordered: declared systems first, then disabled, then absent, each
+    alphabetical. An empty match list under resolved platforms is a statement
+    about this machine — the platform is real and nothing here answers to it.
     """
 
     vocabulary: str
@@ -15600,12 +15604,17 @@ class PlatformSystemsAnswer:
     decimal string.
     """
     platforms: tuple[str, ...] = ()
-    """What the crosswalk resolved the id to — empty exactly when the
-    ``platform-unmapped`` caveat states why.
+    """What the crosswalk resolved the id to — empty when the per-system table resolved
+    it instead, and when the ``platform-unmapped`` caveat states that nothing did.
+    """
+    systems: tuple[str, ...] = ()
+    """The one system the per-system table says the id stands for alone — listed there,
+    it wins over the crosswalk; empty when the table does not list the id.
     """
     matches: tuple[PlatformSystemMatch, ...] = ()
-    """Every system answering to those platforms, each qualified by how firmly it is
-    here — declared first, then disabled, then absent, each group alphabetical.
+    """Every system answering to those platforms, or the system the id stands for, each
+    qualified by how firmly it is here — declared first, then disabled, then absent,
+    each group alphabetical.
     """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
@@ -17585,6 +17594,9 @@ def _entry_mod_with_caveats(
 
 
 _CROSSWALK_SOURCE = "platform crosswalk (platform_ids_crosswalk.json, pinned sources cited inside)"
+_SYSTEM_IDS_SOURCE = (
+    "per-system platform ids (platform_ids_by_system.json, pinned sources cited inside)"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -17618,6 +17630,43 @@ def _absent_vocabulary_systems(view: _PlatformView) -> tuple[tuple[str, tuple[st
         for system in known_systems()
         if system not in view.declared and system not in view.disabled
     )
+
+
+def _platform_matches(
+    view: _PlatformView, answers: Callable[[str, tuple[str, ...]], bool]
+) -> tuple[PlatformSystemMatch, ...]:
+    """Every system of *view* that *answers* ``(system, tags)`` accepts, status-qualified.
+
+    One walk for both routes of the forward question — a crosswalk platform
+    matched by tag, a per-system id matched by name — so a system answers
+    with the same status and tag provenance whichever route named it: declared
+    first, then disabled, then absent, each group alphabetical.
+    """
+    matches = [
+        PlatformSystemMatch(
+            system,
+            PLATFORM_STATUS_DECLARED,
+            view.declared[system],
+            PLATFORM_TAGS_VOCABULARY
+            if system in view.vocabulary_backed
+            else PLATFORM_TAGS_CATALOGUE,
+        )
+        for system in sorted(view.declared)
+        if answers(system, view.declared[system])
+    ]
+    matches += [
+        PlatformSystemMatch(
+            system, PLATFORM_STATUS_DISABLED, view.disabled[system], PLATFORM_TAGS_CATALOGUE
+        )
+        for system in sorted(view.disabled)
+        if system not in view.declared and answers(system, view.disabled[system])
+    ]
+    matches += [
+        PlatformSystemMatch(system, PLATFORM_STATUS_ABSENT, tags, PLATFORM_TAGS_VOCABULARY)
+        for system, tags in _absent_vocabulary_systems(view)
+        if answers(system, tags)
+    ]
+    return tuple(matches)
 
 
 def _commented_map(texts: tuple[str | None, ...]) -> dict[str, tuple[str, ...]]:
@@ -17732,12 +17781,19 @@ class _CatalogueQueries:
         ``<platform>`` tags connect each system to its platform, so a system
         the user added by hand translates without any table knowing it.
 
+        An id that stands for one system rather than a platform — ScreenScraper
+        ``6`` is ``cps1``, tagged ``arcade`` like every arcade system — is
+        listed in the per-system table, and a listed id wins over the
+        crosswalk: the answer names that system in ``systems``, leaves
+        ``platforms`` empty, and qualifies the one system exactly as a tag
+        match would be — declared, disabled or absent.
+
         *vocabulary* is one of :data:`atlas.platforms.KNOWN_PLATFORM_VOCABULARIES`
         and anything else raises — the set is atlas's own and closed. *value* is
         a string, and a numeric id passes as its decimal string: a client
         holding IGDB's numeric ``igdb_id`` asks with ``str(igdb_id)``, and a
-        non-string value raises rather than being coerced. A *value* no
-        crosswalk row carries answers no platforms, no matches and the
+        non-string value raises rather than being coerced. A *value* neither
+        table carries answers no systems, no platforms, no matches and the
         ``platform-unmapped`` caveat: "no platform corresponds" is an answer,
         and inventing a folder name out of the raw id is exactly the failure
         this question exists to prevent.
@@ -17751,51 +17807,36 @@ class _CatalogueQueries:
         """
         view, version = self._platform_view()
         tail = arrangement_caveats(self.kind, observed_version=version)
+        systems = systems_for(vocabulary, value)
+        if systems:
+            named = frozenset(systems)
+            return PlatformSystemsAnswer(
+                vocabulary,
+                value,
+                systems=systems,
+                matches=_platform_matches(view, lambda system, _tags: system in named),
+                sources=(*view.sources, _SYSTEM_IDS_SOURCE),
+                caveats=(*view.caveats, *tail),
+            )
         resolved = platforms_for(vocabulary, value)
         if not resolved:
             unmapped = Caveat(
                 CAVEAT_PLATFORM_UNMAPPED,
-                "no platform in the crosswalk answers to this id — placing content under "
-                "the raw id would name a folder no catalogue declares",
+                "neither the per-system table nor the crosswalk answers to this id — "
+                "placing content under the raw id would name a folder no catalogue declares",
                 {"vocabulary": vocabulary, "value": value},
             )
             return PlatformSystemsAnswer(
                 vocabulary, value, caveats=(*view.caveats, unmapped, *tail)
             )
         wanted = frozenset(resolved)
-        matches = [
-            PlatformSystemMatch(
-                system,
-                PLATFORM_STATUS_DECLARED,
-                view.declared[system],
-                PLATFORM_TAGS_VOCABULARY
-                if system in view.vocabulary_backed
-                else PLATFORM_TAGS_CATALOGUE,
-            )
-            for system in sorted(view.declared)
-            if wanted & frozenset(view.declared[system])
-        ]
-        matches += [
-            PlatformSystemMatch(
-                system, PLATFORM_STATUS_DISABLED, view.disabled[system], PLATFORM_TAGS_CATALOGUE
-            )
-            for system in sorted(view.disabled)
-            if system not in view.declared and wanted & frozenset(view.disabled[system])
-        ]
-        matches += [
-            PlatformSystemMatch(
-                system, PLATFORM_STATUS_ABSENT, tags, PLATFORM_TAGS_VOCABULARY
-            )
-            for system, tags in _absent_vocabulary_systems(view)
-            if wanted & frozenset(tags)
-        ]
         return PlatformSystemsAnswer(
             vocabulary,
             value,
             resolved,
-            tuple(matches),
-            (*view.sources, _CROSSWALK_SOURCE),
-            (*view.caveats, *tail),
+            matches=_platform_matches(view, lambda _system, tags: bool(wanted & frozenset(tags))),
+            sources=(*view.sources, _CROSSWALK_SOURCE),
+            caveats=(*view.caveats, *tail),
         )
 
     @one_question
@@ -17809,6 +17850,12 @@ class _CatalogueQueries:
         does not (``tags_source`` says which). A name neither this machine
         nor the vocabulary knows answers no identities and the
         ``platform-unmapped`` caveat.
+
+        Only the crosswalk is translated out here, tag by tag. The ids the
+        per-system table lists for a system are not among the identities:
+        ``platform_ids("cps1")`` answers the ``arcade`` identities, not
+        ScreenScraper ``6``, though ``systems_for_platform("screenscraper",
+        "6")`` answers ``cps1``.
         """
         view, version = self._platform_view()
         tail = arrangement_caveats(self.kind, observed_version=version)

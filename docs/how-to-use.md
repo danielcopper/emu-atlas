@@ -549,8 +549,24 @@ Each match's `status` says what your next step is, and the three never collapse:
 
 `tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
 column (what backs an `absent` system, and a sealed catalogue's derived systems). A value nothing maps to answers no
-platforms plus the `platform-unmapped` caveat — placing content under the raw id would name a folder no catalogue
-declares, which is exactly the quiet failure this question exists to prevent.
+systems, no platforms and the `platform-unmapped` caveat — placing content under the raw id would name a folder no
+catalogue declares, which is exactly the quiet failure this question exists to prevent.
+
+A few ids stand for one **system** rather than a platform. ES-DE tags `cps1` `arcade` like every other arcade system, so
+ScreenScraper's id for the CPS1 board cannot live in a platform row without answering all of them. Those ids come from a
+second pinned table keyed by system (`atlas/data/platform_ids_by_system.json`), and an id listed there wins:
+
+```python
+answer = inst.systems_for_platform("screenscraper", "6")
+# answer.systems   == ('cps1',)                       ← the per-system half: the one system the id stands for
+# answer.platforms == ()                              ← no platform was resolved
+# answer.matches   == (PlatformSystemMatch(system='cps1', status='declared',
+#                                          platforms=('arcade',), tags_source='catalogue'),)
+```
+
+`systems` and `platforms` are never both filled, and the one system is qualified exactly as a tag match is — `declared`,
+`disabled` or `absent`. ScreenScraper's generic arcade id (`75`) is not in that table and keeps answering every `arcade`
+system. `atlas.systems_for(vocabulary, value)` asks the table alone, without a machine.
 
 The reverse direction reads the system's own tags and translates them out:
 
@@ -560,6 +576,9 @@ answer = inst.platform_ids("sfc")
 # answer.identities[0].igdb  == (IgdbIdentity(id=19, slug='snes', ...), IgdbIdentity(id=58, slug='sfam', ...))
 # answer.identities[0].libretro == ('Nintendo - Super Nintendo Entertainment System',)
 ```
+
+It translates the crosswalk only: `platform_ids("cps1")` answers the `arcade` identities, not ScreenScraper `6`, though
+the forward question answers `cps1` for that id.
 
 Two caveats state the tags a translation cannot use: `platform-unknown` (a token outside the platform vocabulary — the
 same token ES-DE itself warns about and drops) and `platform-scraping-ignored` (the catalogue's deliberate `ignore`
