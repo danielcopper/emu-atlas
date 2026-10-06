@@ -3051,8 +3051,10 @@ class UnclaimedFile:
     """
 
     path: str
-    """The absolute path of the file in the firmware tree that no installed emulator asks
-    for or claims.
+    """The absolute, resolved path of a file found in the firmware tree that no installed
+    emulator asks for or claims — where its bytes are, which for an entry that is a link
+    leading out of the tree is the link's target outside it, stated beside it under
+    ``firmware-file-linked-outside-root``.
     """
     identity: FirmwareIdentity | None
     """What the packaged tables say these bytes are, matched by content and never by name
@@ -4959,8 +4961,10 @@ def _configured_image(
     kernel's answer. A value that climbs is therefore FOLLOWED where it
     stays under the firmware root — ``path`` then names a file outside the
     declared folder while ``declared`` stays the folder, which is what the
-    core would open — and refused only where it leaves the root, which is
-    the bound every read in this module is held to.
+    core would open — and refused only where its directory leaves the
+    root: the place a value names is bounded, while a file there that is a
+    link leading out of the root is followed to its target and stated under
+    :data:`CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT`.
 
     The core's own test for "is the configured file there" is
     ``path_is_valid``, and that is a **stat that succeeded** and nothing more:
@@ -8614,7 +8618,8 @@ def _refused_spelling(core: CoreDeclarations, spelling: str, refusal: str, root:
     which one was left unfollowed. It overstates nothing about the file — a
     name atlas would not follow may well be one the core opens — and it is the
     only reading available, because no place was reached to look at. Every
-    packaged spelling is a bare file name, so the refusal this route meets is
+    packaged spelling is a bare file name — the loader refuses any other
+    (:mod:`atlas.core_firmware`) — so the refusal this route meets is
     a link chain that never settles: leaving the root through a directory
     takes a name with a directory in it, and a bare name linked out of the
     root is followed (:func:`_destination_of`).
@@ -9197,8 +9202,10 @@ def _claiming_what_it_read(machine: Machine, core: CoreFirmware) -> CoreFirmware
     whatever the route already put there — a search's kept candidates, the
     files the emulator's own recognition runs over. Resolved, because the
     unclaimed scan compares resolved spellings and an arrangement routinely
-    links a card's destination into the firmware tree; a path outside that tree
-    resolves the same way and is simply never met by a scan bounded to it.
+    links a card's destination into the firmware tree. A destination outside
+    that tree is met only through a link in it — the scan lists the tree's
+    directories alone, and follows a file link in them to its target — and
+    then this claim is what keeps it out of ``unclaimed``.
 
     Here rather than in each resolver because it is the same statement for all
     of them, and a claim carried at four sites and forgotten at the fifth is

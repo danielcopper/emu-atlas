@@ -20,6 +20,7 @@ import pytest
 import atlas
 from atlas.core_firmware import (
     FIRMWARE_LOCATING,
+    CoreFirmwareCard,
     CoreFirmwareNameRoute,
     CoreFirmwareSpellingRoute,
     FirmwareLocating,
@@ -130,6 +131,19 @@ def _context(machine: FixtureMachine) -> FirmwareContext:
 
 def _shipped() -> Mapping[str, SystemFirmware]:
     return load_system_firmware()
+
+
+def _spellings_naming_a_directory(cards: tuple[CoreFirmwareCard, ...]) -> list[tuple[str, str]]:
+    """Every spelling a card's own list holds that carries a directory step, with its card."""
+    found: list[tuple[str, str]] = []
+    for card in cards:
+        route = card.name_route
+        if not isinstance(route, CoreFirmwareSpellingRoute):
+            continue
+        lists = [names for names in route.override_option.values.values() if names is not None]
+        lists.extend(row.names for row in route.regions)
+        found.extend((card.key, name) for names in lists for name in names.spellings if "/" in name)
+    return found
 
 
 def _doc(**overrides: object) -> str:
@@ -598,6 +612,20 @@ class TestACoreCarryingItsOwnNamesIsStatedOrRefused:
 
     def _route(self, **overrides: object) -> str:
         return self._one_door(name_route={**self.ROUTE, **overrides})
+
+    def test_every_packaged_spelling_is_a_bare_file_name(self):
+        """No packaged spelling names a directory, so none can leave the root through one.
+
+        The spelling walk composes each name under the firmware root, and a name
+        with no directory part has only its own last component to lead
+        anywhere: linked out of the root it is followed, never refused as
+        leaving it (``_refused_spelling`` rests on this). A spelling with a
+        ``/`` would reopen that refusal on this route. The loader refuses one
+        (:meth:`test_a_spelling_carrying_a_directory_step_is_refused`); this
+        reads the packaged lists themselves, so the claim holds of the file
+        that ships and not only of the rule that loads it.
+        """
+        assert _spellings_naming_a_directory(core_firmware_cards()) == []
 
     def test_the_route_loads_under_the_one_door_word(self):
         (card,) = load_core_firmware(self._one_door())

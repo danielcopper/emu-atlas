@@ -2754,8 +2754,9 @@ listed folder's read does: every file a DuckStation search kept (its size gate's
 recognition runs over) and every destination a card names. Those files leave `unclaimed`, because on RetroDECK
 DuckStation's search directory _is_ the firmware root — so a BIOS image there was that card's satisfied requirement in
 `firmware_for_system` and a file nobody asks for in `firmware_inventory` at the same time. The claim is by resolved
-path, so a card destination an arrangement links into the firmware tree claims its target; a destination outside the
-root claims nothing there, since the scan never looks outside it.
+path, so a card destination an arrangement links into the firmware tree claims its target. A destination outside the
+root is met by the scan only through a link in the tree — the scan lists no directory outside it, and follows a file
+link in its directories to the target — and the card's claim is what keeps that file out of `unclaimed`.
 
 Reading a `FirmwareAnswer`:
 
@@ -3224,12 +3225,14 @@ the bytes belong, and `satisfied` is `False` for a required file — never a ref
 what a directory at any file answers, `firmware-path-obstructed` at the target. In both cases the link statement rides
 beside it.
 
-What leaves the root through a **directory** is still refused as `firmware-path-escapes-root`: a `../` climb, a declared
-path whose directory is linked out of the root, and a folder a core lists — LRPS2's `pcsx2/bios` — linked out of the
-root, because that folder is the directory part of every file the core opens below it. The unclaimed scan follows a file
-link in the tree the same way: an entry nothing claims is listed under its target, with the answer-level statement
-naming the link it was met as, and the scan still lists no directory outside the root. A standalone emulator has no
-firmware root to leave, so its answers follow links wherever they lead and carry no such statement.
+What leaves the root through a **directory** is still refused as `firmware-path-escapes-root`: where the chain ends
+outside the root and the directory the name resolves into lies outside it too — a `../` climb, or a declared path whose
+directory is linked out of the root. A file in such an outside directory that links back into the root resolves inside
+it and is answered there, as it always was. A folder a core lists — LRPS2's `pcsx2/bios` — linked out of the root is
+refused as well, because that folder is the directory part of every file the core opens below it. The unclaimed scan
+follows a file link in the tree the same way: an entry nothing claims is listed under its target, with the answer-level
+statement naming the link it was met as, and the scan still lists no directory outside the root. A standalone emulator
+has no firmware root to leave, so its answers follow links wherever they lead and carry no such statement.
 
 ### What an unclaimed file says about itself
 
@@ -3734,10 +3737,11 @@ for req in folders:                               # every listed folder whose co
 Placing a file by link instead of a copy works through the same `req.path`: create the link there, pointing into your
 own store. The next answer states the requirement at the file in your store — `path` is always where the bytes are — and
 `firmware-file-linked-outside-root` names the link you wrote as `link`, so you recognise your own placement by the
-`target` you linked to. Where a requirement already carries that statement, its `path` is the link's target and the link
-itself sits at `link`: a copy to `path` writes into whatever the link points at, so replacing the placement means
-replacing the link at `link`. Link a file, never the folder a core lists — a folder linked out of the firmware root is
-refused ([A file reached through a link](#a-file-reached-through-a-link)).
+`target` you linked to. The statement is not a field of the requirement: it rides `core.caveats` in a firmware answer
+and `ident.caveats` here, and the requirement it is about is the one whose `path` equals its `data["target"]`. Where one
+matches, the link sits at the statement's `link`: a copy to `req.path` writes into whatever the link points at, so
+replacing the placement means replacing the link at `link`. Link a file, never the folder a core lists — a folder linked
+out of the firmware root is refused ([A file reached through a link](#a-file-reached-through-a-link)).
 
 ### Flow 5 — "Did the layout drift since the last sync?"
 
