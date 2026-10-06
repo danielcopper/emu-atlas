@@ -538,14 +538,14 @@ class LaunchLookup:
         self._rules = rules
         self._view = view
         self._found: dict[str, _Found | LaunchResolution] = {}
-        self._notes: dict[str, tuple[Caveat, ...]] = {}
+        self._notes: dict[str, Caveat | None] = {}
 
     def _find(self, token: str) -> _Found | LaunchResolution:
         if token not in self._found:
             self._found[token] = _find(token, self._rules, self._view)
         return self._found[token]
 
-    def _run_game_note(self, token: str, launcher: Launcher) -> tuple[Caveat, ...]:
+    def _run_game_note(self, token: str, launcher: Launcher) -> Caveat | None:
         if token not in self._notes:
             self._notes[token] = _run_game_note(token, launcher, self._rules.shipped, self._view)
         return self._notes[token]
@@ -613,7 +613,8 @@ class LaunchLookup:
             if isinstance(core, LaunchResolution):
                 return core
             core_path = core if loads_core else None
-        notes = self._run_game_note(token, found.launcher)
+        note = self._run_game_note(token, found.launcher)
+        notes = () if note is None else (note,)
         return LaunchResolution(AVAILABILITY_STARTABLE, found.launcher, core_path, notes)
 
 
@@ -724,24 +725,20 @@ def _run_game_command(entry: str, view: LaunchView) -> str | None:
     return ""
 
 
-def _run_game_note(
-    token: str, launcher: Launcher, shipped: FindRules | None, view: LaunchView
-) -> tuple[Caveat, ...]:
-    """``run-game-differs`` where RetroDECK's direct start would run something other than ES-DE does."""
+def _run_game_note(token: str, launcher: Launcher, shipped: FindRules | None, view: LaunchView) -> Caveat | None:
+    """``run-game-differs`` where RetroDECK's direct start would run something other than ES-DE does, else ``None``."""
     if shipped is None:
-        return ()
+        return None
     picked = _run_game_pick(token, shipped, view)
     if picked is None:
-        return ()
+        return None
     if launcher.replacement_command is None and picked and generic_path(picked) == launcher.path:
-        return ()
-    return (
-        Caveat(
-            CAVEAT_RUN_GAME_DIFFERS,
-            "RetroDECK's own direct start (run_game.sh) reads only the shipped find rules, never "
-            "expands ~ and takes no | entry — it would run "
-            + (picked or "nothing")
-            + " where ES-DE runs what this entry's launcher names",
-            {"run_game_path": picked},
-        ),
+        return None
+    return Caveat(
+        CAVEAT_RUN_GAME_DIFFERS,
+        "RetroDECK's own direct start (run_game.sh) reads only the shipped find rules, never "
+        "expands ~ and takes no | entry — it would run "
+        + (picked or "nothing")
+        + " where ES-DE runs what this entry's launcher names",
+        {"run_game_path": picked},
     )

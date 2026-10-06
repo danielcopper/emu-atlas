@@ -138,7 +138,8 @@ class TestTheEmulatorIsFoundTheWayESDEFindsIt:
         rules = layered({"X": EmulatorRules(static_paths=("/opt/x.y*",))})
         view = View(files={"/opt/xzy-1"}, dirs={"/opt": ("xzy-1",)})
         answer = resolve(rules, view, "%EMULATOR_X% %ROM%")
-        assert answer.launcher is not None and answer.launcher.path == "/opt/xzy-1"
+        assert answer.launcher is not None
+        assert answer.launcher.path == "/opt/xzy-1"
 
     def test_a_wildcard_above_the_last_component_matches_nothing(self):
         # The parent spelled with a literal '*' lists a file the last
@@ -151,7 +152,8 @@ class TestTheEmulatorIsFoundTheWayESDEFindsIt:
         rules = layered({"X": EmulatorRules(static_paths=("/opt/x (1)[a]*",))})
         view = View(files={"/opt/x (1)[a]-z"}, dirs={"/opt": ("x (1)[a]-z",)})
         answer = resolve(rules, view, "%EMULATOR_X% %ROM%")
-        assert answer.launcher is not None and answer.launcher.path == "/opt/x (1)[a]-z"
+        assert answer.launcher is not None
+        assert answer.launcher.path == "/opt/x (1)[a]-z"
 
     def test_a_symlink_counts_whatever_it_points_at(self):
         view = View(links={LAUNCHER})
@@ -175,7 +177,8 @@ class TestTheEmulatorIsFoundTheWayESDEFindsIt:
         view = View(files={"/roms///tools/y/"}, rom="/roms/")
         answer = resolve(rules, view, "%EMULATOR_X% %ROM%")
         assert view.asked[0] == "/app/retrodeck/components/es-de/bin/x"
-        assert answer.launcher is not None and answer.launcher.path == "/roms/tools/y"
+        assert answer.launcher is not None
+        assert answer.launcher.path == "/roms/tools/y"
 
     def test_a_rompath_nobody_can_resolve_stops_the_walk(self):
         rules = layered({"X": EmulatorRules(static_paths=("%ROMPATH%/x", "/later"))})
@@ -283,7 +286,8 @@ class TestTheCoreIsFoundThroughTheCorepathRules:
     def test_no_corepath_holding_it_is_not_installed(self):
         answer = resolve(layered(RETROARCH, CORES), View(files={RA_FILE}), LIBRETRO, loads_core=True)
         assert answer.availability == atlas.AVAILABILITY_NOT_INSTALLED
-        assert answer.launcher is None and answer.core_path is None
+        assert answer.launcher is None
+        assert answer.core_path is None
         assert [(c.code, dict(c.data)) for c in answer.caveats] == [
             (
                 atlas.CAVEAT_CORE_NOT_INSTALLED,
@@ -338,7 +342,8 @@ class TestRunGameIsComparedNotFollowed:
         rules = {"DOLPHIN": EmulatorRules(static_paths=("~/bin/dolphin", LAUNCHER))}
         view = View(files={LAUNCHER, f"{HOME}/bin/dolphin"})
         answer = resolve(layered(rules, shipped=self.shipped(rules)), view, STANDALONE)
-        assert answer.launcher is not None and answer.launcher.path == f"{HOME}/bin/dolphin"
+        assert answer.launcher is not None
+        assert answer.launcher.path == f"{HOME}/bin/dolphin"
         assert self.note(answer) == [LAUNCHER]
 
     def test_a_custom_definition_run_game_never_reads(self):

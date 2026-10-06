@@ -909,6 +909,9 @@ _FLATPAK_SANDBOX_OWN = frozenset(("etc", "tmp", "dev", "proc", "sys"))
 # flatpak-exports.c:547-550, :640-643 @ 1.16.6), and each merged-``/usr``
 # root directory recreated there the way the host has it (:559-597).
 _RUN_HOST = "/run/host"
+# The removable-media root, which a ``host`` grant exports by name
+# (flatpak-context.c:2884-2888).
+_RUN_MEDIA = "/run/media"
 
 
 class _Hidden:
@@ -1088,10 +1091,13 @@ def _revocations_read(machine: Machine, grants: _FlatpakGrants) -> _FlatpakGrant
     goes to ``unread``: whether it masks is not known.
     """
     kinds = {path: machine.path_kind(path) for path in grants.hidden}
-    return _dc_replace(
-        grants,
-        hidden=tuple(path for path, kind in kinds.items() if kind == KIND_DIRECTORY),
-        unread=tuple(path for path, kind in kinds.items() if kind == KIND_INACCESSIBLE),
+    return cast(
+        _FlatpakGrants,
+        _dc_replace(
+            grants,
+            hidden=tuple(path for path, kind in kinds.items() if kind == KIND_DIRECTORY),
+            unread=tuple(path for path, kind in kinds.items() if kind == KIND_INACCESSIBLE),
+        ),
     )
 
 
@@ -1246,7 +1252,7 @@ class _SandboxLaunchView:
             *self.grants.unread,
         ]
         first = path.split("/")[1] if path != "/" else ""
-        shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, "/run/media")
+        shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, _RUN_MEDIA)
         if self.grants.host and not shared and first in _FLATPAK_HOST_HIDDEN:
             roots.append("/" + first)
         return max((root for root in roots if _under(path, root)), key=len, default=None)
@@ -16103,8 +16109,8 @@ def _host_export_prefix(path: str) -> str | None:
     A ``host`` grant binds every root entry except flatpak's own reserved
     names, plus ``/run/media`` explicitly (flatpak-context.c:2856-2888).
     """
-    if path == "/run/media" or path.startswith("/run/media/"):
-        return "/run/media"
+    if path == _RUN_MEDIA or path.startswith(_RUN_MEDIA + "/"):
+        return _RUN_MEDIA
     first = path.split("/", 2)[1] if path.startswith("/") else ""
     if first and first not in _FS_HOST_UNMOUNTED:
         return f"/{first}"
@@ -18368,6 +18374,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     # (es-app/src/FileData.cpp:2398-2763 there, :2285-2650 upstream). The
     # deploy names its build in components/es-de/component_version.
     ESDE_FORK_BUILD = "retrodeck-main-20260926-172324"
+    # RetroDECK's direct start, under the deploy's files/.
+    _RUN_GAME_SH = "libexec/run_game.sh"
     # The deployed lines the launch lookup's reading of RetroDECK's scripts
     # rests on, as (file under the deploy's files/, line, text the line
     # holds): ES-DE's --home, the find rules run_game.sh reads, and
@@ -18382,16 +18390,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             7,
             'es_find_rules="/app/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml"',
         ),
-        ("libexec/run_game.sh", 232, "(%EMULATOR_[A-Z0-9_]+%)"),
-        ("libexec/run_game.sh", 293, '"%EMULATOR_OS-SHELL%"/"/bin/sh"'),
-        ("libexec/run_game.sh", 369, "find_emulator() {"),
-        ("libexec/run_game.sh", 374, "xmllint --xpath \"//emulator[@name='$emulator_name']\" \"$es_find_rules\""),
-        ("libexec/run_game.sh", 383, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
-        ("libexec/run_game.sh", 385, 'if [ -x "$(command -v "$command_path")" ]; then'),
-        ("libexec/run_game.sh", 389, "//rule[@type='systempath']/entry"),
-        ("libexec/run_game.sh", 394, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
-        ("libexec/run_game.sh", 395, 'if [ -x "$command_path" ]; then'),
-        ("libexec/run_game.sh", 399, "//rule[@type='staticpath']/entry"),
+        (_RUN_GAME_SH, 232, "(%EMULATOR_[A-Z0-9_]+%)"),
+        (_RUN_GAME_SH, 293, '"%EMULATOR_OS-SHELL%"/"/bin/sh"'),
+        (_RUN_GAME_SH, 369, "find_emulator() {"),
+        (_RUN_GAME_SH, 374, "xmllint --xpath \"//emulator[@name='$emulator_name']\" \"$es_find_rules\""),
+        (_RUN_GAME_SH, 383, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
+        (_RUN_GAME_SH, 385, 'if [ -x "$(command -v "$command_path")" ]; then'),
+        (_RUN_GAME_SH, 389, "//rule[@type='systempath']/entry"),
+        (_RUN_GAME_SH, 394, "sed -n 's/.*<entry>\\(.*\\)<\\/entry>.*/\\1/p'"),
+        (_RUN_GAME_SH, 395, 'if [ -x "$command_path" ]; then'),
+        (_RUN_GAME_SH, 399, "//rule[@type='staticpath']/entry"),
     )
 
     def _find_rules(self) -> LayeredFindRules:
