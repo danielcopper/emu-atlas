@@ -41,6 +41,7 @@ from typing import (
 from dataclasses import dataclass, field, replace as _dc_replace
 
 from . import _xml as _ET
+from ._question import one_question
 from . import whdload
 from .content_path import (
     content_basename,
@@ -374,8 +375,7 @@ from .retroarch_cfg import (
     chain_value,
     expand_home,
     is_app_relative,
-    parse_cfg,
-    parse_cfg_text,
+    parse_cfg_once,
     resolve_layout,
 )
 
@@ -859,7 +859,8 @@ def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
     Where the core binaries live is a question every arrangement asks the same
     way; only which app's spellings the cfg is written in differs.
     """
-    resolved = sandbox.cfg_path("libretro_directory", parse_cfg_text(global_text).get("libretro_directory"))
+    raw = parse_cfg_once(global_text).values.get("libretro_directory")
+    resolved = sandbox.cfg_path("libretro_directory", raw)
     return resolved.path if resolved is not None else None
 
 
@@ -5016,7 +5017,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         gates=gates,
         layers=tuple(layers),
         layout=layout,
-        global_values=parse_cfg_text(query.global_text) if query.global_text is not None else {},
+        global_values=parse_cfg_once(query.global_text).values if query.global_text is not None else {},
         reachable=saves_root.reachable,
         platform_default_dir=platform_default_dir,
         retroarch_config_dir=retroarch_config_dir,
@@ -14836,7 +14837,7 @@ def _retroarch_soft_patch_candidates(
     if core.not_installed is not None:
         return core.not_installed
 
-    parsed = parse_cfg_text(query.global_text) if query.global_text is not None else {}
+    parsed = parse_cfg_once(query.global_text).values if query.global_text is not None else {}
     caveats = [*query.extra_caveats, *core.caveats]
     sources = [*query.extra_sources, *core.sources]
 
@@ -14963,7 +14964,7 @@ def _retroarch_firmware_context(
     # resolves silently to the platform default, a line the parser refused
     # looks exactly like a key nobody wrote — and the user did write it. The
     # card route states the same fact for the same reason.
-    read = parse_cfg(global_text) if global_text is not None else ParsedCfg({})
+    read = parse_cfg_once(global_text) if global_text is not None else ParsedCfg({})
     parsed = read.values
     # The installation's own health leads: whether the arrangement is broken is
     # the most general thing about any answer, so it stands before what this
@@ -15229,14 +15230,17 @@ class _FirmwareQueries:
         """The handle's live read, stated — the context all four questions answer from."""
         return self._stated(self._read_firmware_context())
 
+    @one_question
     def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer:
         """Does *core_so* need firmware, where does each file go, and is it there?"""
         return _resolve_for_core(self._machine, self._firmware_context(), core_so=core_so, verify=verify)
 
+    @one_question
     def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators can run *system*, and what does each of them want?"""
         return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
 
+    @one_question
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
         """Every installed emulator's firmware, plus what is lying around unclaimed.
 
@@ -15248,6 +15252,7 @@ class _FirmwareQueries:
         """
         return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
 
+    @one_question
     def identify_firmware(
         self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None
     ) -> FirmwareIdentification:
@@ -17006,6 +17011,7 @@ class EmulatorEntry:
         """
         return (*self._caveats, *self._launch.caveats)
 
+    @one_question
     def savefile_location(self, *, content_path: str | None = None) -> SavefilePlacement | Unresolved:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
@@ -17022,6 +17028,7 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
+    @one_question
     def savestate_location(
         self, *, content_path: str | None = None
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
@@ -17042,6 +17049,7 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
+    @one_question
     def texture_pack_location(self, *, content_path: str | None = None) -> TexturePlacement | Unresolved:
         """Where this emulator reads texture packs — the emulator taken from the catalogue.
 
@@ -17062,6 +17070,7 @@ class EmulatorEntry:
             self._spec, self._caveats, content_path=content_path
         )
 
+    @one_question
     def mod_location(self, *, content_path: str | None = None) -> ModPlacement | Unresolved:
         """Where this emulator reads mods — the emulator taken from the catalogue.
 
@@ -17693,6 +17702,7 @@ class _CatalogueQueries:
 
     kind: str
 
+    @one_question
     def standalone_firmware_token(self, command: str) -> str | None:
         """The emulator identity *command* states, for the firmware seam.
 
@@ -17702,6 +17712,7 @@ class _CatalogueQueries:
         """
         return emulator_token(command)
 
+    @one_question
     def entry_emulator(self, spec: EmulatorSpec) -> str | None:
         """Which emulator this entry launches — the catalogue's reading by default.
 
@@ -17720,6 +17731,7 @@ class _CatalogueQueries:
         """
         return spec.emulator
 
+    @one_question
     def standalone_firmware_homes(self, command: str) -> "_XdgHomes | None":
         """The per-entry override of the context's standalone bases — none by default.
 
@@ -17731,6 +17743,7 @@ class _CatalogueQueries:
         del command
         return None
 
+    @one_question
     def standalone_firmware_sandbox(self, homes: "_XdgHomes") -> "_Sandbox | None":
         """The per-entry override of the context's sandbox — none by default.
 
@@ -17746,6 +17759,7 @@ class _CatalogueQueries:
     def _catalogue_absence(self) -> Caveat:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
 
+    @one_question
     def systems(self) -> SystemsAnswer:
         """Every system the frontend catalogue declares, sorted."""
         answer, version = self._systems_answer()
@@ -17756,6 +17770,7 @@ class _CatalogueQueries:
     def _platform_view(self) -> tuple[_PlatformView, str | None]:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
 
+    @one_question
     def systems_for_platform(self, vocabulary: str, value: str) -> PlatformSystemsAnswer:
         """Which systems here answer to a public platform id, and how firmly.
 
@@ -17824,6 +17839,7 @@ class _CatalogueQueries:
             caveats=(*view.caveats, *tail),
         )
 
+    @one_question
     def platform_ids(self, system: str) -> SystemPlatformsAnswer:
         """One system's platform tags and their public identities, status-qualified.
 
@@ -17914,6 +17930,7 @@ class _CatalogueQueries:
             (*view.caveats, *notes, *tail),
         )
 
+    @one_question
     def rom_location(self, system: str) -> RomPlacement:
         """Where *system*'s ROMs live, and which extensions the frontend launches.
 
@@ -17933,6 +17950,7 @@ class _CatalogueQueries:
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
+    @one_question
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer:
         """The emulators that can launch *system*, in launch-priority order.
 
@@ -17969,6 +17987,7 @@ class _CatalogueQueries:
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
+    @one_question
     def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer:
         """Whether *content_path* launches as *system* content here — and why not, when not.
 
@@ -18011,6 +18030,7 @@ class _CatalogueQueries:
     # already read it — asking for it here would read the marker a second time
     # inside one query, and the two reads could disagree.
 
+    @one_question
     def health(self) -> Health:
         raise NotImplementedError  # pragma: no cover - every handle answers it
 
@@ -18193,6 +18213,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             fallback = os.path.join(root, fallback_subdir)
         return fallback, f"default: {key} unset → {fallback}"
 
+    @one_question
     def root(self) -> str:
         """The RetroDECK home directory (``rd_home_path`` or the fallback).
 
@@ -18206,14 +18227,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return self._config_path(self._read_marker()[0], "rd_home_path", "")[0]
 
+    @one_question
     def saves_root(self) -> str:
         """The RetroDECK saves root (``saves_path`` or the fallback)."""
         return self._config_path(self._read_marker()[0], "saves_path", "saves")[0]
 
+    @one_question
     def bios_dir(self) -> str:
         """The RetroDECK BIOS directory (``bios_path`` or the fallback)."""
         return self._config_path(self._read_marker()[0], "bios_path", "bios")[0]
 
+    @one_question
     def roms_dir(self) -> str | None:
         """The ROM root the frontend substitutes for ``%ROMPATH%`` — or ``None``.
 
@@ -18264,6 +18288,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             )
         return Health(tuple(issues))
 
+    @one_question
     def health(self) -> Health:
         """Installation health — marker readable and parseable, roots present, catalogue loadable.
 
@@ -18870,6 +18895,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return GamelistSelections(system_label=None, per_game={})
         return parse_gamelist(text)
 
+    @one_question
     def gamelist_selections(self, system: str) -> GamelistSelections:
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
@@ -19149,6 +19175,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
+    @one_question
     def savefile_location(
         self,
         *,
@@ -19176,6 +19203,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             system=system,
         )
 
+    @one_question
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement | Unresolved:
@@ -19215,6 +19243,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
+    @one_question
     def screenshot_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ScreenshotPlacement | Unresolved:
@@ -19251,6 +19280,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
+    @one_question
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved:
@@ -19298,6 +19328,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
+    @one_question
     def mod_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ModPlacement | Unresolved:
@@ -19315,6 +19346,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             config, marker_issues, content_path=content_path, core_so=core_so
         )
 
+    @one_question
     def soft_patch_candidates(
         self, content_path: str, *, core_so: str | None = None
     ) -> SoftPatchAnswer | Unresolved:
@@ -19383,6 +19415,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         config, marker_issues = self._read_marker()
         return self._firmware_context_from(config, marker_issues)
 
+    @one_question
     def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
 
@@ -19434,6 +19467,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             (*answer.caveats[:index], *status, *answer.caveats[index:]),
         )
 
+    @one_question
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
         """Every installed emulator's firmware here, plus what is lying around unclaimed.
 
@@ -19518,6 +19552,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return (*status, *anchor.caveats)
         return (*status, *anchor.caveats, _per_game_override_caveat(override_label, spec))
 
+    @one_question
     def entry_savefile_location(
         self,
         spec: EmulatorSpec,
@@ -19572,6 +19607,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         return _entry_savefile_with_caveats(placement, extra)
 
+    @one_question
     def entry_savestate_location(
         self,
         spec: EmulatorSpec,
@@ -19662,6 +19698,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             xdg_pinned=True,
         )
 
+    @one_question
     def entry_texture_pack_location(
         self,
         spec: EmulatorSpec,
@@ -19717,6 +19754,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
         return _entry_texture_with_caveats(placement, extra)
 
+    @one_question
     def entry_mod_location(
         self,
         spec: EmulatorSpec,
@@ -19978,18 +20016,22 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         fallback = os.path.join(self._home, "Emulation", fallback_subdir)
         return fallback, f"default: {key} unset → {fallback} (EmuDeck default)"
 
+    @one_question
     def root(self) -> str:
         """The EmuDeck ``Emulation`` tree root (parent of ``romsPath``)."""
         return os.path.dirname(self._setting_path(self._read_marker()[0], "romsPath", "roms")[0])
 
+    @one_question
     def saves_root(self) -> str:
         """EmuDeck's saves root (``savesPath`` or the default)."""
         return self._setting_path(self._read_marker()[0], "savesPath", "saves")[0]
 
+    @one_question
     def bios_dir(self) -> str:
         """EmuDeck's BIOS directory (``biosPath`` or the default)."""
         return self._setting_path(self._read_marker()[0], "biosPath", "bios")[0]
 
+    @one_question
     def roms_dir(self) -> str | None:
         """The ROM root the frontend substitutes for ``%ROMPATH%`` — or ``None``.
 
@@ -20057,6 +20099,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         return Health(tuple(issues))
 
+    @one_question
     def health(self) -> Health:
         """Installation health — marker, roots, companion RetroArch config, catalogue loadable.
 
@@ -20896,6 +20939,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return (*status, *relocation, *anchor.caveats)
         return (*status, *relocation, *anchor.caveats, _per_game_override_caveat(override_label, spec))
 
+    @one_question
     def entry_savefile_location(
         self,
         spec: EmulatorSpec,
@@ -21186,6 +21230,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return _EmuDeckGate(launch, variant, None, self._variant_reason(launch, variant))
         return _EmuDeckGate(launch, variant, homes, None)
 
+    @one_question
     def entry_emulator(self, spec: EmulatorSpec) -> str | None:
         """The catalogue's reading, plus the launcher script EmuDeck launches through.
 
@@ -21212,6 +21257,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         launcher = _emudeck_launcher(spec.command)
         return None if launcher is None else launcher[0]
 
+    @one_question
     def standalone_firmware_token(self, command: str) -> str | None:
         """The command's word, variant-gated — EmuDeck's own reading.
 
@@ -21235,6 +21281,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         homes = self._homes_for_token(variant, launch.token)
         return launch.token if homes is not None else None
 
+    @one_question
     def standalone_firmware_homes(self, command: str) -> _XdgHomes | None:
         """The homes the gated launch reads — per entry, because the variant is.
 
@@ -21248,6 +21295,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None
         return self._homes_for_token(self._launch_variant(launch), launch.token)
 
+    @one_question
     def standalone_firmware_sandbox(self, homes: _XdgHomes) -> _Sandbox:
         """The firmware seam's sandbox for one launch — the placement routes' own.
 
@@ -21297,6 +21345,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return _Sandbox(self._machine, self._home, homes.flatpak, expansion_home=self._home)
 
+    @one_question
     def entry_savestate_location(
         self,
         spec: EmulatorSpec,
@@ -21382,6 +21431,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
         )
 
+    @one_question
     def entry_texture_pack_location(
         self,
         spec: EmulatorSpec,
@@ -21411,6 +21461,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return placement
         return _entry_texture_with_caveats(placement, self._entry_caveats_for(spec, content_path))
 
+    @one_question
     def entry_mod_location(
         self,
         spec: EmulatorSpec,
@@ -21572,6 +21623,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             revocation=context.revocation,
         )
 
+    @one_question
     def savefile_location(
         self,
         *,
@@ -21595,6 +21647,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._query(content_path=content_path, core_so=core_so, system=system),
         )
 
+    @one_question
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement | Unresolved:
@@ -21617,6 +21670,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def screenshot_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ScreenshotPlacement | Unresolved:
@@ -21625,6 +21679,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved:
@@ -21646,6 +21701,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def mod_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ModPlacement | Unresolved:
@@ -21661,6 +21717,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def soft_patch_candidates(
         self, content_path: str, *, core_so: str | None = None
     ) -> SoftPatchAnswer | Unresolved:
@@ -21742,6 +21799,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         cfg = self._machine.read_text(self._companion_cfg_path())
         return self._firmware_context_from(settings, marker_issues, cfg)
 
+    @one_question
     def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
         """Which emulators this EmuDeck's ES-DE offers for *system*, and what each wants.
 
@@ -21815,6 +21873,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             answer, (*answer.caveats[:index], *inserted, *answer.caveats[index:])
         )
 
+    @one_question
     def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
         """Every installed emulator's firmware here, plus what is lying around unclaimed.
 
@@ -21891,6 +21950,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
     def _cfg_path(self) -> str:
         return os.path.join(self._home, self._cfg_suffix)
 
+    @one_question
     def root(self) -> str:
         """The RetroArch config directory (the folder holding ``retroarch.cfg``)."""
         return os.path.dirname(self._cfg_path())
@@ -21911,6 +21971,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             )
         )
 
+    @one_question
     def health(self) -> Health:
         """Bare installs: the cfg is the marker — health is its read status."""
         return self._health_from(self._machine.read_text(self._cfg_path()).status)
@@ -21982,6 +22043,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             revocation=revocation,
         )
 
+    @one_question
     def savefile_location(
         self,
         *,
@@ -22005,6 +22067,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._query(content_path=content_path, core_so=core_so, system=system),
         )
 
+    @one_question
     def savestate_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> SavestatePlacement | Unresolved:
@@ -22019,6 +22082,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def screenshot_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ScreenshotPlacement | Unresolved:
@@ -22033,6 +22097,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def texture_pack_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> TexturePlacement | Unresolved:
@@ -22047,6 +22112,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def mod_location(
         self, *, content_path: str | None = None, core_so: str | None = None
     ) -> ModPlacement | Unresolved:
@@ -22061,6 +22127,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
 
+    @one_question
     def soft_patch_candidates(
         self, content_path: str, *, core_so: str | None = None
     ) -> SoftPatchAnswer | Unresolved:
@@ -22236,6 +22303,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             None,
         )
 
+    @one_question
     def entry_savefile_location(
         self,
         spec: EmulatorSpec,
@@ -22265,6 +22333,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             ),
         )
 
+    @one_question
     def entry_savestate_location(
         self,
         spec: EmulatorSpec,
@@ -22287,6 +22356,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
         )
 
+    @one_question
     def entry_texture_pack_location(
         self,
         spec: EmulatorSpec,
@@ -22305,6 +22375,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
         )
 
+    @one_question
     def entry_mod_location(
         self,
         spec: EmulatorSpec,
