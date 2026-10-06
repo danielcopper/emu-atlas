@@ -65,6 +65,7 @@ from .placement import (
     SoftPatchAnswer,
     TexturePlacement,
     Unresolved,
+    checked_cwd,
 )
 
 AnswerT = TypeVar("AnswerT")
@@ -131,31 +132,42 @@ class EveryInstallation:
         content_path: str | None = None,
         core_so: str | None = None,
         system: str | None = None,
+        cwd: str | None = None,
     ) -> tuple[InstallationAnswer[SavefilePlacement | Unresolved], ...]:
         """Where each installation keeps this save — one placement per arrangement.
 
         An installation that does not have the named core refuses rather than
         answering, so an answer here is a placement *or* that refusal: the same
         question can be answerable on one arrangement and not on its neighbour,
-        which is exactly what this route exists to show.
+        which is exactly what this route exists to show. ``cwd`` is the
+        launch's working folder, checked here — so a value that is not an
+        absolute path raises even with no installation to ask — and handed to
+        every handle.
         """
+        checked_cwd(cwd)
         return self._ask(
             lambda installation: installation.savefile_location(
-                content_path=content_path, core_so=core_so, system=system
+                content_path=content_path, core_so=core_so, system=system, cwd=cwd
             )
         )
 
     def savestate_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        cwd: str | None = None,
     ) -> tuple[InstallationAnswer[SavestatePlacement | Unresolved], ...]:
         """Where each installation keeps this content's savestates, or refuses to.
 
         Refuses on the same condition the savefile route does: a core this
-        installation does not have.
+        installation does not have. ``cwd`` is taken as the savefile route
+        takes it.
         """
+        checked_cwd(cwd)
         return self._ask(
             lambda installation: installation.savestate_location(
-                content_path=content_path, core_so=core_so
+                content_path=content_path, core_so=core_so, cwd=cwd
             )
         )
 
@@ -261,26 +273,44 @@ class EveryInstallation:
         return self._ask(lambda installation: installation.launchable(system, content_path))
 
     def firmware_for_core(
-        self, core_so: str, *, verify: bool = False
+        self, core_so: str, *, verify: bool = False, cwd: str | None = None
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
-        """What this core wants, and where, under each installation's firmware root."""
+        """What this core wants, and where, under each installation's firmware root.
+
+        ``cwd`` is taken as :meth:`firmware_for_system` takes it; no core's
+        firmware depends on it.
+        """
+        checked_cwd(cwd)
         return self._ask(
-            lambda installation: installation.firmware_for_core(core_so, verify=verify)
+            lambda installation: installation.firmware_for_core(core_so, verify=verify, cwd=cwd)
         )
 
     def firmware_for_system(
-        self, system: str, *, verify: bool = False
+        self, system: str, *, verify: bool = False, cwd: str | None = None
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
-        """Which cores run this system under each installation, and what each wants."""
+        """Which cores run this system under each installation, and what each wants.
+
+        ``cwd`` is the launch's working folder, an absolute host path: it
+        completes a standalone emulator's relative configured path (xemu's),
+        is checked here — so a value that is not absolute raises even with no
+        installation to ask — and is handed to every handle.
+        """
+        checked_cwd(cwd)
         return self._ask(
-            lambda installation: installation.firmware_for_system(system, verify=verify)
+            lambda installation: installation.firmware_for_system(system, verify=verify, cwd=cwd)
         )
 
     def firmware_inventory(
-        self, *, verify: bool = False
+        self, *, verify: bool = False, cwd: str | None = None
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
-        """Each installation's whole firmware tree — declared, present, and unclaimed."""
-        return self._ask(lambda installation: installation.firmware_inventory(verify=verify))
+        """Each installation's whole firmware tree — declared, present, and unclaimed.
+
+        ``cwd`` is taken as :meth:`firmware_for_system` takes it.
+        """
+        checked_cwd(cwd)
+        return self._ask(
+            lambda installation: installation.firmware_inventory(verify=verify, cwd=cwd)
+        )
 
     def identify_firmware(
         self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None

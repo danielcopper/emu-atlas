@@ -9344,6 +9344,308 @@
       }
     },
     {
+      "name": "xemu-a-relative-disk-image-below-a-cwd-the-sandbox-would-move",
+      "rationale": "xemu's relative hdd_path below a working folder spelled under /var/config — a path the emulator's sandbox maps into the app's config tree under the home. The folder is the caller's host path and is used as written, so the image's directory is /var/config/launch/images.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = 'images/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/var/config/launch/images"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox",
+          "cwd": "/var/config/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/var/config/launch/images",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/var/config/launch/images",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/xbox/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "token": "XEMU",
+                "image": "/var/config/launch/images/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "images/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "xemu-a-relative-disk-image-filled-by-the-callers-cwd",
+      "rationale": "xemu's hdd_path is relative and the caller names the working folder the launch will use. The disk image's directory is that folder joined with the value's own directory — a host path, never translated — the cwd hole and the launch caveat are gone, and the directory is walked for links like any other. The root kind stays working_directory: the image still hangs off the launch's own folder.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = 'images/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/launch/images"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/launch/images",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/launch/images",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/xbox/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "token": "XEMU",
+                "image": "/home/deck/launch/images/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "images/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "xemu-a-relative-disk-image-below-a-dead-link-cwd",
+      "rationale": "xemu's hdd_path is relative and the working folder the caller names is a symlink into nothing. The image's directory below it is walked like any other, so the dead link is stated as it is for an absolute directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin'\nhdd_path = 'images/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu",
+          "/home/deck/launch": "/mnt/gone/launch"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/launch/images",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/launch/images",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/xbox/xemu",
+                "files": [
+                  "xbox-eeprom.bin"
+                ],
+                "granularity": "shared-file",
+                "role": "settings"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "token": "XEMU",
+                "image": "/home/deck/launch/images/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            },
+            {
+              "code": "dead-symlink",
+              "data": {
+                "link": "/home/deck/launch",
+                "target": "/mnt/gone/launch",
+                "resolved": "/mnt/gone/launch/images"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "images/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/saves/xbox/xemu/xbox-eeprom.bin",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "duckstation-a-case-variant-spelling-of-the-card-keys-governs",
       "rationale": "settings.ini goes through CSimpleIniA (ini_settings_interface.h:65 at 64655818e), so [memorycards] card1type, card1path and directory are the canonical keys to the running emulator. The Shared slot, its relative card name and the configured memory-card directory all govern; an exact-case lookup would have answered the per-game default below the compiled memcards directory instead (#295). The readings quote the spelling the file carries, because that line is the one a user must edit.",
       "input": {
@@ -13873,6 +14175,297 @@
       }
     },
     {
+      "name": "dolphin-a-relative-gba-cartridge-path-below-a-cwd-the-sandbox-would-move",
+      "rationale": "The working folder the caller names is a host path, and atlas does not translate it: /var/config/launch is a spelling the emulator's sandbox maps into the app's own config tree under the home, yet the .sav is read at /var/config/launch/gba on this host, exactly as named.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = gba/Pokemon Ruby.gba\n",
+          "/var/config/launch/gba/Pokemon Ruby.sav": "ssssssssssssssss"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/var/config/launch/gba"
+        ],
+        "entry_savefile_query": {
+          "system": "gc",
+          "cwd": "/var/config/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/var/config/launch/gba",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Ruby.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/var/config/launch/gba",
+                "files": [
+                  "Pokemon Ruby.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-relative-gba-cartridge-path-filled-by-the-callers-cwd",
+      "rationale": "Slot A's GBA cartridge path is relative, and the caller names the working folder the launch will use. The .sav beside the cartridge is then read below that folder — a host path, not translated through the sandbox — like any absolute one: it holds bytes, so it is the shared-file battery group the adapter writes back, and save-dir-launch-dependent is no longer stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = gba/Pokemon Ruby.gba\n",
+          "/home/deck/launch/gba/Pokemon Ruby.sav": "ssssssssssssssss"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launch/gba"
+        ],
+        "entry_savefile_query": {
+          "system": "gc",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/launch/gba",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Ruby.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/launch/gba",
+                "files": [
+                  "Pokemon Ruby.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-a-relative-gba-cartridge-path-in-a-cwd-without-the-sav",
+      "rationale": "Slot A's GBA cartridge path is relative and the caller names the working folder, but no .sav lies below it. Read like an absolute .sav that is missing, it gives the cartridge no size to save with, so the slot keeps nothing — the answer is the one an absolute missing .sav gets, not a launch-dependence.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 9\nSlotB = 255\nAgpCartAPath = gba/Pokemon Ruby.gba\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "gc",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "token": "DOLPHIN",
+                "mode": "agp+none"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "agp+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartAPath",
+                "value": "gba/Pokemon Ruby.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "255",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "dolphin-a-gba-cartridge-sav-this-host-cannot-examine",
       "rationale": "The directory holding the configured cartridge cannot be read, so whether its .sav exists and has a size — which is whether the cartridge keeps a save at all — could not be established. The slot is not called empty: no group, granularity shared-file, and core-mode-unestablished with reason slot-holds-agp-device names the slot.",
       "input": {
@@ -15976,6 +16569,163 @@
                 "key": "user-auto-connect",
                 "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "melonds-a-relative-save-path-filled-by-the-callers-cwd",
+      "rationale": "melonDS's SaveFilePath is the relative value saves, which the emulator opens from the launching process's working directory, and the caller names that folder. The save directory is the folder joined with the value, the cwd hole and the launch caveat are gone, and the directory is walked like any other; the mode stays cwd-relative and the root kind working_directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSaveFilePath = \"saves\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/launch/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/launch/saves",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/launch/saves",
+                "files": [
+                  "Some Game.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cwd-relative",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "saves",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "melonds-a-relative-save-path-below-a-dead-link-cwd",
+      "rationale": "melonDS's relative SaveFilePath asked with a working folder that is a symlink into nothing: the save directory below it is walked like any configured directory, so the dead link is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSaveFilePath = \"saves\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds",
+          "cwd": "/home/deck/launch"
+        },
+        "symlinks": {
+          "/home/deck/launch": "/mnt/gone/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/launch/saves",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/launch/saves",
+                "files": [
+                  "Some Game.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "dead-symlink",
+              "data": {
+                "link": "/home/deck/launch",
+                "target": "/mnt/gone/launch",
+                "resolved": "/mnt/gone/launch/saves"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cwd-relative",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "saves",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
               }
             ],
             "alternatives": []

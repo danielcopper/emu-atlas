@@ -536,7 +536,9 @@ CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
 # Distinct from ``firmware-root-unusable`` (a relative *root* refusing every
 # declaration resolved against it) and from ``firmware-path-names-no-file``
 # (a value naming no file at all): this value names its file perfectly well —
-# where it lands is what only the launch decides.
+# where it lands is what only the launch decides. A question asked with
+# ``cwd=`` has that decision in hand, so the file is an ordinary requirement
+# there and this caveat is not stated.
 CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT = "firmware-path-launch-dependent"
 # Distinct from CAVEAT_FIRMWARE_ROOT_MISSING, which says the root is not there:
 # this one says the configured value cannot name a place at all, so no
@@ -3275,6 +3277,12 @@ class FirmwareContext:
     # source paths it states are the distribution's own spellings.
     distribution: str | None = None
     distribution_sandbox: SandboxTranslation | None = None
+    # The working folder the launch will use, where the question was asked
+    # with one: not a read of the machine but the asker's own fact, riding
+    # here so it reaches a standalone emulator that opens a relative
+    # configured path from its own working directory (xemu). ``None`` leaves
+    # that path a launch-dependent statement.
+    cwd: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -6265,6 +6273,7 @@ def _melonds_standalone_core(
     sandbox: SandboxTranslation | None,
     xdg_pinned: bool,
     verify: bool,
+    cwd: str | None = None,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """melonDS's expectations: ``verifySetup`` performed as reads.
 
@@ -6371,6 +6380,7 @@ def _pcsx2_standalone_core(
     sandbox: SandboxTranslation | None,
     xdg_pinned: bool,
     verify: bool,
+    cwd: str | None = None,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """PCSX2's expectation: the image named inside the directory named.
 
@@ -6624,6 +6634,53 @@ def _xemu_unreadable_core(entry: CatalogueEntry, path: str, why: str) -> CoreFir
     )
 
 
+def _xemu_file_host(
+    sandbox: SandboxTranslation | None,
+    entry: CatalogueEntry,
+    card: StandaloneFirmwareCard,
+    key: str,
+    value: str,
+    cwd: str | None,
+) -> tuple[str | None, Caveat | None]:
+    """Where one ``[sys.files]`` value lands on this host — or the caveat saying why nowhere.
+
+    An absolute value goes through the sandbox map. A relative one opens from
+    the launch's working directory: *cwd*, the folder the caller names, is a
+    host path already and completes it with nothing to translate; without one
+    there is no destination to state.
+    """
+    if os.path.isabs(value):
+        return _sandbox_host_path(sandbox, entry, card, key, value)
+    if cwd is not None:
+        return os.path.join(cwd, value), None
+    # xemu opens the value relative to its own process's working directory
+    # (verbatim into the QEMU options, system/vl.c:2983-3095; probed with
+    # plain fopen/access, vl.c:2527-2535 and :2918 with osdep.h:645-653; no
+    # launch step chdirs, ui/xemu.c:1278-1379, all at v0.8.135) — a fact of
+    # the launch no read of this machine can establish, so no destination is
+    # stated and the caveat carries the anchor as data instead of a
+    # requirement carrying an invented one.
+    return None, Caveat(
+        CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT,
+        f"{entry.label}'s {key} is the relative value {value!r}, which xemu "
+        "opens relative to the working directory of the launching process "
+        "(the configured string is passed verbatim into the QEMU options, "
+        "system/vl.c:2983-3095, and opened with plain fopen/access, "
+        "vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — a "
+        "property of the launch, not of the machine, so no destination is "
+        f"stated for a file the emulator does ask for; fill '{HOLE_CWD}' with "
+        "the launcher's working directory to complete the path",
+        {
+            "label": entry.label,
+            "token": card.token,
+            "key": key,
+            "declared": value,
+            "need": NEED_REQUIRED,
+            "path": os.path.join(TEMPLATE_CWD, value),
+        },
+    )
+
+
 def _xemu_standalone_core(
     machine: Machine,
     entry: CatalogueEntry,
@@ -6636,6 +6693,7 @@ def _xemu_standalone_core(
     sandbox: SandboxTranslation | None,
     xdg_pinned: bool,
     verify: bool,
+    cwd: str | None = None,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """xemu's expectations: the three files in ``[sys.files]`` its documentation asks for.
 
@@ -6647,7 +6705,10 @@ def _xemu_standalone_core(
     disk does, and is claimed by both answers on purpose: xemu asks for one,
     and every save lives inside it. What ``need`` does not say is how hard
     each launch gate is, which is why the empty-setting caveat states the
-    consequence per file rather than once for all three.
+    consequence per file rather than once for all three. A relative value
+    opens from the launch's working directory: *cwd*, the host path the caller
+    names, completes it into a destination read like any other, and without
+    it the value is stated as launch-dependent instead.
     """
     del xdg_pinned  # xemu states one base, so no launch has a root to pick
     # Which home the file sits under is the settings table's to say — xemu's
@@ -6688,40 +6749,10 @@ def _xemu_standalone_core(
                 )
             )
             continue
-        if not os.path.isabs(value):
-            # xemu opens the value relative to its own process's working
-            # directory (verbatim into the QEMU options, system/vl.c:2983-3095;
-            # probed with plain fopen/access, vl.c:2527-2535 and :2918 with
-            # osdep.h:645-653; no launch step chdirs, ui/xemu.c:1278-1379, all
-            # at v0.8.135) — a fact of the launch no read of this machine can
-            # establish, so no destination is stated and the caveat carries the
-            # anchor as data instead of a requirement carrying an invented one.
-            caveats.append(
-                Caveat(
-                    CAVEAT_FIRMWARE_PATH_LAUNCH_DEPENDENT,
-                    f"{entry.label}'s {key} is the relative value {value!r}, which xemu "
-                    "opens relative to the working directory of the launching process "
-                    "(the configured string is passed verbatim into the QEMU options, "
-                    "system/vl.c:2983-3095, and opened with plain fopen/access, "
-                    "vl.c:2527-2535 and :2918 with osdep.h:645-653, at v0.8.135) — a "
-                    "property of the launch, not of the machine, so no destination is "
-                    f"stated for a file the emulator does ask for; fill '{HOLE_CWD}' with "
-                    "the launcher's working directory to complete the path",
-                    {
-                        "label": entry.label,
-                        "token": card.token,
-                        "key": key,
-                        "declared": value,
-                        "need": NEED_REQUIRED,
-                        "path": os.path.join(TEMPLATE_CWD, value),
-                    },
-                )
-            )
-            continue
-        host, untranslated = _sandbox_host_path(sandbox, entry, card, key, value)
+        host, unplaced = _xemu_file_host(sandbox, entry, card, key, value, cwd)
         if host is None:
-            assert untranslated is not None
-            caveats.append(untranslated)
+            assert unplaced is not None
+            caveats.append(unplaced)
             continue
         path = resolve_links(machine, host) or host
         found, checked, observed, _ = _observe(
@@ -7408,6 +7439,7 @@ def _duckstation_standalone_core(
     sandbox: SandboxTranslation | None,
     xdg_pinned: bool,
     verify: bool,
+    cwd: str | None = None,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """DuckStation's expectation: a directory, and whatever in it is a BIOS.
 
@@ -9238,6 +9270,7 @@ def _carded_standalone_core(
     sandbox: SandboxTranslation | None,
     xdg_pinned: bool,
     verify: bool,
+    cwd: str | None = None,
 ) -> tuple[CoreFirmware, list[Caveat]]:
     """A carded standalone entry, routed by the shape its card states.
 
@@ -9289,6 +9322,7 @@ def _carded_standalone_core(
             sandbox=sandbox,
             xdg_pinned=xdg_pinned,
             verify=verify,
+            cwd=cwd,
         )
     located = cast(CoreFirmware, replace(core, locating=locating_of_card(card)))
     return _claiming_what_it_read(machine, located), observed
@@ -9348,6 +9382,7 @@ def _standalone_entry_core(
             sandbox=sandbox,
             xdg_pinned=xdg_pinned,
             verify=verify,
+            cwd=context.cwd,
         )
     return (
         CoreFirmware(

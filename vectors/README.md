@@ -156,6 +156,12 @@ Each expectation is paired with the input key that asks it. Several may appear i
 `soft_patch_query` is the one family whose `content_path` is required rather than optional: the content is that
 question's subject — the patch files are named after it — so a vector asking it without one asks about no file at all.
 
+`cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
+on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `firmware_query`, and an
+`aggregate_query` whose `question` is `savefile_location` or `savestate_location`. Another family carrying one, or a
+value that is not absolute, is refused: the first would state an input no answer reflects, the second is one the library
+refuses at the call.
+
 Every single-question family may name `installation` (a handle kind) to choose which detected installation answers;
 without it the first one does. `aggregate_query` may not — asking the aggregate to choose is the one thing it does not
 do — and names its `question` instead.
