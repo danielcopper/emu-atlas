@@ -512,13 +512,14 @@ CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT = "firmware-path-escapes-root"
 # A file the core opens — at a declared place, or one its folder listing or
 # directory search keeps — lies inside the firmware root and is a link whose
 # chain ends outside it. Not a refusal: the core opens that place, the kernel
-# follows the link, and the bytes it reads are the target's — so a
-# requirement's ``path`` is the target and its content is judged there, while
-# this names the ``link`` and its ``target``, the one fact the rest of the
-# answer cannot show. Stated by the libretro routes, which have a firmware root
-# to leave, once per route that read the link, and by the unclaimed scan for a
-# link in the root nothing claims; a directory on the way out of the root is
-# still refused under the code above.
+# follows the link, and the bytes it reads are the target's — so its content
+# is judged there, and a file at a declared place is stated at the target,
+# while a file a listing or search found is stated under the entry it listed,
+# which is the ``link``. This names the ``link`` and its ``target``, the one
+# fact the rest of the answer cannot show. Stated by the libretro routes,
+# which have a firmware root to leave, once per route that read the link, and
+# by the unclaimed scan for a link in the root nothing claims; a directory on
+# the way out of the root is still refused under the code above.
 CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT = "firmware-file-linked-outside-root"
 CAVEAT_FIRMWARE_PATH_UNRESOLVABLE = "firmware-path-unresolvable"
 CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE = "firmware-path-names-no-file"
@@ -2065,10 +2066,16 @@ class FirmwareRequirement:
     per-file system override is looked up under.
     """
     path: str
-    """The absolute, resolved destination — where the file lands once every symlink on
-    the way is followed, stated whether or not one is there. Where the declared place
-    is a link leading out of the firmware root, this is the link's target and
-    ``firmware-file-linked-outside-root`` on the core names the link.
+    """The absolute destination — where the file lands once every symlink on the way is
+    followed, stated whether or not one is there. Where the declared place is a link
+    leading out of the firmware root, this is the link's target and
+    ``firmware-file-linked-outside-root`` on the core names the link as its ``link``.
+
+    A file a directory search picked (SwanStation's, and DuckStation's on its card) is
+    the one exception, and a deliberate one: it is stated under the entry the search
+    listed — the name the emulator lists and opens through any link there — so where
+    that entry is a link leading out of the root, this is the statement's ``link``
+    rather than its ``target``.
     """
     declared: str
     """The string the core spelled for this file, which is the name it will open —
@@ -4655,8 +4662,8 @@ def _candidates_linked_out(
             Caveat(
                 CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT,
                 f"{core_so} lists {path} in its folder, and it is a link leading out of the firmware "
-                f"root to {target} — the core reads the target, so whatever this answer says about "
-                "that file is about the target",
+                f"root to {target} — the core reads the target's bytes through it, and this answer "
+                "states the file under the name the core lists",
                 {"core_so": core_so, "link": path, "target": target, "need": need},
             )
         )
@@ -8025,8 +8032,8 @@ def _searched_directory(
         Caveat(
             CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT,
             f"{core_so} searches {directory} and keeps {path}, which is a link leading out of the "
-            f"firmware root to {target} — the core reads the target, so whatever this answer says "
-            "about that file is about the target",
+            f"firmware root to {target} — the core reads the target's bytes through it, and this "
+            "answer states the file under the name the search listed",
             {"core_so": core_so, "link": path, "target": target, "dir": directory},
         )
         for path, _ in kept
