@@ -511,6 +511,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-directory-holds-no-image",
     "firmware-path-inaccessible",
     "firmware-path-escapes-root",
+    "firmware-file-linked-outside-root",
     "firmware-path-unresolvable",
     "firmware-path-names-no-file",
     "firmware-path-launch-dependent",
@@ -1831,7 +1832,12 @@ def _validate_requirement_fields(
 
 
 def _validate_requirement_path(
-    name: str, entry: Any, root: str, named_by: frozenset[str], spelled: frozenset[str]
+    name: str,
+    entry: Any,
+    root: str,
+    named_by: frozenset[str],
+    spelled: frozenset[str],
+    linked: frozenset[str],
 ) -> None:
     # The root itself is a legal destination: LRPS2 declares the FOLDER
     # "pcsx2/bios", and RetroDECK links it back to the firmware root, so that
@@ -1840,10 +1846,17 @@ def _validate_requirement_path(
     # A card-declared requirement is the exception to containment: its
     # destination is the standalone emulator's own tree (Cemu probes its keys
     # below its user data path), which no firmware root contains.
+    #
+    # *linked* is the other: a file at a place inside the root that is a link
+    # leading out of it is answered at its target, and the answer must say so
+    # — firmware-file-linked-outside-root, whose ``target`` this set holds.
+    # Without a statement naming this very path, a destination outside the
+    # root is a resolver reading where nothing led it.
     if (
         entry["system_source"] != "card"
         and entry["path"] != root
         and not entry["path"].startswith(f"{root}/")
+        and entry["path"] not in linked
     ):
         fail(f"{name}: a requirement's path must be the absolute destination under the root {root!r}")
     if os.path.normpath(entry["path"]) != entry["path"]:
@@ -2132,9 +2145,10 @@ def _validate_requirement(
     fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS,
     named_by: frozenset[str] = frozenset(),
     spelled: frozenset[str] = frozenset(),
+    linked: frozenset[str] = frozenset(),
 ) -> None:
     _validate_requirement_fields(name, entry, fields)
-    _validate_requirement_path(name, entry, root, named_by, spelled)
+    _validate_requirement_path(name, entry, root, named_by, spelled, linked)
     _validate_requirement_presence(name, entry)
     _validate_requirement_verdict(
         name,
@@ -2154,6 +2168,7 @@ def _validate_alternatives(
     root: str,
     hash_checked: bool,
     spelled: frozenset[str] = frozenset(),
+    linked: frozenset[str] = frozenset(),
 ) -> None:
     """An alternatives group: one launch needs exactly one option, the region decides.
 
@@ -2175,6 +2190,7 @@ def _validate_alternatives(
             hash_checked=hash_checked,
             fields=FIRMWARE_ALTERNATIVE_OPTION_FIELDS,
             spelled=spelled,
+            linked=linked,
         )
         if option["core_so"] != core_so:
             fail(f"{name}: an alternatives option must name the core it is listed under")
@@ -2232,6 +2248,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
         if caveat["code"] == "firmware-name-spellings"
         for spelling in caveat["data"].get("spellings", ())
     )
+    linked = _linked_targets(core["caveats"])
     for entry in requirements:
         if isinstance(entry, dict) and "alternatives" in entry:
             _validate_alternatives(
@@ -2241,12 +2258,19 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
                 root=root,
                 hash_checked=hash_checked,
                 spelled=spelled,
+                linked=linked,
             )
             continue
         if entry["core_so"] != core["core_so"]:
             fail(f"{name}: a requirement must name the core it is listed under")
         _validate_requirement(
-            name, entry, root=root, hash_checked=hash_checked, named_by=named_by, spelled=spelled
+            name,
+            entry,
+            root=root,
+            hash_checked=hash_checked,
+            named_by=named_by,
+            spelled=spelled,
+            linked=linked,
         )
 
 
@@ -2471,9 +2495,25 @@ def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bo
     _validate_caveats(name, core["caveats"])
 
 
-def _validate_unclaimed(name: str, entry: Any, *, root: str, hash_checked: bool) -> None:
+def _linked_targets(caveats: Any) -> frozenset[str]:
+    """Every target a firmware-file-linked-outside-root statement in *caveats* names."""
+    return frozenset(
+        caveat["data"]["target"]
+        for caveat in caveats
+        if caveat["code"] == "firmware-file-linked-outside-root"
+        and isinstance(caveat["data"].get("target"), str)
+    )
+
+
+def _validate_unclaimed(
+    name: str, entry: Any, *, root: str, hash_checked: bool, linked: frozenset[str] = frozenset()
+) -> None:
     _require_exact(name, entry, UNCLAIMED_FIELDS, "each unclaimed file")
-    if not isinstance(entry["path"], str) or not entry["path"].startswith(f"{root}/"):
+    # Outside the root only where the answer names the link in the tree that
+    # led the scan there (*linked*, as for a requirement's path).
+    if not isinstance(entry["path"], str) or (
+        not entry["path"].startswith(f"{root}/") and entry["path"] not in linked
+    ):
         fail(f"{name}: an unclaimed file's path must be absolute under the root {root!r}")
     identity = entry["identity"]
     known_as = entry["known_as"]
@@ -2601,7 +2641,9 @@ def _validate_firmware(name: str, firmware: Any) -> None:
     for core in cores:
         _validate_firmware_core(name, core, root=root, hash_checked=hash_checked)
     for entry in unclaimed:
-        _validate_unclaimed(name, entry, root=root, hash_checked=hash_checked)
+        _validate_unclaimed(
+            name, entry, root=root, hash_checked=hash_checked, linked=_linked_targets(firmware["caveats"])
+        )
     _validate_firmware_coverage(name, firmware, cores)
     _validate_caveats(name, firmware["caveats"])
 

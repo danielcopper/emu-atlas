@@ -58,6 +58,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_IMAGE_UNLISTED,
     CAVEAT_FIRMWARE_INSTALLER_DOWNLOAD,
     CAVEAT_FIRMWARE_NAME_SPELLINGS,
+    CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT,
     CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT,
     CAVEAT_FIRMWARE_PATH_INACCESSIBLE,
     CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE,
@@ -2570,6 +2571,26 @@ class TestResolutionIsTheKernelsOrder:
             with pytest.raises(ValueError):
                 Destination(**kwargs)  # type: ignore[arg-type]
 
+    def test_a_destination_states_a_link_only_beside_its_landing_place(self):
+        landed = Destination(path="/store/x.bin", link="/bios/x.bin")
+        assert (landed.path, landed.link) == ("/store/x.bin", "/bios/x.bin")
+        with pytest.raises(ValueError):
+            Destination(refusal=CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT, link="/bios/x.bin")
+
+    def test_a_file_link_leaves_the_root_and_a_folder_link_does_not(self):
+        # The two ends decide: the directory the name is declared in, and
+        # where the chain ends. The same link is followed where the core opens
+        # a file and refused where it lists a folder, because a folder is the
+        # directory part of every file the core reads below it.
+        machine = FixtureMachine(
+            {"/store/x.bin": "x"},
+            symlinks={"/bios/x.bin": "/bios/hop.bin", "/bios/hop.bin": "/store/x.bin"},
+        )
+        followed = destination_under(machine, "/bios", "x.bin")
+        assert (followed.path, followed.link) == ("/store/x.bin", "/bios/x.bin")
+        listed = destination_under(machine, "/bios", "x.bin", declared_kind=DECLARED_DIRECTORY)
+        assert listed.refusal == CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT
+
     def test_resolve_links_follows_the_seam(self):
         machine = FixtureMachine({"/real/f.bin": "x"}, symlinks={"/via": "/real", "/real/inner": "/real"})
         assert resolve_links(machine, "/via/f.bin") == "/real/f.bin"
@@ -3639,9 +3660,9 @@ class TestACoreThatTriesSeveralSpellingsOfOneImage:
                 f"{BIOS_DIR}/SCPH5502.bin": BEETLE_US_IMAGE,
             },
             symlinks={
-                f"{BIOS_DIR}/scph5500.bin": "/elsewhere/scph5500.bin",
-                f"{BIOS_DIR}/scph5501.bin": "/elsewhere/scph5501.bin",
-                f"{BIOS_DIR}/scph5502.bin": "/elsewhere/scph5502.bin",
+                f"{BIOS_DIR}/scph5500.bin": f"{BIOS_DIR}/scph5500.bin",
+                f"{BIOS_DIR}/scph5501.bin": f"{BIOS_DIR}/scph5501.bin",
+                f"{BIOS_DIR}/scph5502.bin": f"{BIOS_DIR}/scph5502.bin",
             },
         )
         core = self._core(machine)
@@ -3809,13 +3830,45 @@ class TestACoreThatTriesSeveralSpellingsOfOneImage:
         )
         assert self._option(self._core(machine), "ntsc-j").file_name == "SCPH5500.bin"
 
-    def test_a_name_that_climbs_out_of_the_firmware_root_is_refused_and_the_walk_goes_on(self):
+    def test_a_name_that_cannot_be_resolved_is_refused_and_the_walk_goes_on(self):
+        machine = self._machine(
+            {f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE},
+            symlinks={f"{BIOS_DIR}/scph5500.bin": f"{BIOS_DIR}/scph5500.bin"},
+        )
+        core = self._core(machine)
+        assert CAVEAT_FIRMWARE_PATH_UNRESOLVABLE in self._codes(core)
+        assert self._option(core, "ntsc-j").file_name == "SCPH5500.bin"
+
+    def test_a_name_linked_out_of_the_firmware_root_is_followed_and_the_walk_goes_on(self):
+        # The link is where the core opens, so it is followed rather than
+        # refused; its target is missing, which the core's open fails on, so
+        # the walk goes on to the next spelling exactly as for a dead link.
         machine = self._machine(
             {f"{BIOS_DIR}/SCPH5500.bin": BEETLE_US_IMAGE},
             symlinks={f"{BIOS_DIR}/scph5500.bin": "/elsewhere/scph5500.bin"},
         )
         core = self._core(machine)
-        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT in self._codes(core)
+        assert CAVEAT_FIRMWARE_PATH_ESCAPES_ROOT not in self._codes(core)
+        # Stated twice, by the two routes that open the name: the declared
+        # row, with the need the .info declares, and the walk — each with the
+        # keys its own refusal would carry.
+        linked = [c for c in core.caveats if c.code == CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT]
+        assert [dict(c.data) for c in linked] == [
+            {
+                "core_so": BEETLE_PSX_SO,
+                "declared": "scph5500.bin",
+                "need": NEED_REQUIRED,
+                "root": BIOS_DIR,
+                "link": f"{BIOS_DIR}/scph5500.bin",
+                "target": "/elsewhere/scph5500.bin",
+            },
+            {
+                "core_so": BEETLE_PSX_SO,
+                "declared": "scph5500.bin",
+                "link": f"{BIOS_DIR}/scph5500.bin",
+                "target": "/elsewhere/scph5500.bin",
+            },
+        ]
         assert self._option(core, "ntsc-j").file_name == "SCPH5500.bin"
 
     def test_a_name_that_cannot_be_looked_at_does_not_end_the_walk(self):
