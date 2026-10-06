@@ -982,7 +982,7 @@ class _FlatpakGrants:
     binding anything — less those flatpak refuses, which hide nothing.
     Read on the machine (:func:`_revocations_read`), only the directories
     among them stay, since flatpak mounts that tmpfs on a directory alone
-    (flatpak-exports.c:494, :508-510), and ``unread`` are those whose kind
+    (flatpak-exports.c:493, :507-510), and ``unread`` are those whose kind
     the machine cannot read, under which nothing is established.
 
     ``unplaced`` is a granted entry the model cannot place (an ``xdg-*``
@@ -1082,9 +1082,10 @@ def _revocations_read(machine: Machine, grants: _FlatpakGrants) -> _FlatpakGrant
     """*grants* with each revoked path read on the machine: a directory stays masked, a file or nothing masks nothing.
 
     flatpak mounts a revocation's tmpfs only where a directory stands
-    (``path_is_dir``, flatpak-exports.c:494), and skips anything else
-    (:508-510 @ 1.16.6). A path whose kind the machine cannot read goes to
-    ``unread``: whether it masks is not known.
+    (``path_is_dir``, flatpak-exports.c:493), and skips anything else
+    (:507-510 @ 1.16.6); a path that is not there it never exports at all,
+    failing to open it (:920-935). A path whose kind the machine cannot read
+    goes to ``unread``: whether it masks is not known.
     """
     kinds = {path: machine.path_kind(path) for path in grants.hidden}
     return _dc_replace(
@@ -1225,18 +1226,18 @@ class _SandboxLaunchView:
         """The innermost masked or unbound root over *path* — ``None`` where nothing masks it.
 
         Masked with a tmpfs: the rest of ``~/.var/app``, the user's own
-        Flatpak installation, and every revoked directory (flatpak-context.c:3019-3031,
-        :3131-3143; flatpak-exports.c:1104-1105); a revoked path whose kind is
-        unread is a root too, which :meth:`_granted_or_masked` answers as
-        unknown. Not bound under the ``host``
-        grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and ``/root``
-        (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and ``/run/media`` aside.
-        Only a grant at or under such a root lifts it. At the root itself the
-        higher mode wins and a tmpfs is mode NONE (flatpak-exports.c:102,
-        :772-790), so a grant there binds it; beneath the root, exports are
-        emitted parents first (:309-337, :445-447, :487-506), so a parent's
-        bind is mounted before the tmpfs over the root and does not reach
-        beneath it.
+        Flatpak installation, and every revoked directory
+        (flatpak-context.c:3019-3031, :3131-3143; flatpak-exports.c:1104-1105);
+        a revoked path whose kind is unread is a root too, which
+        :meth:`_granted_or_masked` answers as unknown. Not bound under the
+        ``host`` grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and
+        ``/root`` (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and
+        ``/run/media`` aside. Only a grant at or under such a root lifts it. At
+        the root itself the higher mode wins and a tmpfs is mode NONE
+        (flatpak-exports.c:102, :772-790), so a grant there binds it; beneath
+        the root, exports are emitted parents first (:309-337, :445-447,
+        :487-506), so a parent's bind is mounted before the tmpfs over the root
+        and does not reach beneath it.
         """
         roots = [
             os.path.join(self.real_home, ".var", "app"),
