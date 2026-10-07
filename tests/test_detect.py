@@ -16,6 +16,8 @@ STANDALONE_CFG = "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/re
 NATIVE_CFG = "/home/deck/.config/retroarch/retroarch.cfg"
 RETRODECK_SYSTEM_DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active"
 RETRODECK_USER_DEPLOY = "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active"
+# The frontend's default ROM root where no ES-DE settings set one, which health checks.
+RETRODECK_DEFAULT_ROMS = "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
 
 HOME = "/home/deck"
 
@@ -123,7 +125,7 @@ class TestHealth:
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
                 "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/retrodeck/bios", RETRODECK_DEFAULT_ROMS],
         )
         assert installs[0].health() == atlas.Health()
 
@@ -132,7 +134,8 @@ class TestHealth:
             {
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
                 "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
-            }
+            },
+            dirs=["/mnt/sd/retrodeck/bios", RETRODECK_DEFAULT_ROMS],
         )
         assert installs[0].health().codes == (atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,)
 
@@ -159,7 +162,7 @@ class TestHealth:
                 EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
                 "/home/deck/Emulation/roms/gba/game.zip": "",
             },
-            dirs=["/home/deck/Emulation/saves"],
+            dirs=["/home/deck/Emulation/saves", "/home/deck/Emulation/bios"],
         )
         assert installs[0].health().codes == (atlas.HEALTH_ISSUE_COMPANION_CONFIG_MISSING,)
 

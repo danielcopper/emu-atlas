@@ -17,7 +17,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
@@ -88,7 +89,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
@@ -161,7 +164,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
@@ -223,7 +228,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/dolphin_libretro.so": {
@@ -287,7 +294,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/azahar_libretro.so": {
@@ -346,7 +355,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
@@ -414,7 +425,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/mgba_libretro.so": {
@@ -458,7 +471,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/fbneo_libretro.so": {
@@ -521,7 +536,8 @@
         },
         "dirs": [
           "/mnt/sd/Emulation/saves/retroarch/saves",
-          "/mnt/sd/Emulation/cores"
+          "/mnt/sd/Emulation/cores",
+          "/mnt/sd/Emulation/bios"
         ],
         "cores": {
           "/mnt/sd/Emulation/cores/fbneo_libretro.so": {
@@ -585,7 +601,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Load/GraphicMods": "/mnt/sd/retrodeck/mods/Dolphin/GraphicMods"
@@ -651,7 +669,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "n3ds"
@@ -696,7 +716,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "arcade"
@@ -738,7 +760,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/mods"
+          "/mnt/sd/retrodeck/mods",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -793,7 +817,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/mods",
-          "/mnt/sd/retrodeck/mods/DuckStation/cheats"
+          "/mnt/sd/retrodeck/mods/DuckStation/cheats",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -846,7 +872,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/mods"
+          "/mnt/sd/retrodeck/mods",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -902,7 +930,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/mods"
+          "/mnt/sd/retrodeck/mods",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -948,7 +978,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1003,7 +1034,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1051,7 +1083,8 @@
           "/home/deck/Emulation/bios",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/org.DolphinEmu.dolphin-emu",
-          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC"
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC",
+          "/home/deck/ROMs"
         ],
         "entry_mod_query": {
           "system": "gc"
@@ -1119,7 +1152,8 @@
           "/home/deck/Emulation/bios",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/io.github.shiiion.primehack",
-          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/GraphicMods"
+          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/GraphicMods",
+          "/home/deck/ROMs"
         ],
         "entry_mod_query": {
           "system": "gc"
@@ -1184,7 +1218,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/cheats",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1237,7 +1273,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nCheats = /var/tmp/cheats\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1285,7 +1323,8 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/bios",
-          "/var/data/duckstation/cheats"
+          "/var/data/duckstation/cheats",
+          "/home/deck/ROMs"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1341,7 +1380,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/mods",
-          "/mnt/sd/retrodeck/mods/DuckStation/cheats"
+          "/mnt/sd/retrodeck/mods/DuckStation/cheats",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "psx"
@@ -1394,7 +1435,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nPatches = my-patches\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "ps2"
@@ -1447,7 +1490,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "ps2"
@@ -1501,7 +1546,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/my-patches"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/my-patches",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_mod_query": {
           "system": "ps2"

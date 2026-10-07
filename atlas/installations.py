@@ -391,6 +391,25 @@ HEALTH_ISSUE_ROOT_MISSING = "root-missing"
 HEALTH_ISSUE_SAVES_ROOT_MISSING = "saves-root-missing"
 HEALTH_ISSUE_COMPANION_CONFIG_MISSING = "companion-config-missing"
 HEALTH_ISSUE_CONFIG_UNREADABLE = "config-unreadable"
+# The two folders a consumer downloads into besides the saves root, checked the
+# way that root is: each one on its own, as "not an existing directory", so a
+# removed SD card or an unmounted drive under one of them is stated rather than
+# reported healthy (issue #599). The BIOS folder is the marker's own value
+# (RetroDECK's ``bios_path``, EmuDeck's ``biosPath``, or the default under the
+# root), not RetroArch's ``system_directory`` — that one is
+# ``firmware-root-missing`` on the firmware answers, and a user can point the
+# two apart. The ROM root is what ``roms_dir()`` answers: ES-DE's
+# ``ROMDirectory`` or the frontend's default for a file that sets none.
+HEALTH_ISSUE_BIOS_ROOT_MISSING = "bios-root-missing"
+HEALTH_ISSUE_ROMS_ROOT_MISSING = "roms-root-missing"
+# ES-DE's ``ROMDirectory`` is not an absolute path even after the frontend's
+# own ``~`` expansion, so there is no ROM root to check; ``data.value`` is the
+# setting as the file spells it, because that text is what a user edits. The
+# other ways the root stays undetermined keep their own codes: settings that
+# exist and cannot be read are ``config-unreadable``, and an EmuDeck
+# ``portable.txt`` that may have moved the frontend's home is
+# ``config-home-relocated``.
+HEALTH_ISSUE_ROMS_ROOT_NOT_ABSOLUTE = "roms-root-not-absolute"
 # A systems catalogue file ES-DE refuses its whole load on: one that does not
 # parse, or one carrying no document-level <systemList>. Not a statement about
 # one layer — the frontend aborts loadConfig outright (SystemData.cpp:879-882,
@@ -487,10 +506,14 @@ class Health:
     present-but-broken installation — they report it with the issues attached.
 
     These issues *are* caveats, and they travel as themselves: every answer
-    computed on a broken installation carries the findings directly in its own
-    ``caveats``, under their own codes and ahead of what the query itself could
-    not resolve. Nothing wraps them in a category code with the real condition
-    nested in ``data`` — that shape hides a distinct, stable code behind a
+    computed on a broken installation (a stated no, ``SavestateAbsence``,
+    aside: it names no path for them to qualify) carries the findings from
+    the reads every route makes — the marker, the roots, the saves root, the
+    BIOS folder, the companion config, a bare RetroArch's
+    ``config-unreadable`` — directly in its own ``caveats``, under their own
+    codes and ahead of what the query itself could not resolve. Nothing
+    wraps them in a category code with the real condition nested in
+    ``data`` — that shape hides a distinct, stable code behind a
     discriminator a client has to unpack, and the firmware route retired it for
     the same reason.
 
@@ -501,6 +524,10 @@ class Health:
     caller's. Each route derives the findings from the reads it already made,
     never from a second :meth:`Installation.health` call, so an answer and the
     findings beside it were read from one revision of each source (REVIEW M4).
+    That is also why a finding with a read of its own rides only where that
+    read is made: ``catalogue-invalid`` on the answers whose question reads the
+    catalogue, ``content-tree-unwired`` and the ROM root findings on
+    :meth:`Installation.health` alone.
     """
 
     issues: tuple[Caveat, ...] = ()
@@ -16475,6 +16502,9 @@ CAVEAT_FRONTEND_SETTINGS_UNREADABLE = "frontend-settings-unreadable"
 # was closed as not planned), so the config home a RetroDECK answer reads from
 # is exactly the one in force, override files or no.
 CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
+# The same fact as an EmuDeck health finding, where it leaves the ROM root
+# undetermined — one fact, one code on every route.
+HEALTH_ISSUE_CONFIG_HOME_RELOCATED = CAVEAT_CONFIG_HOME_RELOCATED
 
 # Why the settings could not be read, where the read itself succeeded and the
 # parse did not. Alongside the seam's own read statuses in the caveat's data,
@@ -16930,6 +16960,38 @@ class _RomRoot:
     relocated: tuple[str, str] | None = None
     not_absolute: str | None = None
     sources: tuple[str, ...] = ()
+
+
+def _rom_root_finding(machine: Machine, root: _RomRoot, settings_path: str) -> Caveat | None:
+    """The health finding for one resolved ROM root — ``None`` when it is a directory.
+
+    Says why the root could not be determined where it could not, and checks
+    it the way the saves root is checked where it could. ``relocated`` answers
+    ``None`` here: that statement is the EmuDeck handle's own caveat, which the
+    handle states itself rather than have it rebuilt.
+    """
+    if root.unreadable is not None:
+        return Caveat(
+            HEALTH_ISSUE_CONFIG_UNREADABLE,
+            f"the frontend's settings {settings_path} exist and cannot be read ({root.unreadable}), "
+            "so the ROM root they set is unknown",
+            {"path": settings_path, "status": root.unreadable},
+        )
+    if root.not_absolute is not None:
+        return Caveat(
+            HEALTH_ISSUE_ROMS_ROOT_NOT_ABSOLUTE,
+            f"the frontend's ROMDirectory {root.not_absolute!r} is not an absolute path even after "
+            "its own ~ expansion, so there is no ROM root to check",
+            {"value": root.not_absolute},
+        )
+    directory = root.directory
+    if directory is None or machine.path_kind(directory) == KIND_DIRECTORY:
+        return None
+    return Caveat(
+        HEALTH_ISSUE_ROMS_ROOT_MISSING,
+        f"ROM root {directory} is not an existing directory",
+        {"path": directory},
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -18131,8 +18193,9 @@ class _CatalogueQueries:
         "the frontend knows none".
 
         The test is those codes, not an empty ``caveats``: a broken
-        installation states its health findings on this answer as on every
-        other, so an empty caveat list is not what "read, and it declares
+        installation states the health findings every answer carries on this
+        one too, and ``catalogue-invalid`` besides, since this answer reads the
+        catalogue — so an empty caveat list is not what "read, and it declares
         nothing" looks like there.
         """
         answer, version = self._catalogue_answer(system, content_path=content_path)
@@ -18411,9 +18474,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         configured value is not an absolute path even after the frontend's own
         ``~`` expansion. A bare string cannot carry which, and raising is not
         this domain's grammar, so a caller who needs the reason asks
-        ``rom_location(system)`` and reads its caveats. A not-set-up
-        installation refuses too: the frontend has no settings of RetroDECK's
-        making yet.
+        ``rom_location(system)`` and reads its caveats, or :meth:`health`,
+        which states it as a finding. A not-set-up installation refuses too:
+        the frontend has no settings of RetroDECK's making yet.
         """
         if _not_set_up(self._read_marker()[1]) is not None:
             return None
@@ -18439,6 +18502,15 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     {"path": saves},
                 )
             )
+        bios = self._config_path(config, "bios_path", "bios")[0]
+        if self._machine.path_kind(bios) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(
+                    HEALTH_ISSUE_BIOS_ROOT_MISSING,
+                    f"BIOS folder {bios} is not an existing directory",
+                    {"path": bios},
+                )
+            )
         return Health(tuple(issues))
 
     @one_question
@@ -18450,8 +18522,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         health computation must not open sources the question itself never
         reads, so the catalogue-invalid finding rides the health question
         (its own single read here) and every answer whose question reads the
-        catalogue anyway — never the others. A not-set-up installation stops
-        at its finding: nothing past the missing marker is RetroDECK's yet.
+        catalogue anyway — never the others. The ROM root check lives here for
+        the same reason: it reads ES-DE's settings, which most questions never
+        open, while the BIOS folder is a stat on a marker value every question
+        has read already, the way the saves root is. A not-set-up installation
+        stops at its finding: nothing past the missing marker is RetroDECK's
+        yet.
         """
         config, marker_issues = self._read_marker()
         health = self._health_from(config, marker_issues)
@@ -18460,6 +18536,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         root = self._config_path(config, "rd_home_path", "")[0]
         catalogue_invalid = self._read_catalogue(root)[3]
         issues = health.issues
+        rom_root_finding = _rom_root_finding(self._machine, self._rom_root(), self._esde_settings_path())
+        if rom_root_finding is not None:
+            issues = (*issues, rom_root_finding)
         if catalogue_invalid is not None:
             issues = (*issues, catalogue_invalid)
         return Health((*issues, *self._content_tree_findings(config)))
@@ -20242,7 +20321,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         setting alike — or the configured value is not an absolute path even
         after the frontend's own ``~`` expansion. A bare string cannot carry
         which, and raising is not this domain's grammar, so a caller who needs
-        the reason asks ``rom_location(system)`` and reads its caveats.
+        the reason asks ``rom_location(system)`` and reads its caveats, or
+        :meth:`health`, which states it as a finding wherever ES-DE is present.
         """
         if not self._esde_present():
             return None
@@ -20272,6 +20352,15 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                     {"path": saves},
                 )
             )
+        bios = self._setting_path(settings, "biosPath", "bios")[0]
+        if self._machine.path_kind(bios) != KIND_DIRECTORY:
+            issues.append(
+                Caveat(
+                    HEALTH_ISSUE_BIOS_ROOT_MISSING,
+                    f"BIOS folder {bios} is not an existing directory",
+                    {"path": bios},
+                )
+            )
         if companion_status != "ok":
             path = self._companion_cfg_path()
             issues.append(
@@ -20291,15 +20380,35 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         The catalogue check lives here rather than in :meth:`_health_from`
         for RetroDECK's reason: per-question health must not open sources the
         question never reads, so the finding rides this question's own single
-        read and every catalogue-reading answer — never the others.
+        read and every catalogue-reading answer — never the others. The ROM
+        root check lives here for the same reason, and only where ES-DE is on
+        this disk: without it there is no frontend ROM root to check.
         """
         settings, marker_issues = self._read_marker()
         companion_status = self._machine.read_text(self._companion_cfg_path()).status
-        health = self._health_from(settings, marker_issues, companion_status)
+        issues = self._health_from(settings, marker_issues, companion_status).issues
+        rom_root_finding = self._rom_root_finding()
+        if rom_root_finding is not None:
+            issues = (*issues, rom_root_finding)
         catalogue_invalid = self._read_esde_catalogue()[4]
         if catalogue_invalid is not None:
-            return Health((*health.issues, catalogue_invalid))
-        return health
+            issues = (*issues, catalogue_invalid)
+        return Health(issues)
+
+    def _rom_root_finding(self) -> Caveat | None:
+        """The ROM root's health finding — ``None`` without ES-DE or with a root that is there.
+
+        A ``portable.txt`` that leaves the root undetermined is stated as the
+        relocation caveat the answers carry, under its own code: health says
+        why the root could not be checked, and the fact has one spelling.
+        """
+        if not self._esde_present():
+            return None
+        relocation = self._relocation_caveat()
+        root = self._esde_rom_root(relocated=relocation is not None)
+        if root.relocated is not None:
+            return relocation
+        return _rom_root_finding(self._machine, root, self._esde_settings_path())
 
     # ── EmuDeck's ES-DE ─────────────────────────────────────────────────
     # Every path below is EmuDeck's shipped wiring, read from the installer at

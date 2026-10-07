@@ -38,7 +38,11 @@ def _healthy() -> atlas.RetroDeck:
             RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
             "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
         },
-        dirs=["/mnt/sd/retrodeck/saves"],
+        dirs=[
+            "/mnt/sd/retrodeck/saves",
+            "/mnt/sd/retrodeck/bios",
+            f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ROMs",
+        ],
     )
     return atlas.RetroDeck(HOME, machine)
 

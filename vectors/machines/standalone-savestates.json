@@ -15,7 +15,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "gc"
@@ -71,7 +73,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/dolphin"
+          "/mnt/sd/retrodeck/states/dolphin",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/StateSaves": "/mnt/sd/retrodeck/states/dolphin"
@@ -129,7 +133,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "wii",
@@ -185,7 +191,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "psp"
@@ -240,7 +248,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "ps3"
@@ -295,7 +305,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "n3ds"
@@ -352,7 +364,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/ps2/pcsx2"
+          "/mnt/sd/retrodeck/states/ps2/pcsx2",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "ps2"
@@ -408,7 +422,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/cards\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "ps2"
@@ -466,7 +482,9 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "ps2"
@@ -509,7 +527,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/nds/melonds"
+          "/mnt/sd/retrodeck/states/nds/melonds",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -566,7 +586,9 @@
           "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -624,7 +646,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/nds/melonds"
+          "/mnt/sd/retrodeck/states/nds/melonds",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -695,7 +719,9 @@
           "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -762,7 +788,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/launch/states"
+          "/home/deck/launch/states",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -820,7 +848,9 @@
           "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "nds",
@@ -889,7 +919,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Main]\nSettingsVersion = 3\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "psx"
@@ -944,7 +976,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>coco</name>\n    <path>%ROMPATH%/coco</path>\n    <extension>.ccc .CCC</extension>\n    <command label=\"XRoar CoCo 2 NTSC (Standalone)\">%EMULATOR_XROAR% -fs -default-machine coco2bus %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "coco"
@@ -985,7 +1019,9 @@
         },
         "dirs": [
           "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves"
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "coco"
@@ -1030,7 +1066,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/saves/duckstation/states"
+          "/home/deck/Emulation/saves/duckstation/states",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "psx",
@@ -1091,7 +1129,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/saves/duckstation/states"
+          "/home/deck/Emulation/saves/duckstation/states",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "psx",
@@ -1137,7 +1177,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/saves/melonds/states"
+          "/home/deck/Emulation/saves/melonds/states",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "nds"
@@ -1206,7 +1248,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.wua .WUA</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% -g %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "wiiu"
@@ -1244,7 +1288,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>switch</name>\n    <path>%ROMPATH%/switch</path>\n    <extension>.nsp .NSP</extension>\n    <command label=\"Ryubing (Standalone)\">%EMULATOR_RYUBING% %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "switch"
@@ -1291,7 +1337,9 @@
         },
         "dirs": [
           "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves"
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "wiiu"
@@ -1336,7 +1384,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/mnt/sd/retrodeck/saves/xbox/xemu"
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox"
@@ -1398,7 +1447,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox"
@@ -1444,7 +1494,8 @@
           "/home/deck/Emulation/saves/xemu",
           "/home/deck/Emulation/bios",
           "/home/deck/Emulation/storage/xemu",
-          "/var/lib/flatpak/app/app.xemu.xemu"
+          "/var/lib/flatpak/app/app.xemu.xemu",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox"
@@ -1505,7 +1556,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -1599,7 +1652,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "arcade"
@@ -1695,7 +1750,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "arcade",
@@ -1788,7 +1845,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>apple2gs</name>\n    <path>%ROMPATH%/apple2gs</path>\n    <extension>.2mg .2MG</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/apple2gs apple2gs -gameio joy -flop3 %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "apple2gs"
@@ -1880,7 +1939,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>apple2gs</name>\n    <path>%ROMPATH%/apple2gs</path>\n    <extension>.2mg .2MG</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/apple2gs apple2gs -gameio joy -flop3 %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "apple2gs",
@@ -1973,7 +2034,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>vectrex</name>\n    <path>%ROMPATH%/vectrex</path>\n    <extension>.vec .VEC</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/vectrex vectrex -cart %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "vectrex"
@@ -2075,7 +2138,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/launch/sta/vectrex"
+          "/home/deck/launch/sta/vectrex",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "vectrex",
@@ -2168,7 +2233,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>vectrex</name>\n    <path>%ROMPATH%/vectrex</path>\n    <extension>.vec .VEC</extension>\n    <command label=\"MAME (Standalone)\">%EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/vectrex vectrex -cart %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "vectrex",
@@ -2274,7 +2341,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame/vectrex"
+          "/mnt/sd/retrodeck/states/mame/vectrex",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "vectrex",
@@ -2369,7 +2438,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/states/vectrex"
+          "/home/deck/states/vectrex",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "vectrex",
@@ -2466,7 +2537,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -2569,7 +2642,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.vpk</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% -r %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "psvita"
@@ -2607,7 +2682,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <extension>.swf</extension>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% --fullscreen %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "flash"
@@ -2645,7 +2722,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>doom</name>\n    <path>%ROMPATH%/doom</path>\n    <extension>.wad</extension>\n    <command label=\"GZDoom (Standalone)\">%EMULATOR_GZDOOM% %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "doom"
@@ -2683,7 +2762,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>quake</name>\n    <path>%ROMPATH%/quake</path>\n    <extension>.pak</extension>\n    <command label=\"Ironwail (Standalone)\">%EMULATOR_IRONWAIL%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "quake"
@@ -2729,7 +2810,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>openbor</name>\n    <path>%ROMPATH%/openbor</path>\n    <extension>.pak</extension>\n    <command label=\"OpenBOR (Standalone)\">%STARTDIR%=%GAMEDIR% %EMULATOR_OPENBOR% -c \"%ROM%\"</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "openbor"
@@ -2767,7 +2850,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>pico8</name>\n    <path>%ROMPATH%/pico8</path>\n    <extension>.png</extension>\n    <command label=\"PICO-8 (Standalone)\">%EMULATOR_PICO-8% -root_path %GAMEDIR% -run %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "pico8"
@@ -2813,7 +2898,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>solarus</name>\n    <path>%ROMPATH%/solarus</path>\n    <extension>.solarus</extension>\n    <command label=\"Solarus (Standalone)\">%EMULATOR_SOLARUS% %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "solarus"
@@ -2852,7 +2939,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/share/mame/ini/mame.ini": "homepath                  $HOME/.mame\ninipath                   $HOME/.mame;/app/share/mame/ini\nstate_directory           $HOME/.mame/sta\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "apple2gs"
@@ -2950,7 +3039,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/mnt/sd/retrodeck/saves/xbox/xemu"
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox"
@@ -3024,7 +3114,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/retrodeck/saves/xbox/xemu",
-          "/home/deck/launch/images"
+          "/home/deck/launch/images",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox",
@@ -3089,7 +3180,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/mnt/sd/retrodeck/saves/xbox/xemu"
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_savestate_query": {
           "system": "xbox",
@@ -3160,7 +3252,9 @@
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/saves/mame/states",
           "/home/deck/Applications",
-          "/var/lib/flatpak/app/org.mamedev.MAME"
+          "/var/lib/flatpak/app/org.mamedev.MAME",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "atarijaguar"
@@ -3258,7 +3352,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "ps2"
@@ -3318,7 +3414,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/states/mame-sa",
-          "/mnt/sd/adam-states"
+          "/mnt/sd/adam-states",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -3414,7 +3512,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -3512,7 +3612,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/states/mame-sa",
-          "/mnt/sd/adam-states"
+          "/mnt/sd/adam-states",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -3620,7 +3722,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -3727,7 +3831,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "arcade"
@@ -3837,7 +3943,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/states/mame-sa",
-          "/mnt/sd/sf"
+          "/mnt/sd/sf",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "arcade",
@@ -3936,7 +4044,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/states/mame-sa"
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"
@@ -3980,7 +4090,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/.local/share/duckstation/states/deep"
+          "/home/deck/.local/share/duckstation/states/deep",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "psx"
@@ -4040,7 +4152,9 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/saves/mame/states",
-          "/home/deck/Applications"
+          "/home/deck/Applications",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "atarijaguar"
@@ -4137,7 +4251,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/app/share/duckstation/states"
+          "/app/share/duckstation/states",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "psx",
@@ -4185,7 +4301,9 @@
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/org.mamedev.MAME",
-          "/home/deck/.var/app/org.mamedev.MAME/config/mame/sta"
+          "/home/deck/.var/app/org.mamedev.MAME/config/mame/sta",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "atarijaguar"
@@ -4283,7 +4401,9 @@
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/org.mamedev.MAME",
-          "/run/user/1000/mame/sta"
+          "/run/user/1000/mame/sta",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_savestate_query": {
           "system": "atarijaguar"
@@ -4330,7 +4450,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/states/mame-sa",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/source"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/source",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_savestate_query": {
           "system": "adam"

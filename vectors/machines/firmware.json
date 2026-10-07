@@ -223,7 +223,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "core",
@@ -578,7 +579,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "core",
@@ -674,7 +676,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -787,7 +790,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -989,7 +993,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -1772,7 +1777,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "core",
@@ -2256,7 +2262,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -2358,7 +2365,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -2455,7 +2463,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -2669,7 +2678,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "inaccessible": [
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/dolphin-emu"
@@ -2776,7 +2786,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -2881,7 +2892,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -2985,7 +2997,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -3088,7 +3101,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -3178,7 +3192,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "core",
@@ -3942,7 +3957,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -8595,7 +8611,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "installation": "retrodeck",
@@ -9020,7 +9037,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -9434,7 +9452,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios"
@@ -9548,7 +9567,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios"
@@ -9655,7 +9675,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios"
@@ -9767,7 +9788,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios"
@@ -9914,7 +9936,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "/mnt/sd/retrodeck/bios",
@@ -10043,7 +10066,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -10161,7 +10185,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -10293,7 +10318,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/firmware-store"
+          "/mnt/sd/firmware-store",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -10452,7 +10478,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/mnt/sd/retrodeck/bios/dc": "/mnt/sd/retrodeck/bios/dreamcast"
@@ -12544,7 +12571,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -12633,7 +12661,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory"
@@ -12685,7 +12714,8 @@
           "/mnt/sd/retrodeck/bios/gba_bios.bin": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "unlistable": [
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
@@ -12750,7 +12780,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.info": "display_name = \"mGBA\"\nsystemname = \"Nintendo - Game Boy Advance\"\nfirmware_count = \"1\"\nfirmware0_path = \"gba_bios.bin\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "unlistable": [
           "/mnt/sd/retrodeck/bios"
@@ -12844,6 +12875,9 @@
           "/mnt/sd/retrodeck/bios/gba_bios.bin": "bios",
           "/mnt/sd/retrodeck/saves/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
         "firmware_query": {
           "kind": "inventory"
         }
@@ -14131,7 +14165,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -14235,7 +14270,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -14454,7 +14490,8 @@
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy (Standalone)\">%EMULATOR_SAMEBOY% %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/home/deck/Emulation/saves"
+          "/home/deck/Emulation/saves",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "installation": "emudeck",
@@ -14588,7 +14625,8 @@
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>atarijaguar</name><path>%ROMPATH%/atarijaguar</path>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/home/deck/Emulation/saves"
+          "/home/deck/Emulation/saves",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "installation": "emudeck",
@@ -14783,7 +14821,14 @@
               "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
-            "health": []
+            "health": [
+              {
+                "code": "config-home-relocated",
+                "data": {
+                  "path": "/home/deck/Applications/portable.txt"
+                }
+              }
+            ]
           }
         ],
         "firmware": {
@@ -14914,7 +14959,9 @@
         },
         "dirs": [
           "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves"
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/roms"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15163,7 +15210,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/data/Cemu/keys.txt": "/mnt/sd/retrodeck/bios/cemu/keys.txt"
@@ -15266,7 +15314,9 @@
         },
         "dirs": [
           "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves"
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15366,7 +15416,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15491,7 +15542,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15582,7 +15634,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15715,7 +15768,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15835,7 +15889,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -15918,7 +15973,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16008,7 +16064,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16101,7 +16158,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16196,7 +16254,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16289,7 +16348,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16379,7 +16439,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16472,7 +16533,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16566,7 +16628,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16649,7 +16712,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16773,7 +16837,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16884,7 +16949,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -16968,7 +17034,8 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/bios",
-          "/var/lib/flatpak/app/app.xemu.xemu"
+          "/var/lib/flatpak/app/app.xemu.xemu",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17097,7 +17164,8 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/bios",
-          "/var/lib/flatpak/app/app.xemu.xemu"
+          "/var/lib/flatpak/app/app.xemu.xemu",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17225,7 +17293,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17350,7 +17419,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17486,7 +17556,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17614,7 +17685,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17781,7 +17853,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -17933,7 +18006,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18072,7 +18146,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18174,7 +18249,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18274,7 +18350,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18376,7 +18453,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18538,7 +18616,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18671,7 +18750,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -18864,7 +18944,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19032,7 +19113,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19153,7 +19235,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19283,7 +19366,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19432,7 +19516,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19538,7 +19623,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19671,7 +19757,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19793,7 +19880,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -19920,7 +20008,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20047,7 +20136,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20180,7 +20270,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20345,7 +20436,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20441,7 +20533,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/gamesettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20552,7 +20645,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -20650,7 +20744,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -21033,7 +21128,8 @@
           "/mnt/sd/retrodeck/bios/pcsx2/bios": "not a folder\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -21146,7 +21242,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -21532,7 +21629,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/scph5501.bin"
+          "/mnt/sd/retrodeck/bios/scph5501.bin",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -21919,7 +22017,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -22053,7 +22152,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "system",
@@ -22661,7 +22761,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios/duckstation",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -22765,7 +22866,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -22902,7 +23004,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -23052,7 +23155,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios/duckstation",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -23122,7 +23226,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios/duckstation",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -23204,7 +23309,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios/duckstation",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "inventory",
@@ -23333,7 +23439,14 @@
               "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
-            "health": []
+            "health": [
+              {
+                "code": "config-home-relocated",
+                "data": {
+                  "path": "/home/deck/Applications/portable.txt"
+                }
+              }
+            ]
           }
         ],
         "firmware": {
@@ -27798,7 +27911,8 @@
           }
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "firmware_query": {
           "kind": "core",

@@ -27,6 +27,11 @@ EMUDECK_SETTINGS = f"{HOME}/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 
 RD_JSON = '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
+# The two folders health checks beside RD_JSON's saves root: the BIOS folder
+# under its root, and the frontend's default ROM root where no ES-DE settings
+# set one. A fixture modelling a working installation names them.
+RD_BIOS = "/mnt/sd/retrodeck/bios"
+RD_DEFAULT_ROMS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ROMs"
 RD_DEPLOY_CORES = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores"
 
 
@@ -302,7 +307,7 @@ class TestLaunchable:
                 RETRODECK_CFG: self.CFG_WITH_CORES,
                 RD_BUNDLED_ESDE: self.N3DS,
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
             cores=cores or {},
         )
 
@@ -703,7 +708,7 @@ class TestMarkerPathValuesMustBeStrings:
     for something that is not a path at all.
     """
 
-    FALLBACK_DIRS = [f"{HOME}/retrodeck", f"{HOME}/retrodeck/saves"]
+    FALLBACK_DIRS = [f"{HOME}/retrodeck", f"{HOME}/retrodeck/saves", f"{HOME}/retrodeck/bios", RD_DEFAULT_ROMS]
 
     def test_non_string_path_value_makes_the_marker_invalid(self):
         rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": 123}}'}, dirs=self.FALLBACK_DIRS)
@@ -739,7 +744,10 @@ class TestMarkerPathValuesMustBeStrings:
         assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
 
     def test_a_marker_without_a_paths_section_is_not_invalid(self):
-        rd = _retrodeck({RETRODECK_JSON: '{"version": "0.10.9b"}'}, dirs=[f"{HOME}/retrodeck"])
+        rd = _retrodeck(
+            {RETRODECK_JSON: '{"version": "0.10.9b"}'},
+            dirs=[f"{HOME}/retrodeck", f"{HOME}/retrodeck/bios", RD_DEFAULT_ROMS],
+        )
         assert rd.health().codes == (atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,)
 
     def test_a_null_paths_section_is_invalid_not_absent(self):
@@ -772,7 +780,7 @@ class TestMarkerPathValuesMustBeStrings:
                     '"saves_path": "/mnt/sd/retrodeck/saves", "videos_path": {"nested": 1}}}'
                 )
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
         )
         assert rd.health() == atlas.Health()
         assert rd.root() == "/mnt/sd/retrodeck"
@@ -788,7 +796,7 @@ class TestMarkerPathValuesMustBeStrings:
                     '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": 5}}'
                 )
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
         )
         assert rd.health() == atlas.Health()
 
@@ -991,7 +999,8 @@ class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
     def test_a_marker_beside_the_deploy_changes_nothing(self):
         # Detected by the marker: the deploy adds no second handle and no finding.
         rd = self._handle(
-            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""}
+            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""},
+            dirs=[RD_BIOS, RD_DEFAULT_ROMS],
         )
         assert rd.health() == atlas.Health()
         assert [e.label for e in rd.emulators_for("gb").entries] == ["Gambatte"]
@@ -1000,7 +1009,8 @@ class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
         # The handle is live: detected by the deploy, it answers normally once
         # the first launch has written the marker.
         machine = FixtureMachine(
-            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""}
+            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""},
+            dirs=[RD_BIOS, RD_DEFAULT_ROMS],
         )
         rd = atlas.RetroDeck(HOME, machine, detected_by_deploy=True)
         assert rd.health() == atlas.Health()
@@ -1018,7 +1028,7 @@ class TestTheMarkerVersionIsAKeyAtlasReads:
     """
 
     PATHS = {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}
-    DIRS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves"]
+    DIRS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS]
     CFG = (
         'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
         'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
@@ -1273,7 +1283,12 @@ class TestRetroDeckSavefileLocation:
         # included: the retired envelope carried a different code, a nested
         # data["issue"], and an "installation health: " prefix, so any of the
         # three coming back fails this.
-        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'})
+        # The ROM root is there: its finding is health()'s own and rides no
+        # answer, so a missing one would be the one finding not carried here.
+        rd = _retrodeck(
+            {RETRODECK_JSON: '{"paths": {"rd_home_path": "/run/media/gone/retrodeck"}}'},
+            dirs=[RD_DEFAULT_ROMS],
+        )
         findings = rd.health().issues
         assert [c for c in placed(rd.savefile_location()).caveats if c in findings] == list(findings)
 
@@ -6933,6 +6948,7 @@ class TestEmuDeck:
             {
                 EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
                 f"{HOME}/Emulation/saves/.keep": "",
+                f"{HOME}/Emulation/bios/.keep": "",
             }
         )
         ed = atlas.EmuDeck(HOME, machine)
@@ -6959,6 +6975,7 @@ class TestEmuDeck:
                     'savefile_directory = "/run/media/deck/Emulation/Emulation/saves/retroarch/saves"\n'
                 ),
                 "/run/media/deck/Emulation/Emulation/saves/retroarch/saves/.keep": "",
+                "/run/media/deck/Emulation/Emulation/bios/.keep": "",
             }
         )
         ed = atlas.EmuDeck(HOME, machine)
@@ -8555,7 +8572,8 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         # EmuDeck installs a frontend; which one, and where it keeps its
         # catalogue, is what nobody has established. Saying "none" here would
         # be atlas reporting its own gap as a property of the machine.
-        answer = self._only(self.EMUDECK_FILES, dirs=[f"{HOME}/Emulation/saves"]).emulators_for("n64")
+        dirs = [f"{HOME}/Emulation/saves", f"{HOME}/Emulation/bios"]
+        answer = self._only(self.EMUDECK_FILES, dirs=dirs).emulators_for("n64")
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [
             atlas.CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
@@ -8586,7 +8604,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         """
         machine = FixtureMachine(
             {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: {"status": "unreadable"}},
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
         )
         rd = atlas.RetroDeck(HOME, machine)
         for answer in (rd.emulators_for("n64"), rd.systems()):
@@ -8608,7 +8626,7 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
                 "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%"
                 "</command>\n  </system>\n</systemList>\n",
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
         )
         answer = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast")
         assert answer.entries == ()
@@ -8646,7 +8664,7 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         files = {RETRODECK_JSON: RD_JSON, self.DEPLOY_ESDE: self.ES_SYSTEMS}
         if settings is not None:
             files[self.SETTINGS] = settings
-        machine = FixtureMachine(files, dirs=["/mnt/sd/retrodeck/saves"])
+        machine = FixtureMachine(files, dirs=["/mnt/sd/retrodeck/saves", RD_BIOS])
         return atlas.RetroDeck(HOME, machine).rom_location(system)
 
     @staticmethod
@@ -8763,7 +8781,7 @@ class TestTheRomDirectorySettingIsReadOrRefused:
                     "[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
                 ),
             },
-            dirs=["/mnt/sd/retrodeck/saves"],
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
         )
         placement = atlas.RetroDeck(HOME, machine).rom_location("n64")
         assert placement.dir == f"{self.CONFIG_HOME}/Emulation/roms/n64"
@@ -8832,7 +8850,10 @@ class TestEveryAnswerStatesTheInstallationsHealth:
 
     The findings come from the reads each route already makes — never from a
     second ``health()`` call inside a query — so the one-read-per-source
-    invariant above covers this wiring too.
+    invariant above covers this wiring too. That is what bounds the blanket:
+    the marker, root, saves root and BIOS folder findings ride every answer
+    here, while a finding with a read of its own (the catalogue, the ROM root,
+    the content trees) rides only where that read is made.
     """
 
     ESDE = (
@@ -8846,9 +8867,14 @@ class TestEveryAnswerStatesTheInstallationsHealth:
     )
     # A marker whose `saves_path` is not a string: present, parseable, and
     # unusable — so the roots fall back to defaults that do not exist either.
-    BROKEN = {RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": 7}}'}
+    # The frontend's default ROM root is there: its finding is health()'s own
+    # and rides no answer, which the comparisons below are not about.
+    BROKEN = {
+        RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": 7}}',
+        f"{RD_DEFAULT_ROMS}/systeminfo.txt": "",
+    }
     HEALTHY = {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
-    HEALTHY_DIRS = ["/mnt/sd/retrodeck/saves"]
+    HEALTHY_DIRS = ["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS]
     CORE_SO = "mgba_libretro.so"
 
     def _answers(self, rd) -> dict[str, tuple[atlas.Caveat, ...]]:
@@ -8862,11 +8888,12 @@ class TestEveryAnswerStatesTheInstallationsHealth:
             "identify_firmware": rd.identify_firmware(md5="deadbeef").caveats,
         }
 
-    def test_the_fixture_is_broken_in_three_ways(self):
+    def test_the_fixture_is_broken_in_four_ways(self):
         assert _retrodeck(self.BROKEN).health().codes == (
             atlas.HEALTH_ISSUE_MARKER_INVALID,
             atlas.HEALTH_ISSUE_ROOT_MISSING,
             atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,
+            atlas.HEALTH_ISSUE_BIOS_ROOT_MISSING,
         )
 
     def test_every_answer_leads_with_the_findings(self):
@@ -8897,10 +8924,12 @@ class TestEveryAnswerStatesTheInstallationsHealth:
 
     def test_a_healthy_installation_adds_nothing(self):
         rd = _retrodeck(self.HEALTHY, dirs=self.HEALTHY_DIRS)
+        assert rd.health() == atlas.Health()
         health_codes = {
             atlas.HEALTH_ISSUE_MARKER_INVALID,
             atlas.HEALTH_ISSUE_ROOT_MISSING,
             atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,
+            atlas.HEALTH_ISSUE_BIOS_ROOT_MISSING,
         }
         stated = {
             question: [c.code for c in caveats if c.code in health_codes]
@@ -8917,6 +8946,89 @@ class TestEveryAnswerStatesTheInstallationsHealth:
         assert not isinstance(placement, atlas.Unresolved)
         carried = [c.code for c in placement.caveats]
         assert carried[: len(rd.health().codes)] == list(rd.health().codes)
+
+
+class TestTheFolderFindingsRideWhereTheirReadsDo:
+    """The BIOS folder rides every answer; the ROM root rides ``health()`` alone (issue #599).
+
+    The BIOS check is a stat on a marker value every question has read, the
+    way the saves root is. The ROM check reads ES-DE's settings, which most
+    questions never open, so by the one-read model only the health question
+    states it.
+    """
+
+    CORE_SO = "mgba_libretro.so"
+    MARKER = '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
+
+    def _rd(self, dirs):
+        return _retrodeck({RETRODECK_JSON: self.MARKER}, dirs=dirs)
+
+    def _answer_codes(self, rd) -> dict[str, list[str]]:
+        return {
+            "savefile_location": [c.code for c in placed(rd.savefile_location(core_so=self.CORE_SO)).caveats],
+            "systems": [c.code for c in rd.systems().caveats],
+            "firmware_inventory": [c.code for c in rd.firmware_inventory().caveats],
+        }
+
+    def test_a_missing_bios_folder_rides_every_answer(self):
+        rd = self._rd(["/mnt/sd/retrodeck/saves", RD_DEFAULT_ROMS])
+        assert rd.health().codes == (atlas.HEALTH_ISSUE_BIOS_ROOT_MISSING,)
+        missing = {q: atlas.HEALTH_ISSUE_BIOS_ROOT_MISSING in codes for q, codes in self._answer_codes(rd).items()}
+        assert missing == {q: True for q in missing}
+
+    def test_a_missing_rom_root_rides_health_alone(self):
+        rd = self._rd(["/mnt/sd/retrodeck/saves", RD_BIOS])
+        assert rd.health().codes == (atlas.HEALTH_ISSUE_ROMS_ROOT_MISSING,)
+        stated = {q: atlas.HEALTH_ISSUE_ROMS_ROOT_MISSING in codes for q, codes in self._answer_codes(rd).items()}
+        assert stated == {q: False for q in stated}
+
+    def test_the_rom_root_checked_is_the_one_roms_dir_answers(self):
+        rd = _retrodeck(
+            {RETRODECK_JSON: self.MARKER, ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/usb/roms/" />'},
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
+        )
+        assert [dict(c.data) for c in rd.health().issues] == [{"path": rd.roms_dir()}]
+
+
+class TestEmuDecksRelocatedRomRootIsStatedOnce:
+    """A ``portable.txt`` that leaves the ROM root undetermined is health's finding under the answers' code."""
+
+    FILES = {
+        EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+        STANDALONE_CFG: "",
+        f"{HOME}/Applications/portable.txt": "",
+        f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
+            '<?xml version="1.0"?><systemList><system><name>gba</name><path>%ROMPATH%/gba</path>'
+            '<extension>.gba</extension><command label="mGBA">%EMULATOR_RETROARCH% -L '
+            "%CORE_RETROARCH%/mgba_libretro.so %ROM%</command></system></systemList>"
+        ),
+    }
+    DIRS = [f"{HOME}/Emulation/saves", f"{HOME}/Emulation/bios"]
+
+    def _ed(self, files=None):
+        return atlas.EmuDeck(HOME, FixtureMachine({**self.FILES, **(files or {})}, dirs=self.DIRS))
+
+    def test_health_states_the_relocation_the_answers_state(self):
+        ed = self._ed()
+        finding = ed.health().issues
+        carried = [c for c in ed.systems().caveats if c.code == atlas.CAVEAT_CONFIG_HOME_RELOCATED]
+        assert [(c.code, c.message, dict(c.data)) for c in finding] == [
+            (c.code, c.message, dict(c.data)) for c in carried
+        ]
+        assert atlas.HEALTH_ISSUE_CONFIG_HOME_RELOCATED == atlas.CAVEAT_CONFIG_HOME_RELOCATED
+
+    def test_no_answer_states_it_twice(self):
+        ed = self._ed()
+        assert [c.code for c in ed.systems().caveats].count(atlas.CAVEAT_CONFIG_HOME_RELOCATED) == 1
+
+    def test_an_absolute_setting_is_still_checked_beside_a_portable_txt(self):
+        # Only the home-derived spellings stop resolving: an absolute
+        # ROMDirectory is the root in force, and a missing one is stated.
+        settings = '<string name="ROMDirectory" value="/mnt/usb/roms" />'
+        ed = self._ed({f"{HOME}/ES-DE/settings/es_settings.xml": settings})
+        assert [(c.code, dict(c.data)) for c in ed.health().issues] == [
+            (atlas.HEALTH_ISSUE_ROMS_ROOT_MISSING, {"path": "/mnt/usb/roms"})
+        ]
 
 
 class TestAFlatpakOverrideCannotMoveTheConfigHome:
@@ -10987,6 +11099,7 @@ class TestARowNamingACoreFileOfAnotherHost:
             EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
             STANDALONE_CFG: 'savefile_directory = "/home/deck/Emulation/saves"\n',
             f"{HOME}/Emulation/saves/.keep": "",
+            f"{HOME}/Emulation/bios/.keep": "",
             self.ROM: "",
             f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
                 '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'

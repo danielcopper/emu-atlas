@@ -16,7 +16,8 @@
           "/mnt/sd/retrodeck/texture_packs/retroarch-core/Flycast/textures/readme.txt": "put packs here"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -72,7 +73,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"disabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/ppsspp_libretro.so": {
@@ -133,7 +136,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/HdPacks"
+          "/mnt/sd/retrodeck/bios/HdPacks",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/mesen_libretro.so": {
@@ -177,7 +181,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/HdPacks"
+          "/mnt/sd/retrodeck/bios/HdPacks",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/mesen_libretro.so": {
@@ -230,7 +235,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -349,7 +355,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/mgba_libretro.so": {
@@ -394,7 +402,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/dc/textures"
+          "/mnt/sd/retrodeck/bios/dc/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -456,7 +465,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -513,7 +524,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/dc/textures"
+          "/mnt/sd/retrodeck/bios/dc/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -568,7 +580,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/dc/textures"
+          "/mnt/sd/retrodeck/bios/dc/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -626,7 +639,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.config/retroarch/system/dc/textures"
+          "/home/deck/.config/retroarch/system/dc/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/flycast_libretro.so": {
@@ -744,7 +758,9 @@
           "/mnt/sd/retrodeck/texture_packs/Dolphin/Textures/readme.txt": "put packs here"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {},
         "symlinks": {
@@ -862,7 +878,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/TEXTURES"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/TEXTURES",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {},
         "entry_texture_query": {
@@ -910,7 +928,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/pcsx2/textures"
+          "/mnt/sd/retrodeck/bios/pcsx2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/pcsx2_libretro.so": {
@@ -963,7 +982,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"enabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/ppsspp_libretro.so": {
@@ -1026,7 +1047,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios/pcsx2/textures"
+          "/mnt/sd/retrodeck/bios/pcsx2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/pcsx2_libretro.so": {
@@ -1088,7 +1110,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/cores"
+          "/mnt/sd/retrodeck/cores",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/mnt/sd/retrodeck/cores/citra_libretro.so": {
@@ -1174,7 +1198,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psvita"
@@ -1216,7 +1242,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures"
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1273,7 +1301,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1340,7 +1370,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1409,7 +1441,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/gamesettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1471,7 +1505,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = memcards\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1525,7 +1561,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = mytextures\n[EmuCore/GS]\nLoadTextureReplacements = false\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1583,7 +1621,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "gc"
@@ -1643,7 +1682,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "gc"
@@ -1692,7 +1732,8 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/bios",
-          "/home/deck/Emulation/storage/pcsx2/textures"
+          "/home/deck/Emulation/storage/pcsx2/textures",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -1748,7 +1789,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs"
+          "/mnt/sd/retrodeck/texture_packs",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -1798,7 +1841,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/texture_packs",
-          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures"
+          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -1846,7 +1891,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs"
+          "/mnt/sd/retrodeck/texture_packs",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -1897,7 +1944,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs"
+          "/mnt/sd/retrodeck/texture_packs",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -1943,7 +1992,8 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/Emulation/bios"
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -1997,7 +2047,8 @@
           "/home/deck/Emulation/bios",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/org.DolphinEmu.dolphin-emu",
-          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC"
+          "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "gc"
@@ -2060,7 +2111,8 @@
           "/home/deck/Emulation/bios",
           "/home/deck/Applications",
           "/home/deck/.local/share/flatpak/app/io.github.shiiion.primehack",
-          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/Textures"
+          "/home/deck/.var/app/io.github.shiiion.primehack/data/dolphin-emu/Load/Textures",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "gc"
@@ -2120,7 +2172,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/data/PCSX2/textures"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2174,7 +2228,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /var/tmp/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2217,7 +2273,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures"
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2290,7 +2348,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures"
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2356,7 +2416,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/textures"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/duckstation/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -2404,7 +2466,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nTextures = /var/tmp/textures\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -2452,7 +2516,8 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Emulation/bios",
-          "/var/data/pcsx2/textures"
+          "/var/data/pcsx2/textures",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2509,7 +2574,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures"
+          "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "ps2"
@@ -2576,7 +2643,9 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/texture_packs",
-          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures"
+          "/mnt/sd/retrodeck/texture_packs/Duckstation/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "entry_texture_query": {
           "system": "psx"
@@ -2627,7 +2696,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GameSettings",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "entry_texture_query": {
           "system": "gc"
@@ -2698,7 +2768,9 @@
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
           "/home/deck/Applications",
-          "/var/lib/flatpak/app/uk.org.6809.xroar"
+          "/var/lib/flatpak/app/uk.org.6809.xroar",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "coco"
@@ -2743,7 +2815,9 @@
         "dirs": [
           "/home/deck/Emulation/saves",
           "/home/deck/Emulation/saves/retroarch/saves",
-          "/home/deck/.local/share/duckstation/textures/packs"
+          "/home/deck/.local/share/duckstation/textures/packs",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "entry_texture_query": {
           "system": "psx"

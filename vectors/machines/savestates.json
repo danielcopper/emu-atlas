@@ -16,6 +16,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -73,6 +77,10 @@
           "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).replay": "movie",
           "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).ldci": "index"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -128,6 +136,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.so": {
             "library_name": "mGBA"
@@ -181,6 +193,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.so": {
             "library_name": "mGBA"
@@ -234,6 +250,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -287,6 +307,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).srm": "sram",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba"
         }
@@ -338,6 +362,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -448,6 +476,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.so": {
             "library_name": "mGBA"
@@ -508,6 +540,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -557,6 +593,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -615,6 +655,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -670,6 +714,10 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/run/user/1000/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -726,6 +774,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "savestate_query": {
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
         }
@@ -782,6 +834,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "unlistable": [
           "/mnt/sd/retrodeck/states"
         ],
@@ -840,6 +896,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/card/real-states/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "symlinks": {
           "/mnt/sd/retrodeck/states": "/mnt/card/real-states"
         },
@@ -895,6 +955,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.so": {
             "library_name": "VaporSpec"
@@ -954,6 +1018,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.so": {
             "library_name": "VaporSpec"
@@ -1005,6 +1073,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.so": {
             "library_name": "VaporSpec"
@@ -1058,6 +1130,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.so": {
             "library_name": "VaporSpec"
@@ -1116,6 +1192,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.so": {
             "library_name": "VaporSpec"
@@ -1174,6 +1254,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "",
           "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.so": {
             "library_name": "mGBA"
@@ -1228,6 +1312,10 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "",
           "/mnt/sd/retrodeck/states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "entry_savestate_query": {
           "system": "gba"
         }
@@ -1269,6 +1357,10 @@
           "/mnt/sd/retrodeck/states/.keep": "",
           "/home/deck/ra-states/.keep": ""
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "aggregate_query": {
           "question": "savestate_location",
           "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
@@ -1377,6 +1469,9 @@
           "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip": "",
           "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/states/Golden Sun (USA).state": "state"
         },
+        "dirs": [
+          "/home/deck/Emulation/bios"
+        ],
         "savestate_query": {
           "content_path": "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip"
         }

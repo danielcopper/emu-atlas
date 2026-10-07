@@ -16,7 +16,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -81,7 +83,9 @@
           "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -155,6 +159,10 @@
           "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram",
           "/mnt/sd/retrodeck/saves/Golden Sun (USA).rtc": "stale clock data"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
             "library_name": "mGBA",
@@ -218,7 +226,9 @@
           "/mnt/sd/retrodeck/roms/gb/Tetris (World).gb": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -285,7 +295,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -343,7 +355,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -402,7 +416,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -477,6 +493,10 @@
           "/mnt/sd/retrodeck/roms/snes/Chrono Trigger (USA).sfc": "rom",
           "/mnt/sd/retrodeck/saves/Chrono Trigger (USA).srm": "sram"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/snes9x2005_libretro.so": {
             "library_name": "Snes9x 2005",
@@ -547,7 +567,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": null
@@ -612,7 +634,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "unlistable": [
           "/mnt/sd/retrodeck/saves"
@@ -680,7 +704,9 @@
           "/mnt/sd/retrodeck/roms/msx/Puzzle Game (Japan).rom": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/bluemsx_libretro.so": {
@@ -746,7 +772,9 @@
           "/mnt/sd/retrodeck/roms/arduboy/Mystic Balloon.hex": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/arduous_libretro.so": {
@@ -814,7 +842,9 @@
           "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
@@ -921,7 +951,9 @@
           "/mnt/sd/retrodeck/roms/snes/Chrono Trigger (USA).sfc": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/snes9x_libretro.so": {
@@ -990,7 +1022,9 @@
           "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/dice_libretro.so": {
@@ -1058,7 +1092,9 @@
           "/mnt/sd/retrodeck/roms/megadrive/Sonic 3 & Knuckles.md": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/picodrive_libretro.so": {
@@ -1127,7 +1163,9 @@
           "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/mame/nvram"
+          "/mnt/sd/retrodeck/saves/mame/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -1271,7 +1309,9 @@
           "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/fbneo"
+          "/mnt/sd/retrodeck/saves/fbneo",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
@@ -1396,6 +1436,10 @@
           "/mnt/sd/retrodeck/roms/arcade/simpsons.zip": "rom",
           "/mnt/sd/retrodeck/saves/fbneo/simpsons.nv": "eeprom"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
             "library_name": "FinalBurn Neo",
@@ -1501,6 +1545,10 @@
           "/mnt/sd/retrodeck/roms/arcade/rtype.zip": "rom",
           "/mnt/sd/retrodeck/saves/fbneo/rtype.hi": "scores"
         },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbneo_libretro.so": {
             "library_name": "FinalBurn Neo",
@@ -1607,7 +1655,9 @@
           "/mnt/sd/retrodeck/roms/gba/Zelda.gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
@@ -1677,7 +1727,9 @@
           "/mnt/sd/retrodeck/roms/gba/Zelda.gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
@@ -1745,7 +1797,9 @@
           "/mnt/sd/retrodeck/roms/gb/Tetris (World).gb": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
@@ -1835,7 +1889,9 @@
           "/mnt/sd/retrodeck/roms/sgb/Donkey Kong (World).sgb": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
@@ -1924,7 +1980,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
@@ -2012,7 +2070,9 @@
           "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
@@ -2098,7 +2158,9 @@
           "/mnt/sd/retrodeck/roms/atarilynx/Chip's Challenge (USA).lnx": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
@@ -2190,7 +2252,9 @@
           "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/mame2000/nvram"
+          "/mnt/sd/retrodeck/saves/mame2000/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2000_libretro.so": {
@@ -2303,7 +2367,9 @@
           "/mnt/sd/retrodeck/saves/mame2000/nvram/dkong.nv": "nv"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/mame2000/nvram"
+          "/mnt/sd/retrodeck/saves/mame2000/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2000_libretro.so": {
@@ -2415,7 +2481,9 @@
           "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/mame2010/nvram"
+          "/mnt/sd/retrodeck/saves/mame2010/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2000_libretro.so": {
@@ -2596,7 +2664,9 @@
           "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/mame2003/nvram"
+          "/mnt/sd/retrodeck/saves/mame2003/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_libretro.so": {
@@ -2758,7 +2828,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame2003-plus_core_save_subfolder = \"disabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves/nvram"
+          "/mnt/sd/retrodeck/saves/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame2003_libretro.so": {
@@ -2920,7 +2992,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "fba2012cps2_hiscores = \"enabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_cps2_libretro.so": {
@@ -3052,7 +3126,9 @@
           "/mnt/sd/retrodeck/roms/fba/mslug.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/fbalpha2012_cps2_libretro.so": {
@@ -3157,7 +3233,9 @@
           "/mnt/sd/retrodeck/roms/nds/Castlevania (USA).nds": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
@@ -3241,7 +3319,9 @@
           "/mnt/sd/retrodeck/roms/ngp/Metal Slug 2nd Mission.ngp": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
@@ -3325,7 +3405,9 @@
           "/mnt/sd/retrodeck/roms/ngp/Pocket Falcon Rally (World).ngp": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_ngp_libretro.so": {
@@ -3396,7 +3478,9 @@
           "/mnt/sd/retrodeck/roms/ngpc/Neon Kite Legends (World).ngc": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_ngp_libretro.so": {
@@ -3467,7 +3551,9 @@
           "/mnt/sd/retrodeck/roms/neogeo/mslug.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/geolith_libretro.so": {
@@ -3573,7 +3659,9 @@
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
@@ -3669,7 +3757,9 @@
           "/mnt/sd/retrodeck/roms/ports/outrun.zip": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/cannonball_libretro.so": {
@@ -3752,7 +3842,9 @@
           "/mnt/sd/retrodeck/roms/doom/Doom (USA).wad": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/prboom_libretro.so": {
@@ -3874,7 +3966,9 @@
           "/mnt/sd/retrodeck/roms/quake2/baseq2/pak0.pak": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vitaquake2_libretro.so": {
@@ -3968,7 +4062,9 @@
           "/mnt/sd/retrodeck/roms/doom3/base/pak000.pk4": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/boom3_libretro.so": {
@@ -4062,7 +4158,9 @@
           "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
@@ -4153,7 +4251,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/launch"
+          "/home/deck/launch",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
@@ -4233,7 +4333,9 @@
           "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
@@ -4315,7 +4417,9 @@
           "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
@@ -4409,7 +4513,9 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/home/deck/launch"
+          "/home/deck/launch",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
@@ -4505,7 +4611,9 @@
           "/mnt/sd/retrodeck/roms/megacd/Game (Europe).chd": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
@@ -4724,7 +4832,9 @@
           "/mnt/sd/retrodeck/roms/quake/id1/pak0.pak": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tyrquake_libretro.so": {
@@ -4857,7 +4967,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>quake</name><path>%ROMPATH%/quake</path>\n    <command label=\"TyrQuake\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tyrquake_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tyrquake_libretro.so": {
@@ -4951,7 +5063,9 @@
           "/mnt/sd/retrodeck/roms/pc88/Game (Japan).d88": "rom"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/quasi88_libretro.so": {
@@ -5069,7 +5183,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "q88_save_to_disk_image = \"enabled\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/quasi88_libretro.so": {
@@ -5171,7 +5287,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
@@ -5281,7 +5398,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
@@ -5368,7 +5486,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
@@ -5480,7 +5599,8 @@
         "dirs": [
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
-          "/mnt/sd/scumm-saves"
+          "/mnt/sd/scumm-saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
@@ -5553,7 +5673,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
@@ -5645,7 +5766,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
@@ -5740,7 +5862,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "swanstation_MemoryCards_Card1Type = \"PerGame\"\nswanstation_MemoryCards_Card2Type = \"Shared\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/swanstation_libretro.so": {
@@ -5949,7 +6073,9 @@
           "/mnt/sd/retrodeck/saves/Vagrant Story (USA).srm": "old"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/swanstation_libretro.so": {
@@ -6127,7 +6253,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6219,7 +6346,8 @@
           "/mnt/sd/retrodeck/bios",
           "/home/deck/launch/states/mame/nvram",
           "/home/deck/launch/states/mame/cfg",
-          "/home/deck/launch/system/mame/diff"
+          "/home/deck/launch/system/mame/diff",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6331,7 +6459,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/mame-nvram",
-          "/mnt/sd/mame-cfg-dkong"
+          "/mnt/sd/mame-cfg-dkong",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6440,7 +6569,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/mame-nvram",
-          "/mnt/sd/mame-cfg-dkong"
+          "/mnt/sd/mame-cfg-dkong",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6555,7 +6685,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/home/deck/mame-nvram",
-          "/mnt/sd/mame-cfg-dkong"
+          "/mnt/sd/mame-cfg-dkong",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6667,7 +6798,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/mame-nvram",
-          "/mnt/sd/mame-cfg-dkong"
+          "/mnt/sd/mame-cfg-dkong",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6776,7 +6908,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -6866,7 +6999,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "genesis_plus_gx_bram = \"per game\"\ngenesis_plus_gx_system_bram = \"per bios\"\ngenesis_plus_gx_cart_bram = \"per cart\"\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
@@ -6985,7 +7120,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -7080,7 +7216,8 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/mnt/sd/mame-nvram",
-          "/mnt/sd/mame-cfg-dkong"
+          "/mnt/sd/mame-cfg-dkong",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
@@ -7169,7 +7306,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/hatari_libretro.so": {
@@ -7259,7 +7397,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/scummvm_libretro.so": {
@@ -7332,7 +7471,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_psx_libretro.so": {
@@ -7446,7 +7586,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -7621,7 +7762,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -7797,7 +7939,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -7963,7 +8106,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8157,7 +8301,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8327,7 +8472,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8499,7 +8645,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8660,7 +8807,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8794,7 +8942,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -8927,7 +9076,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9060,7 +9210,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9195,7 +9346,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9360,7 +9512,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9525,7 +9678,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9691,7 +9845,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -9886,7 +10041,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -10047,7 +10203,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -10208,7 +10365,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -10385,7 +10543,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
@@ -10560,7 +10719,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
@@ -10729,7 +10889,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -10934,7 +11095,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -11142,7 +11304,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -11346,7 +11509,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -11545,7 +11709,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -11738,7 +11903,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -11938,7 +12104,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12129,7 +12296,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12278,7 +12446,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12460,7 +12629,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12652,7 +12822,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12824,7 +12995,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -12995,7 +13167,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13167,7 +13340,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13371,7 +13545,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13510,7 +13685,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13649,7 +13825,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13853,7 +14030,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -13990,7 +14168,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -14124,7 +14303,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -14259,7 +14439,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -14409,7 +14590,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -14558,7 +14740,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae2021_libretro.so": {
@@ -14762,7 +14945,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -14966,7 +15150,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -15169,7 +15354,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -15373,7 +15559,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -15577,7 +15764,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -15776,7 +15964,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -15974,7 +16163,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16119,7 +16309,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16317,7 +16508,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16515,7 +16707,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16648,7 +16841,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16783,7 +16977,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -16937,7 +17132,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17077,7 +17273,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17221,7 +17418,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17420,7 +17618,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17565,7 +17764,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17720,7 +17920,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -17924,7 +18125,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18127,7 +18329,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18275,7 +18478,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18426,7 +18630,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18573,7 +18778,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18715,7 +18921,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -18856,7 +19063,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19015,7 +19223,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19165,7 +19374,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19313,7 +19523,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19480,7 +19691,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19629,7 +19841,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -19835,7 +20048,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {
@@ -20034,7 +20248,8 @@
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
-          "/mnt/sd/retrodeck/bios"
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/puae_libretro.so": {

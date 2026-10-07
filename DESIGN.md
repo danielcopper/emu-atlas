@@ -54,7 +54,8 @@ installations = atlas.detect(home="/home/deck")
 inst = installations[0]              # e.g. a RetroDeck handle — live, re-reads its sources per query
                                      # choosing is optional: atlas.every_installation(home) asks them all
 inst.health()                        # structured: a tuple of finding caveats with stable codes; ok = no findings
-                                     # the same findings ride in a placement's own caveats, unwrapped
+                                     # the findings from reads every route makes ride in each answer's
+                                     # own caveats, unwrapped
 
 inst.savefile_location(content_path="/.../roms/n64/Paper Mario (USA).z64",
                    core_so="mupen64plus_next_libretro.so")
@@ -177,16 +178,20 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   every other answer refuses with that finding instead of naming what setup has not written yet.
 - **A health finding is a caveat, and travels as one.** It serializes `{code, data}` like every other caveat — the path
   it is about, the read status behind it, the marker key that is wrong — and **every** answer computed on a broken
-  installation carries the findings themselves in its `caveats`, under their own codes: placement, catalogue, systems
-  and all four firmware answers alike. The rule is blanket rather than causal on purpose — a true finding is never a
-  false statement, while a map of which finding affects which answer has to be maintained and can rot into silence, and
-  a client reading a catalogue answer would otherwise never learn the installation is broken. The `data` names what
-  broke; judging relevance is the client's. No category code with the real condition nested in `data`: a distinct,
-  stable code hidden behind a discriminator is a shape a client has to unpack before it can branch, and one the firmware
-  route already retired. The health answer itself serializes as an object like every other answer — `ok` the summary
-  field a client renders, `issues` the findings — while an installation's identity carries the findings as a plain
-  field, where an empty list is the whole summary. `ok` is derived from the findings and stays derived: stating a
-  summary is not storing a second copy of the fact.
+  installation (a stated no — `no_savestates` — aside: it names no path for them to qualify) carries the findings from
+  the reads every route makes (the marker, the roots, the saves root, the BIOS folder, the companion config, a bare
+  RetroArch's `config-unreadable`) themselves in its `caveats`, under their own codes: placement, catalogue, systems and
+  all four firmware answers alike. A finding with a read of its own rides only where that read is made, by the one-read
+  model: `catalogue-invalid` on the answers whose question reads the catalogue, `content-tree-unwired` and the ROM root
+  findings on `health()` alone. The rule is blanket rather than causal on purpose — a true finding is never a false
+  statement, while a map of which finding affects which answer has to be maintained and can rot into silence, and a
+  client reading a catalogue answer would otherwise never learn the installation is broken. The `data` names what broke;
+  judging relevance is the client's. No category code with the real condition nested in `data`: a distinct, stable code
+  hidden behind a discriminator is a shape a client has to unpack before it can branch, and one the firmware route
+  already retired. The health answer itself serializes as an object like every other answer — `ok` the summary field a
+  client renders, `issues` the findings — while an installation's identity carries the findings as a plain field, where
+  an empty list is the whole summary. `ok` is derived from the findings and stays derived: stating a summary is not
+  storing a second copy of the fact.
 - **The emulator handle means "as currently configured".** Granularity, roots, and modes are config readings with
   provenance, not static facts. Where an alternative mode exists (Flycast per-game VMUs), the handle names the config
   that selects it.

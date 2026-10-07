@@ -22,7 +22,9 @@
           "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -105,7 +107,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -169,7 +173,9 @@
           "/run/current-system/sw/lib/retroarch/cores/dolphin_libretro.so": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -238,7 +244,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RYUBING\">\n        <rule type=\"systempath\">\n            <entry>ryubing</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>/var/data/retrodeck/external_components/ryubing/Ryujinx.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "switch"
@@ -304,7 +312,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/opt/dolphin/dolphin-emu</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -370,7 +380,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/bin/retroarch": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -461,7 +473,9 @@
           "/home/deck/Applications/Bar-1.0.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -553,7 +567,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Applications/Foo-1.0.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -620,7 +636,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Foo*.AppImage</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Applications/Foo.AppImage": "/home/deck/Downloads/gone.AppImage"
@@ -691,7 +709,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/.local/bin/x64sc": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "c64"
@@ -758,7 +778,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "wiiu"
@@ -818,7 +840,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -899,7 +923,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<ruleList><emulator name=\"DOLPHIN\"></ruleList>"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -961,7 +987,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/custom_systems/es_find_rules.xml": "<ruleList>"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -1029,7 +1057,9 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Applications/Dolphin-2509.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -1096,7 +1126,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/etc/foo/launch</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1157,7 +1189,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "launchable_query": {
           "system": "gc",
@@ -1232,7 +1266,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/dolphin_libretro.so": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -1296,7 +1332,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1358,7 +1396,9 @@
           "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Environment]\nPATH=/app/extra/bin:/app/bin:/usr/bin\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -1421,7 +1461,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "gc"
@@ -1484,7 +1526,9 @@
           "/opt/foo/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1545,7 +1589,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/run/user/1000/foo</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1608,7 +1654,9 @@
           "/home/deck/.local/share/flatpak/exports/bin/org.example.Foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1674,7 +1722,9 @@
           "/usr/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1735,7 +1785,9 @@
           "/usr/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/bin": "/usr/bin"
@@ -1799,7 +1851,9 @@
           "/usr/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1864,7 +1918,9 @@
           "/home/deck/.var/app/com.valvesoftware.Steam/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1926,7 +1982,9 @@
           "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Environment]\nPATH=bin:/app/bin\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -1988,7 +2046,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2050,7 +2110,9 @@
           "/home/deck/.local/share/flatpak/exports/bin/org.example.Foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2115,7 +2177,9 @@
           "/home/deck/.var/app/org.example.Foo/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2180,7 +2244,9 @@
           "/etc/emus/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2242,7 +2308,9 @@
           "/usr/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2303,7 +2371,9 @@
           "/home/deck/Applications/Foo.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2369,7 +2439,9 @@
           "/opt/bar/bar": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2450,7 +2522,9 @@
           "/home/deck/.var/app/org.example.Foo/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2512,7 +2586,9 @@
           "/usr/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2573,7 +2649,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2635,7 +2713,9 @@
           "/var/lib/emus/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2696,7 +2776,9 @@
           "/run/emus/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2761,7 +2843,9 @@
           "/home/deck/bin/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2823,7 +2907,9 @@
           "/home/deck/Applications/Foo.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2888,7 +2974,9 @@
           "/opt/foo/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -2951,7 +3039,9 @@
           "/home/deck/.var/app/org.example.Foo/other/bar": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -3035,7 +3125,9 @@
           "/etc/emus/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -3097,7 +3189,9 @@
           "/opt/foo/foo": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -3158,7 +3252,9 @@
           "/home/deck/Applications/Foo.AppImage": ""
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
           "system": "ports"
@@ -3218,7 +3314,9 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"FOO\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Applications/Foo.AppImage</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "inaccessible": [
           "/home/deck/Applications"
@@ -3284,7 +3382,9 @@
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Foo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/foo.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
-          "/mnt/sd/retrodeck/saves"
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
         ],
         "symlinks": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/rd_extras/cores"
@@ -3347,7 +3447,9 @@
         },
         "dirs": [
           "/home/deck/Emulation/saves",
-          "/home/deck/Emulation/saves/retroarch/saves"
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
         ],
         "catalogue_query": {
           "installation": "emudeck",
