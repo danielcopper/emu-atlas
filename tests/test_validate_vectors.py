@@ -1158,6 +1158,13 @@ REQUIREMENT_CASES = [
          "with no source for the system the slug must be", id="requirement-none-source-named-system"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(path="/elsewhere/gb_bios.bin")])]),
          "must be the absolute destination under the root", id="requirement-path-outside-root"),
+    # A link leading out of the root admits the one target its statement
+    # names, and nothing beside it.
+    case(_base_firmware(cores=[_core(
+        requirements=[_requirement(path="/elsewhere/gb_bios.bin")],
+        caveats=[{"code": "firmware-file-linked-outside-root",
+                  "data": {"core_so": CORE_SO, "link": f"{BIOS}/gb_bios.bin", "target": "/store/gb_bios.bin"}}],
+    )]), "must be the absolute destination under the root", id="requirement-path-outside-root-another-link"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(path=f"{BIOS}/../bios/gb_bios.bin")])]),
          "must be normalized", id="requirement-path-unnormalized"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(declared="sub/other.bin")])]),
@@ -1375,6 +1382,10 @@ UNCLAIMED_CASES = [
          "each unclaimed file must be exactly the fields", id="unclaimed-missing-field"),
     case(_base_firmware(unclaimed=[_unclaimed(path="/elsewhere/x.bin")]),
          "an unclaimed file's path must be absolute under the root", id="unclaimed-outside-root"),
+    case(_base_firmware(unclaimed=[_unclaimed(path="/elsewhere/x.bin")],
+                        caveats=[{"code": "firmware-file-linked-outside-root",
+                                  "data": {"link": f"{BIOS}/x.bin", "target": "/store/x.bin"}}]),
+         "an unclaimed file's path must be absolute under the root", id="unclaimed-outside-root-another-link"),
     case(_base_firmware(unclaimed=[_unclaimed(known_as="")]),
          "unclaimed known_as must be a list", id="unclaimed-known-as-type"),
     case(_base_firmware(unclaimed=[_unclaimed(known_as=["gb_bios.bin"])]),

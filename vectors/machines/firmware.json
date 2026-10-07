@@ -4019,6 +4019,1592 @@
       }
     },
     {
+      "name": "firmware-a-declared-file-linked-out-of-the-root-is-followed-and-judged",
+      "rationale": "A client may place firmware as a link at the place atlas names, pointing into a store of its own outside the firmware root. The core opens the link and the kernel reads the target, so the declaration is not refused: the requirement's path is the target, its bytes are judged there and verify against the packaged identity, and firmware-file-linked-outside-root on the core names the link and the target with the keys firmware-path-escapes-root carries. The unclaimed scan meets the link in the root, resolves it to the claimed target and states nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/linked_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/linked_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.local/share/firmware-store/scph5501.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "linked_libretro.so",
+              "emulator": "linked_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "linked_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "linked_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declared-file-linked-out-of-the-root-to-nothing-is-missing",
+      "rationale": "A link out of the root whose target is gone is a file the core cannot open, which is what found: missing says anywhere else. It is not refused as leaving the root: the requirement names the target as the place the bytes belong, required and missing makes requirements_met false, and the caveat still names the link.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/linked_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/linked_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.local/share/firmware-store/scph5501.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "linked_libretro.so",
+              "emulator": "linked_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "linked_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "linked_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-declared-file-linked-out-of-the-root-to-a-directory-is-obstructed",
+      "rationale": "A link out of the root that lands on a directory puts a directory where the core opens a file, and it answers what a directory at any declared file answers: found directory, checked unknown, firmware-path-obstructed at the target. The link caveat rides beside it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/linked_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/linked_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.local/share/firmware-store/bios"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store/bios"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "linked_libretro.so",
+              "emulator": "linked_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "linked_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/bios",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": null,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "linked_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/bios"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-path-obstructed",
+              "data": {
+                "path": "/home/deck/.local/share/firmware-store/bios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-link-into-the-root-that-leads-out-again-is-one-link-out",
+      "rationale": "Whether a declared file leaves the root is decided on two ends of its resolution, the directory it is declared in and where the chain ends, never on the number of hops. Here scph5501.bin links to another name inside the root, and that one links out: the declared place is inside, the bytes are outside, so the answer is the same as for one link straight out — link is the declared place, target the end of the chain. The intermediate name is a link in the root whose target is claimed, so the scan states nothing about it either.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/linked_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/linked_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.config/retroarch/system/alias.bin",
+          "/home/deck/.config/retroarch/system/alias.bin": "/home/deck/.local/share/firmware-store/scph5501.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "linked_libretro.so",
+              "emulator": "linked_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "linked_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "linked_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-unclaimed-link-out-of-the-root-is-listed-under-its-target",
+      "rationale": "The unclaimed scan follows a file link in the firmware tree the way the kernel does, and a link leading out of the root is no exception: the file nobody claims is listed under its target, where its bytes are, and an answer-level firmware-file-linked-outside-root names the link it was met as. No core is named, because none claims it. The scan still lists only directories inside the root.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/linked_libretro.info": "systemname = \"Sony - PlayStation\"\nfirmware_count = 1\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/linked_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/stray.bin": {
+            "md5": "33333333333333333333333333333333",
+            "sha1": "3333333333333333333333333333333333333333",
+            "size": 16
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/stray.bin": "/home/deck/.local/share/firmware-store/stray.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "linked_libretro.so",
+              "emulator": "linked_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "linked_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [
+            {
+              "path": "/home/deck/.local/share/firmware-store/stray.bin",
+              "identity": null,
+              "known_as": [],
+              "description": null,
+              "console": null,
+              "concerns": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-file-linked-outside-root",
+              "data": {
+                "link": "/home/deck/.config/retroarch/system/stray.bin",
+                "target": "/home/deck/.local/share/firmware-store/stray.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-folder-declaration-linked-out-of-the-root-is-refused",
+      "rationale": "LRPS2 lists pcsx2/bios and opens every image inside it, so that folder is a directory on the way to each file the core reads. Linked out of the firmware root, it is a directory component leaving the root, and it stays refused as firmware-path-escapes-root: only a declared file reached through a link is followed out of the root. The store it points at is neither listed nor hashed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/bios/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios": "/home/deck/.local/share/firmware-store/bios"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.local/share/firmware-store/bios/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": null,
+              "system_firmware": null,
+              "requirements": [],
+              "refused": [
+                {
+                  "declared": "pcsx2/bios",
+                  "need": "required",
+                  "reason": "firmware-path-escapes-root"
+                }
+              ],
+              "caveats": [
+                {
+                  "code": "firmware-path-escapes-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "declared": "pcsx2/bios",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-firmware-requirement",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-listed-candidate-linked-out-of-the-root-is-read-at-its-target-and-said",
+      "rationale": "A file inside the listed folder that is a link leading out of the root is one the core lists and opens, and it is read at its target as before: the header and the digest come from the store, and the image is stated under the name the core lists. What is new is the core-level firmware-file-linked-outside-root naming that candidate's link and target, with the folder declaration's need, as a declared file reached the same way would carry.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": "/home/deck/.local/share/firmware-store/scph70004.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system/pcsx2/bios",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "inventory",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.local/share/firmware-store/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/home/deck/.config/retroarch/system/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "link": "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph70004.bin",
+                    "need": "required"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-image-identified",
+              "data": {
+                "path": "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin",
+                "image": "ps2-0200e-20040614.bin",
+                "md5": "dc752f160044f2ed5fc1f4964db2a095",
+                "table": "6.0.0",
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-a-configured-image-linked-out-of-the-root-is-followed",
+      "rationale": "The pcsx2_bios option names a file inside the listed folder, and that file is a link leading out of the root. The folder is inside, so only the file leads out, and it is followed: the requirement is the target, its bytes are judged there, and the caveat on the core carries the option key the way a refused configured name does.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/pcsx2_libretro.info": "systemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/usr/lib/libretro/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          },
+          "/home/deck/.config/retroarch/retroarch-core-options.cfg": "pcsx2_bios = \"scph70004.bin\"\n"
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin": "/home/deck/.local/share/firmware-store/scph70004.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system/pcsx2/bios",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "pcsx2_libretro.so",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/home/deck/.local/share/firmware-store/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "scph70004.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph70004.bin",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc752f160044f2ed5fc1f4964db2a095",
+                    "sha1": "434bc0b4eb4827da0773ec0795aadc5162569a07",
+                    "size": 4194304,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "declared": "scph70004.bin",
+                    "key": "pcsx2_bios",
+                    "link": "/home/deck/.config/retroarch/system/pcsx2/bios/scph70004.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph70004.bin"
+                  }
+                },
+                {
+                  "code": "firmware-image-configured",
+                  "data": {
+                    "core": "pcsx2",
+                    "key": "pcsx2_bios",
+                    "name": "scph70004.bin",
+                    "options_file": "/home/deck/.config/retroarch/retroarch-core-options.cfg"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-swanstation-a-region-image-linked-out-of-the-root-is-followed",
+      "rationale": "SwanStation opens the file its region key names under the system directory, and here the NTSC-U default scph5501.bin is a link leading out of the root. It is followed and the image its own table knows boots from the target. The directory search for the other two regions keeps the same link as a candidate, so the core names the one link three times — for the declared row, for the region key and for the search — each with the keys that route's own statements carry.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"2\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.local/share/firmware-store/scph5501.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "optional",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "declared": "scph5501.bin",
+                    "key": "swanstation_BIOS_PathNTSCU",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                    "dir": "/home/deck/.config/retroarch/system"
+                  }
+                },
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "ntsc-u"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core_so": "swanstation_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-beetle-psx-a-spelling-linked-out-of-the-root-is-followed",
+      "rationale": "Beetle PSX walks its own list of spellings per region, and the first that opens ends the walk. Here scph5501.bin is a link leading out of the root to the US image: the walk opens it and stops, the region's option is the target, and the caveat rides the core for the walk as well as for the declared row of the same name.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 5\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\nfirmware3_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware3_path = \"psxonpsp660.bin\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"ps1_rom.bin (PS3 PS1 BIOS)\"\nfirmware4_path = \"ps1_rom.bin\"\nfirmware4_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/scph5501.bin": "/home/deck/.local/share/firmware-store/scph5501.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "ps1_rom.bin",
+                  "path": "/home/deck/.config/retroarch/system/ps1_rom.bin",
+                  "declared": "ps1_rom.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "81bbe60ba7a3d1cea1d48c14cbcc647b",
+                    "sha1": "c40146361eb8cf670b19fdc9759190257803cab7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.local/share/firmware-store/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "declared": "scph5501.bin",
+                    "need": "required",
+                    "root": "/home/deck/.config/retroarch/system",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "declared": "scph5501.bin",
+                    "link": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "target": "/home/deck/.local/share/firmware-store/scph5501.bin"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-an-identification-carries-the-link-behind-a-path-outside-the-root",
+      "rationale": "An identification hands requirements back without their core, so the statement that one of them is reached through a link leading out of the root must travel with it — matched by its target, whatever the requirement's system source. gba_bios.bin is filed by the system override, the case whose core caveats an identification never carried: its requirement's path is the store file, and firmware-file-linked-outside-root with that target rides the answer, so a client finds the link it would otherwise overwrite through path. The Game Boy BIOS is linked out the same way, but it is not in this answer, so its statement stays on its own core.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\nsystemname = \"Nintendo - Game Boy Advance\"\nfirmware_count = 1\nfirmware0_desc = \"gba_bios.bin (Game Boy Advance BIOS)\"\nfirmware0_path = \"gba_bios.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/mgba_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/usr/share/libretro/info/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy / Color (Gambatte)\"\nsystemname = \"Nintendo - Game Boy\"\nfirmware_count = 2\nfirmware0_desc = \"gb_bios.bin (Game Boy BIOS)\"\nfirmware0_path = \"gb_bios.bin\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"gbc_bios.bin (Game Boy Color BIOS)\"\nfirmware1_path = \"gbc_bios.bin\"\nfirmware1_opt = \"true\"\n",
+          "/usr/lib/libretro/gambatte_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.local/share/firmware-store/gba_bios.bin": {
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+            "size": 16384
+          },
+          "/home/deck/.local/share/firmware-store/gb_bios.bin": {
+            "md5": "32fbbd84168d3482956eb3c5051637f5",
+            "sha1": "4ed31ec6b0b175bb109c0eb5fd3d193da823339f",
+            "size": 256
+          }
+        },
+        "symlinks": {
+          "/home/deck/.config/retroarch/system/gba_bios.bin": "/home/deck/.local/share/firmware-store/gba_bios.bin",
+          "/home/deck/.config/retroarch/system/gb_bios.bin": "/home/deck/.local/share/firmware-store/gb_bios.bin"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system",
+          "/home/deck/.local/share/firmware-store"
+        ],
+        "identify_query": {
+          "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "identification": {
+          "identity": {
+            "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+            "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+            "size": 16384,
+            "kind": "file"
+          },
+          "known_as": [
+            "gba_bios.bin"
+          ],
+          "requirements": [
+            {
+              "core_so": "mgba_libretro.so",
+              "system": "gba",
+              "system_source": "override",
+              "need": "optional",
+              "file_name": "gba_bios.bin",
+              "path": "/home/deck/.local/share/firmware-store/gba_bios.bin",
+              "declared": "gba_bios.bin",
+              "declared_kind": "file",
+              "identity": {
+                "md5": "a860e8c0b6d573d191e4ec7db1b1e4f6",
+                "sha1": "300c20df6731a33952ded8c436f7f186d25d3492",
+                "size": 16384,
+                "kind": "file"
+              },
+              "found": "file",
+              "present": true,
+              "checked": "unchecked",
+              "satisfied": null,
+              "supplied_by": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "firmware-file-linked-outside-root",
+              "data": {
+                "core_so": "mgba_libretro.so",
+                "declared": "gba_bios.bin",
+                "need": "optional",
+                "root": "/home/deck/.config/retroarch/system",
+                "link": "/home/deck/.config/retroarch/system/gba_bios.bin",
+                "target": "/home/deck/.local/share/firmware-store/gba_bios.bin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-a-folder-declaration-with-nothing-there-is-a-folder-to-create",
       "rationale": "The consumer-visible half of declared_kind: with the folder absent, found=missing is the same word an absent FILE gets, and only declared_kind separates 'fetch this dump' from 'create this directory'. The declaration's shape is a property of the declaration, so it survives an empty destination — which is exactly the user who needs the instruction. A required folder that is not there is unmet: satisfied=false and requirements_met=false, no hedging caveat anywhere.",
       "input": {
@@ -8601,6 +10187,161 @@
               ],
               "refused": [],
               "caveats": []
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-image-identified",
+              "data": {
+                "path": "/mnt/sd/retrodeck/bios/pcsx2/bios/scph70004.bin",
+                "image": "ps2-0200e-20040614.bin",
+                "md5": "dc752f160044f2ed5fc1f4964db2a095",
+                "table": "6.0.0",
+                "core_so": "pcsx2_libretro.so",
+                "description": "Europe  v02.00(14/06/2004)  Console fixture-eu",
+                "zone": "Europe",
+                "version": "02.00",
+                "date": "2004-06-14",
+                "serial": "fixture-eu"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-catalogue-listing-lrps2-twice-names-a-linked-candidate-on-both-entries",
+      "rationale": "The doubled catalogue again, with the one image in the listed folder a link leading out of the firmware root. firmware-image-identified is an observation about the machine and is stated once, as before; firmware-file-linked-outside-root rides each core, because a consumer reads one emulator's entry whole and the second entry's read of the folder is the same read of the same link — the way a doubled entry restates its refused declarations rather than leaving them on the first.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ps2</name><path>%ROMPATH%/ps2</path>\n    <command label=\"LRPS2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/pcsx2_libretro.so %ROM%</command>\n    <command label=\"PCSX2\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/pcsx2_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.info": "display_name = \"Sony - PlayStation 2 (LRPS2)\"\nsystemname = \"Sony PlayStation 2\"\nfirmware_count = 1\nfirmware0_desc = \"'pcsx2/bios' folder\"\nfirmware0_path = \"pcsx2/bios\"\nfirmware0_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/pcsx2_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/firmware-store/scph70004.bin": {
+            "md5": "dc752f160044f2ed5fc1f4964db2a095",
+            "size": 4194304
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/firmware-store"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "ps2",
+          "verify": true
+        },
+        "ps2_bios_headers": {
+          "/mnt/sd/firmware-store/scph70004.bin": {
+            "romver": "0200EC20040614",
+            "serial": "fixture-eu"
+          }
+        },
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/bios/scph70004.bin": "/mnt/sd/firmware-store/scph70004.bin"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 0,
+              "label": "LRPS2",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/mnt/sd/retrodeck/bios/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "link": "/mnt/sd/retrodeck/bios/pcsx2/bios/scph70004.bin",
+                    "target": "/mnt/sd/firmware-store/scph70004.bin",
+                    "need": "required"
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "pcsx2_libretro.so",
+              "emulator": "pcsx2_libretro.so",
+              "declared_index": 1,
+              "label": "PCSX2",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": null,
+              "requirements": [
+                {
+                  "core_so": "pcsx2_libretro.so",
+                  "system": "ps2",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "bios",
+                  "path": "/mnt/sd/retrodeck/bios/pcsx2/bios",
+                  "declared": "pcsx2/bios",
+                  "declared_kind": "directory",
+                  "identity": null,
+                  "found": "directory",
+                  "present": true,
+                  "checked": "unknown",
+                  "satisfied": true,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-file-linked-outside-root",
+                  "data": {
+                    "core_so": "pcsx2_libretro.so",
+                    "link": "/mnt/sd/retrodeck/bios/pcsx2/bios/scph70004.bin",
+                    "target": "/mnt/sd/firmware-store/scph70004.bin",
+                    "need": "required"
+                  }
+                }
+              ]
             }
           ],
           "unclaimed": [],

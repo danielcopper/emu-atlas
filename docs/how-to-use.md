@@ -2754,8 +2754,9 @@ listed folder's read does: every file a DuckStation search kept (its size gate's
 recognition runs over) and every destination a card names. Those files leave `unclaimed`, because on RetroDECK
 DuckStation's search directory _is_ the firmware root — so a BIOS image there was that card's satisfied requirement in
 `firmware_for_system` and a file nobody asks for in `firmware_inventory` at the same time. The claim is by resolved
-path, so a card destination an arrangement links into the firmware tree claims its target; a destination outside the
-root claims nothing there, since the scan never looks outside it.
+path, so a card destination an arrangement links into the firmware tree claims its target. A destination outside the
+root is met by the scan only through a link in the tree — the scan lists no directory outside it, and follows a file
+link in its directories to the target — and the card's claim is what keeps that file out of `unclaimed`.
 
 Reading a `FirmwareAnswer`:
 
@@ -3147,10 +3148,12 @@ than replacing it. Nothing normalises, because upstream resolves no `.` or `..` 
 separator composes literally and where it lands is the kernel's answer, which is the file the core opens. atlas follows
 it for that reason: `../elsewhere.bin` under a `pcsx2/bios` declaration gives a requirement whose `path` is
 `<root>/pcsx2/elsewhere.bin` while `declared` stays `pcsx2/bios`, and the claim follows the `path`, so the unclaimed
-scan does not meet that file a second time. What is refused rather than followed is only what leaves the firmware root —
-`firmware-path-escapes-root`, carrying `core_so`, `declared` and `key` — which is the bound every read atlas makes is
-held to. None of this moves where a download goes: a `needs`/identification answer still names the declared folder as
-the destination, because that is what the core declares and a setting does not change it.
+scan does not meet that file a second time. What is refused rather than followed is a value whose directory leaves the
+firmware root — `firmware-path-escapes-root`, carrying `core_so`, `declared` and `key` — which is the bound every place
+atlas looks is held to; a value naming a file that is itself a link out of the root is followed to its target instead
+([A file reached through a link](#a-file-reached-through-a-link)). None of this moves where a download goes: a
+`needs`/identification answer still names the declared folder as the destination, because that is what the core declares
+and a setting does not change it.
 
 **Why is `satisfied` `None`?** Every route to it, in one place:
 
@@ -3186,6 +3189,62 @@ it under another prefix.
 `unclaimed` never lists dot-files — the scan globs each directory and a wildcard does not match a leading dot, so
 tooling residue like `.directory` stays out of the answer by design (a core that _declares_ a dotted path still gets its
 requirement: declarations are resolved, never globbed).
+
+### A file reached through a link
+
+`path` is where the bytes are once every link on the way is followed, on every route that resolves a named place. A link
+inside the firmware root has always been read that way — RetroDECK links `pcsx2/bios` back onto the root, and a
+declaration through it states the file at the root. A file at the declared place that is a link **leading out of the
+firmware root** is read the same way: a client that keeps firmware in a store of its own and links each file into place
+gets a requirement whose `path` is the link's target, with `found`, `checked` and `satisfied` judged at the target,
+where the core reads it. The core then carries `firmware-file-linked-outside-root`, because nothing else in the answer
+says the file lives outside the tree.
+
+The two routes that find a file by **listing** a directory are the deliberate exception: they state it under the entry
+they listed — the name the core lists and opens through the link — while its bytes are still read at the target. One is
+the LRPS2 folder listing, whose contents are not requirements but statements beside the folder's requirement
+(`firmware-image-identified` and its siblings, under their `path` key); the other is SwanStation's directory search,
+whose pick is a requirement option with that entry as its `path`. DuckStation's directory search, on its standalone
+card, states its pick under the listed entry the same way, but carries no link statement. So pair a link statement with
+what it is about by `link` on the two libretro listing routes and by `target` everywhere else:
+
+| where the link was met                                                       | rides      | the stated path is | data                                                    |
+| ---------------------------------------------------------------------------- | ---------- | ------------------ | ------------------------------------------------------- |
+| a declared file (a `.info` row)                                              | the core   | `target`           | `core_so`, `declared`, `need`, `root`, `link`, `target` |
+| a file a core option names (LRPS2's `pcsx2_bios`, SwanStation's region keys) | the core   | `target`           | `core_so`, `declared`, `key`, `link`, `target`          |
+| a name in a core's own list of spellings (Beetle PSX)                        | the core   | `target`           | `core_so`, `declared`, `link`, `target`                 |
+| a candidate the LRPS2 folder listing keeps                                   | the core   | `link`             | `core_so`, `link`, `target`, `need`                     |
+| a candidate SwanStation's directory search keeps                             | the core   | `link`             | `core_so`, `link`, `target`, `dir`                      |
+| a file in the tree that nothing claims                                       | the answer | `target`           | `link`, `target`                                        |
+
+`link` is the place the core opens, inside the root; `target` is where the chain ends. Each row carries the keys its
+route's other statements carry — the first three are the keys `firmware-path-escapes-root` carries on that route — so a
+consumer finds the subject under the same keys whether the name was followed or refused. Whether a link leaves the root
+is decided on two ends — the directory the name lies in, and where the chain ends — so a link to another name inside the
+root that links out from there is one link out, with `link` the declared place. An identification hands requirements
+back without their core, so it carries each such statement whose `target` is the `path` of a requirement in its answer,
+whatever that requirement's system source — and none about a file it does not hand back. It never hands back a listing's
+file, so there the match is always on `target`.
+
+**One link can be named once per route that read it.** Beetle PSX opens `scph5501.bin` as a declared `.info` row and
+again while walking its own spellings; SwanStation opens it as a declared row, through its region key, and as a
+candidate of its directory search. Each read states the link with its own keys, so the same `link` may appear two or
+three times on one core. Match on `link` rather than counting statements.
+
+A link whose target is gone is a file the core cannot open: `found` is `missing`, `path` names the target as the place
+the bytes belong, and `satisfied` is `False` for a required file — never a refusal. A target that is a directory answers
+what a directory at any file answers, `firmware-path-obstructed` at the target. In both cases the link statement rides
+beside it.
+
+What leaves the root through a **directory** is still refused as `firmware-path-escapes-root`: where the chain ends
+outside the root and the directory the name resolves into lies outside it too — a `../` climb, or a declared path whose
+directory is linked out of the root. A file in such an outside directory that links back into the root resolves inside
+it and is answered there, as it always was. A folder a core lists — LRPS2's `pcsx2/bios` — linked out of the root is
+refused as well, because that folder is the directory part of every file the core opens below it. The unclaimed scan
+follows a file link in the tree the same way: an entry nothing claims is listed under its target, with the answer-level
+statement naming the link it was met as, and the scan still lists no directory outside the root. A standalone emulator
+has no firmware root to leave, so the places its answers name follow links wherever they lead — its directory search's
+pick, as on SwanStation's, is stated under the listed entry — and carry no such statement.
 
 ### What an unclaimed file says about itself
 
@@ -3674,6 +3733,7 @@ files = [r for r in ident.requirements if r.declared_kind != "directory"]
 folders = [r for r in ident.requirements if r.declared_kind == "directory"]
 for req in files:                                 # every named destination that wants this content
     copy(tmp_file, req.path)                      # the core opens this exact name
+    # or place it by link: symlink(store_copy, req.path) where nothing is there yet
 for req in folders:                               # every listed folder whose core recognises it by header
     if any(dirname(f.path) == req.path for f in files):
         continue                                  # a file copy above already sits inside: one write, not two
@@ -3685,6 +3745,16 @@ for req in folders:                               # every listed folder whose co
     inside_name = basename(ident.known_as[0])     # any name you like: the core reads headers, not names
     copy(tmp_file, join(req.path, inside_name))   # a requirement exists, so known_as is never empty
 ```
+
+Placing a file by link instead of a copy works through the same `req.path`: create the link there, pointing into your
+own store. The next answer states the requirement at the file in your store — at a named place `path` is where the bytes
+are — and `firmware-file-linked-outside-root` names the link you wrote as `link`, so you recognise your own placement by
+the `target` you linked to. The statement is not a field of the requirement: it rides `core.caveats` in a firmware
+answer and `ident.caveats` here, and the requirement it is about is the one whose `path` equals its `data["target"]` —
+an identification hands back no file a listing found, so here the match is never on `link`. Where one matches, the link
+sits at the statement's `link`: a copy to `req.path` writes into whatever the link points at, so replacing the placement
+means replacing the link at `link`. Link a file, never the folder a core lists — a folder linked out of the firmware
+root is refused ([A file reached through a link](#a-file-reached-through-a-link)).
 
 ### Flow 5 — "Did the layout drift since the last sync?"
 

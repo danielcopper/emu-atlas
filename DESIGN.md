@@ -657,9 +657,11 @@ visible in `system_source`, and marked as derived where the core spans systems.
   and a path that could not be looked at are four answers, not two. `present` is therefore `true`/`false`/`null`, and
   the seam's own rule holds: a present-but-broken state is never reported as absent or healthy. Declared paths are
   bounded to the firmware root — `firmwareN_path` comes out of an editable config and drives every read that follows, so
-  one that climbs out is refused and stated rather than followed. The scan for unclaimed files is bounded to the same
-  subtree and, by the seam's glob rule, does not see leading-dot names: dot-files in a firmware tree are tooling
-  residue, and leaving them out is a decision, recorded here so it is not mistaken for a gap.
+  one that climbs out is refused and stated rather than followed. The bound is on the declared place: a file there that
+  is a link leading out of the root is followed to its target, where the core reads it, and stated as such. The scan for
+  unclaimed files is bounded to the same subtree and, by the seam's glob rule, does not see leading-dot names: dot-files
+  in a firmware tree are tooling residue, and leaving them out is a decision, recorded here so it is not mistaken for a
+  gap.
 
 ## Open questions
 
