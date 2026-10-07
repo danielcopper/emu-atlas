@@ -63,13 +63,13 @@ def _flag(name: str, value) -> list[str]:
 
 def _firmware_argv(query) -> list[str]:
     """The CLI spelling of the firmware question, whose kind names the command."""
-    verify = ["--verify"] if query.get("verify") else []
+    flags = (["--verify"] if query.get("verify") else []) + _flag("--cwd", query.get("cwd"))
     kind = query["kind"]
     if kind == "core":
-        return ["firmware-for-core", "--core", query["core_so"]] + verify
+        return ["firmware-for-core", "--core", query["core_so"]] + flags
     if kind == "system":
-        return ["firmware-for-system", "--system", query["system"]] + verify
-    return ["firmware-inventory"] + verify
+        return ["firmware-for-system", "--system", query["system"]] + flags
+    return ["firmware-inventory"] + flags
 
 
 def _question_argv(question: str, query) -> list[str]:
@@ -85,6 +85,7 @@ def _question_argv(question: str, query) -> list[str]:
             [question.replace("_", "-")]
             + _flag("--content", query.get("content_path"))
             + _flag("--core", query.get("core_so"))
+            + _flag("--cwd", query.get("cwd"))
         )
     if question == "soft_patch_candidates":
         return ["soft-patch-candidates", query["content_path"]] + _flag("--core", query.get("core_so"))
@@ -183,6 +184,24 @@ class TestTheExitCodeSeparatesAnsweringFromAsking:
         with pytest.raises(SystemExit) as excinfo:
             run(["no-such-question"], home="/home/deck", machine=machine)
         assert excinfo.value.code == 2
+
+    @pytest.mark.parametrize("value", ["launch", ""])
+    @pytest.mark.parametrize(
+        "question",
+        [
+            ["savefile-location"],
+            ["savestate-location"],
+            ["firmware-for-core", "--core", "mgba_libretro.so"],
+            ["firmware-for-system", "--system", "xbox"],
+            ["firmware-inventory"],
+        ],
+    )
+    def test_a_working_folder_that_is_not_absolute_is_a_usage_error(self, question, value, capsys):
+        machine = FixtureMachine({})
+        with pytest.raises(SystemExit) as excinfo:
+            run([*question, "--cwd", value], home="/home/deck", machine=machine)
+        assert excinfo.value.code == 2
+        assert f"cwd must be an absolute path, got {value!r}" in capsys.readouterr().err
 
     def test_the_home_flag_wins_over_the_binding(self, capsys):
         marker = {f"/elsewhere/{RETRODECK_JSON_SUFFIX}": "{}"}

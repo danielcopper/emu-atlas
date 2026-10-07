@@ -228,25 +228,39 @@ Rules that hold for every answer:
   appear only on a content-less question about a core whose card keys a directory on the content — `rom_stem` (prboom
   names its save directory after the content's stem) and `content_dir_name` (the vitaquake2 family names it after the
   content's directory); name the content and the resolver fills both itself. One hole no content can fill is `cwd`: a
-  `working_directory`-rooted answer (DeSmuME 2015 writes relative to wherever RetroArch was started) is always the
-  `<cwd>` template, and only the launcher knows that directory. And `region` is the hole a region-keyed standalone
-  answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the disc's own region field, which
-  atlas does not read out of content — a caller with metadata (a library server knows its games' regions) fills it and
-  narrows the `<region>` template to one tree, while the groups list every tree either way. Every hole is filled from
-  the content or the launch — a value the configs state is never one, because you could not supply it either; atlas
-  resolves those itself or states a caveat. Holes are not confined to the directory: a declared file set can be a
-  template too. An unknown is something atlas refuses to state — it never guesses to keep a field non-empty. And a
-  declared **emptiness** is a third thing, distinct from both: a placement with `file_set.state == "declared"` and no
-  files says no separate save file exists. When the `save-inside-content` caveat rides beside it (quasi88 writing
-  straight into the loaded disk image, hatari writing a floppy back into its own file at eject), the loaded content file
-  itself takes the writes — atlas will not hand you the ROM under a second name, so what to make of a content file that
-  doubles as the save (back it up, copy it, leave it) is your decision, made on `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Its
-  harder sibling is `atlas.CAVEAT_SAVE_WRITES_DISCARDED` (hatari with write protection on): the same declared emptiness,
-  and this time it is the whole truth — nothing anywhere keeps the progress, and the granularity block beside it says
-  which switch would change that. Branch on `atlas.HOLE_CONTENT_DIR` / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` /
-  `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the strings, the way you would on any other closed
-  set here: every one ships per-value names beside its tuple (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`,
-  `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
+  `working_directory`-rooted answer (DeSmuME 2015 writes relative to wherever RetroArch was started) is the `<cwd>`
+  template, and only the launcher knows that directory — so the launcher hands it in. `cwd=` takes the folder the launch
+  will use, as an absolute host path (atlas translates nothing into a sandbox), on `savefile_location` and
+  `savestate_location` — asked of a handle, of a catalogue entry or of `EveryInstallation` — and on `firmware_for_core`,
+  `firmware_for_system` and `firmware_inventory`; `identify_firmware` takes none. The answer is then an ordinary one:
+  the template filled, `cwd` gone from `needs`, `save-dir-launch-dependent` and `firmware-path-launch-dependent` no
+  longer stated, and the place read like any other — a dead link or a missing `.sav` says what it says at an absolute
+  path. That covers DeSmuME 2015's saves; xemu's relative hard-disk image (its saves and its snapshots), EEPROM, boot
+  ROM and flash ROM; melonDS's relative save and state paths; MAME's states where the command states no `%STARTDIR%`
+  (one it states outranks yours), a relative `-inipath` searched below the folder included; the MAME core handed its own
+  paths (`mame_mame_paths_enable`), whose relative save trees become `save-root-redirected` below the folder; and
+  Dolphin's GBA cartridge save beside a relative cartridge path. One answer that depends on the folder does not take it
+  yet: PUAE asks whether an archive member's bare name is a directory, which resolves against RetroArch's working
+  directory, and atlas assumes no directory of that name is there; #597 covers it. A value that is not an absolute path,
+  the empty string included, raises `ValueError` at the call; a question whose answer does not depend on the folder
+  ignores it and answers byte for byte as without it, so a launcher may pass it on every such question. And `region` is
+  the hole a region-keyed standalone answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the
+  disc's own region field, which atlas does not read out of content — a caller with metadata (a library server knows its
+  games' regions) fills it and narrows the `<region>` template to one tree, while the groups list every tree either way.
+  Every hole is filled from the content or the launch — a value the configs state is never one, because you could not
+  supply it either; atlas resolves those itself or states a caveat. Holes are not confined to the directory: a declared
+  file set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
+  non-empty. And a declared **emptiness** is a third thing, distinct from both: a placement with
+  `file_set.state == "declared"` and no files says no separate save file exists. When the `save-inside-content` caveat
+  rides beside it (quasi88 writing straight into the loaded disk image, hatari writing a floppy back into its own file
+  at eject), the loaded content file itself takes the writes — atlas will not hand you the ROM under a second name, so
+  what to make of a content file that doubles as the save (back it up, copy it, leave it) is your decision, made on
+  `atlas.CAVEAT_SAVE_INSIDE_CONTENT`. Its harder sibling is `atlas.CAVEAT_SAVE_WRITES_DISCARDED` (hatari with write
+  protection on): the same declared emptiness, and this time it is the whole truth — nothing anywhere keeps the
+  progress, and the granularity block beside it says which switch would change that. Branch on `atlas.HOLE_CONTENT_DIR`
+  / `HOLE_LIBRARY_NAME` / `HOLE_SAVE_ID` / `HOLE_ROM_STEM` / `HOLE_CONTENT_DIR_NAME` / `HOLE_CWD` rather than the
+  strings, the way you would on any other closed set here: every one ships per-value names beside its tuple
+  (`atlas.ROOT_SAVEFILE_DIRECTORY` … in `atlas.ROOT_KINDS`, `atlas.GRANULARITY_SHARED_CARD` … in `atlas.GRANULARITIES`).
 - **Handles are live, and worth keeping.** Every query re-reads its sources — that is what makes asking twice a drift
   check. The core probe is the one read that can be remembered instead, and only two things are: a core that answered,
   and whatever a probe that had to be killed at the timeout came back with. Both are kept per machine object under the
@@ -265,7 +279,7 @@ Rules that hold for every answer:
   user's home; `os.path.expanduser("~")` is only correct when the process runs as that user.
 - **Arguments follow one rule: the question's subject may be positional, everything else is keyword-only.** The subject
   is what the question is _about_ — the system in `emulators_for("n64")` and `firmware_for_system("gba")`, the core in
-  `firmware_for_core("mgba_libretro.so")`. Modifiers never are: `verify=`, `content_path=`, `core_so=` on
+  `firmware_for_core("mgba_libretro.so")`. Modifiers never are: `verify=`, `content_path=`, `core_so=`, `cwd=` on
   `savefile_location`, and the digests on `identify_firmware` all read as noise at a call site without their names.
   Passing a subject by keyword keeps working — the rule permits positional, it does not demand it.
 
@@ -1043,7 +1057,7 @@ all.
 | `save-writes-discarded`           | nothing keeps a save at all: the writes are discarded — the granularity block names the way out           |
 | `save-root-redirected`            | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip           |
 | `save-root-revoked`               | a flatpak override revokes the tree the save root lives under — writes never land here on the host        |
-| `save-root-unresolvable`          | the save trees anchor at the frontend _process's_ state (its working directory) — `data` names them       |
+| `save-root-unresolvable`          | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them    |
 | `content-dir-observation`         | the files were observed in the ROM's own directory — content files share the name, see below              |
 | `content-path-unnamed`            | the content path names no file; no file names stated, nothing observed                                    |
 | `marker-missing`                  | health: the config marker this installation is detected by is gone                                        |
@@ -1350,7 +1364,8 @@ slot carries one, `granularity.value` `shared-file`: a path only the sandbox can
 `sandbox-path-untranslated` with the configured cartridge path in `data.path`, a relative one — opened from the
 launching process's working directory — carries `save-dir-launch-dependent` with the relative `.sav` in `data.path`, and
 one this host could not examine — including one whose size stats while its bytes do not read — carries
-`core-mode-unestablished` with the reason `slot-holds-agp-device`. The PrimeHack revision RetroDECK builds writes `.sav`
+`core-mode-unestablished` with the reason `slot-holds-agp-device`. A question that names that working directory with
+`cwd=` reads the relative `.sav` below it like an absolute one. The PrimeHack revision RetroDECK builds writes `.sav`
 into that working directory even with the key unset, so there an unset key reads as the relative case.
 
 **A slot device atlas cannot interpret refuses the question when the other slot gives the answer nothing to stand on.**
@@ -2355,7 +2370,8 @@ answers on purpose: xemu asks for one, and every save lives inside it, so each a
 means. One more shape can appear here: a _relative_ value in those settings is opened by the xemu process from wherever
 it was started, so it has no destination this answer could state — the file drops out of `requirements` and rides the
 `firmware-path-launch-dependent` caveat instead, whose data carries the key, the value as written, and the
-`<cwd>`-templated path a launcher's working directory completes.
+`<cwd>`-templated path a launcher's working directory completes. Asked with `cwd=`, the value is completed below that
+folder and the file is an ordinary requirement, observed like any other.
 
 **DuckStation names no file at all**, which is the third way a card can state its probes and the one that changes what
 `verify` means. `[BIOS] SearchDirectory` names a directory, three per-region keys may name an image inside it, and where
@@ -3616,6 +3632,7 @@ is held to the same bytes a Python caller is.
 emu-atlas detect
 emu-atlas savefile-location --core mgba_libretro.so --content /roms/gba/Game.gba
 emu-atlas savefile-location --core mgba_libretro.so --installation retrodeck
+emu-atlas savefile-location --core desmume2015_libretro.so --content /roms/nds/Game.nds --cwd /home/deck/launch
 emu-atlas emulators-for gba
 emu-atlas launchable dreamcast /roms/dc/Game.chd
 emu-atlas firmware-for-core --core mgba_libretro.so --verify
@@ -3628,7 +3645,8 @@ Every question above has a subcommand under its own name (`savestate-location`, 
 `rom-location`, `firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from
 the sections above: without `--installation` every detected installation answers and the output is the labelled list
 (`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers alone, in the
-question's bare shape. `--home` asks about another home directory.
+question's bare shape. `--home` asks about another home directory. `--cwd` is `cwd=` on the save, savestate and firmware
+questions; a value that is not an absolute path is a usage error.
 
 The exit code separates answering from asking. `0` is an answer — an `unresolved` payload and an empty list are answers,
 exactly as in the library. `2` is a question that could not be put: a usage error, or an `--installation` kind this

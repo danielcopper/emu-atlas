@@ -69,6 +69,13 @@ INPUT_FIELDS_OPTIONAL = {
 # moves the directory a core builds its tree in, but it does decide which
 # per-game options file states whether replacement is on.
 QUERY_FIELDS = {"content_path", "core_so", "installation"}
+# The working folder the launch will use (issue #581) is taken by the questions
+# whose answer can depend on it — saves, savestates, firmware — so a family that
+# otherwise shares their keys refuses it: a texture query carrying one would
+# state an input no answer reflects.
+CWD_QUERY_FAMILIES = frozenset(
+    {"savefile_query", "savestate_query", "entry_savefile_query", "entry_savestate_query"}
+)
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
 SYSTEMS_QUERY_FIELDS = {"installation"}
@@ -106,13 +113,13 @@ ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
 # — a core_so on a catalogue question — makes the vector state something no
 # answer can reflect, and half a rule refuses only half of those.
 AGGREGATE_QUESTION_FIELDS = {
-    "savefile_location": ({"question"}, {"content_path", "core_so"}),
-    "savestate_location": ({"question"}, {"content_path", "core_so"}),
+    "savefile_location": ({"question"}, {"content_path", "core_so", "cwd"}),
+    "savestate_location": ({"question"}, {"content_path", "core_so", "cwd"}),
     "texture_pack_location": ({"question"}, {"content_path", "core_so"}),
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
-FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify"}
+FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify", "cwd"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
 IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
 INSTALLATION_FIELDS = {"kind", "label", "kinds", "root", "health"}
@@ -621,29 +628,39 @@ def _validate_handle_selector(name: str, family: str, query: Any) -> None:
         fail(f"{name}: input.{family}.installation must be one of {sorted(KNOWN_KINDS)}")
 
 
+def _validate_cwd(name: str, family: str, query: Any) -> None:
+    """A working folder is an absolute path — the library refuses any other at the call."""
+    if "cwd" in query and not (isinstance(query["cwd"], str) and query["cwd"].startswith("/")):
+        fail(f"{name}: input.{family}.cwd must be an absolute path, got {query['cwd']!r}")
+
+
 def _validate_query(name: str, query: Any, family: str = "savefile_query") -> None:
     """A placement question — *family* says which of the two it is.
 
     Both take the same three keys, so both are held to one rule; only the
-    message names the key the vector actually wrote.
+    message names the key the vector actually wrote. The save and savestate
+    families take the working folder too (:data:`CWD_QUERY_FAMILIES`).
     """
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
-    if not keys or not keys <= QUERY_FIELDS:
-        fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(QUERY_FIELDS)}")
+    fields = QUERY_FIELDS | ({"cwd"} if family in CWD_QUERY_FAMILIES else set())
+    if not keys or not keys <= fields:
+        fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(fields)}")
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
+    _validate_cwd(name, family, query)
     _validate_handle_selector(name, family, query)
 
 
 def _validate_firmware_query_fields(name: str, query: Any) -> None:
-    for key in ("installation", "kind", "core_so", "system"):
+    for key in ("installation", "kind", "core_so", "system", "cwd"):
         if key in query and (not isinstance(query[key], str) or not query[key]):
             fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
     if "verify" in query and not isinstance(query["verify"], bool):
         fail(f"{name}: input.firmware_query.verify must be a boolean")
+    _validate_cwd(name, "firmware_query", query)
     _validate_handle_selector(name, "firmware_query", query)
 
 
@@ -684,14 +701,17 @@ def _validate_entry_query(name: str, query: Any, family: str = "entry_savefile_q
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
-    if "system" not in keys or not keys <= ENTRY_QUERY_FIELDS:
-        fail(
-            f"{name}: input.{family} must carry 'system' plus optional "
+    takes_cwd = family in CWD_QUERY_FAMILIES
+    fields = ENTRY_QUERY_FIELDS | ({"cwd"} if takes_cwd else set())
+    if "system" not in keys or not keys <= fields:
+        optional = "'label'/'content_path'/'cwd'/'installation'" if takes_cwd else (
             "'label'/'content_path'/'installation'"
         )
+        fail(f"{name}: input.{family} must carry 'system' plus optional {optional}")
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
+    _validate_cwd(name, family, query)
     _validate_handle_selector(name, family, query)
 
 
@@ -812,6 +832,7 @@ def _validate_aggregate_query(name: str, query: Any) -> None:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.aggregate_query.{key} must be a non-empty string")
     _validate_aggregate_question(name, query)
+    _validate_cwd(name, "aggregate_query", query)
 
 
 def _scoped_digest_field(key: Any) -> tuple[str, int] | None:

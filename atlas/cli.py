@@ -51,6 +51,7 @@ from .detect import detect
 from .every_installation import EveryInstallation
 from .installations import Installation
 from .machine import Machine
+from .placement import checked_cwd
 
 # A question is asked of one handle or of the aggregate, and the two surfaces
 # are the same on purpose (EveryInstallation mirrors the Installation protocol
@@ -65,13 +66,13 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
     "health": (lambda target, _args: target.health(), health_contract),
     "savefile-location": (
         lambda target, args: target.savefile_location(
-            content_path=args.content, core_so=args.core, system=args.system
+            content_path=args.content, core_so=args.core, system=args.system, cwd=args.cwd
         ),
         savefile_answer_contract,
     ),
     "savestate-location": (
         lambda target, args: target.savestate_location(
-            content_path=args.content, core_so=args.core
+            content_path=args.content, core_so=args.core, cwd=args.cwd
         ),
         savestate_answer_contract,
     ),
@@ -114,15 +115,17 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
         launchable_contract,
     ),
     "firmware-for-core": (
-        lambda target, args: target.firmware_for_core(args.core, verify=args.verify),
+        lambda target, args: target.firmware_for_core(args.core, verify=args.verify, cwd=args.cwd),
         firmware_contract,
     ),
     "firmware-for-system": (
-        lambda target, args: target.firmware_for_system(args.system, verify=args.verify),
+        lambda target, args: target.firmware_for_system(
+            args.system, verify=args.verify, cwd=args.cwd
+        ),
         firmware_contract,
     ),
     "firmware-inventory": (
-        lambda target, args: target.firmware_inventory(verify=args.verify),
+        lambda target, args: target.firmware_inventory(verify=args.verify, cwd=args.cwd),
         firmware_contract,
     ),
     "identify-firmware": (
@@ -135,6 +138,23 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
 # Help texts shared by every subcommand that takes the same input.
 _SYSTEM_ID_HELP = "system id, e.g. gba"
 _VERIFY_HELP = "hash present files against known dumps"
+
+
+def _cwd_argument(value: str) -> str:
+    """``--cwd`` held to the library's own rule, so a relative value is a usage error (exit 2)."""
+    try:
+        checked_cwd(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from None
+    return value
+
+
+def _add_cwd(question: argparse.ArgumentParser) -> None:
+    question.add_argument(
+        "--cwd",
+        type=_cwd_argument,
+        help="absolute path of the working folder the launch will use",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -172,15 +192,21 @@ def build_parser() -> argparse.ArgumentParser:
         "health", parents=[common, selecting], help="each installation's structured health"
     )
 
-    def content_core(name: str, help_text: str, *, system: bool = False) -> None:
+    def content_core(
+        name: str, help_text: str, *, system: bool = False, cwd: bool = False
+    ) -> None:
         question = commands.add_parser(name, parents=[common, selecting], help=help_text)
         question.add_argument("--content", help="path of the content file being asked about")
         question.add_argument("--core", help="libretro core .so name, e.g. mgba_libretro.so")
         if system:
             question.add_argument("--system", help="system the content is filed under")
+        if cwd:
+            _add_cwd(question)
 
-    content_core("savefile-location", "where this content's save file lands", system=True)
-    content_core("savestate-location", "where this content's savestates land")
+    content_core(
+        "savefile-location", "where this content's save file lands", system=True, cwd=True
+    )
+    content_core("savestate-location", "where this content's savestates land", cwd=True)
     content_core("screenshot-location", "where this content's screenshots land")
     content_core("texture-pack-location", "where this core reads texture packs from")
     content_core("mod-location", "where this core reads mods from")
@@ -246,6 +272,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     for_core.add_argument("--core", required=True, help="libretro core .so name")
     for_core.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
+    _add_cwd(for_core)
 
     for_system = commands.add_parser(
         "firmware-for-system",
@@ -254,6 +281,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     for_system.add_argument("--system", required=True, help=_SYSTEM_ID_HELP)
     for_system.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
+    _add_cwd(for_system)
 
     inventory = commands.add_parser(
         "firmware-inventory",
@@ -261,6 +289,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="the whole firmware tree — declared, present, unclaimed",
     )
     inventory.add_argument("--verify", action="store_true", help=_VERIFY_HELP)
+    _add_cwd(inventory)
 
     identify = commands.add_parser(
         "identify-firmware",

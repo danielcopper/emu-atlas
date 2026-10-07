@@ -123,7 +123,8 @@ or a ``system_directory`` left blank or set to the literal ``default``, moves su
 ROOT_WORKING_DIRECTORY: RootKind = "working_directory"
 """The working directory of the launching process — a property of the launch rather than of the
 machine, which is why the answer is a ``<cwd>`` template with a hole rather than a refusal: a
-hole is something the caller fills, and the caller often is the launcher.
+hole is something the caller fills, and the caller often is the launcher. A question asked with
+``cwd=`` answers the directory filled in and read like any other.
 """
 # The root a standalone emulator owns: its user tree below the XDG base the
 # arrangement pins. No frontend hands these emulators a save directory — the
@@ -589,7 +590,7 @@ CAVEAT_SAVE_DIR_UNLISTABLE = "save-dir-unlistable"
 # The working_directory root's rider: the directory is a property of how the
 # emulator is launched, not of anything on disk, so no read of the machine can
 # resolve it — the answer stays a template whose one hole only the launcher
-# can fill.
+# can fill. A question asked with ``cwd=`` has it filled and states no rider.
 CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT = "save-dir-launch-dependent"
 # No separate save file exists: the loaded content file itself takes the
 # writes. The file set is a declared emptiness — true as stated — and this
@@ -828,7 +829,9 @@ CAVEAT_SAVE_ROOT_REDIRECTED = "save-root-redirected"
 # read, this one states the relative trees that would hang off the
 # unknowable anchor, in ``data``, so a caller sees what to look for once it
 # knows the anchor atlas refuses to guess. The placement itself falls back to
-# the standard answer, marked as where the frontend would look.
+# the standard answer, marked as where the frontend would look. A question
+# asked with ``cwd=`` has the working directory in hand, so a tree it settles
+# is a redirect instead; one carrying an environment variable stays here.
 CAVEAT_SAVE_ROOT_UNRESOLVABLE = "save-root-unresolvable"
 CAVEAT_SANDBOX_PATH_UNTRANSLATED = "sandbox-path-untranslated"
 CAVEAT_APP_RELATIVE_PATH_UNEXPANDED = "app-relative-path-unexpanded"
@@ -964,7 +967,8 @@ HOLE_ROM_STEM = "rom_stem"
 HOLE_CONTENT_DIR_NAME = "content_dir_name"
 # The one hole no content can fill: the working directory of the process that
 # will load the core. It exists for the ``working_directory`` root and is
-# genuinely the caller's to fill — a frontend knows what cwd it launches with.
+# genuinely the caller's to fill — a frontend knows what cwd it launches with,
+# and hands it to the question as ``cwd=`` (:func:`checked_cwd`).
 HOLE_CWD = "cwd"
 # The hole a region-keyed answer keeps: which of an emulator's per-region
 # trees this game's save lands in is decided by the disc's own region field,
@@ -1053,6 +1057,19 @@ def file_set_holes(files: Iterable[str]) -> tuple[str, ...]:
 def needs_with_file_set(needs: Iterable[str], files: Iterable[str]) -> tuple[str, ...]:
     """Every hole of an answer: the directory template's, then the file names'."""
     return _holes([*needs, *file_set_holes(files)])
+
+
+def checked_cwd(cwd: str | None) -> str | None:
+    """*cwd* as a question takes it: an absolute host path, or ``None`` for not given.
+
+    The value fills the ``cwd`` hole, so it has to name a place by itself: a
+    relative one would need a working folder of its own to mean anything, and
+    the empty string names none. Either is the caller's mistake rather than a
+    fact of the machine, so it raises at the call instead of being answered.
+    """
+    if cwd is not None and not os.path.isabs(cwd):
+        raise ValueError(f"cwd must be an absolute path, got {cwd!r}")
+    return cwd
 
 
 @dataclass(frozen=True, slots=True)
@@ -1412,8 +1429,9 @@ class SavefilePlacement:
     holes, not the directory's alone. ``root_kind``
     names the anchor (:data:`ROOT_SAVEFILE_DIRECTORY`,
     :data:`ROOT_CONTENT_DIRECTORY`, :data:`ROOT_SYSTEM_DIRECTORY`,
-    :data:`ROOT_WORKING_DIRECTORY` — the launch's own directory, always a
-    ``<cwd>`` template with its hole in ``needs`` — or
+    :data:`ROOT_WORKING_DIRECTORY` — the launch's own directory, a ``<cwd>``
+    template with its hole in ``needs`` unless the question named it with
+    ``cwd=`` — or
     :data:`ROOT_EMULATOR_DIRECTORY`, a standalone emulator's own tree).
     ``file_set`` is observed or unknown, never guessed. ``sources`` is the
     provenance trail; ``caveats`` states every degradation explicitly.

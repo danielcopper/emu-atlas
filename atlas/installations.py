@@ -340,6 +340,7 @@ from .placement import (
     build_savefile_placement,
     build_savestate_placement,
     build_soft_patch_candidates,
+    checked_cwd,
     file_set_holes,
     needs_with_file_set,
 )
@@ -1637,6 +1638,10 @@ class _SaveQuery:
     # through them, the entry routes included, inherits it without a second
     # wiring.
     revocation: "Callable[[str], Caveat | None] | None" = None
+    # The working folder the launch will use, where the asker knows it — the
+    # host path that fills the ``cwd`` hole of a card rooted there. ``None``
+    # leaves the hole open, which is the answer a question without it gets.
+    cwd: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2634,6 +2639,7 @@ def _apply_card(
     layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
+    cwd: str | None = None,
 ) -> _CardApplication:
     """Read the option that governs this card, live, and take the mode it selects.
 
@@ -2662,6 +2668,7 @@ def _apply_card(
             layers=layers,
             content=content,
             gates=gates,
+            cwd=cwd,
         )
     if card.option_key is None:
         # The load refuses any other shape (_expect_selectable_modes), so the
@@ -3001,6 +3008,7 @@ def _rule_reading(
     layers: Sequence[_CfgLayer],
     content: _Content,
     retroarch_config_dir: str,
+    cwd: str | None = None,
 ) -> tuple[RuleReading, _ConsultedOptions]:
     """The machine, packaged for one rule: options, content class, files, paths.
 
@@ -3066,6 +3074,7 @@ def _rule_reading(
             content_is_directory=reads.is_directory,
             archive_members=reads.members,
             whdload_slave=reads.slave,
+            cwd=cwd,
         ),
         recorder,
     )
@@ -3084,6 +3093,7 @@ def _apply_rule_card(
     layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
+    cwd: str | None = None,
 ) -> _CardApplication:
     """Hand the machine to the card's selection rule and take the mode it names.
 
@@ -3116,6 +3126,7 @@ def _apply_rule_card(
         layers=layers,
         content=content,
         retroarch_config_dir=retroarch_config_dir,
+        cwd=cwd,
     )
     choice = MODE_RULES[card.key](reading)
     caveats.extend(choice.caveats)
@@ -3866,6 +3877,7 @@ def _system_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
+    cwd: str | None = None,
 ) -> SavefilePlacement:
     """The placement for a card whose core roots its saves in the system directory.
 
@@ -3911,6 +3923,7 @@ def _content_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
+    cwd: str | None = None,
 ) -> SavefilePlacement:
     """The placement for a card whose core writes into the content's own tree.
 
@@ -5040,40 +5053,52 @@ def _working_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
+    cwd: str | None = None,
 ) -> SavefilePlacement:
     """The placement for a card whose core writes relative to the launch's cwd.
 
     DeSmuME 2015 composes its save path from a variable its libretro build
     never fills, so the file lands relative to the working directory of
     whatever process loaded the core — a property of the launch, not of the
-    machine, so no read here can resolve it. The answer stays a ``<cwd>``
-    template with its hole in ``needs``: the caller is often the launcher,
-    and the launcher knows its own working directory. The caveat carries the
-    sentence, so the template is never mistaken for a directory atlas merely
-    failed to fill.
+    machine, so no read here can resolve it. Without *cwd* the answer stays a
+    ``<cwd>`` template with its hole in ``needs``: the caller is often the
+    launcher, and the launcher knows its own working directory. The caveat
+    carries the sentence, so the template is never mistaken for a directory
+    atlas merely failed to fill. With *cwd* — the host path the caller names
+    — the root is that directory, read like any other root.
 
     The unused parameters keep the three diverted routes one signature, which
     is what lets the router pick a route instead of a call shape.
     """
     del sandbox, cfg_label, layers, retroarch_config_dir, excluded
-    root = _SystemRoot(
-        TEMPLATE_CWD,
-        ROOT_WORKING_DIRECTORY,
-        needs=(HOLE_CWD,),
-        reachable=False,
-        sources=(
-            f"rule card '{card.key}': the core writes relative to the launching process's "
-            "working directory",
-        ),
+    source = (
+        f"rule card '{card.key}': the core writes relative to the launching process's "
+        "working directory"
     )
-    launch_caveat = Caveat(
-        CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
-        f"core {card.key!r} composes its save path from a location its build never sets, so the "
-        "file lands relative to the working directory of whatever process loads the core — a "
-        "property of the launch, not of the machine. The file names are stated; fill 'cwd' with "
-        "the launcher's working directory to complete the path",
-        {"core": card.key},
-    )
+    caveats_out = caveats
+    if cwd is not None:
+        root = _SystemRoot(
+            cwd, ROOT_WORKING_DIRECTORY, sources=(f"{source}, which the caller named",)
+        )
+    else:
+        root = _SystemRoot(
+            TEMPLATE_CWD,
+            ROOT_WORKING_DIRECTORY,
+            needs=(HOLE_CWD,),
+            reachable=False,
+            sources=(source,),
+        )
+        caveats_out = (
+            *caveats,
+            Caveat(
+                CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+                f"core {card.key!r} composes its save path from a location its build never sets, "
+                "so the file lands relative to the working directory of whatever process loads "
+                "the core — a property of the launch, not of the machine. The file names are "
+                "stated; fill 'cwd' with the launcher's working directory to complete the path",
+                {"core": card.key},
+            ),
+        )
     return _card_root_placement(
         machine,
         root=root,
@@ -5083,7 +5108,7 @@ def _working_directory_placement(
         granularity=granularity,
         content=content,
         sources=sources,
-        caveats=(*caveats, launch_caveat),
+        caveats=caveats_out,
     )
 
 
@@ -5167,6 +5192,7 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             layers=layers,
             content=content,
             gates=chain.gates,
+            cwd=query.cwd,
         )
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
@@ -5192,6 +5218,7 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             sources=tuple(sources_extra),
             caveats=tuple(caveats),
             excluded=applied.excluded_observations,
+            cwd=query.cwd,
         )
 
     cross_parts = _CrossParts()
@@ -7356,6 +7383,7 @@ def _dolphin_agp_slot(
     cite: "_Cite",
     *,
     token: str,
+    cwd: str | None = None,
 ) -> _DolphinSlot:
     """A GBA cartridge adapter in one slot: the ``.sav`` beside the configured cartridge.
 
@@ -7372,13 +7400,15 @@ def _dolphin_agp_slot(
     the emulator's way, the path translated out of the sandbox, and a
     spelling only the sandbox has leaves the save where this host cannot
     locate it (#523). A relative spelling is opened from the launching
-    process's working directory — the launch's, not the machine's — and is
-    stated the same way with the launch named as the reason; so is the unset
-    key of a build that writes ``.sav`` back regardless
-    (:data:`_DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE`). A ``.sav`` this host could
-    not examine — its kind withheld, or a size stated for a file that would
-    not read (:func:`_dolphin_sav_size`) — leaves whether it holds anything
-    unestablished.
+    process's working directory — the launch's, not the machine's — and,
+    without *cwd*, is stated the same way with the launch named as the
+    reason; so is the unset key of a build that writes ``.sav`` back
+    regardless (:data:`_DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE`). With *cwd*, the
+    host path the caller names, the relative ``.sav`` is read below it like
+    any absolute one — not translated, because it already is a host path. A
+    ``.sav`` this host could not examine — its kind withheld, or a size
+    stated for a file that would not read (:func:`_dolphin_sav_size`) —
+    leaves whether it holds anything unestablished.
     """
     key = f"AgpCart{letter}Path"
     configured, spelled = _simpleini_value(values, "Core", key)
@@ -7396,7 +7426,11 @@ def _dolphin_agp_slot(
         return _DolphinSlot(mode="agp", readings=readings)
     save = stem + ".sav"
     where = f"{cite('agp_save')} with {cite('split_path')} at {cite('build')}"
-    if not save.startswith("/"):
+    if save.startswith("/"):
+        host_path = sandbox.host(key, save).path
+    elif cwd is not None:
+        host_path = os.path.join(cwd, save)
+    else:
         return _DolphinSlot(
             mode="agp",
             readings=readings,
@@ -7412,8 +7446,7 @@ def _dolphin_agp_slot(
                 ),
             ),
         )
-    resolved = sandbox.host(key, save)
-    if resolved.path is None:
+    if host_path is None:
         return _DolphinSlot(
             mode="agp",
             readings=readings,
@@ -7428,7 +7461,7 @@ def _dolphin_agp_slot(
                 ),
             ),
         )
-    size = _dolphin_sav_size(machine, resolved.path)
+    size = _dolphin_sav_size(machine, host_path)
     if size is None:
         return _DolphinSlot(
             mode="agp",
@@ -7438,7 +7471,7 @@ def _dolphin_agp_slot(
                 Caveat(
                     CAVEAT_CORE_MODE_UNESTABLISHED,
                     f"slot {letter} holds a GBA cartridge adapter (AGP, EXI device 9) whose "
-                    f"cartridge save is {resolved.path}, and this host could not examine that "
+                    f"cartridge save is {host_path}, and this host could not examine that "
                     f"file — the save is only as large as the file already is ({where}), so "
                     "whether the cartridge save holds anything is unestablished",
                     {"token": token, "reason": REASON_SLOT_HOLDS_AGP_DEVICE, "slot": letter},
@@ -7447,7 +7480,7 @@ def _dolphin_agp_slot(
         )
     if not size:
         return _DolphinSlot(mode="agp", readings=readings)
-    directory, name = os.path.split(resolved.path)
+    directory, name = os.path.split(host_path)
     return _DolphinSlot(
         mode="agp",
         groups=(
@@ -7539,6 +7572,7 @@ def _dolphin_slot(
     cite: "_Cite",
     *,
     token: str,
+    cwd: str | None = None,
 ) -> _DolphinSlot:
     """One slot read the way the emulator reads it: device id first, then the path.
 
@@ -7562,7 +7596,7 @@ def _dolphin_slot(
         return _DolphinSlot(mode="none", readings=(slot_reading,))
     slot = _dolphin_carded_slot(letter, device, values, sandbox, gc_root, cite)
     if slot is None and device == _DOLPHIN_DEVICE_AGP:
-        slot = _dolphin_agp_slot(letter, values, machine, sandbox, cite, token=token)
+        slot = _dolphin_agp_slot(letter, values, machine, sandbox, cite, token=token, cwd=cwd)
     if slot is not None:
         return _DolphinSlot(
             mode=slot.mode,
@@ -8004,6 +8038,7 @@ def _dolphin_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Dolphin's save answer, read from Dolphin.ini the way the emulator reads it.
 
@@ -8056,8 +8091,8 @@ def _dolphin_savefile_placement(
         if _simpleini_value(values, "Core", key)[0]
     )
     slots = (
-        _dolphin_slot("A", values, machine, sandbox, gc_root, cite, token=card.token),
-        _dolphin_slot("B", values, machine, sandbox, gc_root, cite, token=card.token),
+        _dolphin_slot("A", values, machine, sandbox, gc_root, cite, token=card.token, cwd=cwd),
+        _dolphin_slot("B", values, machine, sandbox, gc_root, cite, token=card.token, cwd=cwd),
     )
     refusal = _dolphin_uninterpreted_refusal(slots, token=card.token, config=ini_path)
     if refusal is not None:
@@ -8102,6 +8137,7 @@ def _ppsspp_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """PPSSPP's save answer — a compiled-in XDG join, then the links."""
     directory = os.path.join(homes.emulator_root(XDG_CONFIG, card.token), "PSP", "SAVEDATA")
@@ -8197,14 +8233,27 @@ def _cwd_templated(directory: str) -> bool:
 
 
 def _xemu_group(
-    sandbox: _Sandbox, key: str, value: str, *, role: str, token: str
+    sandbox: _Sandbox,
+    key: str,
+    value: str,
+    *,
+    role: str,
+    token: str,
+    cwd: str | None = None,
 ) -> tuple[FileGroup | None, tuple[Caveat, ...]]:
+    """One ``[sys.files]`` value as a group: below the host path, *cwd*, or the ``<cwd>`` template.
+
+    A relative value opens from the launch's working directory, so the caller's
+    *cwd* — a host path, never translated — fills it; without one it stays the
+    template and the launch-dependence caveat says why.
+    """
     if not os.path.isabs(value):
         head, name = os.path.split(value)
-        directory = os.path.join(TEMPLATE_CWD, head) if head else TEMPLATE_CWD
+        anchor = cwd if cwd is not None else TEMPLATE_CWD
+        directory = os.path.join(anchor, head) if head else anchor
         return (
             FileGroup(dir=directory, files=(name,), granularity=GRANULARITY_SHARED_FILE, role=role),
-            (_xemu_launch_dependent_caveat(token, key, value),),
+            () if cwd is not None else (_xemu_launch_dependent_caveat(token, key, value),),
         )
     resolved = sandbox.host(key, value)
     if resolved.path is None:
@@ -8255,7 +8304,7 @@ def _xemu_document(
 
 
 def _xemu_disk_pieces(
-    sandbox: _Sandbox, card: StandaloneSaveCard, hdd: str | None
+    sandbox: _Sandbox, card: StandaloneSaveCard, hdd: str | None, cwd: str | None = None
 ) -> tuple[tuple[FileGroup, ...], tuple[Caveat, ...]]:
     """The hard-disk image's group and what travels with it — or why there is none."""
     if not hdd:
@@ -8268,7 +8317,7 @@ def _xemu_disk_pieces(
             ),
         )
     group, group_caveats = _xemu_group(
-        sandbox, "hdd_path", hdd, role=ROLE_BATTERY, token=card.token
+        sandbox, "hdd_path", hdd, role=ROLE_BATTERY, token=card.token, cwd=cwd
     )
     if group is None or not group.files:
         return (), group_caveats
@@ -8316,6 +8365,16 @@ def _xemu_readings(
     )
 
 
+def _xemu_primary_is_relative(value: str | None) -> bool:
+    """Whether the answer's primary file hangs off the launch's own working directory.
+
+    The primary is the disk image where one is placed, else the EEPROM; a
+    relative value is opened from the launching process's directory whether or
+    not the caller named it, so the root kind follows the value, not the fill.
+    """
+    return value is not None and not os.path.isabs(value)
+
+
 def _xemu_savefile_placement(
     machine: Machine,
     *,
@@ -8326,6 +8385,7 @@ def _xemu_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """xemu's save answer, read from xemu.toml the way the emulator reads it."""
     toml_path = _standalone_settings_path(card, homes)
@@ -8341,9 +8401,9 @@ def _xemu_savefile_placement(
     hdd = xemu_file_value(doc, "hdd_path")
     eeprom = xemu_file_value(doc, "eeprom_path")
     readings = _xemu_readings(hdd, eeprom, stated_toml)
-    disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd)
+    disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd, cwd)
     eeprom_group, eeprom_caveats = (
-        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, token=card.token)
+        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, token=card.token, cwd=cwd)
         if eeprom
         else (None, ())
     )
@@ -8388,8 +8448,10 @@ def _xemu_savefile_placement(
     # machine exists to walk links on — while a hole anywhere in the answer
     # (the EEPROM's group can be the templated one under an absolute disk)
     # belongs in ``needs``: the answer's holes, not the primary directory's.
-    launch_anchored = _cwd_templated(directory)
-    if launch_anchored:
+    # The caller's cwd fills the template, and the directory below it is then
+    # walked like any other; it is still the launch's directory that anchors it.
+    launch_anchored = _xemu_primary_is_relative(hdd if disk_groups else eeprom)
+    if _cwd_templated(directory):
         physical = None
     else:
         physical, link_caveats = _link_view(machine, directory)
@@ -8479,6 +8541,7 @@ def _cemu_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Cemu's save answer, read from settings.xml the way the emulator reads it."""
     xml_path = _standalone_settings_path(card, homes)
@@ -8701,6 +8764,7 @@ def _azahar_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Azahar's save answer: the per-title unit on the emulated SD.
 
@@ -9258,6 +9322,7 @@ def _duckstation_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """DuckStation's save answer: two memory-card slots, six modes each.
 
@@ -9750,6 +9815,7 @@ def _pcsx2_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """PCSX2's save answer: up to eight card slots, each file or folder.
 
@@ -10024,6 +10090,7 @@ def _melonds_root(
     *,
     key: str = "SaveFilePath",
     what: str = "save",
+    cwd: str | None = None,
 ) -> _MelonRoot:
     """The three places a melonDS asset can anchor: the configured directory, the ROM's own, the cwd.
 
@@ -10033,7 +10100,9 @@ def _melonds_root(
     path is opened verbatim by the process, a property of the launch. The
     savestate question walks the identical composition for its own key
     (getSavestateName hands SavestatePath to the same function,
-    EmuInstance.cpp:696-701), which is why the key is a parameter.
+    EmuInstance.cpp:696-701), which is why the key is a parameter. The
+    caller's *cwd*, a host path, fills the working directory where it is
+    given; without it the root stays the ``<cwd>`` template.
     """
     if not config.raw:
         if content_path is not None:
@@ -10049,6 +10118,12 @@ def _melonds_root(
             needs=(HOLE_CONTENT_DIR,),
         )
     trimmed = config.raw.rstrip("/\\")
+    if not os.path.isabs(trimmed) and cwd is not None:
+        return _MelonRoot(
+            directory=os.path.join(cwd, trimmed) if trimmed else cwd,
+            root_kind=ROOT_WORKING_DIRECTORY,
+            mode="cwd-relative",
+        )
     if not os.path.isabs(trimmed):
         return _MelonRoot(
             directory=os.path.join(TEMPLATE_CWD, trimmed) if trimmed else TEMPLATE_CWD,
@@ -10128,6 +10203,7 @@ def _melonds_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """melonDS's save answer: one ``<rom stem>.sav`` where SaveFilePath points.
 
@@ -10142,7 +10218,7 @@ def _melonds_savefile_placement(
     config = _melonds_config(machine, homes, card)
     if isinstance(config, Unresolved):
         return config
-    root = _melonds_root(config, card, sandbox, content_path)
+    root = _melonds_root(config, card, sandbox, content_path, cwd=cwd)
     if root.refusal is not None:
         return root.refusal
     files, name_needs, name_caveats = _melonds_files(card, content_path)
@@ -11084,6 +11160,7 @@ def _rpcs3_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """RPCS3's save answer: the drive vfs.yml names, then one directory per title.
 
@@ -12198,6 +12275,7 @@ def _vita3k_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Vita3K's save answer: the ux0 tree below the preference path.
 
@@ -12385,6 +12463,7 @@ def _standalone_savefile_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavefilePlacement | Unresolved:
     """Dispatch to the emulator's own resolver — a card without one fails loudly.
 
@@ -12392,7 +12471,10 @@ def _standalone_savefile_placement(
     its configuration (Cemu's ``--mlc``), and the catalogue command is the one
     read that says whether this launch carries any. The content path rides for
     the one hole a resolver can fill itself — DuckStation's file-title mode
-    names the card after the content's own stem.
+    names the card after the content's own stem — and the caller's working
+    folder for the one it cannot: a relative path the emulator opens from the
+    launch's own directory (xemu's disk image, melonDS's save directory,
+    Dolphin's GBA cartridge save).
     """
     resolver = _STANDALONE_SAVE_RESOLVERS.get(card.token)
     if resolver is None:
@@ -12409,6 +12491,7 @@ def _standalone_savefile_placement(
         command=command,
         extra_caveats=extra_caveats,
         content_path=content_path,
+        cwd=cwd,
     )
 
 
@@ -12493,6 +12576,7 @@ def _fixed_savestate_tree_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """A compiled states tree below the emulator's own directory — five cards' shape.
 
@@ -12538,6 +12622,7 @@ def _pcsx2_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """PCSX2's states answer: the directory ``[Folders] Savestates`` names.
 
@@ -12623,6 +12708,7 @@ def _duckstation_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """DuckStation's states answer: ``[Folders] SaveStates`` below the probed DataRoot.
 
@@ -12757,6 +12843,7 @@ def _melonds_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """melonDS's states answer: ``<rom stem>.ml1``–``.ml8`` where SavestatePath points.
 
@@ -12777,7 +12864,9 @@ def _melonds_savestate_placement(
     )
     if isinstance(config, Unresolved):
         return config
-    root = _melonds_root(config, card, sandbox, content_path, key="SavestatePath", what="states")
+    root = _melonds_root(
+        config, card, sandbox, content_path, key="SavestatePath", what="states", cwd=cwd
+    )
     if root.refusal is not None:
         return root.refusal
     files, name_needs, name_caveats = _melonds_state_files(card, content_path)
@@ -12817,6 +12906,7 @@ def _xemu_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """xemu's states answer: QEMU internal snapshots inside the qcow2 hard disk.
 
@@ -12875,17 +12965,24 @@ def _xemu_savestate_placement(
         reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"{host.note}'
     else:
         # A relative value anchors at the launching process's working
-        # directory (the save route's fact, one question over), so the image
-        # stays a <cwd> template with the hole the caller fills — no read of
-        # the machine can walk links on a directory that is not on it.
+        # directory (the save route's fact, one question over). The caller's
+        # cwd, a host path, fills it and the directory is walked like any
+        # other; without one the image stays a <cwd> template with the hole
+        # the caller fills — no read of the machine can walk links on a
+        # directory that is not on it.
         head, image = os.path.split(hdd)
-        directory = os.path.join(TEMPLATE_CWD, head) if head else TEMPLATE_CWD
+        anchor = cwd if cwd is not None else TEMPLATE_CWD
+        directory = os.path.join(anchor, head) if head else anchor
         image_path = os.path.join(directory, image)
         root_kind = STATE_ROOT_WORKING_DIRECTORY
-        needs = (HOLE_CWD,)
-        physical = None
-        anchor_caveats = (_xemu_launch_dependent_caveat(card.token, stated.key, hdd),)
         reading = f'xemu.toml: [sys.files] {stated.key} = "{hdd}"'
+        if cwd is not None:
+            needs = ()
+            physical, anchor_caveats = _link_view(machine, directory)
+        else:
+            needs = (HOLE_CWD,)
+            physical = None
+            anchor_caveats = (_xemu_launch_dependent_caveat(card.token, stated.key, hdd),)
     return SavestatePlacement(
         dir=directory,
         root_kind=root_kind,
@@ -13317,6 +13414,7 @@ def _mame_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
     """MAME's states answer: ``state_directory`` from the ini the launch names.
 
@@ -13330,12 +13428,13 @@ def _mame_savestate_placement(
     own grammar and priority rules
     (:func:`_mame_ini_values`). A relative ``state_directory`` — the compiled
     ``sta`` default when no ini exists — resolves against the working
-    directory, which is the command's ``%STARTDIR%`` where it states one and
-    an open hole where it does not. Below the root sits one subdirectory per
-    machine (``statename``, default ``%g`` = the running system's short
-    name, machine.cpp:474-547, :576), which the command's positional system
-    word fills — or the content's own stem where the machine IS the ROM
-    (``%BASENAME%``).
+    directory, which is the command's ``%STARTDIR%`` where it states one, the
+    caller's *cwd* where it does not, and an open hole where neither does
+    (the same order the ini search path's relative elements resolve in).
+    Below the root sits one subdirectory per machine (``statename``, default
+    ``%g`` = the running system's short name, machine.cpp:474-547, :576),
+    which the command's positional system word fills — or the content's own
+    stem where the machine IS the ROM (``%BASENAME%``).
 
     That same word names the ``<system>.ini`` MAME layers over mame.ini
     (``cursystem->name``, mameopts.cpp:96), so this reading OPENS it
@@ -13377,10 +13476,10 @@ def _mame_savestate_placement(
     assert shape is not None  # the loader pairs the shape with this resolver
     launch = _mame_launch_reading(command)
     env = _mame_env(homes, sandbox)
-    cwd = _mame_launch_cwd(launch, env)
+    launch_cwd = _mame_launch_cwd(launch, env)
     ini = _mame_governing_ini(
         machine, token=card.token, file=shape.file, launch=launch, env=env,
-        sandbox=sandbox, cwd=cwd,
+        sandbox=sandbox, cwd=launch_cwd if launch_cwd is not None else cwd,
     )
     if isinstance(ini, Unresolved):
         return ini
@@ -13400,8 +13499,8 @@ def _mame_savestate_placement(
     if isinstance(value, Unresolved):
         return value
     anchored = _mame_root_anchor(
-        card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=cwd,
-        launch=launch, stated_ini=layered.stated_in(key, ini),
+        card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=launch_cwd,
+        given_cwd=cwd, launch=launch, stated_ini=layered.stated_in(key, ini),
     )
     if isinstance(anchored, Unresolved):
         return anchored
@@ -13746,10 +13845,16 @@ def _mame_root_anchor(
     key: str,
     sandbox: _Sandbox,
     cwd: str | None,
+    given_cwd: str | None,
     launch: _MameLaunch,
     stated_ini: str | None,
 ) -> _MameStateRoot | Unresolved:
-    """Where the value anchors: a host path, the stated cwd, or the open hole."""
+    """Where the value anchors: a host path, the stated cwd, the caller's, or the open hole.
+
+    *cwd* is the working directory the launch itself states (``%STARTDIR%``),
+    and it outranks *given_cwd*, the one the caller names: a launch that pins
+    its own directory runs there whatever its launcher's own is.
+    """
     if os.path.isabs(substituted):
         host = sandbox.host(key, substituted)
         if host.path is None:
@@ -13772,6 +13877,12 @@ def _mame_root_anchor(
             reading
             + f" — a relative value resolves against the working directory the launch "
             f"states (%STARTDIR%={launch.startdir})",
+        )
+    if given_cwd is not None:
+        return _MameStateRoot(
+            os.path.normpath(os.path.join(given_cwd, substituted)) if substituted else given_cwd,
+            STATE_ROOT_WORKING_DIRECTORY,
+            reading + " — a relative value resolves against the working directory the caller names",
         )
     return _MameStateRoot(
         os.path.join(TEMPLATE_CWD, substituted) if substituted else TEMPLATE_CWD,
@@ -13956,16 +14067,18 @@ def _standalone_savestate_placement(
     command: str,
     extra_caveats: tuple[Caveat, ...],
     content_path: str | None = None,
+    cwd: str | None = None,
 ) -> SavestatePlacement | SavestateAbsence | Unresolved:
     """Dispatch to the emulator's own states resolver — a card without one fails loudly.
 
-    The launch command and content path ride for the same reasons they ride
-    the save dispatch: a launch's own flags could outrank configuration, and
-    melonDS fills its state names from the content's own stem. An absence
-    card never reaches this dispatch: the routes answer it before homes are
-    built, because the stated no needs none of what this dispatch carries and
-    DOES need the arrangement caveats only a route can supply — reaching here
-    with one means a route forgot that branch.
+    The launch command, content path and working folder ride for the same
+    reasons they ride the save dispatch: a launch's own flags could outrank
+    configuration, melonDS fills its state names from the content's own stem,
+    and a relative states path opens from the launch's own directory. An
+    absence card never reaches this dispatch: the routes answer it before
+    homes are built, because the stated no needs none of what this dispatch
+    carries and DOES need the arrangement caveats only a route can supply —
+    reaching here with one means a route forgot that branch.
     """
     if card.absent is not None:
         raise ValueError(
@@ -13989,6 +14102,7 @@ def _standalone_savestate_placement(
         command=command,
         extra_caveats=extra_caveats,
         content_path=content_path,
+        cwd=cwd,
     )
 
 
@@ -15201,7 +15315,7 @@ class _FirmwareQueries:
     def _read_firmware_context(self) -> FirmwareContext:
         raise NotImplementedError  # pragma: no cover - every handle supplies one
 
-    def _stated(self, context: FirmwareContext) -> FirmwareContext:
+    def _stated(self, context: FirmwareContext, *, cwd: str | None = None) -> FirmwareContext:
         """A context with what atlas has established about this arrangement.
 
         Every firmware answer copies the context's caveats into itself, so
@@ -15213,7 +15327,9 @@ class _FirmwareQueries:
 
         The version the evidence is weighed against comes off the context for
         the same reason — it is what the handle's own read saw, not a fresh
-        one.
+        one. The working folder the question was asked with rides along too:
+        it is the asker's fact rather than a read, and every route below
+        reaches it through the one context.
         """
         return cast(
             FirmwareContext,
@@ -15223,34 +15339,59 @@ class _FirmwareQueries:
                     *context.caveats,
                     *arrangement_caveats(self.kind, observed_version=context.arrangement_version),
                 ),
+                cwd=cwd,
             ),
         )
 
-    def _firmware_context(self) -> FirmwareContext:
+    def _firmware_context(self, *, cwd: str | None = None) -> FirmwareContext:
         """The handle's live read, stated — the context all four questions answer from."""
-        return self._stated(self._read_firmware_context())
+        return self._stated(self._read_firmware_context(), cwd=cwd)
 
     @one_question
-    def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer:
-        """Does *core_so* need firmware, where does each file go, and is it there?"""
-        return _resolve_for_core(self._machine, self._firmware_context(), core_so=core_so, verify=verify)
+    def firmware_for_core(
+        self, core_so: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer:
+        """Does *core_so* need firmware, where does each file go, and is it there?
+
+        ``cwd`` is the working folder the launch will use, an absolute host
+        path; a value that is not absolute raises ``ValueError``. No core's
+        firmware depends on it, so it changes nothing here — it is taken so a
+        launcher can pass it on every firmware question.
+        """
+        checked_cwd(cwd)
+        return _resolve_for_core(
+            self._machine, self._firmware_context(cwd=cwd), core_so=core_so, verify=verify
+        )
 
     @one_question
-    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
-        """Which emulators can run *system*, and what does each of them want?"""
-        return _resolve_for_system(self._machine, self._firmware_context(), system=system, verify=verify)
+    def firmware_for_system(
+        self, system: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer:
+        """Which emulators can run *system*, and what does each of them want?
+
+        ``cwd`` is the working folder the launch will use, an absolute host
+        path: it completes a standalone emulator's relative configured path
+        (xemu's), is ignored where no answer depends on it, and a value that
+        is not absolute raises ``ValueError``.
+        """
+        checked_cwd(cwd)
+        return _resolve_for_system(
+            self._machine, self._firmware_context(cwd=cwd), system=system, verify=verify
+        )
 
     @one_question
-    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+    def firmware_inventory(self, *, verify: bool = False, cwd: str | None = None) -> FirmwareAnswer:
         """Every installed emulator's firmware, plus what is lying around unclaimed.
 
         The installed cores are the whole enumeration on an arrangement with no
         frontend catalogue: a standalone emulator declares no ``.info``, so
         nothing enumerates it here. A handle whose catalogue can enumerate a
         system's emulators overrides this to pass it, and then the standalone
-        emulators atlas carries a firmware card for are entries too.
+        emulators atlas carries a firmware card for are entries too. ``cwd``
+        is taken as :meth:`firmware_for_system` takes it.
         """
-        return _resolve_inventory(self._machine, self._firmware_context(), verify=verify)
+        checked_cwd(cwd)
+        return _resolve_inventory(self._machine, self._firmware_context(cwd=cwd), verify=verify)
 
     @one_question
     def identify_firmware(
@@ -15425,6 +15566,7 @@ class _CatalogueHost(Protocol):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved: ...
 
     def entry_savestate_location(
@@ -15433,6 +15575,7 @@ class _CatalogueHost(Protocol):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | SavestateAbsence | Unresolved: ...
 
     def entry_texture_pack_location(
@@ -17012,7 +17155,9 @@ class EmulatorEntry:
         return (*self._caveats, *self._launch.caveats)
 
     @one_question
-    def savefile_location(self, *, content_path: str | None = None) -> SavefilePlacement | Unresolved:
+    def savefile_location(
+        self, *, content_path: str | None = None, cwd: str | None = None
+    ) -> SavefilePlacement | Unresolved:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
         Catalogue-level degradations stay attached to the derived answer
@@ -17023,14 +17168,20 @@ class EmulatorEntry:
         is stays the installation's decision, exactly as the texture question
         decides it: the catalogue names an emulator, and whether atlas has its
         wiring is a question about packaged knowledge.
+
+        ``cwd`` is the working folder the launch will use, an absolute host
+        path: it fills the ``cwd`` hole of an emulator that saves relative to
+        it, is ignored where the answer does not depend on it, and a value that
+        is not absolute raises ``ValueError``.
         """
+        checked_cwd(cwd)
         return self._installation.entry_savefile_location(
-            self._spec, self._caveats, content_path=content_path
+            self._spec, self._caveats, content_path=content_path, cwd=cwd
         )
 
     @one_question
     def savestate_location(
-        self, *, content_path: str | None = None
+        self, *, content_path: str | None = None, cwd: str | None = None
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """Where this emulator keeps the savestates — core filled in from the catalogue.
 
@@ -17043,10 +17194,12 @@ class EmulatorEntry:
         and whether atlas has its wiring is a question about packaged
         knowledge. Since #284 there is a third shape: a card can state, with
         its citation, that the emulator has no savestates at all — an answer
-        (:class:`~atlas.placement.SavestateAbsence`), not a refusal.
+        (:class:`~atlas.placement.SavestateAbsence`), not a refusal. ``cwd`` is
+        taken as :meth:`savefile_location` takes it.
         """
+        checked_cwd(cwd)
         return self._installation.entry_savestate_location(
-            self._spec, self._caveats, content_path=content_path
+            self._spec, self._caveats, content_path=content_path, cwd=cwd
         )
 
     @one_question
@@ -19090,6 +19243,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
+        cwd: str | None = None,
     ) -> _SaveQuery:
         """The placement question over a marker snapshot this query already read.
 
@@ -19131,6 +19285,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
             revocation=context.revocation,
+            cwd=cwd,
         )
 
     def _savefile_location_from(
@@ -19142,6 +19297,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         return _retroarch_savefile_location(
             self._machine,
@@ -19152,6 +19308,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 core_so=core_so,
                 system=system,
                 extra_caveats=extra_caveats,
+                cwd=cwd,
             ),
         )
 
@@ -19182,6 +19339,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         system: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
@@ -19190,8 +19348,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ``library_name`` from the binary. ``system`` is the content's system in
         ES-DE's vocabulary, which is what keys a core's recorded file set. All
         three are optional — missing ones leave holes and stated caveats, never
-        guesses.
+        guesses. ``cwd`` is the working folder the launch will use, an absolute
+        host path: it fills the ``cwd`` hole of a core that saves relative to
+        it, is ignored where the answer does not depend on it, and a value that
+        is not absolute raises ``ValueError``.
         """
+        checked_cwd(cwd)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
             return self._not_set_up_refusal()
@@ -19201,18 +19363,27 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             core_so=core_so,
             system=system,
+            cwd=cwd,
         )
 
     @one_question
     def savestate_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the savestates for *content_path*.
 
-        The savefile question's twin, taking the same two optional arguments and
-        answering off the same configs — through the savestate quartet of keys
-        instead of the savefile one.
+        The savefile question's twin, taking the same optional arguments but
+        ``system`` and answering off the same configs — through the savestate
+        quartet of keys instead of the savefile one. RetroArch writes every
+        state itself, below a directory its own configuration names, so
+        ``cwd`` is checked like the savefile question's and changes nothing
+        here.
         """
+        checked_cwd(cwd)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
             return self._not_set_up_refusal()
@@ -19416,7 +19587,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return self._firmware_context_from(config, marker_issues)
 
     @one_question
-    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
+    def firmware_for_system(
+        self, system: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
 
         *system* is the ES-DE system name (``"gb"``, ``"dreamcast"``), the same
@@ -19429,11 +19602,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         The catalogue is the one :meth:`emulators_for` answers from, assembled
         from this query's own snapshot: marker and both catalogue layers are
-        read once here and handed on, never re-read.
+        read once here and handed on, never re-read. ``cwd`` is taken as the
+        shared firmware questions take it.
         """
+        checked_cwd(cwd)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
-            context = self._stated(self._firmware_context_from(config, marker_issues))
+            context = self._stated(self._firmware_context_from(config, marker_issues), cwd=cwd)
             return _resolve_for_system(self._machine, context, system=system, verify=verify)
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
@@ -19446,7 +19621,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # The marker this query already read builds the context too — asking
         # for a fresh one would read retrodeck.json twice inside one answer.
         # The override files follow the same rule: read once, by the context.
-        context = self._stated(self._firmware_context_from(config, marker_issues))
+        context = self._stated(self._firmware_context_from(config, marker_issues), cwd=cwd)
         answer = _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
@@ -19468,7 +19643,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     @one_question
-    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+    def firmware_inventory(self, *, verify: bool = False, cwd: str | None = None) -> FirmwareAnswer:
         """Every installed emulator's firmware here, plus what is lying around unclaimed.
 
         RetroDECK's catalogue is what makes the standalone emulators entries:
@@ -19489,12 +19664,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         same ones :meth:`firmware_for_system` rides and in the same order — a
         layer ES-DE refuses wholesale, a custom layer that declared itself
         exclusive — and each carries no system, because this answer is about
-        none of them.
+        none of them. ``cwd`` is taken as the shared firmware questions take it.
         """
+        checked_cwd(cwd)
         config, marker_issues = self._read_marker()
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, invalid = self._read_catalogue(root)
-        context = self._stated(self._firmware_context_from(config, marker_issues))
+        context = self._stated(self._firmware_context_from(config, marker_issues), cwd=cwd)
         return _resolve_inventory(
             self._machine,
             context,
@@ -19559,13 +19735,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — one marker read.
 
         Resolves the placement for a catalogue entry and, when *content_path*
         is given, checks the gamelist for a per-game override that would launch
         a different emulator — all from one snapshot of the governing sources.
+        *cwd* is the launch's working folder, as the entry question takes it.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
@@ -19596,6 +19775,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
                 ),
                 content_path=content_path,
+                cwd=cwd,
             )
         placement = self._savefile_location_from(
             config,
@@ -19604,6 +19784,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=spec.core_so,
             system=spec.system,
             extra_caveats=entry_caveats,
+            cwd=cwd,
         )
         return _entry_savefile_with_caveats(placement, extra)
 
@@ -19614,6 +19795,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savestate_location` — one marker read.
 
@@ -19626,8 +19808,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         (#284) — the dispatch refuses to handle one, because only the route
         holds the caveats that qualify the claim: the catalogue-status and
         per-game-override caveats the save twin carries, and the
-        arrangement's evidence caveats.
+        arrangement's evidence caveats. *cwd* is the launch's working folder,
+        as the entry question takes it.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
@@ -19670,6 +19854,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
                 ),
                 content_path=content_path,
+                cwd=cwd,
             )
         placement = self._savestate_location_from(
             config,
@@ -20946,6 +21131,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — EmuDeck's wiring.
 
@@ -20955,13 +21141,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         A standalone entry goes through the launcher route: EmuDeck's
         catalogue launches these emulators through per-emulator scripts, and
         an established launcher leads to the same save card RetroDECK's token
-        does — read against this arrangement's own config tree.
+        does — read against this arrangement's own config tree. *cwd* is the
+        launch's working folder, as the entry question takes it.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
         if spec.kind != KIND_LIBRETRO:
-            return self._standalone_entry_savefile(spec, entry_caveats, content_path=content_path)
+            return self._standalone_entry_savefile(
+                spec, entry_caveats, content_path=content_path, cwd=cwd
+            )
         placement = _retroarch_savefile_location(
             self._machine,
             self._query(
@@ -20969,6 +21159,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 core_so=spec.core_so,
                 system=spec.system,
                 extra_caveats=entry_caveats,
+                cwd=cwd,
             ),
         )
         if content_path is None:
@@ -20982,6 +21173,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...],
         *,
         content_path: str | None,
+        cwd: str | None,
     ) -> SavefilePlacement | Unresolved:
         """A standalone entry's save answer, resolved the way the launch resolves.
 
@@ -21019,6 +21211,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
             ),
             content_path=content_path,
+            cwd=cwd,
         )
 
     def _launcher_binary_variant(self, name: str) -> str:
@@ -21352,18 +21545,23 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
         A standalone entry goes through the launcher route the save answer
         goes through: the same variant gate, the savestate card the token
         leads to, and the same refusals where nothing is established (#225).
+        *cwd* is the launch's working folder, as the entry question takes it.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
         if spec.kind != KIND_LIBRETRO:
-            return self._standalone_entry_savestate(spec, entry_caveats, content_path=content_path)
+            return self._standalone_entry_savestate(
+                spec, entry_caveats, content_path=content_path, cwd=cwd
+            )
         placement = _retroarch_savestate_location(
             self._machine,
             self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
@@ -21379,6 +21577,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...],
         *,
         content_path: str | None,
+        cwd: str | None,
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """A standalone entry's states answer, resolved the way the launch resolves.
 
@@ -21429,6 +21628,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
             ),
             content_path=content_path,
+            cwd=cwd,
         )
 
     @one_question
@@ -21582,6 +21782,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
+        cwd: str | None = None,
     ) -> _SaveQuery:
         """The placement question, over one read of the companion cfg.
 
@@ -21621,6 +21822,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
             revocation=context.revocation,
+            cwd=cwd,
         )
 
     @one_question
@@ -21630,6 +21832,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         system: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg.
 
@@ -21640,16 +21843,24 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         only way to get file names on an arrangement with no frontend
         catalogue, and it is never guessed from the core — a core's own
         metadata says which systems it *can* run, never which one this content
-        is.
+        is. ``cwd`` is the working folder the launch will use, an absolute host
+        path: it fills the ``cwd`` hole of a core that saves relative to it, is
+        ignored where the answer does not depend on it, and a value that is not
+        absolute raises ``ValueError``.
         """
+        checked_cwd(cwd)
         return _retroarch_savefile_location(
             self._machine,
-            self._query(content_path=content_path, core_so=core_so, system=system),
+            self._query(content_path=content_path, core_so=core_so, system=system, cwd=cwd),
         )
 
     @one_question
     def savestate_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
 
@@ -21664,8 +21875,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         tree via ``RetroArch_maincfg.sh:3053`` — a writer that at the current
         pin has no caller in the Linux backend and targets an override file no
         launch path reads. The handle reads the live cfg either way; the
-        installer history is context, not an input.
+        installer history is context, not an input. ``cwd`` is checked as the
+        savefile question checks it and changes nothing here: RetroArch writes
+        every state below a directory its own configuration names.
         """
+        checked_cwd(cwd)
         return _retroarch_savestate_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
@@ -21800,7 +22014,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return self._firmware_context_from(settings, marker_issues, cfg)
 
     @one_question
-    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer:
+    def firmware_for_system(
+        self, system: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer:
         """Which emulators this EmuDeck's ES-DE offers for *system*, and what each wants.
 
         RetroDECK's route mirrored over this arrangement's sources: the ES-DE
@@ -21819,11 +22035,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         unreadable bundled layer is. And on every catalogue-informed answer
         the relocation suspicion and the marker cross-check ride adjacent to
         the catalogue-status statement, in the same order every catalogue
-        answer pins (sealed, relocation, mismatch).
+        answer pins (sealed, relocation, mismatch). ``cwd`` is taken as the
+        shared firmware questions take it.
         """
+        checked_cwd(cwd)
         settings, marker_issues = self._read_marker()
         cfg = self._machine.read_text(self._companion_cfg_path())
-        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg))
+        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg), cwd=cwd)
         present = self._esde_present()
         if not present or context.root is None:
             # No ES-DE on this disk means the catalogue-less behavior stands;
@@ -21874,7 +22092,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     @one_question
-    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer:
+    def firmware_inventory(self, *, verify: bool = False, cwd: str | None = None) -> FirmwareAnswer:
         """Every installed emulator's firmware here, plus what is lying around unclaimed.
 
         RetroDECK's route mirrored over this arrangement's sources: the ES-DE on
@@ -21893,11 +22111,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         same further statements :meth:`firmware_for_system` rides, in the same
         order: a layer ES-DE refuses wholesale, an exclusive custom layer, and
         the two that qualify which ES-DE was read at all — the relocation
-        suspicion and the marker cross-check.
+        suspicion and the marker cross-check. ``cwd`` is taken as the shared
+        firmware questions take it.
         """
+        checked_cwd(cwd)
         settings, marker_issues = self._read_marker()
         cfg = self._machine.read_text(self._companion_cfg_path())
-        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg))
+        context = self._stated(self._firmware_context_from(settings, marker_issues, cfg), cwd=cwd)
         if not self._esde_present() or context.root is None:
             return _resolve_inventory(self._machine, context, verify=verify)
         by_system, complete, shadow_broken, exclusive, invalid = self._read_esde_catalogue()
@@ -22006,6 +22226,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None,
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
+        cwd: str | None = None,
     ) -> _SaveQuery:
         """The placement question, over one read of this install's cfg.
 
@@ -22041,6 +22262,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             extra_sources=environment_sources,
             extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
             revocation=revocation,
+            cwd=cwd,
         )
 
     @one_question
@@ -22050,6 +22272,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         system: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """Where this RetroArch install keeps the save for *content_path* under *core_so*.
 
@@ -22060,16 +22283,24 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         only way to get file names on an arrangement with no frontend
         catalogue, and it is never guessed from the core — a core's own
         metadata says which systems it *can* run, never which one this content
-        is.
+        is. ``cwd`` is the working folder the launch will use, an absolute host
+        path: it fills the ``cwd`` hole of a core that saves relative to it, is
+        ignored where the answer does not depend on it, and a value that is not
+        absolute raises ``ValueError``.
         """
+        checked_cwd(cwd)
         return _retroarch_savefile_location(
             self._machine,
-            self._query(content_path=content_path, core_so=core_so, system=system),
+            self._query(content_path=content_path, core_so=core_so, system=system, cwd=cwd),
         )
 
     @one_question
     def savestate_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | Unresolved:
         """Where this RetroArch install keeps the savestates for *content_path*.
 
@@ -22077,7 +22308,11 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         ``sort_savestates_enable`` is **true** (``config.def.h:983``) exactly as
         its savefile twin is — so an unconfigured install sorts states into
         per-``library_name`` subdirectories of ``states`` under the config tree.
+        ``cwd`` is checked as the savefile question checks it and changes
+        nothing here: RetroArch writes every state below a directory its own
+        configuration names.
         """
+        checked_cwd(cwd)
         return _retroarch_savestate_location(
             self._machine, self._query(content_path=content_path, core_so=core_so)
         )
@@ -22310,6 +22545,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind a derived entry — the core question, asked by the entry.
 
@@ -22317,7 +22553,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         cores'), so the placement is exactly what the direct question answers
         for that ``core_so``; both guards stand for the day a spec arrives
         from somewhere else, and each refuses in the word that spec would be.
+        *cwd* is the launch's working folder, as the entry question takes it.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVE_FILES)
@@ -22330,6 +22568,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
                 core_so=spec.core_so,
                 system=spec.system,
                 extra_caveats=entry_caveats,
+                cwd=cwd,
             ),
         )
 
@@ -22340,12 +22579,15 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         entry_caveats: tuple[Caveat, ...] = (),
         *,
         content_path: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
         The guards stand for the day a spec arrives from somewhere else, as on
-        the savefile route: a derived entry is always a libretro core.
+        the savefile route: a derived entry is always a libretro core, and no
+        RetroArch state depends on *cwd*, which is checked and changes nothing.
         """
+        checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
         if foreign is not None:
             return _foreign_core_unresolved(spec, foreign, _READS_SAVESTATES)
@@ -22470,10 +22712,15 @@ class Installation(Protocol):
         content_path: str | None = None,
         core_so: str | None = None,
         system: str | None = None,
+        cwd: str | None = None,
     ) -> SavefilePlacement | Unresolved: ...
 
     def savestate_location(
-        self, *, content_path: str | None = None, core_so: str | None = None
+        self,
+        *,
+        content_path: str | None = None,
+        core_so: str | None = None,
+        cwd: str | None = None,
     ) -> SavestatePlacement | Unresolved: ...
 
     def screenshot_location(
@@ -22504,11 +22751,15 @@ class Installation(Protocol):
 
     def rom_location(self, system: str) -> RomPlacement: ...
 
-    def firmware_for_core(self, core_so: str, *, verify: bool = False) -> FirmwareAnswer: ...
+    def firmware_for_core(
+        self, core_so: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer: ...
 
-    def firmware_for_system(self, system: str, *, verify: bool = False) -> FirmwareAnswer: ...
+    def firmware_for_system(
+        self, system: str, *, verify: bool = False, cwd: str | None = None
+    ) -> FirmwareAnswer: ...
 
-    def firmware_inventory(self, *, verify: bool = False) -> FirmwareAnswer: ...
+    def firmware_inventory(self, *, verify: bool = False, cwd: str | None = None) -> FirmwareAnswer: ...
 
     def identify_firmware(
         self, *, md5: str | None = None, sha1: str | None = None, size: int | None = None

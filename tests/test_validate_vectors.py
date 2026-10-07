@@ -619,6 +619,19 @@ QUERY_CASES = [
                  entry_savefile_query={"system": SYSTEM, "nope": "x"}), "must carry 'system'", id="entry-query-stray"),
     case(_vector({"entry_savefile_location": _placement()}, installed=True, entry_savefile_query={"system": 7}),
          "must be a non-empty string", id="entry-query-value-type"),
+    case(_vector({"savefile_location": _placement()}, installed=True,
+                 savefile_query={"content_path": ROM, "cwd": "launch"}),
+         "input.savefile_query.cwd must be an absolute path", id="query-cwd-relative"),
+    case(_vector({"texture_pack_location": _texture()}, installed=True,
+                 texture_query={"core_so": CORE_SO, "cwd": "/home/deck/launch"}),
+         "input.texture_query keys must be a non-empty subset", id="query-cwd-on-a-family-that-takes-none"),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True,
+                 entry_savefile_query={"system": SYSTEM, "cwd": "launch"}),
+         "input.entry_savefile_query.cwd must be an absolute path", id="entry-query-cwd-relative"),
+    case(_vector({"entry_texture_pack_location": _texture()}, installed=True,
+                 entry_texture_query={"system": SYSTEM, "cwd": "/home/deck/launch"}),
+         "must carry 'system' plus optional 'label'/'content_path'/'installation'",
+         id="entry-query-cwd-on-a-family-that-takes-none"),
 ]
 
 FIRMWARE_QUERY_CASES = [
@@ -639,6 +652,12 @@ FIRMWARE_QUERY_CASES = [
     case(_vector({"firmware": _firmware()}, installed=True,
                  firmware_query={"kind": "core", "core_so": CORE_SO, "verify": "yes"}),
          "verify must be a boolean", id="firmware-query-verify-type"),
+    case(_vector({"firmware": _firmware()}, installed=True,
+                 firmware_query={"kind": "core", "core_so": CORE_SO, "cwd": ""}),
+         "input.firmware_query.cwd must be a non-empty string", id="firmware-query-cwd-empty"),
+    case(_vector({"firmware": _firmware()}, installed=True,
+                 firmware_query={"kind": "inventory", "cwd": "launch"}),
+         "input.firmware_query.cwd must be an absolute path", id="firmware-query-cwd-relative"),
 ]
 
 IDENTIFY_QUERY_CASES = [
@@ -665,6 +684,10 @@ AGGREGATE_QUERY_CASES = [
          "is not asked by", id="aggregate-query-stray-key"),
     case(_vector({"aggregate": []}, aggregate_query={"question": ""}),
          "must be a non-empty string", id="aggregate-query-empty-value"),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "texture_pack_location", "cwd": "/home/deck/x"}),
+         "is not asked by", id="aggregate-query-cwd-on-a-question-that-takes-none"),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "savestate_location", "cwd": "launch"}),
+         "input.aggregate_query.cwd must be an absolute path", id="aggregate-query-cwd-relative"),
 ]
 
 PAIRING_CASES = [
@@ -1600,6 +1623,16 @@ class TestTheFileLevelRules:
 # vector would pass the whole table above, and each of these is a state the
 # corpus is allowed to reach — several of them only reachable on real machines.
 ACCEPTED_CASES = [
+    pytest.param(_with(_base_placement(), savefile_query={"content_path": ROM, "cwd": "/home/deck/launch"}),
+                 id="a-save-question-asked-with-a-working-folder"),
+    pytest.param(_with(_base_entry(), entry_savefile_query={"system": SYSTEM, "cwd": "/home/deck/launch"}),
+                 id="an-entry-save-question-asked-with-a-working-folder"),
+    pytest.param(_with(_base_firmware(), firmware_query={"kind": "core", "core_so": CORE_SO,
+                                                         "cwd": "/home/deck/launch"}),
+                 id="a-firmware-question-asked-with-a-working-folder"),
+    pytest.param(_with(_base_aggregate(), aggregate_query={"question": "savefile_location",
+                                                           "cwd": "/home/deck/launch"}),
+                 id="an-aggregate-save-question-asked-with-a-working-folder"),
     pytest.param(_with(_vector(), files={"/a": {"status": "unreadable", "size": 12}}),
                  id="a-file-that-stats-but-cannot-be-read"),
     pytest.param(_with(_vector(), files={"/a": {"md5": "0" * 32, "size": 4}}),

@@ -99,14 +99,18 @@ def _aggregate(installs, query, name):
     if question == "savefile_location":
         return installation_answers_contract(
             every.savefile_location(
-                content_path=query.get("content_path"), core_so=query.get("core_so")
+                content_path=query.get("content_path"),
+                core_so=query.get("core_so"),
+                cwd=query.get("cwd"),
             ),
             savefile_answer_contract,
         )
     if question == "savestate_location":
         return installation_answers_contract(
             every.savestate_location(
-                content_path=query.get("content_path"), core_so=query.get("core_so")
+                content_path=query.get("content_path"),
+                core_so=query.get("core_so"),
+                cwd=query.get("cwd"),
             ),
             savestate_answer_contract,
         )
@@ -161,14 +165,18 @@ def _launchable(installs, query, name):
 def _savefile_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savefile_answer_contract(
-        install.savefile_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+        install.savefile_location(
+            content_path=query.get("content_path"), core_so=query.get("core_so"), cwd=query.get("cwd")
+        )
     )
 
 
 def _savestate_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savestate_answer_contract(
-        install.savestate_location(content_path=query.get("content_path"), core_so=query.get("core_so"))
+        install.savestate_location(
+            content_path=query.get("content_path"), core_so=query.get("core_so"), cwd=query.get("cwd")
+        )
     )
 
 
@@ -210,13 +218,14 @@ def _soft_patch_candidates(installs, query, name):
 def _firmware(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     verify = query.get("verify", False)
+    cwd = query.get("cwd")
     kind = query["kind"]
     if kind == "core":
-        answer = install.firmware_for_core(core_so=query["core_so"], verify=verify)
+        answer = install.firmware_for_core(core_so=query["core_so"], verify=verify, cwd=cwd)
     elif kind == "system":
-        answer = install.firmware_for_system(system=query["system"], verify=verify)
+        answer = install.firmware_for_system(system=query["system"], verify=verify, cwd=cwd)
     else:
-        answer = install.firmware_inventory(verify=verify)
+        answer = install.firmware_inventory(verify=verify, cwd=cwd)
     return firmware_contract(answer)
 
 
@@ -240,12 +249,16 @@ def _entry_of(installs, query, name):
 
 def _entry_savefile_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    return savefile_answer_contract(entry.savefile_location(content_path=query.get("content_path")))
+    return savefile_answer_contract(
+        entry.savefile_location(content_path=query.get("content_path"), cwd=query.get("cwd"))
+    )
 
 
 def _entry_savestate_location(installs, query, name):
     entry = _entry_of(installs, query, name)
-    return savestate_answer_contract(entry.savestate_location(content_path=query.get("content_path")))
+    return savestate_answer_contract(
+        entry.savestate_location(content_path=query.get("content_path"), cwd=query.get("cwd"))
+    )
 
 
 def _entry_texture_pack_location(installs, query, name):

@@ -92,7 +92,7 @@ class FileLookup:
 
 @dataclass(frozen=True, slots=True)
 class RuleReading:
-    """Everything the resolver hands a rule to decide with — all machine reads.
+    """Everything the resolver hands a rule: what it read, and what the question states.
 
     ``option_values`` maps the card's declared rule options to their live
     values (``None`` where nothing on the machine states one and the core
@@ -134,6 +134,13 @@ class RuleReading:
     keys, so the resolver's option recorder cannot see them, and an answer
     that named a directory without saying where the name came from would be
     the silent kind of claim this project refuses.
+
+    ``cwd`` is the working folder the launch will use where the asker named
+    one — like ``content_path``, a value the caller states rather than a
+    read — and ``None`` where it was not named. The MAME rule with its own
+    paths anchors a relative tree there instead of leaving it unresolvable;
+    PUAE's member check resolves against the same directory and does not
+    take it yet (``_puae_class_of``, #597).
     """
 
     option_values: Mapping[str, str | None]
@@ -149,6 +156,7 @@ class RuleReading:
     content_is_directory: Callable[[], bool]
     archive_members: Callable[[], ArchiveListResult]
     whdload_slave: Callable[[], WhdloadSlaveResult]
+    cwd: str | None = None
 
 
 # What a rule fills no template with — the state of every mode whose names
@@ -915,12 +923,44 @@ def _mame_unresolvable(
     )
 
 
+def _mame_at_cwd(target: str, cwd: str | None) -> str | None:
+    """A relative tree resolved against the working folder the caller named — or ``None``.
+
+    The frontend process opens a relative tree from its own working
+    directory, so a named *cwd* (a host path) completes it, normalised the
+    way MAME's other working-directory joins are. A tree carrying ``$VAR``
+    is expanded from the process's environment first (options.cpp:531-569),
+    which no working folder settles, so it stays unresolved.
+    """
+    if cwd is None or "$" in target:
+        return None
+    return posixpath.normpath(posixpath.join(cwd, target))
+
+
 def _mame_redirected(key: str, path: str, options_file: str | None) -> Caveat:
     return Caveat(
         CAVEAT_SAVE_ROOT_REDIRECTED,
         f"MAME's own configuration routes its {key} to {path!r}, read along its ini search "
         "path the way the emulator reads it — the standard answer below is where the frontend "
         "would look, not where this emulator writes",
+        {"core": "mame", "key": key, "path": path, "options_file": options_file or ""},
+    )
+
+
+def _mame_redirected_at_cwd(key: str, tree: str, path: str, options_file: str | None) -> Caveat:
+    """The redirect a relative tree makes once the caller names the working folder.
+
+    The same statement as an absolute tree's (:func:`_mame_redirected`), code
+    and data alike, because it is the same fact: the emulator writes at
+    ``path``, not under the frontend's save root. Only the sentence says
+    where the place came from.
+    """
+    return Caveat(
+        CAVEAT_SAVE_ROOT_REDIRECTED,
+        f"MAME's own paths leave its {key} relative ({tree!r}), which the frontend process "
+        f"opens from its working directory — the folder this question names — so it lands at "
+        f"{path!r}; the standard answer below is where the frontend would look, not where this "
+        "emulator writes",
         {"core": "mame", "key": key, "path": path, "options_file": options_file or ""},
     )
 
@@ -1003,9 +1043,13 @@ def _mame_ini_readings(
 
 
 def _mame_tree_caveats(
-    values: dict[str, str], sources: dict[str, "str | None"]
+    values: dict[str, str], sources: dict[str, "str | None"], cwd: str | None
 ) -> tuple[Caveat, ...]:
-    """What the effective values say per tree: a redirect each, or the unresolvable rest."""
+    """What the effective values say per tree: a redirect each, or the unresolvable rest.
+
+    A relative tree the caller's working folder resolves (:func:`_mame_at_cwd`)
+    is a redirect like an absolute one.
+    """
     caveats: list[Caveat] = []
     unresolved: list[tuple[str, str]] = []
     unresolved_file: str | None = None
@@ -1014,8 +1058,11 @@ def _mame_tree_caveats(
         # element. A value carrying `$VAR` is expanded from the process's
         # environment (options.cpp:531-569) — process state, like the cwd.
         target = values.get(key, default).split(";")[0].strip()
+        at_cwd = _mame_at_cwd(target, cwd)
         if target.startswith("/"):
             caveats.append(_mame_redirected(key, target, sources.get(key)))
+        elif at_cwd is not None:
+            caveats.append(_mame_redirected_at_cwd(key, target, at_cwd, sources.get(key)))
         else:
             unresolved.append((key, target))
             if unresolved_file is None:
@@ -1049,7 +1096,7 @@ def _mame_own_ini(reading: RuleReading) -> ModeChoice:
             ),
         )
     values, sources = _mame_ini_readings(main, driver)
-    return ModeChoice(None, caveats=_mame_tree_caveats(values, sources))
+    return ModeChoice(None, caveats=_mame_tree_caveats(values, sources, reading.cwd))
 
 
 def _mame(reading: RuleReading) -> ModeChoice:
@@ -1067,6 +1114,11 @@ def _mame(reading: RuleReading) -> ModeChoice:
         return ModeChoice(None, caveats=(_value_unestablished("mame", _MAME_READ_CONFIG),))
     if read_config not in _MAME_TOGGLES:
         return ModeChoice(None, caveats=(_unknown_value("mame", _MAME_READ_CONFIG, read_config),))
+    if read_config == "disabled" and reading.cwd is not None:
+        # No ini is read, so the compiled-in defaults are the effective
+        # values — and none carries a variable, so the named folder settles
+        # every one of them.
+        return ModeChoice(None, caveats=_mame_tree_caveats({}, {}, reading.cwd))
     if read_config == "disabled":
         return ModeChoice(
             None,
@@ -2097,7 +2149,8 @@ def _puae_class_of(name: str) -> str | None:
     name (libretro-core.c:6324-6332 at 0043cf9), so its ``path_is_directory``
     arm resolves against the emulator's own working directory rather than the
     extracted tree: a member that is a directory answers no class here, which
-    is what leaves such an archive in the extracted-tree branch. [D]
+    is what leaves such an archive in the extracted-tree branch. [D] A named
+    ``cwd`` is not used here yet; #597 covers it.
     """
     extension = name.rpartition(".")[2].lower() if "." in name else None
     return next((token for token, group in _PUAE_ARCHIVE_BY_EXTENSION if extension in group), None)
