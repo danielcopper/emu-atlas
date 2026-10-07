@@ -181,8 +181,11 @@ Two rules decide what belongs in a vector:
 - **prose is not** — `sources`, caveat `message` and the `*provenance` fields are for humans and change freely, so they
   are not serialized and not asserted.
 
-Health findings ride twice by design: in `installations[].health`, and in the `caveats` of every answer computed on that
-installation. They keep their own codes in both places — nothing wraps them.
+Health findings ride twice by design: in `installations[].health`, and in the `caveats` of the answers computed on that
+installation — the marker, root, saves root, BIOS folder and companion config findings and a bare RetroArch's
+`config-unreadable` on every answer (a stated no — `no_savestates` — aside: it names no path for them to qualify),
+`catalogue-invalid` on the answers that read the catalogue, while `content-tree-unwired` and the ROM root findings stay
+in `installations[].health` alone. They keep their own codes in both places — nothing wraps them.
 
 Caveats are `{code, data}` with `data` a flat object of strings. The codes are a closed vocabulary; so are root kinds,
 granularities, file-set states, holes (`needs`), emulator kinds, declaration states, system sources, path kinds and

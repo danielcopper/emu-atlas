@@ -48,7 +48,7 @@ COEXISTENCE_FILES = {
     NATIVE_CFG: f'savefile_directory = "~/ra-saves"\n{FLAT_LAYOUT}',
     ROM: "",
 }
-COEXISTENCE_DIRS = ["/mnt/sd/retrodeck/saves", f"{HOME}/ra-saves"]
+COEXISTENCE_DIRS = ["/mnt/sd/retrodeck/saves", "/mnt/sd/retrodeck/bios", f"{HOME}/ra-saves"]
 
 
 def _coexistence() -> FixtureMachine:

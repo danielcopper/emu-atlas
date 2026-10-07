@@ -339,18 +339,22 @@ if not health.ok:
 A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
 works on it. What each finding carries:
 
-| code                       | `data`                                         | what it says                                                        |
-| -------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
-| `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there      |
-| `not-set-up`               | `path`, `app_id`                               | RetroDECK is installed and its marker is not there — start it once  |
-| `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)    |
-| `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry    |
-| `root-missing`             | `path`                                         | the installation's own root is not an existing directory            |
-| `saves-root-missing`       | `path`                                         | its saves root is not an existing directory                         |
-| `config-unreadable`        | `path`, `status`                               | a bare RetroArch's `retroarch.cfg` could not be read                |
-| `companion-config-missing` | `path`, `status`                               | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken |
-| `catalogue-invalid`        | `path`, `problem`                              | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on   |
-| `content-tree-unwired`     | `family`, `hub`, `path`, `problem`[, `target`] | a texture/mods hub tree exists that no emulator-side link reaches   |
+| code                       | `data`                                         | what it says                                                                                       |
+| -------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there                                     |
+| `not-set-up`               | `path`, `app_id`                               | RetroDECK is installed and its marker is not there — start it once                                 |
+| `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)                                   |
+| `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry                                   |
+| `root-missing`             | `path`                                         | the installation's own root is not an existing directory                                           |
+| `saves-root-missing`       | `path`                                         | its saves root is not an existing directory                                                        |
+| `bios-root-missing`        | `path`                                         | its BIOS folder is not an existing directory                                                       |
+| `roms-root-missing`        | `path`                                         | the ROM root its frontend launches from is not an existing directory                               |
+| `roms-root-not-absolute`   | `value`                                        | ES-DE's `ROMDirectory` is not an absolute path, so there is no ROM root to check                   |
+| `config-unreadable`        | `path`, `status`                               | a bare RetroArch's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read |
+| `config-home-relocated`    | `path`                                         | EmuDeck: a `portable.txt` may have moved ES-DE's home, so the ROM root is undetermined             |
+| `companion-config-missing` | `path`, `status`                               | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                |
+| `catalogue-invalid`        | `path`, `problem`                              | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on                                  |
+| `content-tree-unwired`     | `family`, `hub`, `path`, `problem`[, `target`] | a texture/mods hub tree exists that no emulator-side link reaches                                  |
 
 `catalogue-invalid` is the hardest of them (issue #100): a systems file that does not parse (`problem: "parse-error"`)
 or carries no document-level `<systemList>` (`"missing-systemlist"`) aborts ES-DE's whole load — the frontend runs with
@@ -373,6 +377,22 @@ deliberately weak — a link settling _anywhere_ in the family's hub counts as w
 linked coarser hub layouts and those links still route. Unlike `catalogue-invalid` it rides the `health()` question
 alone: no other answer's question reads the wiring state.
 
+The two folders a download lands in besides the saves root are checked the same way, on RetroDECK and EmuDeck (issue
+#599): `bios-root-missing` names the BIOS folder (RetroDECK's `bios_path`, EmuDeck's `biosPath`, or the default under
+the root), and `roms-root-missing` the ROM root — what `roms_dir()` answers, ES-DE's `ROMDirectory` or the frontend's
+own default where the settings set none. "Missing" is the saves root's test: not an existing directory, so a card that
+is not mounted shows here instead of the installation reporting itself healthy. Each folder is checked on its own —
+`root-missing` suppresses neither — and a `not-set-up` RetroDECK states neither, since setup has not created them yet.
+Where the ROM root cannot be determined, health says why instead: ES-DE settings that exist and cannot be read are
+`config-unreadable` (`status` is the read, or `"unparseable"` for text that is not a settings file), a `ROMDirectory`
+that is not absolute even after the frontend's `~` expansion is `roms-root-not-absolute` (`value` as the file spells
+it), and on EmuDeck a `portable.txt` beside ES-DE that leaves an unset or `~`-relative setting unresolved is
+`config-home-relocated` (`path` is the `portable.txt`). An EmuDeck without ES-DE has no frontend ROM root, so it states
+no ROM finding; its BIOS folder is still checked. The BIOS check is a stat on a marker value, like the saves root, and
+rides every answer; the ROM checks read ES-DE's settings, so by the one-read model they ride the `health()` question
+alone. The bare RetroArch installations state neither: they have no frontend ROM root, and their firmware root answers
+`firmware-root-missing` on every firmware answer.
+
 `not-set-up` is the one finding that is an installation's whole answer (issue #579). RetroDECK writes `retrodeck.json`
 at the start of its first launch, before its first-run setup, and that setup deletes it again when it is left at the
 storage step (`other_functions.sh:674-678`). So a RetroDECK Flatpak that is deployed — in the user installation or the
@@ -387,10 +407,16 @@ storage — which setup may put elsewhere. `marker-missing` stays what it was: a
 detected by it. A setup quit at the storage step leaves no marker and answers `not-set-up`; a setup left after that step
 keeps its marker and answers as a set-up RetroDECK does (#590).
 
-The findings also travel **in the answers themselves**: every answer computed on a broken installation — a placement, a
-catalogue answer, a systems listing, any of the four firmware answers — carries them in its own `caveats`, ahead of what
-the query itself could not resolve, under these same codes with this same data. Nothing wraps them — branch on
-`marker-invalid`, not on a category code with the condition buried in `data`.
+The findings also travel **in the answers themselves**, each where its own read is made. The ones from reads every route
+makes anyway — the marker, the root, the saves root, the BIOS folder, EmuDeck's companion config and a bare RetroArch's
+`retroarch.cfg` — ride every answer computed on a broken installation but a stated no — the savestate question's
+`no_savestates` answer, see
+[A card can state the emulator has no savestates](#a-card-can-state-the-emulator-has-no-savestates--and-that-is-an-answer)
+— which names no path for them to qualify: a placement, a catalogue answer, a systems listing, any of the four firmware
+answers carries them in its own `caveats`, ahead of what the query itself could not resolve, under these same codes with
+this same data. `catalogue-invalid` rides the answers whose question reads the catalogue; `content-tree-unwired` and the
+ROM root findings ride the `health()` question alone. Nothing wraps them — branch on `marker-invalid`, not on a category
+code with the condition buried in `data`.
 
 They ride there whether or not they bear on what you asked: a finding is a true statement about the installation, and
 atlas does not decide for you which of them matter to the question at hand. So an answer can be perfectly usable and
@@ -1025,63 +1051,66 @@ all.
 
 ### Placement caveats worth branching on
 
-| Code                              | Meaning                                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `sorted-dir-missing`              | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`                 |
-| `sorted-dir-uncreatable`          | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`               |
-| `dead-symlink`                    | the directory is reached through a dead link; nothing can land there                                      |
-| `symlink-loop`                    | the link chain never settles (`ELOOP`); nothing can land there either — check both codes                  |
-| `save-dir-unlistable`             | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"               |
-| `per-game-override`               | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`       |
-| `per-game-alternative-emulator`   | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]` |
-| `per-game-overrides-present`      | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)    |
-| `per-game-layer-unread`           | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"       |
-| `per-game-build-layer-unread`     | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted          |
-| `cfg-value-rejected`              | the file sets a value the emulator cannot read, so the value it had keeps governing                       |
-| `core-unaudited` / `core-suspect` | no rule card for this core yet / options scan shows save-related keys nobody has verified                 |
-| `core-multi-option`               | granularity deliberately unstated — depends on options atlas does not interpret (named in it)             |
-| `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope token, below       |
-| `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared             |
-| `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole         |
-| `file-set-directories-unread`     | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"          |
-| `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                 |
-| `core-unqueryable`                | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                   |
-| `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame          |
-| `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied          |
-| `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame           |
-| `core-options-unaudited`          | card applied, answer unchanged: the core registers options its audit never examined (`data["added"]`)     |
-| `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied              |
-| `option-entry-retired`            | the options file carries a key this core generation retired — the value there stopped applying            |
-| `save-inside-content`             | no separate save file exists: the loaded content file itself takes the writes — your call                 |
-| `save-inside-image`               | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file          |
-| `save-writes-discarded`           | nothing keeps a save at all: the writes are discarded — the granularity block names the way out           |
-| `save-root-redirected`            | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip           |
-| `save-root-revoked`               | a flatpak override revokes the tree the save root lives under — writes never land here on the host        |
-| `save-root-unresolvable`          | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them    |
-| `content-dir-observation`         | the files were observed in the ROM's own directory — content files share the name, see below              |
-| `content-path-unnamed`            | the content path names no file; no file names stated, nothing observed                                    |
-| `marker-missing`                  | health: the config marker this installation is detected by is gone                                        |
-| `not-set-up`                      | health: RetroDECK is installed and its marker is not there — every other answer refuses with this         |
-| `marker-unreadable`               | health: the marker exists and its bytes could not be read                                                 |
-| `marker-invalid`                  | health: the marker parsed to something unusable                                                           |
-| `root-missing`                    | health: the installation's own root is not an existing directory                                          |
-| `saves-root-missing`              | health: its saves root is not an existing directory                                                       |
-| `config-unreadable`               | health: a bare RetroArch's `retroarch.cfg` could not be read                                              |
-| `companion-config-missing`        | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                               |
-| `catalogue-invalid`               | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                    |
-| `content-tree-unwired`            | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost         |
-| `unverified-version`              | the rule card was never verified against this emulator version                                            |
-| `arrangement-unverified`          | this arrangement has never been observed live — the answer is derived (see above)                         |
-| `arrangement-version-drifted`     | it was observed, on another version than this machine runs — re-verification pending                      |
-| `sandbox-path-untranslated`       | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read               |
-| `config-home-relocated`           | EmuDeck entry route: a `portable.txt` may have moved ES-DE's tree — reads may not be in force             |
-| `entry-format-unclaimed`          | launchable: the running core does not claim this format — attempted, never refused                        |
-| `archive-contents-unread`         | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread           |
-| `entry-format-unestablished`      | launchable: what the running entry reads was never established — not the same as "refuses"                |
-| `emulator-list-derived`           | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command       |
-| `platform-unmapped`               | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id       |
-| `platform-unknown`                | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too        |
-| `platform-scraping-ignored`       | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                         |
+| Code                              | Meaning                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `sorted-dir-missing`              | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`                                  |
+| `sorted-dir-uncreatable`          | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`                                |
+| `dead-symlink`                    | the directory is reached through a dead link; nothing can land there                                                       |
+| `symlink-loop`                    | the link chain never settles (`ELOOP`); nothing can land there either — check both codes                                   |
+| `save-dir-unlistable`             | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"                                |
+| `per-game-override`               | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`                        |
+| `per-game-alternative-emulator`   | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]`                  |
+| `per-game-overrides-present`      | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)                     |
+| `per-game-layer-unread`           | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"                        |
+| `per-game-build-layer-unread`     | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted                           |
+| `cfg-value-rejected`              | the file sets a value the emulator cannot read, so the value it had keeps governing                                        |
+| `core-unaudited` / `core-suspect` | no rule card for this core yet / options scan shows save-related keys nobody has verified                                  |
+| `core-multi-option`               | granularity deliberately unstated — depends on options atlas does not interpret (named in it)                              |
+| `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope token, below                        |
+| `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                              |
+| `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                          |
+| `file-set-directories-unread`     | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                           |
+| `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                                  |
+| `core-unqueryable`                | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                                    |
+| `core-generation-mismatch`        | the recorded deviation names an option this core does not register — not applied, standard frame                           |
+| `core-generation-unestablished`   | the core could not be read, so its generation is unknown — the recorded deviation is not applied                           |
+| `core-option-value-unestablished` | the core fits the card, but nothing states the value governing it — not applied, standard frame                            |
+| `core-options-unaudited`          | card applied, answer unchanged: the core registers options its audit never examined (`data["added"]`)                      |
+| `core-mode-unestablished`         | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied                               |
+| `option-entry-retired`            | the options file carries a key this core generation retired — the value there stopped applying                             |
+| `save-inside-content`             | no separate save file exists: the loaded content file itself takes the writes — your call                                  |
+| `save-inside-image`               | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file                           |
+| `save-writes-discarded`           | nothing keeps a save at all: the writes are discarded — the granularity block names the way out                            |
+| `save-root-redirected`            | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip                            |
+| `save-root-revoked`               | a flatpak override revokes the tree the save root lives under — writes never land here on the host                         |
+| `save-root-unresolvable`          | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them                     |
+| `content-dir-observation`         | the files were observed in the ROM's own directory — content files share the name, see below                               |
+| `content-path-unnamed`            | the content path names no file; no file names stated, nothing observed                                                     |
+| `marker-missing`                  | health: the config marker this installation is detected by is gone                                                         |
+| `not-set-up`                      | health: RetroDECK is installed and its marker is not there — every other answer refuses with this                          |
+| `marker-unreadable`               | health: the marker exists and its bytes could not be read                                                                  |
+| `marker-invalid`                  | health: the marker parsed to something unusable                                                                            |
+| `root-missing`                    | health: the installation's own root is not an existing directory                                                           |
+| `saves-root-missing`              | health: its saves root is not an existing directory                                                                        |
+| `bios-root-missing`               | health: its BIOS folder is not an existing directory                                                                       |
+| `roms-root-missing`               | health: the ROM root its frontend launches from is not an existing directory                                               |
+| `roms-root-not-absolute`          | health: ES-DE's `ROMDirectory` is not an absolute path — no ROM root to check                                              |
+| `config-unreadable`               | health: a bare RetroArch's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read                 |
+| `companion-config-missing`        | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                                |
+| `catalogue-invalid`               | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                                     |
+| `content-tree-unwired`            | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost                          |
+| `unverified-version`              | the rule card was never verified against this emulator version                                                             |
+| `arrangement-unverified`          | this arrangement has never been observed live — the answer is derived (see above)                                          |
+| `arrangement-version-drifted`     | it was observed, on another version than this machine runs — re-verification pending                                       |
+| `sandbox-path-untranslated`       | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read                                |
+| `config-home-relocated`           | EmuDeck: a `portable.txt` may have moved ES-DE's tree — reads may not be in force; on health, the ROM root is undetermined |
+| `entry-format-unclaimed`          | launchable: the running core does not claim this format — attempted, never refused                                         |
+| `archive-contents-unread`         | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread                            |
+| `entry-format-unestablished`      | launchable: what the running entry reads was never established — not the same as "refuses"                                 |
+| `emulator-list-derived`           | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                        |
+| `platform-unmapped`               | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                        |
+| `platform-unknown`                | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                         |
+| `platform-scraping-ignored`       | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                                          |
 
 Two of those codes state per-game facts from different places, and they are distinct codes on purpose (#311).
 `per-game-alternative-emulator` is a statement about the **frontend**: some games of this system select a different
@@ -1261,12 +1290,15 @@ to a person (see the firmware section).
 
 Treat caveat codes you do not recognize conservatively: the answer stands, but something about it is degraded.
 
-The nine `health:` rows are the installation's own findings, riding here with the same codes and the same `data` that
-`health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations). The
-marker, root and config findings travel in every answer, not just placements, ahead of what the query itself could not
-resolve; the two findings with their own reads follow the one-read model instead — `catalogue-invalid` rides the answers
-whose question reads the catalogue, `content-tree-unwired` rides `health()` alone. Do not key on the position: on the
-entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the codes.
+The thirteen `health:` rows are the installation's own findings, riding here with the same codes and the same `data`
+that `health()` reports — their `data` keys are in the table under [Finding installations](#finding-installations) — and
+so is `config-home-relocated` where an EmuDeck's `health()` states it. The marker, root, saves and BIOS folder findings,
+EmuDeck's `companion-config-missing` and a bare RetroArch's `config-unreadable` travel in every answer, not just
+placements, ahead of what the query itself could not resolve; the findings with their own reads follow the one-read
+model instead — `catalogue-invalid` rides the answers whose question reads the catalogue, while `content-tree-unwired`
+and the ROM root findings (`roms-root-missing`, `roms-root-not-absolute`, and `config-unreadable` or
+`config-home-relocated` about ES-DE's settings) ride `health()` alone. Do not key on the position: on the entry route
+(`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the codes.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
@@ -2233,9 +2265,10 @@ missing, replaced or restructured, the sealed state stays exactly what it always
 so the same machine can answer differently under two Pythons — both answers are honest, and the caveat says which one
 you got.
 
-Read the four codes, not the emptiness of `caveats`: a broken installation puts its health findings in front of any of
-these, so `if not answer.caveats:` is not the "read and declares nothing" test — it never fires on a broken
-installation. Filter to the codes (or ask `health()` separately, which is the same question asked directly).
+Read the four codes, not the emptiness of `caveats`: a broken installation puts the health findings every answer carries
+in front of any of these, so `if not answer.caveats:` is not the "read and declares nothing" test — a broken marker,
+root or BIOS folder alone keeps it from firing. Filter to the codes (or ask `health()` separately, which is the same
+question asked directly).
 
 ```python
 refusals = {c.code for c in answer.caveats} & {

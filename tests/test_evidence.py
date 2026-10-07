@@ -249,7 +249,12 @@ def _retrodeck(version: str | None = None) -> atlas.Installation:
     if version is not None:
         marker["version"] = version
     files = {RETRODECK_JSON: json.dumps(marker), "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
-    return atlas.detect(HOME, _machine(files, dirs=["/mnt/sd/retrodeck/saves"]))[0]
+    dirs = [
+        "/mnt/sd/retrodeck/saves",
+        "/mnt/sd/retrodeck/bios",
+        f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ROMs",
+    ]
+    return atlas.detect(HOME, _machine(files, dirs=dirs))[0]
 
 
 def _emudeck(version: str | None = None) -> atlas.Installation:
@@ -267,7 +272,7 @@ def _emudeck(version: str | None = None) -> atlas.Installation:
     if version is not None:
         files[f"{HOME}/.config/EmuDeck/backend/.git/HEAD"] = "ref: refs/heads/main\n"
         files[f"{HOME}/.config/EmuDeck/backend/.git/refs/heads/main"] = f"{version}\n"
-    return atlas.detect(HOME, _machine(files, dirs=[f"{HOME}/Emulation/saves"]))[0]
+    return atlas.detect(HOME, _machine(files, dirs=[f"{HOME}/Emulation/saves", f"{HOME}/Emulation/bios"]))[0]
 
 
 # The verified arrangements' fixture builders, keyed the way the record is:

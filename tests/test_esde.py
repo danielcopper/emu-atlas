@@ -461,9 +461,10 @@ def _retrodeck(files, **kwargs):
 
 # The roots `RD_JSON` names, so the fixture models a *working* installation.
 # These tests are about what the catalogue declares; every answer from a broken
-# installation now carries its health findings, and a fixture that was broken
-# only by omission would put them in the way of every assertion here.
-CATALOGUE_ROOTS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves"]
+# installation now carries its marker, root and folder findings, and a fixture
+# that was broken only by omission would put them in the way of every assertion
+# here.
+CATALOGUE_ROOTS = ["/mnt/sd/retrodeck", "/mnt/sd/retrodeck/saves", "/mnt/sd/retrodeck/bios"]
 
 
 ESDE_SETTINGS = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml"
