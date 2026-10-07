@@ -43,7 +43,7 @@ class TestThePackagedCard:
     def test_retrodeck_is_pinned_and_populated(self):
         card = lookup_distribution_supplied("retrodeck")
         assert card is not None
-        assert card.version == "0.10.9b"
+        assert card.version == "0.10.10b"
         assert card.card_version == "1"
         assert card.source_root == "/app/retrodeck/components/retroarch/rd_extras"
         assert card.entries

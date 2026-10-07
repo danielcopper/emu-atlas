@@ -20,8 +20,10 @@ machine, so this repository does not carry them and no contributor needs them.
   who initializes the state a branch checks before marking [V]; and filtered/truncated `strings`/grep scans over
   binaries are guessing — run the unfiltered pass, then read upstream source with `file:line` citations.
 - **Upstream citations**: RetroArch facts cite `file:line` at the pinned revision (see
-  `docs/research/retrodeck-save-placement.md` header). RetroDECK's per-emulator knowledge lives in the **Flatpak**
-  (`/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`), not in its Git repo.
+  `docs/research/retrodeck-save-placement.md` header). RetroDECK's per-emulator knowledge lives in RetroDECK/components
+  and is deployed in the **Flatpak**
+  (`/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`); atlas reads the deployed
+  copy, not a repository.
 - **Zero runtime dependencies is a contract** (`pyproject.toml`) — it makes vendoring a directory copy, so the package
   may only import what a consumer's runtime is sure to have: XML goes through `atlas/_xml.py` (stdlib expat, in
   ElementTree's shape) because a frozen runtime can ship the parser without the `xml.etree` wrapper. Parsing local

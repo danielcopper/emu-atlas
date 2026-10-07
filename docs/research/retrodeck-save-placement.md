@@ -11,13 +11,15 @@ Every claim carries an evidence level:
 - **[D]** derived — follows from verified facts by arithmetic or reading, but not directly observed
 - **[O]** open — not yet established
 
-Sources are cited as `file:line`. RetroArch refers to upstream at `a79435a`; RetroDECK to `0.10.9b`, whose components
-live in the Flatpak at `/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`,
-**not** in the RetroDECK Git repository. EmuDeck has two pinned generations: `acc45fc` (clone of 2026-07-23, the pin
-§13's original findings were read at) and `863ab69` (default branch `main`, fetched 2026-08-09, the pin behind §13b and
-the corrections marked in §13); ES-DE upstream facts cite the `v3.4.1` tag — the current stable, and the same revision
-RetroDECK's shipped fork derives from. Flatpak facts cite tag `1.16.6` — the reference machine's own flatpak — at commit
-`e761a8885453c217a931281092a641ebbdd0a0c6` (see §15's env-composition subsection).
+Sources are cited as `file:line`. RetroArch refers to upstream at `a79435a`; RetroDECK to `0.10.9b`, except that line
+numbers into its component scripts and its `functions/` (deployed as `libexec/`) are those of `0.10.10b`. The component
+scripts live in the RetroDECK/components repository (tag `main-20261003-0649` for 0.10.10b) and are deployed in the
+Flatpak at `/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/`. EmuDeck has two
+pinned generations: `acc45fc` (clone of 2026-07-23, the pin §13's original findings were read at) and `863ab69` (default
+branch `main`, fetched 2026-08-09, the pin behind §13b and the corrections marked in §13); ES-DE upstream facts cite the
+`v3.4.1` tag — the current stable, and the same revision RetroDECK's shipped fork derives from. Flatpak facts cite tag
+`1.16.6` — the reference machine's own flatpak — at commit `e761a8885453c217a931281092a641ebbdd0a0c6` (see §15's
+env-composition subsection).
 
 ## 1. The target matrix
 
@@ -46,7 +48,7 @@ standalone config format is its own procedure.
 **[V]** `$XDG_CONFIG_HOME/retrodeck/retrodeck.json` is the single root of truth for every path, where `XDG_CONFIG_HOME`
 is `~/.var/app/net.retrodeck.retrodeck/config`. `paths.saves_path` governs saves.
 
-**[V]** `prepare_component <action> <component>` (`functions/framework.sh:613`) distributes those roots into each
+**[V]** `prepare_component <action> <component>` (`functions/framework.sh:634`) distributes those roots into each
 emulator's own config. Actions: `reset`, `postmove`, `startup`.
 
 **[V]** `dir_prep "<real>" "<symlink>"` (`functions/other_functions.sh:245`) creates the real directory under
@@ -54,7 +56,7 @@ emulator's own config. Actions: `reset`, `postmove`, `startup`.
 
 **[V]** The per-emulator knowledge lives in `components/<name>/component_prepare.sh` plus `component_manifest.json`,
 with shipped default configs under `components/<name>/rd_config/` using a `RETRODECKHOMEDIR` placeholder. None of this
-is in the RetroDECK Git repository — it ships with the Flatpak.
+is in RetroDECK's own repository: it lives in RetroDECK/components and ships with the Flatpak.
 
 **[V]** **The config is the truth, never the existence of a folder.** The observed machine carries _two_ retrodeck
 roots: a stale `~/retrodeck` (backups, bios, cheats, mods, roms — no `saves`) and the real one on the SD card that
@@ -1050,7 +1052,7 @@ and `serialized`, so `null` leaves the default standing too.
 
 **[V]** `components/retroarch/rd_config/retroarch.cfg` ships `savestate_directory = "RETRODECKHOMEDIR/states"`,
 `savestates_in_content_dir = "false"`, `sort_savestates_by_content_enable = "true"`, `sort_savestates_enable = "false"`.
-`component_prepare.sh:28` (and `:209`) writes `states_path` into the first of them; `retrodeck.json` carries
+`component_prepare.sh:28` (and `:247`) writes `states_path` into the first of them; `retrodeck.json` carries
 `paths.states_path` beside `saves_path`.
 
 **[V-live]** The reference installation reads `savestate_directory = "/run/media/deck/Emulation/retrodeck/states"` with

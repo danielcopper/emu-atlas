@@ -25,7 +25,8 @@ from atlas.systems import (
 )
 
 # The build the packaged id set is cited to, where RetroDECK deploys it. Its
-# per-emulator knowledge lives in the Flatpak, not in RetroDECK's Git repository.
+# per-emulator knowledge lives in RetroDECK/components and is read here as the
+# Flatpak deploys it.
 DEPLOYED_ES_SYSTEMS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
     "/es-de/share/es-de/resources/systems/linux/es_systems.xml"

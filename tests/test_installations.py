@@ -211,6 +211,36 @@ class TestAnUnwiredContentTreeIsAFinding:
         rd = self._rd(marker=RD_JSON, dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
         assert self._findings(rd) == []
 
+    def test_a_non_string_version_checks_nothing(self):
+        marker = self.VERSIONED_JSON.replace('"0.10.9b"', '["0.10.9b"]')
+        rd = self._rd(marker=marker, dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
+        assert self._findings(rd) == []
+
+    # The pair 0.10.10b added: the RetroArch PPSSPP core's plugin tree.
+    PLUGINS_HUB = "/mnt/sd/retrodeck/mods/retroarch-core/PPSSPP/PLUGINS"
+    PLUGINS_SIDE = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/PPSSPP/PSP/PLUGINS"
+
+    def test_each_version_is_measured_against_its_own_row_set(self):
+        later = self.VERSIONED_JSON.replace("0.10.9b", "0.10.10b")
+        rd = self._rd(marker=later, dirs=[self.PLUGINS_HUB, self.PLUGINS_SIDE])
+        assert [f.data for f in self._findings(rd)] == [
+            {
+                "family": "mods",
+                "hub": self.PLUGINS_HUB,
+                "path": self.PLUGINS_SIDE,
+                "problem": "not-a-link",
+            }
+        ]
+
+    def test_a_pair_a_version_never_promised_is_not_held_against_it(self):
+        rd = self._rd(dirs=[self.PLUGINS_HUB, self.PLUGINS_SIDE])
+        assert self._findings(rd) == []
+
+    def test_the_later_version_still_checks_the_pairs_it_carried_over(self):
+        later = self.VERSIONED_JSON.replace("0.10.9b", "0.10.10b")
+        rd = self._rd(marker=later, dirs=[self.HUB_TREE, self.EMULATOR_SIDE])
+        assert [f.data["hub"] for f in self._findings(rd)] == [self.HUB_TREE]
+
     def test_an_unstatable_emulator_side_supports_no_claim(self):
         rd = self._rd(dirs=[self.HUB_TREE], inaccessible=[self.EMULATOR_SIDE])
         assert self._findings(rd) == []

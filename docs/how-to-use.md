@@ -371,11 +371,11 @@ without a reset can therefore carry a hub tree whose emulator-side path is a pla
 content filed in the hub then never reaches it, silently. The finding names the pair (`family` is `texture_packs` or
 `mods`, `hub` the tree, `path` the emulator side) and how it is broken (`problem`: `"missing"`, `"not-a-link"`, or
 `"diverted"` with `target` naming where the link actually settles). Three gates keep it honest: it fires only when the
-marker names exactly the RetroDECK version the packaged wiring table was read at (any other version made promises atlas
-never read), only for a hub tree that exists (nothing can be filed in one that is not there), and the wired test is
-deliberately weak — a link settling _anywhere_ in the family's hub counts as wired, because older RetroDECK versions
-linked coarser hub layouts and those links still route. Unlike `catalogue-invalid` it rides the `health()` question
-alone: no other answer's question reads the wiring state.
+marker names exactly a RetroDECK version the packaged wiring table was read at, and then only against that version's own
+pairs (any other version made promises atlas never read), only for a hub tree that exists (nothing can be filed in one
+that is not there), and the wired test is deliberately weak — a link settling _anywhere_ in the family's hub counts as
+wired, because older RetroDECK versions linked coarser hub layouts and those links still route. Unlike
+`catalogue-invalid` it rides the `health()` question alone: no other answer's question reads the wiring state.
 
 The two folders a download lands in besides the saves root are checked the same way, on RetroDECK and EmuDeck (issue
 #599): `bios-root-missing` names the BIOS folder (RetroDECK's `bios_path`, EmuDeck's `biosPath`, or the default under

@@ -15353,6 +15353,77 @@
       }
     },
     {
+      "name": "retrodeck-a-later-release-is-measured-against-its-own-row-set",
+      "rationale": "The marker names 0.10.10b, the second RetroDECK version the packaged wiring table was read at, and two hub trees stand with a plain directory where the link belongs: the Citra texture tree both versions pair (components/retroarch/component_prepare.sh:176 at 0.10.10b) and the RetroArch PPSSPP core's plugin tree, which only 0.10.10b pairs (component_prepare.sh:159 on prepare and reset, component_prepare.sh:243 on a folder move, and components/retroarch/component_update.sh:137 on the upgrade into that release). Each version is measured against its own row set, so health states both breaks, the second one a pair a 0.10.9b marker is never held to. The systems answer carries the drift caveat because the arrangement atlas verified is still 0.10.9b; the wiring findings ride health() alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gb</name>\n    <path>%ROMPATH%/gb</path>\n    <extension>.gb</extension>\n    <command label=\"Gambatte\">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/mods/retroarch-core/PPSSPP/PLUGINS",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/PPSSPP/PSP/PLUGINS"
+        ],
+        "systems_query": {
+          "installation": "retrodeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "content-tree-unwired",
+                "data": {
+                  "family": "texture_packs",
+                  "hub": "/mnt/sd/retrodeck/texture_packs/retroarch-core/Citra/textures",
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/Citra/load/textures",
+                  "problem": "not-a-link"
+                }
+              },
+              {
+                "code": "content-tree-unwired",
+                "data": {
+                  "family": "mods",
+                  "hub": "/mnt/sd/retrodeck/mods/retroarch-core/PPSSPP/PLUGINS",
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/PPSSPP/PSP/PLUGINS",
+                  "problem": "not-a-link"
+                }
+              }
+            ]
+          }
+        ],
+        "systems": {
+          "systems": [
+            "gb"
+          ],
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "retrodeck-a-version-the-wiring-table-never-read-stays-silent",
       "rationale": "The same broken pair, but the marker names a RetroDECK version the packaged wiring table was not read at. That version's prepare may pair different trees or none — its promise was never read — so the check fails closed and health carries no content-tree-unwired finding: atlas refuses to measure a machine against a promise it does not know rather than alarming on one it invented.",
       "input": {

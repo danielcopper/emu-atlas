@@ -1,5 +1,10 @@
 # Packaged data
 
+A line number into a RetroDECK component script or `framework.sh` anywhere in these tables is the line at RetroDECK
+0.10.10b (components tag `main-20261003-0649`), except inside a `content_tree_wiring.json` row set, which cites the
+release it names. A release named beside `[V-live]` says when the observation was made, not which revision the line
+number beside it belongs to.
+
 ## `core_oddities.json` — the rule cards
 
 One card per libretro core whose save behaviour deviates from RetroArch's standard rule. A card says _which live config
@@ -986,8 +991,11 @@ never with the upstream build defaults, which are a fact about the source tree a
 Read by `atlas.content_tree_wiring`, behind the `content-tree-unwired` health finding (issue #104). RetroDECK reaches
 its two content hubs (`texture_packs/`, `mods/`) from each emulator by replacing the emulator-side directory with a
 symlink — `dir_prep` creates hub tree and link **together**, and only on prepare, reset and folder moves; an in-place
-upgrade runs version-gated patches that re-create only some pairs. The table records every pair one RetroDECK version
-promises, each row citing the `component_prepare.sh` line in the shipped Flatpak that makes it.
+upgrade runs version-gated patches that re-create only some pairs. The table records every pair a RetroDECK version
+promises, one row set per version it was read at, each row citing the `component_prepare.sh` lines in that version's
+shipped Flatpak that make it — and, where they bear on the pair, the `component_update.sh` line that wires it on an
+upgrade and the `component_functions.sh` line that spells its emulator-side target. A row set is never re-pinned to a
+later release: the later release gets its own, and the older one stays the evidence for machines still running it.
 
 This is **arrangement** knowledge, deliberately not on the texture or mods cards: a card states where the emulator
 reads, and the installer's link target is provably not always that path — Citra's card derives `citra-emu/load/textures`
@@ -996,12 +1004,12 @@ health check built on card paths would probe paths the installer never linked.
 
 A row is `family` (which hub), `hub` (the tree below that family's root), `base` + `path` (the emulator-side location:
 `bios` and `storage` resolve from the marker, `xdg-data`/`xdg-config` are the flatpak's pinned homes), and `source`. The
-check fails closed on every axis: a marker naming any version but the pinned one is measured against nothing, a hub tree
-that does not exist files nothing, an emulator-side path whose `stat` fails supports no claim — and a link settling
-_anywhere_ in the family's hub counts as wired, because older versions linked coarser layouts and those links still
-route. Three absences are deliberate, spelled out in the file's own spec: PCSX2 standalone and MAME wire by
+check fails closed on every axis: a marker naming a version the table holds no row set for is measured against nothing,
+a hub tree that does not exist files nothing, an emulator-side path whose `stat` fails supports no claim — and a link
+settling _anywhere_ in the family's hub counts as wired, because older versions linked coarser layouts and those links
+still route. Three absences are deliberate, spelled out in the file's own spec: PCSX2 standalone and MAME wire by
 configuration value rather than by link, and the legacy rows in `component_update.sh` files are migrations for layouts
-the pinned version no longer prepares.
+the versions read no longer prepare.
 
 ## `distribution_supplied.json` — which files a distribution places into the firmware root itself
 
