@@ -4157,15 +4157,15 @@ def _opened_through_a_link(core_so: str, opened: str, *, link: str, target: str)
 
 def _declaration_linked_out(
     core: CoreDeclarations, declaration: FirmwareDeclaration, destination: Destination, root: str
-) -> tuple[Caveat, ...]:
+) -> list[Caveat]:
     """A declared file reached through a link out of the root, stated — or nothing, for any other destination.
 
     On the core, where the declaration's refusal would have stood, and with
     the keys :func:`_refusal_caveat` gives it.
     """
     if destination.link is None or destination.path is None:
-        return ()
-    return (
+        return []
+    return [
         Caveat(
             CAVEAT_FIRMWARE_FILE_LINKED_OUTSIDE_ROOT,
             _opened_through_a_link(
@@ -4179,8 +4179,8 @@ def _declaration_linked_out(
                 "link": destination.link,
                 "target": destination.path,
             },
-        ),
-    )
+        )
+    ]
 
 
 @dataclass(frozen=True, slots=True)
