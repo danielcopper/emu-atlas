@@ -260,17 +260,13 @@ def _deployed_version() -> str | None:
 
     Deployed and stating nothing readable fails the calling test: the row set
     to read cannot be chosen, and skipping would let the wiring passes go
-    quiet on exactly the deployment that broke them.
+    quiet on exactly the deployment that broke them. A version file that
+    cannot be read raises out of the read itself, which fails the test the
+    same way.
     """
     if not _deployed():
         return None
-    try:
-        stated = VERSION_FILE.read_text(encoding="utf-8").strip()
-    except (OSError, UnicodeDecodeError) as error:
-        pytest.fail(
-            f"RetroDECK is deployed at {COMPONENTS} and its version file {VERSION_FILE} cannot "
-            f"be read ({error}) — nothing says which wiring row set to check"
-        )
+    stated = VERSION_FILE.read_text(encoding="utf-8").strip()
     if not stated:
         pytest.fail(
             f"RetroDECK is deployed at {COMPONENTS} and its version file {VERSION_FILE} is empty "

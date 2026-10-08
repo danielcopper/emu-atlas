@@ -110,8 +110,9 @@ class TestTheLoaderRefusesWhatItCannotState:
 
     @pytest.mark.parametrize("schema", [1, 3])
     def test_an_unknown_schema_fails(self, schema):
+        table = json.dumps({"schema": schema, "arrangements": {}})
         with pytest.raises(ValueError, match="schema"):
-            load_content_tree_wiring(json.dumps({"schema": schema, "arrangements": {}}))
+            load_content_tree_wiring(table)
 
     def test_a_version_with_two_row_sets_fails(self):
         table = _table([ROW], {"version": "0.10.9b", "rows": [ROW]})
