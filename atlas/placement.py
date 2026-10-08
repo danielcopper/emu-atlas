@@ -670,6 +670,20 @@ REASON_CONFIGURED_USER_REACH_UNESTABLISHED = "configured-user-reach-unestablishe
 # instead of opening the user manager, and the tree named is the one that id
 # composes.
 REASON_UNSET_USER_ID_IS_LISTED = "unset-user-id-is-listed"
+# The configuration records no user the listing holds — none at all, the empty
+# value, or an id nothing listed answers to — and the emulator opens the first
+# user its own listing holds, the smallest id, rather than asking: the tree
+# named is the one that id composes. Vita3K build 4103.
+REASON_FIRST_LISTED_USER_OPENED = "first-listed-user-opened"
+# The emulator's own listing holds no user at all, so the start creates the
+# first one and opens it: the tree named is the one that user writes, which the
+# start creates rather than one found here. Vita3K build 4103.
+REASON_FIRST_USER_CREATED = "first-user-created"
+# Which rule picks the user turns on the emulator's build, and the build that
+# runs here is not one atlas reads — ``build`` carries the value read, and is
+# absent where nothing on this machine states a build at all. The user trees
+# both read builds compose alike are still stated.
+REASON_EMULATOR_BUILD_UNESTABLISHED = "emulator-build-unestablished"
 # Which console a launch is, and where the emulator's own root comes from.
 # ``region-decided-by-disc`` rides ``regions``, the regions found side by side.
 REASON_REGION_DECIDED_BY_DISC = "region-decided-by-disc"
@@ -785,6 +799,9 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_CONFIGURED_USER_ID_UNREAD,
     REASON_CONFIGURED_USER_REACH_UNESTABLISHED,
     REASON_UNSET_USER_ID_IS_LISTED,
+    REASON_FIRST_LISTED_USER_OPENED,
+    REASON_FIRST_USER_CREATED,
+    REASON_EMULATOR_BUILD_UNESTABLISHED,
     REASON_REGION_DECIDED_BY_DISC,
     REASON_DATA_ROOT_DECIDED_BY_LAUNCH,
     REASON_SLOT_HOLDS_AGP_DEVICE,

@@ -4484,6 +4484,12 @@ PER_USER_ESDE = (
     "</systemList>"
 )
 VITA3K_CONFIG_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+# The release a RetroDECK deploy names beside the Vita3K binary, which decides
+# which build's rule picks the user (vita3k/component_recipe.json writes it).
+VITA3K_COMPONENT_VERSION = (
+    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/"
+    "components/vita3k/component_version"
+)
 RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
 # Where the compiled default drive puts the first user's saves: $(EmulatorDir)
 # is empty, which means the emulator's own config directory (get_emu_dir,
@@ -4575,6 +4581,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'
         'libretro_directory = "/app/cores"\n',
         DOLPHIN_ESDE: PER_USER_ESDE,
+        # Build 3996, whose rule every test in this class was written against.
+        VITA3K_COMPONENT_VERSION: "3996\n",
     }
 
     def _answer(self, system, files=None, dirs=(), **kwargs):
@@ -6704,6 +6712,177 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert found.listing.unreadable == (RPCS3_HOME,)
         assert found.users == ("00000001",)
         assert found.unstatable == ()
+
+
+class TestTheVita3kBuildPicksTheRule:
+    """Which build runs decides which rule picks the user, and the two halves stay paired.
+
+    The machine-level behaviour of each build is in the vector family; these
+    hold the joints the vectors cannot reach — the card and the code agreeing
+    about which builds there are, and the reads at the edges of the build
+    file and the map order.
+    """
+
+    BASE = TestTheUserAPerUserTreeWouldOpen.BASE
+    USERS = {
+        VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+        "/mnt/sd/vita/ux0/user/00/user.xml": '<?xml version="1.0"?>\n<user id="00"/>\n',
+        "/mnt/sd/vita/ux0/user/01/user.xml": '<?xml version="1.0"?>\n<user id="01"/>\n',
+    }
+    DIRS = ("/mnt/sd/vita/ux0/user/00/savedata", "/mnt/sd/vita/ux0/user/01/savedata")
+
+    def _caveat(self, files):
+        rd = _retrodeck(
+            {**self.BASE, **self.USERS, **files}, dirs=["/mnt/sd/retrodeck/saves", *self.DIRS]
+        )
+        p = placed(rd.emulators_for("psvita").entries[0].savefile_location())
+        stated = [c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert len(stated) == 1
+        return p, stated[0]
+
+    def test_the_card_and_the_code_know_the_same_builds(self):
+        from atlas.installations import (
+            _VITA3K_BUILD_SELECTIONS,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
+            _VITA3K_BUILD_SOURCES,  # pyright: ignore[reportPrivateUsage] - the pairing is the unit under test
+        )
+        from atlas.standalone_saves import lookup_standalone_save_card
+
+        card = lookup_standalone_save_card("VITA3K")
+        assert card is not None
+        releases = {build.release for build in card.builds}
+        assert releases == set(_VITA3K_BUILD_SELECTIONS) == set(_VITA3K_BUILD_SOURCES)
+
+    def test_a_pinned_build_without_a_rule_fails_loudly(self, monkeypatch):
+        from atlas import installations
+
+        monkeypatch.delitem(installations._VITA3K_BUILD_SOURCES, "4103")  # pyright: ignore[reportPrivateUsage]
+        with pytest.raises(ValueError, match="shipped out of step"):
+            self._caveat({VITA3K_COMPONENT_VERSION: "4103\n"})
+
+    def test_each_pinned_build_answers_by_its_own_rule(self):
+        # The same machine under the two builds: 3996 names the recorded user
+        # for a frontend launch, 4103 for every start — the same reason here,
+        # told apart by the build each states and the sources each carries.
+        for release, revision in (("3996", "cb1f592c"), ("4103", "e6ac4272")):
+            p, caveat = self._caveat({VITA3K_COMPONENT_VERSION: f"{release}\n"})
+            assert caveat.data["build"] == release
+            assert caveat.data["reason"] == atlas.REASON_CONFIGURED_USER_TREE_NAMED
+            assert f"commit is {revision}" in p.sources[0]
+
+    def test_an_unreadable_build_file_states_no_build(self):
+        _, caveat = self._caveat({VITA3K_COMPONENT_VERSION: {"status": "unreadable"}})
+        assert caveat.data["reason"] == atlas.REASON_EMULATOR_BUILD_UNESTABLISHED
+        assert "build" not in caveat.data
+        assert "could not be read" in caveat.message
+
+    def test_an_empty_build_file_is_the_empty_value_read(self):
+        # Something was read, and it names no build atlas reads: the value is
+        # stated as read rather than dropped as if nothing had been.
+        _, caveat = self._caveat({VITA3K_COMPONENT_VERSION: "\n"})
+        assert caveat.data["reason"] == atlas.REASON_EMULATOR_BUILD_UNESTABLISHED
+        assert caveat.data["build"] == ""
+
+    def test_an_unread_build_outranks_a_short_listing(self):
+        # Neither build's rule applies, so the reason says the build is not
+        # established even where the user root could not be listed — and the
+        # listing's own failure is still stated, by the caveat that names it.
+        rd = _retrodeck(
+            {**self.BASE, **self.USERS, VITA3K_COMPONENT_VERSION: "5000\n"},
+            dirs=["/mnt/sd/retrodeck/saves", *self.DIRS],
+            unlistable=["/mnt/sd/vita/ux0/user"],
+        )
+        p = placed(rd.emulators_for("psvita").entries[0].savefile_location())
+        codes = [c.code for c in p.caveats]
+        assert atlas.CAVEAT_SAVE_DIR_UNLISTABLE in codes
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED)
+        assert caveat.data["reason"] == atlas.REASON_EMULATOR_BUILD_UNESTABLISHED
+        assert caveat.data["build"] == "5000"
+        assert "could not be listed either" in caveat.message
+
+    @pytest.mark.parametrize(
+        ("release", "said"),
+        [
+            ("3996", "the tree named is the one the emulator starts with"),
+            ("4103", "the emulator does not start from such a root"),
+        ],
+    )
+    def test_an_unlistable_user_root_is_told_by_the_build(self, release, said):
+        # At 4103 load_users' fs::is_empty throws on a root it cannot open and
+        # nothing catches it, so the stand-in is not a tree the emulator starts
+        # with; 3996 keeps the sentence the shared assembly states.
+        rd = _retrodeck(
+            {**self.BASE, **self.USERS, VITA3K_COMPONENT_VERSION: f"{release}\n"},
+            dirs=["/mnt/sd/retrodeck/saves", *self.DIRS],
+            unlistable=["/mnt/sd/vita/ux0/user"],
+        )
+        p = placed(rd.emulators_for("psvita").entries[0].savefile_location())
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED)
+        assert caveat.data["reason"] == atlas.REASON_USER_LISTING_UNESTABLISHED
+        assert said in caveat.message
+
+    def test_an_entry_that_can_end_the_walk_is_named_where_no_user_is_listed(self):
+        # Nothing listed and one entry whose stat failed: the third outcome
+        # beside "a user opens" and "user 00 is created" is the throw that
+        # ends the emulator, and the sentence names it.
+        rd = _retrodeck(
+            {
+                **self.BASE,
+                VITA3K_CONFIG_YML: "pref-path: /mnt/sd/vita\n",
+                VITA3K_COMPONENT_VERSION: "4103\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/vita/ux0/user"],
+            inaccessible=["/mnt/sd/vita/ux0/user/02"],
+        )
+        p = placed(rd.emulators_for("psvita").entries[0].savefile_location())
+        caveat = next(c for c in p.caveats if c.code == atlas.CAVEAT_CORE_MODE_UNESTABLISHED)
+        assert caveat.data["reason"] == atlas.REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+        assert "where its walk ends at 02, the emulator ends with it" in caveat.message
+
+    # One config.yml per refusal the resolver can give before any rule picks a
+    # user, each with the data key it adds beside token and config.
+    REFUSALS = {
+        "config-unreadable": ({"status": "unreadable"}, None),
+        "construct-refused": ("pref-path: &here /mnt/sd/vita\n", "reason"),
+        "pref-path-unread": ("pref-path:\n  - /mnt/sd/vita\n", "key"),
+        "pref-path-unset": ("user-id: 01\n", None),
+        "pref-path-untranslatable": ("pref-path: /app/nowhere/vita\n", "path"),
+    }
+
+    @pytest.mark.parametrize("refusal", sorted(REFUSALS))
+    @pytest.mark.parametrize("release", ["3996\n", "4103\n", "5000\n", None])
+    def test_a_refusal_names_the_build_it_was_read_under(self, refusal, release):
+        # The same rule as the per-user caveat: the release read wherever one
+        # was read, a pinned one or not, and no key where nothing was read.
+        config, added = self.REFUSALS[refusal]
+        files = {**self.BASE, VITA3K_CONFIG_YML: config}
+        if release is None:
+            del files[VITA3K_COMPONENT_VERSION]
+        else:
+            files[VITA3K_COMPONENT_VERSION] = release
+        outcome = _retrodeck(files, dirs=["/mnt/sd/retrodeck/saves"]).emulators_for(
+            "psvita"
+        ).entries[0].savefile_location()
+        assert isinstance(outcome, atlas.Unresolved)
+        assert outcome.data["token"] == "VITA3K"
+        if added is not None:
+            assert added in outcome.data
+        if release is None:
+            assert "build" not in outcome.data
+        else:
+            assert outcome.data["build"] == release.strip()
+
+    def test_the_first_listed_id_is_the_smallest_by_bytes(self):
+        from atlas.installations import (
+            _vita3k_first_listed,  # pyright: ignore[reportPrivateUsage] - the map order is the unit under test
+        )
+
+        # std::string compares bytes, so an upper-case letter sorts before a
+        # lower-case one and a multi-byte character after every ASCII one.
+        assert _vita3k_first_listed(("a", "B")) == "B"
+        assert _vita3k_first_listed(("é", "z")) == "z"
+        assert _vita3k_first_listed(("00", "", "01")) == ""
+        # A name read off the disk that is not UTF-8 sorts by the bytes it has.
+        assert _vita3k_first_listed(("\udcff", "z")) == "z"
 
 
 class TestEmuDeckStandaloneLaunchers:

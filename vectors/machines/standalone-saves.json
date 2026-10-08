@@ -4747,6 +4747,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nlle-modules: []\n",
           "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -4808,7 +4809,8 @@
                 "reason": "no-user-preselected",
                 "users": [
                   "00"
-                ]
+                ],
+                "build": "3996"
               }
             }
           ],
@@ -4845,6 +4847,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -4915,7 +4918,8 @@
                 "users": [
                   "00",
                   "01"
-                ]
+                ],
+                "build": "3996"
               }
             }
           ],
@@ -4952,6 +4956,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -5023,6 +5028,7 @@
                   "00",
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "01"
               }
             }
@@ -5060,6 +5066,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -5131,6 +5138,7 @@
                   "00",
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "01"
               }
             }
@@ -5168,6 +5176,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 02\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -5239,6 +5248,7 @@
                   "00",
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "02"
               }
             }
@@ -5276,6 +5286,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n"
         },
         "dirs": [
@@ -5337,6 +5348,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "00",
                 "skipped": [
                   "00"
@@ -5377,6 +5389,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -5440,6 +5453,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "01",
                 "skipped": [
                   "01"
@@ -5480,6 +5494,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n"
         },
         "dirs": [
@@ -5541,6 +5556,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "01"
               }
             }
@@ -5578,6 +5594,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\".hidden\" name=\"deck\"/>\n"
@@ -5649,6 +5666,7 @@
                   ".hidden",
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ".hidden"
               }
             }
@@ -5686,6 +5704,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
@@ -5757,6 +5776,7 @@
                   ".hidden",
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ".hidden"
               }
             }
@@ -5794,6 +5814,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -5857,6 +5878,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ".hidden",
                 "skipped": [
                   ".hidden"
@@ -5897,6 +5919,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
           "/mnt/sd/vita/ux0/user/.hidden.bak/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -5959,6 +5982,7 @@
                 "users": [
                   ".hidden.bak"
                 ],
+                "build": "3996",
                 "configured_user": ".hidden"
               }
             }
@@ -5996,6 +6020,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: ..bak\n",
           "/mnt/sd/vita/ux0/user/..bak/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -6058,6 +6083,7 @@
                 "users": [
                   "..bak"
                 ],
+                "build": "3996",
                 "configured_user": "..bak"
               }
             }
@@ -6095,6 +6121,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": {
             "status": "unreadable"
@@ -6161,6 +6188,7 @@
                 "users": [
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "00",
                 "unestablished": [
                   "00"
@@ -6201,6 +6229,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": {
             "status": "unreadable"
@@ -6265,6 +6294,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "01",
                 "unestablished": [
                   "00"
@@ -6305,6 +6335,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"00\"/>\n"
         },
@@ -6370,6 +6401,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "unestablished": [
                   "01"
                 ]
@@ -6409,6 +6441,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"\"/>\n"
         },
@@ -6470,7 +6503,8 @@
                 "reason": "unset-user-id-is-listed",
                 "users": [
                   "00"
-                ]
+                ],
+                "build": "3996"
               }
             }
           ],
@@ -6507,6 +6541,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
           "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -6568,7 +6603,8 @@
                 "reason": "unset-user-id-is-listed",
                 "users": [
                   ".hidden"
-                ]
+                ],
+                "build": "3996"
               }
             }
           ],
@@ -6605,6 +6641,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"\"/>\n"
         },
@@ -6667,6 +6704,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ""
               }
             }
@@ -6704,6 +6742,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -6766,6 +6805,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ""
               }
             }
@@ -6803,6 +6843,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n"
         },
         "dirs": [
@@ -6864,6 +6905,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": ""
               }
             }
@@ -6901,6 +6943,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
           "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -6963,6 +7006,7 @@
                 "users": [
                   "null"
                 ],
+                "build": "3996",
                 "configured_user": "null"
               }
             }
@@ -7000,6 +7044,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: ~\n",
           "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -7062,6 +7107,7 @@
                 "users": [
                   "null"
                 ],
+                "build": "3996",
                 "configured_user": "null"
               }
             }
@@ -7099,6 +7145,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-id: 01\nuser-auto-connect: true\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -7170,6 +7217,7 @@
                   "00",
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "00"
               }
             }
@@ -7207,6 +7255,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"null\"/>\n"
         },
@@ -7269,6 +7318,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "null"
               }
             }
@@ -7306,6 +7356,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
           "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -7371,6 +7422,7 @@
                 "users": [
                   "null"
                 ],
+                "build": "3996",
                 "configured_user": "null",
                 "unestablished": [
                   "02"
@@ -7411,6 +7463,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -7473,6 +7526,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "null"
               }
             }
@@ -7510,6 +7564,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
           "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -7572,6 +7627,7 @@
                 "users": [
                   "null"
                 ],
+                "build": "3996",
                 "configured_user": "null"
               }
             }
@@ -7609,6 +7665,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: \"\"\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\"?>\n<user id=\"00\"/>\n"
         },
@@ -7671,6 +7728,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "00"
               }
             }
@@ -7708,6 +7766,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -7782,6 +7841,7 @@
                   "00",
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "01",
                 "unestablished": [
                   "02"
@@ -7822,6 +7882,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
           "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\"?>\n<user/>\n"
         },
@@ -7887,6 +7948,7 @@
                 "users": [
                   ".hidden"
                 ],
+                "build": "3996",
                 "unestablished": [
                   "01"
                 ]
@@ -7926,6 +7988,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<user id=\"00\">",
           "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
@@ -7990,6 +8053,7 @@
                 "users": [
                   "01"
                 ],
+                "build": "3996",
                 "configured_user": "00",
                 "skipped": [
                   "00"
@@ -8030,6 +8094,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
         },
         "dirs": [
@@ -8092,6 +8157,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "skipped": [
                   "00",
                   "01"
@@ -8126,13 +8192,102 @@
     },
     {
       "name": "vita3k-an-unset-preference-path-is-a-default-this-build-derives-at-run-time",
-      "rationale": "An empty pref-path is not a directory atlas may invent: the emulator falls back to a default preference path it derives at run time and writes nowhere (config.cpp:189-190). So the answer refuses with emulator-config-unreadable naming the file, rather than stating a tree nobody configured — the boundary rule's own case.",
+      "rationale": "An empty pref-path is not a directory atlas may invent: the emulator falls back to a default preference path it derives at run time and writes nowhere (config.cpp:189-190). So the answer refuses with emulator-config-unreadable naming the file, rather than stating a tree nobody configured — the boundary rule's own case. The refusal still names the build it was read under, release 3996, as the save card's refusals and its per-user caveat do wherever a release was read.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: \"\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-unreadable",
+            "data": {
+              "token": "VITA3K",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml",
+              "build": "3996"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-preference-path-with-no-host-spelling-refuses-naming-the-build",
+      "rationale": "pref-path names /app/nowhere/vita, a path inside the RetroDECK sandbox that its deploy does not carry, so it has no spelling on this host and the answer refuses with emulator-config-path-untranslatable, the stated value in path. The refusal comes before any rule picks a user and still names the build it was read under: release 4103, from components/vita3k/component_version, as the save card's refusals and its per-user caveat do wherever a release was read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /app/nowhere/vita\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-path-untranslatable",
+            "data": {
+              "token": "VITA3K",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml",
+              "path": "/app/nowhere/vita",
+              "build": "4103"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-refusal-with-no-build-read-names-none",
+      "rationale": "The deploy carries no component_version, so no build is read, and config.yml names no pref-path, so the answer refuses with emulator-config-unreadable. A refusal names the build it was read under only where one was read: here the data carries no build key at all rather than an empty or invented one.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "user-id: 01\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -8167,8 +8322,8 @@
       }
     },
     {
-      "name": "emudeck-vita3k-runs-the-binary-it-unpacked-from-the-appimage",
-      "rationale": "EmuDeck does not keep Vita3K as an AppImage: it unpacks the executable to ~/Applications/Vita3K/Vita3K (emuDeckVita3K.sh:21-24), which is exactly where ES-DE's own find rule looks right after the AppImage patterns. So the launch's binary probe answers a third variant, and its configuration is the host's own $HOME/.config/Vita3K/config.yml (:7) because nothing sandboxes it — the same trees an AppImage would read. Each user directory holds a user.xml that loads, which is the file get_users_list loads before listing a user (user_management.cpp:89 at cb1f592c) — without it the directory is one the emulator passes over.",
+      "name": "emudeck-vita3k-runs-the-appimage-it-moved-into-place-and-states-no-build",
+      "rationale": "EmuDeck keeps Vita3K as the AppImage it downloaded: installEmuBI fetches it to $emusFolder/Vita3K.AppImage (installEmuBI.sh:27 at EmuDeck 863ab69) and the installer moves that file, unopened, to ~/Applications/Vita3K/Vita3K (emuDeckVita3K.sh:21-24), which is exactly where ES-DE's own find rule looks right after the AppImage patterns. So the launch's binary probe answers that path, and its configuration is the host's own $HOME/.config/Vita3K/config.yml (:7) because nothing sandboxes it. The build inside the AppImage is one nothing on this machine states — EmuDeck fetches the continuous release, whose build moves with every upstream commit — so which rule picks the user is not established: the reason says so and carries no build, because none was read. What both read builds share still stands: the listed user's tree, below the preference path config.yml names.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8229,14 +8384,14 @@
                 "token": "VITA3K",
                 "dir": "/home/deck/Emulation/storage/Vita3K/ux0/user/00/savedata",
                 "role": "battery",
-                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c"
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c and io.cpp:165-172 at commit e6ac4272"
               }
             },
             {
               "code": "core-mode-unestablished",
               "data": {
                 "token": "VITA3K",
-                "reason": "no-user-preselected",
+                "reason": "emulator-build-unestablished",
                 "users": [
                   "00"
                 ]
@@ -8256,11 +8411,6 @@
                 "key": "user-id",
                 "value": null,
                 "options_file": "/home/deck/.config/Vita3K/config.yml"
-              },
-              {
-                "key": "user-auto-connect",
-                "value": null,
-                "options_file": "/home/deck/.config/Vita3K/config.yml"
               }
             ],
             "alternatives": []
@@ -8269,8 +8419,8 @@
       }
     },
     {
-      "name": "emudeck-vita3k-without-the-unpacked-binary-names-the-variant-it-fell-to",
-      "rationale": "The other side of the same probe: an ~/Applications directory holding neither an AppImage nor the unpacked executable leaves the launch on its last fallback, and the entry refuses with the variant named rather than answering from a tree that binary never reads.",
+      "name": "emudeck-vita3k-without-the-binary-names-the-variant-it-fell-to",
+      "rationale": "The other side of the same probe: an ~/Applications directory holding neither an AppImage under its own name nor the file EmuDeck moves one to (~/Applications/Vita3K/Vita3K) leaves the launch on its last fallback, and the entry refuses with the variant named rather than answering from a tree that binary never reads.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -16639,6 +16789,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id:\n  stored: 00\nlle-modules: []\n",
           "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
         },
@@ -16700,7 +16851,8 @@
                 "reason": "configured-user-id-unread",
                 "users": [
                   "00"
-                ]
+                ],
+                "build": "3996"
               }
             }
           ],
@@ -16737,6 +16889,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id: 05\nlle-modules: []\n",
           "/mnt/sd/retrodeck/storage/psvita/Vita3K/ux0/user/05/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"05\" name=\"deck\"/>\n"
         },
@@ -16803,6 +16956,7 @@
                 "users": [
                   "00"
                 ],
+                "build": "3996",
                 "configured_user": "05"
               }
             },
@@ -16831,6 +16985,1848 @@
               {
                 "key": "user-auto-connect",
                 "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-vita3k-4103-opens-the-recorded-user-it-lists",
+      "rationale": "Build 4103 (component_version 4103, commit e6ac4272) picks the user itself, by one rule stated twice — init_current_user at every start (main_window.cpp:846-866) and ensure_current_user before every launch (app.cpp:185-208): a non-empty recorded user-id the listing holds is activated (main_window.cpp:857-860, app.cpp:198-199), so the recorded 01 is the user every start opens and its tree is the headline — no launch flag and no user-auto-connect enter that rule. The listing is load_users' (user.cpp:53-99), the same user.xml test 3996 made.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "build": "4103",
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-recorded-user-it-does-not-list-opens-the-first-listed",
+      "rationale": "The recorded 05 is not among the users load_users keeps, so the rule activates users.begin() — the smallest key of a std::map<std::string, User> (state.h:41) — and writes it back to user-id (main_window.cpp:862-865, app.cpp:201-207). 01 sorts before 02, so 01's tree is the headline, where 3996 opened the user manager.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n",
+          "/mnt/sd/vita/ux0/user/02/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"02\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/02/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/02/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-listed-user-opened",
+                "users": [
+                  "01",
+                  "02"
+                ],
+                "build": "4103",
+                "configured_user": "05"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "05",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-user-id-stated-empty-opens-the-first-listed",
+      "rationale": "An empty user-id never matches at this build — both statements of the rule test !cfg.user_id.empty() before the listing (main_window.cpp:857, app.cpp:198) — so the start opens the smallest listed id, 01, and writes it back.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
+          "/mnt/sd/vita/ux0/user/03/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"03\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/03/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/03/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-listed-user-opened",
+                "users": [
+                  "01",
+                  "03"
+                ],
+                "build": "4103",
+                "configured_user": ""
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-the-empty-id-sorts-before-every-other",
+      "rationale": "A .hidden directory whose user.xml states no id is keyed by its stem, the empty string (stem_v3 over the same Boost 3996 bundled), and the empty string is the smallest key the map can hold: with nothing recorded the start opens that user, whose tree is the user root's own savedata, beside 00 rather than under .hidden.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
+          "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/.hidden/savedata",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-listed-user-opened",
+                "users": [
+                  ".hidden",
+                  "00"
+                ],
+                "build": "4103"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-user-auto-connect-governs-nothing",
+      "rationale": "user-auto-connect is declared at this build (config.h:190) and read nowhere else in the tree, so a true value moves nothing: with no user recorded the start opens the first listed user, 00, exactly as without the switch — and the switch is not among the readings, because it governs nothing the answer states.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-auto-connect: true\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-listed-user-opened",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "build": "4103"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-an-empty-user-tree-creates-user-00",
+      "rationale": "ux0/user is there and empty, so load_users returns before its walk (user.cpp:58-59) and the rule, finding no user, creates the first free id — 00 over an empty map (next_free_id, user.cpp:35-49) — before it reads the record at all (main_window.cpp:849-855, app.cpp:188-195). The tree named is the one that user writes, which the start creates rather than one found here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-user-created",
+                "users": [
+                  "00"
+                ],
+                "build": "4103",
+                "configured_user": "05"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "05",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-missing-user-tree-creates-user-00",
+      "rationale": "No ux0/user at all is the same early return in load_users (user.cpp:58-59): the map is empty and the start creates user 00, so its tree is the one named.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-user-created",
+                "users": [
+                  "00"
+                ],
+                "build": "4103"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-tree-of-only-skipped-directories-creates-user-00",
+      "rationale": "Directories without a user.xml are skipped by load_users as by get_users_list (user.cpp:66), so a tree holding only those lists no user, and the start creates 00 — which here writes its user.xml into the directory of that name that was already there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/07/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-user-created",
+                "users": [
+                  "00"
+                ],
+                "build": "4103",
+                "skipped": [
+                  "00",
+                  "07"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-user-id-stated-as-a-block-is-unread",
+      "rationale": "user-id is a nested block the scalar reader does not read. With two users listed, whether the start opens the recorded one or the first one listed turns on the value atlas did not read, so the headline is not moved and the reason says the id is unread.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n  stored: 01\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-id-unread",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "build": "4103"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-recorded-user-beside-an-entry-that-can-end-the-walk-is-opened",
+      "rationale": "01 is recorded and listed, and 02 is an entry whose own stat failed. At this build that entry can at worst end the emulator: the throw out of load_users is caught nowhere up to main (main.cpp:216). It can never make another user open, because a listed recorded id wins over every other key (main_window.cpp:857, app.cpp:198), so the recorded user's tree is the headline.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        },
+        "inaccessible": [
+          "/mnt/sd/vita/ux0/user/02"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "01"
+                ],
+                "build": "4103",
+                "configured_user": "01",
+                "unestablished": [
+                  "02"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-an-undecided-entry-leaves-the-first-listed-user-open",
+      "rationale": "Nothing is recorded, 01 is listed, and 00's user.xml could not be read — it may hold a user whose id sorts before 01. Which user the start opens is not established, so the headline stays the first tree listed and the reason says the listing is not established.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "listed-user-account-unestablished",
+                "users": [
+                  "01"
+                ],
+                "build": "4103",
+                "unestablished": [
+                  "00"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-nothing-sorts-before-the-empty-id-an-undecided-entry-could-hold",
+      "rationale": "Nothing is recorded and the empty id is listed (a .hidden directory with an idless user.xml). An entry atlas could not decide sits beside it, and nothing it could hold sorts before the empty string, so the start still opens that user: the user root's own savedata.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
+          "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/.hidden/savedata",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "first-listed-user-opened",
+                "users": [
+                  ".hidden"
+                ],
+                "build": "4103",
+                "unestablished": [
+                  "00"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-an-undecided-entry-could-hold-the-recorded-user",
+      "rationale": "The recorded 05 is not listed and the smallest listed id is the empty one, but 00's user.xml could not be read and may state id 05. A recorded id that is listed wins (main_window.cpp:857, app.cpp:198), so that entry could move the start to 05: the user is not established, even though nothing sorts before the empty id.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n",
+          "/mnt/sd/vita/ux0/user/.hidden/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/.hidden/savedata",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/.hidden/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "listed-user-account-unestablished",
+                "users": [
+                  ".hidden"
+                ],
+                "build": "4103",
+                "configured_user": "05",
+                "unestablished": [
+                  "00"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "05",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-only-undecided-entries-leave-the-start-unestablished",
+      "rationale": "The only entry below ux0/user is one whose user.xml could not be read. If it holds a user, the start opens it; if not, the start creates 00. Neither is established, so the answer names user 00's tree as the stand-in and the reason says the listing is not established.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "listed-user-account-unestablished",
+                "users": [
+                  "00"
+                ],
+                "build": "4103",
+                "unestablished": [
+                  "00"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-a-null-node-user-id-opens-the-user-named-null",
+      "rationale": "user-id stated with nothing after the colon is a null node, which yaml-cpp at this build's own pin (external/yaml-cpp@56e3bb55, impl.h:145-146) still reads as the id null. A directory listed under that key is the recorded user every start opens.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/null/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/null/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/null/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "configured-user-tree-named",
+                "users": [
+                  "00",
+                  "null"
+                ],
+                "build": "4103",
+                "configured_user": "null"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "null",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-4103-an-unlistable-user-root-names-the-stand-in",
+      "rationale": "The user root cannot be listed, so which users exist is not established — at this build the start itself would fail there, since load_users' test of the root throws uncaught. The answer names the stand-in 00 and states the failed listing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/05/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        },
+        "unlistable": [
+          "/mnt/sd/vita/ux0/user"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "user-listing-unestablished",
+                "users": [
+                  "00"
+                ],
+                "build": "4103",
+                "configured_user": "05"
+              }
+            },
+            {
+              "code": "save-dir-unlistable",
+              "data": {
+                "path": "/mnt/sd/vita/ux0/user",
+                "token": "VITA3K"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "05",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-vita3k-a-release-atlas-does-not-read-leaves-the-user-unestablished",
+      "rationale": "component_version names release 5000, which is neither build atlas reads. 3996 and 4103 pick the user by different rules, so which user a launch opens is not established. The release read is carried as build, and what both builds share still stands: the listed users' trees and the savedata path below each.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "5000\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c and io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "emulator-build-unestablished",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "build": "5000",
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retrodeck-vita3k-a-deploy-without-component-version-states-no-build",
+      "rationale": "The deploy carries no component_version, so nothing states which build runs: the user is not established, and the data carries no build key, because no value was read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
+          "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",
+          "/mnt/sd/vita/ux0/user/01/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"01\" name=\"deck\"/>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/vita/ux0/user/00/savedata",
+          "/mnt/sd/vita/ux0/user/01/savedata",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              },
+              {
+                "dir": "/mnt/sd/vita/ux0/user/01/savedata",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "dir": "/mnt/sd/vita/ux0/user/00/savedata",
+                "role": "battery",
+                "citation": "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c and io.cpp:165-172 at commit e6ac4272"
+              }
+            },
+            {
+              "code": "core-mode-unestablished",
+              "data": {
+                "token": "VITA3K",
+                "reason": "emulator-build-unestablished",
+                "users": [
+                  "00",
+                  "01"
+                ],
+                "configured_user": "01"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "pref-path",
+            "readings": [
+              {
+                "key": "pref-path",
+                "value": "/mnt/sd/vita",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+              },
+              {
+                "key": "user-id",
+                "value": "01",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
               }
             ],
