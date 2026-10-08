@@ -1160,10 +1160,10 @@ not the empty array's. Read off the emitters, and measured wherever the corpus r
 carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-assignment-derived.database`,
 `core-without-systemname.database` and `core-options-unaudited.removed`; the ones present only when they have something
 to say, and simply absent otherwise, are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`,
-`unverified-version.missing` and the per-user `skipped` and `unestablished`. `per-game-layer-unread.files` is neither,
-because that code has four emulators' emitters and they do not agree: MAME's states it, `[]` there when only a failed
-listing is left to state, and states no `token`, while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir`
-and `key` and no `files`. Test for the key before reading it.
+`unverified-version.missing` and the per-user `skipped`, `unestablished` and `build`. `per-game-layer-unread.files` is
+neither, because that code has four emulators' emitters and they do not agree: MAME's states it, `[]` there when only a
+failed listing is left to state, and states no `token`, while the DuckStation, PCSX2 and Dolphin emitters state `token`,
+`dir` and `key` and no `files`. Test for the key before reading it.
 
 A key a client **branches** on is a value from a closed set, never a sentence. Five of them are set out below; the two
 others the constructor closes — `firmware-search-candidates`'s `readings` and `system-firmware-world-knowledge`'s
@@ -1188,6 +1188,9 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                                                      | —                          |
 | `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                                                  | —                          |
 | `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds                                  | —                          |
+| `first-listed-user-opened`            | the configuration records no user the listing holds, and the emulator opens the smallest listed id itself                | —                          |
+| `first-user-created`                  | the listing holds no user, and the emulator creates the first one at start                                               | —                          |
+| `emulator-build-unestablished`        | which rule picks the user turns on the emulator's build, and the build here is not one atlas reads                       | `build`                    |
 | `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | — [^rd]                    |
 | `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                                                                | —                          |
 | `slot-holds-agp-device`               | the slot's GBA cartridge adapter reads a `.sav` this host could not examine, so whether it holds a save is unestablished | `slot`                     |
@@ -1220,13 +1223,15 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 [^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
     lifted out of the sentence.
 
-Four keys ride the eleven per-user reasons independently of which one it is, so read them by presence rather than by
+Five keys ride the sixteen per-user reasons independently of which one it is, so read them by presence rather than by
 reason: `users` is always there and names the users whose trees the per-user groups point at — where none was found it
 holds the single user the emulator starts with, a compiled default rather than one seen on this machine, and where the
 listing came back short the answer's own `dir` names that user's tree whatever `users` holds; `configured_user` is there
 whenever the configuration records a user id, including on reasons whose name does not mention one; `skipped` names
 entries the emulator's own listing passes over, and `unestablished` those atlas could not decide — a deciding file it
-could not look at, or an entry whose own `stat` failed, which leaves not even its kind known.
+could not look at, or an entry whose own `stat` failed, which leaves not even its kind known; and `build`, on Vita3K's
+answers alone, names the release read wherever one was read — the build whose rule the answer applied, or, under
+`emulator-build-unestablished`, the value no pinned build answers for — and is absent where nothing states a build.
 
 `core-unqueryable.reason` — how the core probe came back. atlas loads the `.so` the way RetroArch does, in a subprocess,
 and asks it what it calls itself; every way that read fails used to arrive as the same silence. The value is what the
@@ -1269,7 +1274,8 @@ the drive is composed off, more than once gets this reason: which directory the 
 reader can state. Only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's `config.yml` —
 ever state a `reason` at all. A refusal that could not open its file states none, and so does one whose file is not
 parseable in its own format (xemu's TOML, Cemu's XML): there is no vocabulary for "the parser said no" and inventing one
-would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case.
+would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case, and a refusal
+Vita3K's save card gives carries `build` beside it where a release was read, as Vita3K's save answer below sets out.
 
 `filenames-content-conditional.files_established_for` — which class of content the declared names were established for:
 `console`, `driver-named-content` (the emulator names the file after the driver or romset it identified, not after the
@@ -1553,6 +1559,24 @@ literal `null` whichever of the five the file writes, so that is the id `init_ho
 against the listing like any other recorded one — `configured_user` then carries the four-letter **string** `null`, the
 id the emulator reads, and not a JSON null. A plain launch of the emulator without `user-auto-connect` opens the user
 manager whatever is recorded — the headline follows the launch a frontend makes.
+
+That is build 3996's rule, and Vita3K changed it: build 4103 (commit `e6ac4272`) asks no one. Every start, and every
+launch again, opens the recorded user where the listing holds it, and otherwise the first user listed — the smallest id,
+the empty one first — writing that id back to `user-id`; with no user listed it creates user `00` and opens that.
+`user-auto-connect` governs nothing there and is not among the readings. So which build runs is read first, from the
+release a RetroDECK deploy writes beside the binary (`components/vita3k/component_version`), the per-user caveat carries
+it as `build` wherever a release was read — and so does each refusal the Vita3K save card gives,
+`emulator-config-unreadable` and `emulator-config-path-untranslatable`, by the same rule, while a refusal given before
+the card is reached and the answers to other questions (savestates, texture packs) read no build and carry none — and
+each build answers by its own rule: `reason` is `configured-user-tree-named` for a recorded user that is listed,
+`first-listed-user-opened` where the record names no listed user (`dir` is that first user's tree), and
+`first-user-created` where nothing is listed (`dir` is the tree user `00` will write). An entry atlas could not decide
+can hold a smaller id or the recorded one, so beside such an entry the first-listed answer becomes
+`listed-user-account-unestablished` — unless the record names no user and the smallest id listed is the empty one, which
+nothing sorts before. A build that is neither, or one nothing on the machine states — EmuDeck runs the AppImage it
+downloaded, whose build nothing atlas reads names — answers `emulator-build-unestablished`, with the release read as
+`build` where one was read and no `build` where none was: the listed users' trees and the savedata path below each still
+stand, because both builds compose them alike, and which of them a launch opens does not.
 
 RPCS3 is the one whose directory takes two steps to reach. `vfs.yml` maps the emulated PS3's internal drive
 (`/dev_hdd0/`) to a host directory, composed off a `$(EmulatorDir)` variable the same file defines — empty means the

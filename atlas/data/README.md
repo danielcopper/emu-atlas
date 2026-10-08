@@ -519,16 +519,22 @@ configured card path templates its region — is knowledge written nowhere on th
 beside the card (`atlas/installations.py`), the same split the rule cards make with `atlas/mode_rules.py`. The loader
 refuses a card whose token has no resolver registered.
 
-A card may also pin the revision its citations were read at, as an optional `build` block of `revision` and `citation` —
-the short commit hash the deployed binary spells in the version string its `--version` prints, and how that string was
-read. It is what makes a card checkable, for the reason the core-firmware entries carry the same block: **the readings
-are a property of one build, not of an emulator.** So `tests/test_standalone_build_tripwire.py` reads that string off
-the deployed binary as raw bytes where the string is a constant of the build, as Vita3K's is — nothing has to be run
-then, and an emulator that composes its version at startup instead would need reading of another kind, which is why the
-pattern the stamp is read with is stated per card there — and fails a card whose pinned revision the string does not
-carry. Vita3K's card pins one; the rest pin none, which that test's `UNPINNED` set keeps deliberate rather than
-accidental, and pinning them is open work. The block is additive — a card without one reads exactly as it always did —
-so the file's schema number is unchanged.
+A card may also pin the builds its citations were read at, as an optional `builds` list. Each build states the `release`
+the deploy names for it — the tag RetroDECK's component recipe writes as `component_version` — the `revision`, the short
+commit hash the deployed binary spells in the version string its `--version` prints, the `citation` that ties the two,
+and the `provenance` an answer read under that build carries in its `sources`; the card-level provenance is what an
+answer carries where no pinned build applied. It is what makes a card checkable, for the reason the core-firmware
+entries carry the same kind of block: **the readings are a property of one build, not of an emulator.** So
+`tests/test_standalone_build_tripwire.py` reads that string off the deployed binary as raw bytes where the string is a
+constant of the build, as Vita3K's is — nothing has to be run then, and an emulator that composes its version at startup
+instead would need reading of another kind, which is why the pattern the stamp is read with is stated per card there —
+and fails a card none of whose pinned revisions the string carries. More than one build is a card whose emulator is in
+the field at builds that answer differently, and whose resolver reads which build runs: Vita3K's card pins 3996 and
+4103, whose rules for picking the user differ, and the resolver reads `component_version` to pick one — a release the
+card does not pin, or none read at all, answers what the builds share and states the rest as not established. The rest
+pin none, which that test's `UNPINNED` set keeps deliberate rather than accidental, and pinning them is open work. The
+list is schema 3: it replaced schema 2's single `build` block, which the loader now refuses by name rather than read as
+a card that pins nothing, and an empty list is refused for the same reason.
 
 ### `citations` — the evidence a shared reading speaks
 
@@ -608,19 +614,19 @@ listed carries `save-dir-unlistable` rather than a clause glued onto another cav
 named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only the
 per-user tree would miss. It is a **directory**, so it is a group of its own with its names left open (`files: null`)
 beside `file-set-spans-roots` — not `save-inside-image`, which means the answer named a file and nothing inside it is
-addressable, the opposite of what is true here. Vita3K (build 3996, commit `cb1f592c`): one key carries the whole tree —
-`pref-path` in `config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and saves at
-`ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user segment states the user directories
-the emulator itself would list as groups of their own, the ones it passes over as `skipped` — the way RPCS3's does — and
-claims those are **every** user the emulator would list only where every entry found here was decided: where one was
-not, the answer says instead that the users stated are the ones established here, and where that undecided entry is one
-whose own `stat` failed it names where the listing can end, since such an entry can throw out of the walk and leave
-whatever it had not reached unlisted. But this emulator **does** write down the user it opened, as `user-id` in the same
-`config.yml` (select_and_open_user, user_management.cpp:329-331), and the record reaches further: `init_home` reopens
-the recorded user when the id is among the users the emulator itself listed and either the launch names an app on the
-command line — which is how a frontend launches — or `user-auto-connect` is on, and otherwise the user manager opens for
-the player to pick (gui.cpp:688-696); the list is built from the directories under `ux0/user` whose `user.xml` loads,
-keyed by the file's `id` attribute or, lacking one, the directory name's stem (get_users_list,
+addressable, the opposite of what is true here. Vita3K (build 3996, commit `cb1f592c`; build 4103 below): one key
+carries the whole tree — `pref-path` in `config.yml`, with everything the emulator keeps hanging off it as `ux0/…`, and
+saves at `ux0/user/<user>/savedata`, one directory per title id (io.cpp:136-143). Its user segment states the user
+directories the emulator itself would list as groups of their own, the ones it passes over as `skipped` — the way
+RPCS3's does — and claims those are **every** user the emulator would list only where every entry found here was
+decided: where one was not, the answer says instead that the users stated are the ones established here, and where that
+undecided entry is one whose own `stat` failed it names where the listing can end, since such an entry can throw out of
+the walk and leave whatever it had not reached unlisted. But this emulator **does** write down the user it opened, as
+`user-id` in the same `config.yml` (select_and_open_user, user_management.cpp:329-331), and the record reaches further:
+`init_home` reopens the recorded user when the id is among the users the emulator itself listed and either the launch
+names an app on the command line — which is how a frontend launches — or `user-auto-connect` is on, and otherwise the
+user manager opens for the player to pick (gui.cpp:688-696); the list is built from the directories under `ux0/user`
+whose `user.xml` loads, keyed by the file's `id` attribute or, lacking one, the directory name's stem (get_users_list,
 user_management.cpp:83-97), and the emulator's own writes keep that key equal to the directory name (save_user,
 user_management.cpp:145-158) — atlas reads each `user.xml` the same way, so the users it checks the record against are
 the emulator's own list. So the answer's headline `dir` names the recorded user's tree where that listing holds it and
@@ -647,10 +653,19 @@ detail/impl.h:118-138), and the `user-id` and `user-auto-connect` readings say t
 while `pref-path` answers the first statement without a word about it; RPCS3's own reader keeps the last statement it
 can decode instead, so a `vfs.yml` that states its drive, or the variable the drive is composed off, more than once
 refuses with `key-repeated` rather than answering either statement. An empty `pref-path` is a refusal rather than a
-guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). A
-configuration that exists and cannot be read refuses the whole question with `emulator-config-unreadable`; one that
-reads fine but states an absolute path only the emulator's sandbox can spell refuses with
-`emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
+guess: the emulator falls back to a default it derives at run time and writes nowhere (config.cpp:189-190). Build 4103
+(commit `e6ac4272`) keeps that tree and those keys and changes who picks the user: one rule, stated twice —
+`init_current_user` at every start (main_window.cpp:846-866) and `ensure_current_user` before every launch
+(app.cpp:185-208) — opens a non-empty recorded `user-id` the listing holds, and otherwise the smallest listed id — the
+empty one first — writing it back, or creates user `00` where nothing is listed; no launch flag enters that rule,
+`user-auto-connect` is read nowhere, and an entry that ends the listing ends the emulator, the throw being caught
+nowhere up to `main` (main.cpp:216). Its answers carry `first-listed-user-opened` and `first-user-created` beside the
+reasons 3996 shares; the per-user `core-mode-unestablished` caveat and each refusal the save card gives
+(`emulator-config-unreadable`, `emulator-config-path-untranslatable`) carry the release read as `build` wherever one was
+read, and under a release the card does not pin the caveat's reason is `emulator-build-unestablished`, with that `build`
+still beside it. A configuration that exists and cannot be read refuses the whole question with
+`emulator-config-unreadable`; one that reads fine but states an absolute path only the emulator's sandbox can spell
+refuses with `emulator-config-path-untranslatable`, the stated value carried in `data.path` — the caveat vocabulary's
 `sandbox-path-untranslated` said as an outcome, for the routes where the whole answer hangs on that one path
 (`data.path` is the primary; an aggregate refusal naming more than one file — xemu's save answer — also carries
 `data.paths`, every untranslatable value, the disk image first and then the EEPROM). The answers root at

@@ -47,7 +47,12 @@ from pathlib import Path
 import pytest
 
 from atlas.emulator_settings import load_emulator_settings
-from atlas.standalone_saves import SAVES_SCHEMA, StandaloneSaveCard, load_standalone_saves
+from atlas.standalone_saves import (
+    SAVES_SCHEMA,
+    StandaloneBuild,
+    StandaloneSaveCard,
+    load_standalone_saves,
+)
 
 COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
@@ -91,15 +96,38 @@ UNPINNED = frozenset(
 NO_STAMP = "carries no version stamp of the shape this test reads"
 
 DEMO = "DEMO"
+DEMO_RELEASE = "1234"
 DEMO_REVISION = "abc1234"
 DEMO_CITATION = "[V] a citation"
-BLOCK_SHAPE = "exactly revision/citation"
+DEMO_PROVENANCE = "Demo build 1234, commit abc1234"
+BLOCK_SHAPE = "exactly release/revision/citation/provenance"
 BLANK = "non-blank string"
+
+
+def _demo_build(**changed: object) -> dict[str, object]:
+    """One well-formed build block, with *changed* keys replaced or, as None, dropped."""
+    block: dict[str, object] = {
+        "release": DEMO_RELEASE,
+        "revision": DEMO_REVISION,
+        "citation": DEMO_CITATION,
+        "provenance": DEMO_PROVENANCE,
+    }
+    for key, value in changed.items():
+        if value is None:
+            del block[key]
+        else:
+            block[key] = value
+    return block
 
 
 def pinned_cards() -> tuple[StandaloneSaveCard, ...]:
     """The packaged cards that state a build, in the file's own order."""
-    return tuple(card for card in load_standalone_saves() if card.build is not None)
+    return tuple(card for card in load_standalone_saves() if card.builds)
+
+
+def pinned_builds() -> tuple[tuple[StandaloneSaveCard, StandaloneBuild], ...]:
+    """Every build a packaged card pins, beside its card."""
+    return tuple((card, build) for card in pinned_cards() for build in card.builds)
 
 
 def cards_without_a_pattern(cards: tuple[StandaloneSaveCard, ...]) -> list[str]:
@@ -107,14 +135,14 @@ def cards_without_a_pattern(cards: tuple[StandaloneSaveCard, ...]) -> list[str]:
     return [
         card.token
         for card in cards
-        if card.build is not None and card.token not in VERSION_STAMPS
+        if card.builds and card.token not in VERSION_STAMPS
     ]
 
 
 def stamp_disagreements(
     cards: tuple[StandaloneSaveCard, ...], stamps: Mapping[str, str | None]
 ) -> list[str]:
-    """The pinned cards whose revision the deployed stamp does not carry.
+    """The pinned cards none of whose revisions the deployed stamp carries.
 
     *stamps* maps a card's token to the version string that emulator's deployed
     binary carries, ``None`` where the binary is there and carries no such
@@ -122,21 +150,26 @@ def stamp_disagreements(
     mapping and is not judged — this machine's emulator set is an accident of
     one installation, and the cards are not.
 
+    A card pinning more than one build passes where the stamp carries any of
+    them: each is a build the card's resolver answers by its own rule, and the
+    deployed one only has to be among them.
+
     Factored out of the assertion so the comparison can be exercised without a
     deployed emulator: a guard nobody has watched fail is a guard nobody knows
     fires.
     """
     wrong: list[str] = []
     for card in cards:
-        if card.build is None or card.token not in stamps:
+        if not card.builds or card.token not in stamps:
             continue
         reported = stamps[card.token]
+        revisions = [build.revision for build in card.builds]
         if reported is None:
             wrong.append(f"{card.token}: the deployed build {NO_STAMP}")
-        elif card.build.revision not in reported:
+        elif not any(revision in reported for revision in revisions):
             wrong.append(
-                f"{card.token}: the card pins {card.build.revision!r} and the deployed "
-                f"build states {reported!r}"
+                f"{card.token}: the card pins {revisions!r} and the deployed build states "
+                f"{reported!r}"
             )
     return wrong
 
@@ -219,28 +252,30 @@ def _stamps_or_skip() -> dict[str, str | None]:
     return stamps
 
 
-def _synthetic(build: object) -> str:
+def _synthetic(builds: object, *, key: str = "builds") -> str:
     """One card's text, so the loader's own guards can be watched failing."""
     card: dict[str, object] = {
         "saves": {"settings": "demo.yml", "systems": ["psvita"]},
         "provenance": {"source": DEMO_CITATION},
     }
-    if build is not None:
-        card["build"] = build
+    if builds is not None:
+        card[key] = builds
     return json.dumps({"schema": SAVES_SCHEMA, "emulators": {DEMO: card}})
 
 
 class TestTheCheckItself:
     """The comparison, over stamps written here — no machine involved."""
 
-    def test_a_stamp_carrying_the_pinned_revision_passes(self):
-        cards = pinned_cards()
-        stamps = {
-            card.token: f"Demo v9.9.9 1-{card.build.revision}"
-            for card in cards
-            if card.build is not None
-        }
-        assert stamp_disagreements(cards, stamps) == []
+    @pytest.mark.parametrize(
+        ("card", "build"),
+        pinned_builds(),
+        ids=[f"{card.token}-{build.release}" for card, build in pinned_builds()],
+    )
+    def test_a_stamp_carrying_any_pinned_revision_passes(
+        self, card: StandaloneSaveCard, build: StandaloneBuild
+    ):
+        stamps = {card.token: f"Demo v9.9.9 {build.release}-{build.revision}"}
+        assert stamp_disagreements(pinned_cards(), stamps) == []
 
     def test_a_card_whose_revision_is_absent_is_named(self):
         cards = pinned_cards()
@@ -268,9 +303,7 @@ class TestThePatternTable:
         )
 
     def test_a_pinned_card_with_no_pattern_is_named(self):
-        cards = load_standalone_saves(
-            _synthetic({"revision": DEMO_REVISION, "citation": DEMO_CITATION})
-        )
+        cards = load_standalone_saves(_synthetic([_demo_build()]))
         assert cards_without_a_pattern(cards) == [DEMO]
 
     def test_the_pattern_matches_a_plain_stamp(self):
@@ -292,7 +325,7 @@ class TestTheCardsThatPinNothing:
     """The unpinned set, so an absent pin stays deliberate."""
 
     def test_the_cards_with_no_build_are_exactly_the_listed_ones(self):
-        assert {card.token for card in load_standalone_saves() if card.build is None} == UNPINNED, (
+        assert {card.token for card in load_standalone_saves() if not card.builds} == UNPINNED, (
             "which cards pin no build has changed — a new card either pins its build and gets "
             "a pattern in VERSION_STAMPS, or joins UNPINNED on purpose, and a card that left "
             "the set stopped being held against anything"
@@ -302,72 +335,109 @@ class TestTheCardsThatPinNothing:
 class TestTheLoaderReadsTheBlock:
     """What the packaged card states, and what the loader refuses."""
 
-    def test_the_packaged_card_states_its_revision(self):
+    def test_the_packaged_card_states_its_builds(self):
         card = pinned_cards()[0]
-        assert card.build is not None
-        assert card.build.revision == "cb1f592c"
+        assert [(build.release, build.revision) for build in card.builds] == [
+            ("3996", "cb1f592c"),
+            ("4103", "e6ac4272"),
+        ]
 
-    @pytest.mark.parametrize("card", pinned_cards(), ids=[c.token for c in pinned_cards()])
-    def test_every_statement_of_the_pin_names_one_commit(self, card: StandaloneSaveCard):
-        # The commit stands three times in a card on purpose: `provenance` is
-        # the prose an answer carries in its `sources`, the build citation is
-        # where the release is tied to the commit, and `build.revision` is the
-        # pin this file checks. Three places is three chances to drift, so the
-        # agreement is a test rather than a habit — a card whose prose still
-        # named the old commit would tell a reader one build and the tripwire
-        # another.
-        assert card.build is not None
-        assert card.build.revision in card.provenance, (
-            f"{card.token} pins {card.build.revision!r} and its provenance names some other "
-            "commit — the sentence an answer carries and the pin held against the deployed "
-            "build must be the same commit"
+    @pytest.mark.parametrize(
+        ("card", "build"),
+        pinned_builds(),
+        ids=[f"{card.token}-{build.release}" for card, build in pinned_builds()],
+    )
+    def test_every_statement_of_the_pin_names_one_commit(
+        self, card: StandaloneSaveCard, build: StandaloneBuild
+    ):
+        # The commit stands three times in a build on purpose: `provenance` is
+        # the prose an answer read under that build carries in its `sources`,
+        # the citation is where the release is tied to the commit, and
+        # `revision` is the pin this file checks. Three places is three chances
+        # to drift, so the agreement is a test rather than a habit — a build
+        # whose prose still named the old commit would tell a reader one build
+        # and the tripwire another.
+        assert build.revision in build.provenance, (
+            f"{card.token} pins {build.revision!r} and that build's provenance names some "
+            "other commit — the sentence an answer carries and the pin held against the "
+            "deployed build must be the same commit"
         )
-        assert card.build.revision in card.build.citation, (
-            f"{card.token} pins {card.build.revision!r} and its build citation names some "
+        assert build.revision in build.citation, (
+            f"{card.token} pins {build.revision!r} and that build's citation names some "
             "other commit — the reading that ties the release to a commit and the pin held "
             "against the deployed build must be the same commit"
         )
+        assert build.release in build.citation, (
+            f"{card.token} pins release {build.release!r} and that build's citation ties some "
+            "other release to the commit"
+        )
 
-    def test_a_card_with_no_block_pins_nothing(self):
+    def test_a_card_with_no_list_pins_nothing(self):
         cards = load_standalone_saves(_synthetic(None))
-        assert cards[0].build is None
+        assert cards[0].builds == ()
 
-    def test_a_block_missing_a_key_is_refused(self):
-        table = _synthetic({"revision": DEMO_REVISION})
+    def test_a_card_finds_the_build_its_release_names(self):
+        card = load_standalone_saves(_synthetic([_demo_build()]))[0]
+        assert card.build_for(DEMO_RELEASE) == card.builds[0]
+        assert card.build_for("9999") is None
+        assert card.build_for(None) is None
+
+    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    def test_a_block_missing_a_key_is_refused(self, key: str):
+        table = _synthetic([_demo_build(**{key: None})])
         with pytest.raises(ValueError, match=BLOCK_SHAPE):
             load_standalone_saves(table)
 
     def test_a_block_with_an_extra_key_is_refused(self):
-        table = _synthetic(
-            {"revision": DEMO_REVISION, "citation": DEMO_CITATION, "mode": "by-name"}
-        )
+        table = _synthetic([_demo_build(mode="by-name")])
         with pytest.raises(ValueError, match=BLOCK_SHAPE):
             load_standalone_saves(table)
 
     def test_a_block_that_is_not_an_object_is_refused(self):
-        table = _synthetic(DEMO_REVISION)
+        table = _synthetic([DEMO_REVISION])
         with pytest.raises(ValueError, match=BLOCK_SHAPE):
             load_standalone_saves(table)
 
-    def test_an_empty_revision_is_refused(self):
-        table = _synthetic({"revision": "", "citation": DEMO_CITATION})
-        with pytest.raises(ValueError, match="build.revision"):
+    def test_a_list_that_is_not_a_list_is_refused(self):
+        table = _synthetic(_demo_build())
+        with pytest.raises(ValueError, match="non-empty list"):
             load_standalone_saves(table)
 
-    def test_an_empty_citation_is_refused(self):
-        table = _synthetic({"revision": DEMO_REVISION, "citation": ""})
-        with pytest.raises(ValueError, match="build.citation"):
+    def test_an_empty_list_is_refused(self):
+        # An empty list states a pin and pins nothing — the absent key is how
+        # a card says it pins no build.
+        table = _synthetic([])
+        with pytest.raises(ValueError, match="non-empty list"):
             load_standalone_saves(table)
 
-    def test_a_blank_revision_is_refused(self):
+    def test_a_lone_build_block_is_refused(self):
+        # Schema 2's shape: read under schema 3 it would be a card that pins
+        # nothing, which is the silence this file exists to break.
+        table = _synthetic(_demo_build(), key="build")
+        with pytest.raises(ValueError, match="'builds' list"):
+            load_standalone_saves(table)
+
+    @pytest.mark.parametrize("key", ["release", "revision"])
+    def test_two_builds_under_one_name_are_refused(self, key: str):
+        other = _demo_build(release="5678", revision="def5678")
+        twin = {**other, key: _demo_build()[key]}
+        table = _synthetic([_demo_build(), twin])
+        with pytest.raises(ValueError, match=f"one {key} twice"):
+            load_standalone_saves(table)
+
+    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    def test_an_empty_value_is_refused(self, key: str):
+        table = _synthetic([_demo_build(**{key: ""})])
+        with pytest.raises(ValueError, match=f"build.{key}"):
+            load_standalone_saves(table)
+
+    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    def test_a_blank_value_is_refused(self, key: str):
         # A revision of spaces is a substring of every version string there is,
-        # so it would pass the comparison against any build at all.
-        table = _synthetic({"revision": " ", "citation": DEMO_CITATION})
-        with pytest.raises(ValueError, match=BLANK):
-            load_standalone_saves(table)
-
-    def test_a_blank_citation_is_refused(self):
-        table = _synthetic({"revision": DEMO_REVISION, "citation": " "})
+        # so it would pass the comparison against any build at all; a release
+        # of spaces names no deploy, and a citation or provenance of spaces is
+        # one nobody can follow.
+        table = _synthetic([_demo_build(**{key: " "})])
         with pytest.raises(ValueError, match=BLANK):
             load_standalone_saves(table)
 

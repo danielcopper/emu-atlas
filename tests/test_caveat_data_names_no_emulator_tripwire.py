@@ -42,15 +42,17 @@ dictionary literal whose every key is a string constant, stores into it under
 string-literal keys alone, and uses it nowhere else. :func:`_from_variable` is
 that rule.
 
-The reach is measured, not assumed: of the 292 construction sites this walk's
-own definitions find, 273 are read whole, 7 are read in part, and 12 cannot be
-read at all. The 292 and the 273 were counted when this was written and grow
-with the package, held by nothing here; the 19 behind the other two numbers are
-the ones that matter, and :data:`BLIND_SITES` pins them. Seven shapes account
-for those 19, in two groups. Written at the call: the argument is a conditional
-expression (5, ``{"core_so": x} if x is not None else {}``), a dictionary
-literal holding a ``**`` entry (2, ``{"core": core, "reason": reason,
-**facts}``), or a starred call (1, ``Caveat(CODE, *_per_user_state(...))``).
+The reach is measured, not assumed: of the 331 construction sites this walk's
+own definitions find, 307 are read whole, 7 are read in part, and 17 cannot be
+read at all. The 331 and the 307 were counted when this was last updated and
+grow with the package, held by nothing here; the 24 behind the other two
+numbers are the ones that matter, and :data:`BLIND_SITES` pins them. Eight
+shapes account for those 24, in two groups. Written at the call: the argument
+is a conditional expression (5, ``{"core_so": x} if x is not None else {}``), a
+dictionary literal holding a ``**`` entry (2, ``{"core": core, "reason":
+reason, **facts}``), a starred call (1, ``Caveat(CODE, *_per_user_state(...))``),
+or a call's result (5, ``_vita3k_refusal_data(card, config_path, build, ...)``,
+which adds ``build`` only where a release was read).
 Passed in by name, where the function does not pin it to one fully literal
 dictionary: bound to a dictionary that itself holds a ``**`` entry (4), bound
 twice on two branches (1), bound to a call's result (3, ``stated =
@@ -79,7 +81,7 @@ only the corpus end can see — which is the reason the one parameter that did
 carry a card token under ``core`` was also named ``core``.
 
 A hollow pass is made visible by pinning: :data:`BLIND_SITES` is the reviewed
-census of those 19, keyed by the function that holds them, and
+census of those 24, keyed by the function that holds them, and
 :func:`test_the_blind_sites_are_the_reviewed_ones` fails when the walk's census
 differs. A new construction site the walk cannot read therefore fails loudly and
 gets reviewed, rather than quietly shrinking what the rule covers. The census is
@@ -87,7 +89,7 @@ keyed by function rather than by line so that editing a module does not churn
 it.
 
 **The corpus end** reads what answers actually carry, whatever built them, which
-is what covers the 19 sites the source end does not read whole: the keys, and
+is what covers the 24 sites the source end does not read whole: the keys, and
 for the identity keys the values as well. What separates ``core`` from ``token``
 there is the packaged card set itself — a ``core`` value is never one of those
 tokens, and a ``token`` value is always one — and neither of those two is a rule
@@ -234,6 +236,7 @@ BLIND_SITES: dict[tuple[str, str], int] = {
     ("installations.py", "_retroarch_mod_location"): 1,
     ("installations.py", "_retroarch_texture_pack_location"): 1,
     ("installations.py", "_verification_notes"): 1,
+    ("installations.py", "_vita3k_savefile_placement"): 5,
     ("installations.py", "revocation"): 1,
     ("mode_rules.py", "_mame_unresolvable"): 1,
     ("mode_rules.py", "_mode_unestablished"): 1,

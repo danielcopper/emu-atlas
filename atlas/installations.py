@@ -298,6 +298,9 @@ from .placement import (
     REASON_CONFIGURED_USER_NOT_SET_UP,
     REASON_CONFIGURED_USER_REACH_UNESTABLISHED,
     REASON_CONFIGURED_USER_SETUP_UNESTABLISHED,
+    REASON_EMULATOR_BUILD_UNESTABLISHED,
+    REASON_FIRST_LISTED_USER_OPENED,
+    REASON_FIRST_USER_CREATED,
     REASON_HDD_PATH_UNSET,
     REASON_KEY_REPEATED,
     REASON_KEY_UNREAD,
@@ -346,7 +349,7 @@ from .placement import (
 )
 from . import duckstation, emulator_settings, melonds, qt_ini
 from .yaml_scalars import YamlScalars, read_scalars
-from .standalone_saves import StandaloneSaveCard, lookup_standalone_save_card
+from .standalone_saves import StandaloneBuild, StandaloneSaveCard, lookup_standalone_save_card
 from .standalone_savestates import (
     SavestateIniKey,
     SavestateLaunchIni,
@@ -10388,6 +10391,23 @@ class _PerUserSaves:
     records its user, so its headline stays the first tree found. A short
     listing is answered once, by the assembly naming the stand-in tree before
     it reads this field, so nothing this field holds is read there.
+
+    ``build_unestablished`` is the sentence for an emulator whose rule for
+    picking the user turns on its build, where the build running here is not
+    one the caller reads — Vita3K's 3996 and 4103 pick differently. It
+    outranks every other state, a short listing included, because no rule
+    applies to state it under: the listing's own failure is still stated by
+    the caveat that names it. ``build`` is the release read, whether or not a
+    pinned build answers for it, carried in the data wherever one was read at
+    all — so a client sees which build an answer was read under, and so which
+    rule stands behind it where a pinned build answers for it, rather than
+    only where no rule could decide.
+    ``source`` is the provenance the answer's ``sources`` carry where it is not
+    the card's own — the pinned build's, where one applied.
+    ``short_listing_sentence`` replaces the shared sentence for a user root that
+    could not be listed, for an emulator that does not go on from such a root
+    at all: the shared one says the tree named is the one the emulator starts
+    with, and Vita3K build 4103 does not start there.
     """
 
     user_root: str
@@ -10410,6 +10430,10 @@ class _PerUserSaves:
     skipped: tuple[str, ...] = ()
     unestablished: tuple[str, ...] = ()
     no_user_reason: str = REASON_NO_USER_DIRECTORY
+    build_unestablished: str | None = None
+    build: str | None = None
+    source: str | None = None
+    short_listing_sentence: str | None = None
 
 
 def _per_user_state(
@@ -10433,8 +10457,10 @@ def _per_user_state(
     answer *names* is the compiled default beside them, which is what this
     sentence says.
     """
-    if listing.status != GLOB_COMPLETE:
-        sentence = (
+    if shape.build_unestablished is not None:
+        sentence, reason = shape.build_unestablished, REASON_EMULATOR_BUILD_UNESTABLISHED
+    elif listing.status != GLOB_COMPLETE:
+        sentence = shape.short_listing_sentence or (
             f"{shape.user_root} could not be listed, so which users exist below it is not "
             "established — the tree named is the one the emulator starts with, and whether "
             "this machine has that user, others, or none beyond those handed back is "
@@ -10453,6 +10479,8 @@ def _per_user_state(
         # is the tree the answer names too.
         "users": users or (shape.first_user,),
     }
+    if shape.build is not None:
+        data["build"] = shape.build
     # The recorded user is a reading of the configuration, not of the tree, so
     # it holds whatever the listing did or did not establish.
     if shape.configured_user is not None:
@@ -10559,8 +10587,9 @@ def _per_user_savedata_placement(
     Which tree the answer names is decided in three steps: a listing that came
     back short names ``shape.first_user``'s tree whatever it handed back, an
     established headline names its user's tree, and otherwise the first group
-    is the headline. The first step is what keeps ``dir`` and the sentence
-    beside it saying the same thing, and it holds for both emulators here.
+    is the headline. The first step names the stand-in each emulator's own
+    sentence for a short listing explains, which is what keeps ``dir`` and
+    that sentence saying the same thing.
     """
     groups = tuple(
         FileGroup(
@@ -10576,17 +10605,18 @@ def _per_user_savedata_placement(
     ) + extra_groups
     if listing.status != GLOB_COMPLETE:
         # A listing that came back short establishes no user, so no user it
-        # handed back may take the headline either: the trees it did reach
-        # stay as groups, because they were seen, while the answer names the
-        # tree the emulator starts with — which is what the sentence beside
-        # it says in as many words. Two things reach a short listing that
-        # still carries matches, and the first is not a hypothetical:
-        # :func:`_per_user_listing` globs TWICE, once per pattern, and a real
-        # machine reads the directory once per call, so a root that loses its
-        # read permission between the two merges into matches and an
-        # unreadable place at once. The second is the seam itself — ``Machine``
-        # is a protocol and :class:`~atlas.machine.GlobResult` permits
-        # incomplete with matches outright.
+        # handed back may take the headline either: the trees it did reach stay
+        # as groups, because they were seen, while the answer names
+        # ``shape.first_user``'s tree — the stand-in the emulator's own
+        # sentence beside it explains in as many words. Two things reach a
+        # short listing that still carries matches, and the first is not a
+        # hypothetical: :func:`_per_user_listing` globs TWICE, once per
+        # pattern, and a real machine reads the directory once per call, so a
+        # root that loses its read permission between the two merges into
+        # matches and an unreadable place at once. The second is the seam
+        # itself — ``Machine`` is a protocol and
+        # :class:`~atlas.machine.GlobResult` permits incomplete with matches
+        # outright.
         directory = os.path.join(shape.user_root, shape.first_user, "savedata")
     elif shape.headline_user is not None:
         # The caller resolved this identity against the emulator's own user
@@ -10641,7 +10671,10 @@ def _per_user_savedata_placement(
             complete=False,
             groups=groups,
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=(
+            f"standalone save card '{card.token}': "
+            f"{card.provenance if shape.source is None else shape.source}",
+        ),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -11377,13 +11410,25 @@ _VITA3K_AUTO_CONNECT_KEY = "user-auto-connect"
 # them in YamlScalars.null, and its ``_NULL_SPELLINGS`` carries the spellings
 # and their citations.
 _VITA3K_NULL_ID = "null"
-# The sentence for a key stated as a null node, said once because two readings
-# publish it — the record clause and the key's provenance — and a yaml-cpp bump
-# must move one citation, not two copies of it.
-_VITA3K_NULL_NODE_ID_SENTENCE = (
-    f"config.yml states {_VITA3K_USER_ID_KEY} as a null node (nothing after the colon, or "
-    f'one of ~, null, Null, NULL), which yaml-cpp reads as the id "{_VITA3K_NULL_ID}" '
-    "(impl.h:145-146, read and run at external/yaml-cpp@2f86d137)"
+
+
+def _vita3k_null_node_id_sentence(yaml_cpp: str) -> str:
+    """The sentence for a key stated as a null node, at the yaml-cpp one build pins.
+
+    Said once because two readings publish it — the record clause and the
+    key's provenance — and a yaml-cpp bump must move one citation, not two
+    copies of it. *yaml_cpp* is how far that commit was read and which one it
+    is (:attr:`_Vita3kSources.yaml_cpp`).
+    """
+    return (
+        f"config.yml states {_VITA3K_USER_ID_KEY} as a null node (nothing after the colon, or "
+        f'one of ~, null, Null, NULL), which yaml-cpp reads as the id "{_VITA3K_NULL_ID}" '
+        f"(impl.h:145-146, {yaml_cpp})"
+    )
+
+
+_VITA3K_NULL_NODE_ID_SENTENCE = _vita3k_null_node_id_sentence(
+    "read and run at external/yaml-cpp@2f86d137"
 )
 _VITA3K_USER_TREE = os.path.join("ux0", "user")
 # How the emulator's own listing decides what a user is, said once because
@@ -11458,6 +11503,95 @@ _VITA3K_WALK_CITATION = (
     "boost::filesystem::directory_entry (directory.hpp:544-547, directory.cpp:413-450 at the "
     "bundled Boost 1.89; the same reading at 1.81, the oldest this build accepts, "
     "directory.hpp:238-241, directory.cpp:324-345)"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _Vita3kSources:
+    """The lines one Vita3K build's answer cites, stated once per build.
+
+    The two builds atlas reads list users, compose the savedata tree and read
+    config.yml the same way, at different lines and through a different
+    yaml-cpp — so the sentences they share take their citations from here
+    rather than each carrying one build's lines for the other's answer.
+
+    ``listing`` names the call that keeps a user directory, ``load`` the same
+    load as the undecided entries' clause names it, ``walk`` the road an entry
+    whose stat failed takes through Boost, ``names`` the composition of the
+    savedata tree, ``pref_default`` and ``pref_provenance`` where an empty
+    pref-path falls back (in a refusal's words and in the granularity's),
+    ``yaml_cpp`` how far the yaml-cpp the build pins was read and which commit
+    it is, and ``yaml_cpp_pin`` that commit alone.
+    """
+
+    listing: str
+    load: str
+    walk: str
+    names: str
+    pref_default: str
+    pref_provenance: str
+    yaml_cpp: str
+    yaml_cpp_pin: str
+
+
+_VITA3K_3996_SOURCES = _Vita3kSources(
+    listing="get_users_list, user_management.cpp:89 at cb1f592c",
+    load="load_file, user_management.cpp:89",
+    walk=_VITA3K_WALK_CITATION,
+    names="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
+    pref_default="config.cpp:189-190",
+    pref_provenance="config.cpp:189-190 at commit cb1f592c",
+    yaml_cpp="read and run at external/yaml-cpp@2f86d137",
+    yaml_cpp_pin="external/yaml-cpp@2f86d137",
+)
+# Build 4103 (commit e6ac4272) lists users in load_users (user.cpp:53-99), whose
+# walk is get_users_list's line for line — the same directory_entry test
+# (user.cpp:62) over the same Boost, ff5f55bd bundled and 1.81 the oldest
+# accepted (CMakeLists.txt:169-192), and a byte scan of the 1130 regular files
+# among the 1158 entries git ls-files names finds neither
+# BOOST_FILESYSTEM_VERSION nor BOOST_FILESYSTEM_SOURCE, so the stem and the
+# append are still the v3 ones. Its yaml-cpp moved to 56e3bb55, where the lines
+# this answer cites — the null node's string (impl.h:145-146) and the first of
+# two statements (detail/impl.h:118-138) — stand where they stood at 2f86d137:
+# both files are byte for byte the same, read rather than run here.
+_VITA3K_4103_SOURCES = _Vita3kSources(
+    listing="load_users, user.cpp:61-67 at e6ac4272",
+    load="load_file, user.cpp:66",
+    walk=(
+        "load_users, user.cpp:61-62 at e6ac4272, over "
+        "boost::filesystem::directory_entry (directory.hpp:544-547, directory.cpp:413-450 at "
+        "the bundled Boost 1.89; the same reading at 1.81, the oldest this build accepts, "
+        "directory.hpp:238-241, directory.cpp:324-345)"
+    ),
+    names="init_savedata_app_path, io.cpp:165-172 at commit e6ac4272",
+    pref_default="config.cpp:283-284 at commit e6ac4272",
+    pref_provenance="config.cpp:283-284 at commit e6ac4272",
+    yaml_cpp="read at external/yaml-cpp@56e3bb55",
+    yaml_cpp_pin="external/yaml-cpp@56e3bb55",
+)
+# Where the build is not one atlas reads, what both read builds share is still
+# stated, and its citation names both — neither alone is the source of an
+# answer about a build that is neither.
+_VITA3K_UNREAD_BUILD_SOURCES = _Vita3kSources(
+    listing=(
+        "get_users_list, user_management.cpp:89 at cb1f592c; load_users, user.cpp:61-67 at "
+        "e6ac4272"
+    ),
+    load="load_file, user_management.cpp:89 at cb1f592c and user.cpp:66 at e6ac4272",
+    walk=(
+        "get_users_list, user_management.cpp:87-89 at cb1f592c, and load_users, "
+        "user.cpp:61-62 at e6ac4272, both over boost::filesystem::directory_entry "
+        "(directory.hpp:544-547, directory.cpp:413-450 at the bundled Boost 1.89; the same "
+        "reading at 1.81, directory.hpp:238-241, directory.cpp:324-345)"
+    ),
+    names=(
+        "init_savedata_app_path, io.cpp:136-143 at commit cb1f592c and io.cpp:165-172 at "
+        "commit e6ac4272"
+    ),
+    pref_default="config.cpp:189-190 at commit cb1f592c, :283-284 at commit e6ac4272",
+    pref_provenance="config.cpp:189-190 at commit cb1f592c, :283-284 at commit e6ac4272",
+    yaml_cpp="read at external/yaml-cpp@2f86d137 and @56e3bb55, the two builds' own",
+    yaml_cpp_pin="external/yaml-cpp@2f86d137 and @56e3bb55",
 )
 
 
@@ -11581,17 +11715,21 @@ def _vita3k_listed_users(
     )
 
 
-def _vita3k_survey(homes: tuple[_Vita3kListedUser, ...]) -> _PerUserSurvey:
+def _vita3k_survey(
+    homes: tuple[_Vita3kListedUser, ...], sources: _Vita3kSources
+) -> _PerUserSurvey:
     """get_users_list's verdict over every directory found, in the shape the caveat states.
 
     A user is a directory whose user.xml loads (user_management.cpp:89 at
-    cb1f592c); one without a user.xml and one whose user.xml does not parse
+    cb1f592c, and load_users at user.cpp:61-67 at e6ac4272 keeps the same one);
+    one without a user.xml and one whose user.xml does not parse
     are the emulator's own skip, the way :func:`_vita3k_listed_user`
     classifies them. Two fates are left undecided instead, and they are two
     because they are undecided about different things: a user.xml atlas could
     not read leaves the emulator's own load open, while an entry whose stat
     failed leaves open what the emulator's listing makes of the entry — the
     walk hands back every name, and the kind it was handed with decides.
+    *sources* is the build whose lines the clauses cite.
     """
     passed_over: list[str] = []
     for home in homes:
@@ -11604,9 +11742,9 @@ def _vita3k_survey(homes: tuple[_Vita3kListedUser, ...]) -> _PerUserSurvey:
             names=tuple(h.directory for h in homes if h.fate == _VITA3K_USER_XML_UNREADABLE),
             unread=(
                 "its user.xml could not be read, and the emulator's own load "
-                "(load_file, user_management.cpp:89) is not known to fail the same way",
+                f"({sources.load}) is not known to fail the same way",
                 "their user.xml could not be read, and the emulator's own load "
-                "(load_file, user_management.cpp:89) is not known to fail the same way",
+                f"({sources.load}) is not known to fail the same way",
             ),
         ),
         _Undecided(
@@ -11614,11 +11752,11 @@ def _vita3k_survey(homes: tuple[_Vita3kListedUser, ...]) -> _PerUserSurvey:
             unread=(
                 "nothing about it could be looked at, not even whether it is a directory, "
                 "and what the emulator's own listing makes of such an entry depends on the "
-                f"kind its walk was handed rather than on a stat ({_VITA3K_WALK_CITATION})",
+                f"kind its walk was handed rather than on a stat ({sources.walk})",
                 "nothing about them could be looked at, not even whether they are "
                 "directories, and what the emulator's own listing makes of such entries "
                 "depends on the kind its walk was handed rather than on a stat "
-                f"({_VITA3K_WALK_CITATION})",
+                f"({sources.walk})",
             ),
         ),
     )
@@ -11631,7 +11769,7 @@ def _vita3k_survey(homes: tuple[_Vita3kListedUser, ...]) -> _PerUserSurvey:
         aside=_per_user_aside(
             emulator="Vita3K",
             passed_over=passed_over,
-            citation="get_users_list, user_management.cpp:89 at cb1f592c",
+            citation=sources.listing,
             undecided=undecided,
         ),
     )
@@ -11770,7 +11908,9 @@ def _vita3k_identities(homes: tuple[_Vita3kListedUser, ...]) -> tuple[str, ...]:
     return tuple(home.identity for home in homes if home.identity is not None)
 
 
-def _vita3k_recorded_record(configured: str, *, null_node: bool) -> str:
+def _vita3k_recorded_record(
+    configured: str, *, null_node: bool, null_sentence: str = _VITA3K_NULL_NODE_ID_SENTENCE
+) -> str:
     """How config.yml states the id the answer holds against the listing.
 
     The twin of :func:`_vita3k_unset_record`, and there for the same reason: a
@@ -11780,10 +11920,11 @@ def _vita3k_recorded_record(configured: str, *, null_node: bool) -> str:
     conversion and a file writing ``null`` out in quotes reaches it as the text
     it is — see :data:`_VITA3K_NULL_ID` for the spellings that conversion takes
     for a null node — so the clause says which file was read rather than making
-    one state what the other does.
+    one state what the other does. ``null_sentence`` is that clause at the
+    yaml-cpp the build pins (:func:`_vita3k_null_node_id_sentence`).
     """
     if null_node:
-        return _VITA3K_NULL_NODE_ID_SENTENCE
+        return null_sentence
     return f'config.yml records {_VITA3K_USER_ID_KEY} "{configured}"'
 
 
@@ -12039,6 +12180,29 @@ def _vita3k_unset_user_state(
     return "", sentence, REASON_UNSET_USER_ID_IS_LISTED
 
 
+def _vita3k_recorded_id(read: YamlScalars) -> tuple[str | None, bool, bool]:
+    """``(configured, unread, null_node)`` — the id ``user-id`` hands the emulator.
+
+    The same reading for every build atlas reads, because both declare the key
+    as a ``std::string`` defaulting to the empty one (config.h:189 at cb1f592c
+    and at e6ac4272) and both hand it to yaml-cpp's string conversion.
+    ``configured`` is ``None`` only where the key is absent or unread.
+    """
+    unread = _VITA3K_USER_ID_KEY in read.skipped
+    # Which spelling the file holds, which the scalar reader's own third
+    # statement answers: its ``values`` say the empty string for a key stated
+    # as a null node and for an empty quoted scalar alike, and the emulator
+    # does not, so reading the value alone made one file's id of the other.
+    null_node = not unread and _VITA3K_USER_ID_KEY in read.null
+    if unread:
+        return None, unread, null_node
+    if null_node:
+        return _VITA3K_NULL_ID, unread, null_node
+    # Stated as written, and ``""`` is written: collapsing a stated empty
+    # value into ``None`` is what made the answer read it as an absent key.
+    return read.get(_VITA3K_USER_ID_KEY), unread, null_node
+
+
 def _vita3k_user(
     read: YamlScalars,
     *,
@@ -12083,20 +12247,7 @@ def _vita3k_user(
     it — see :data:`_VITA3K_NULL_ID`, which is where the five spellings of that
     node and the conversion they all reach are written down.
     """
-    unread = _VITA3K_USER_ID_KEY in read.skipped
-    # Which spelling the file holds, which the scalar reader's own third
-    # statement answers: its ``values`` say the empty string for a key stated
-    # as a null node and for an empty quoted scalar alike, and the emulator
-    # does not, so reading the value alone made one file's id of the other.
-    null_node = not unread and _VITA3K_USER_ID_KEY in read.null
-    if unread:
-        configured = None
-    elif null_node:
-        configured = _VITA3K_NULL_ID
-    else:
-        # Stated as written, and ``""`` is written: collapsing a stated empty
-        # value into ``None`` is what made the answer read it as an absent key.
-        configured = read.get(_VITA3K_USER_ID_KEY)
+    configured, unread, null_node = _vita3k_recorded_id(read)
     auto = None if _VITA3K_AUTO_CONNECT_KEY in read.skipped else read.get(_VITA3K_AUTO_CONNECT_KEY)
     headline = None
     # How completely the listed users are the emulator's own list — read off
@@ -12239,6 +12390,7 @@ def _vita3k_key_provenance(
     unset: str,
     stated_null_node: str | None = None,
     repeated: bool = False,
+    yaml_cpp_pin: str = _VITA3K_3996_SOURCES.yaml_cpp_pin,
 ) -> str:
     """Where one config.yml key's value came from — one grammar, two keys.
 
@@ -12272,6 +12424,8 @@ def _vita3k_key_provenance(
     lookup answers with the first — so the clause qualifies the reading rather
     than unsettling it, and every caller passes the flag without a sentence of
     its own, because the fact is the library's rather than the key's.
+    ``yaml_cpp_pin`` names the yaml-cpp whose lookup that is, which is the
+    build's own.
     """
     if unread:
         stated = (
@@ -12289,105 +12443,104 @@ def _vita3k_key_provenance(
         return stated
     return (
         f"{stated}; config.yml states the key more than once and the emulator reads the "
-        "first statement (node_data::get, detail/impl.h:118-138 at external/yaml-cpp@2f86d137)"
+        f"first statement (node_data::get, detail/impl.h:118-138 at {yaml_cpp_pin})"
     )
 
 
-def _vita3k_savefile_placement(
-    machine: Machine,
-    *,
-    card: StandaloneSaveCard,
-    homes: _XdgHomes,
-    sandbox: _Sandbox,
-    system: str,
-    command: str,
-    extra_caveats: tuple[Caveat, ...],
-    content_path: str | None = None,
-    cwd: str | None = None,
-) -> SavefilePlacement | Unresolved:
-    """Vita3K's save answer: the ux0 tree below the preference path.
+# Where a RetroDECK deploy states the Vita3K build it ships: the component
+# recipe downloads the Vita3K-builds release its version variable names and
+# writes that release's tag beside the binary (vita3k/component_recipe.json:57
+# at main-20261003-0649, :27 at main-20260529-1747; $SOURCE_VERSION is the
+# release downloaded, automation-tools/alchemist/alchemist.sh:56,67). The tag is
+# the build's commit count, the number its stamp carries before the revision,
+# which tests/test_standalone_build_tripwire.py holds against the binary. An
+# arrangement with no deploy tree — EmuDeck runs the AppImage it downloaded
+# without opening it — states no build here at all.
+_VITA3K_COMPONENT_VERSION = "/app/retrodeck/components/vita3k/component_version"
+_VITA3K_BUILD_3996 = "3996"
+_VITA3K_BUILD_4103 = "4103"
+# Build 4103 picks the user itself, by one rule stated twice: init_current_user
+# runs it at every start, before the window opens, and ensure_current_user runs
+# it again before every launch. Neither calls the other; the two bodies make the
+# same three tests in the same order.
+_VITA3K_4103_SELECTION = (
+    "init_current_user at every start, main_window.cpp:846-866, called at :388, and "
+    "ensure_current_user before every launch, app.cpp:185-208, called at :252, both at "
+    "e6ac4272"
+)
+_VITA3K_4103_LISTING_RULE = (
+    "the directories under ux0/user whose user.xml loads, keyed by the file's id or the "
+    "directory name's stem (load_users, user.cpp:53-99 at e6ac4272), read here the same way"
+)
+_VITA3K_4103_NULL_NODE_ID_SENTENCE = _vita3k_null_node_id_sentence(_VITA3K_4103_SOURCES.yaml_cpp)
 
-    ``pref-path`` is the one key that matters, and an empty one means the
-    emulator's own default preference path (config.cpp:189-190) — a location
-    this build derives at run time rather than writing down, so an unset key
-    is a refusal here rather than an invented directory.
 
-    Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
-    id (io.cpp:136-143) — and ``ux0/user/savedata`` for the user keyed by the
-    empty id, which composes no segment of its own. Which user that is at run
-    time is decided by ``init_home`` from the id config.yml records, or from
-    the empty one it starts with where it records none — see
-    :func:`_vita3k_user`. Every user directory ``get_users_list`` keeps — one
-    whose user.xml loads (user_management.cpp:87-89) — becomes a group of its
-    own with the recorded id stated beside them, the directories it passes
-    over are stated as skipped, and one whose user.xml atlas could not read is
-    stated as unestablished; where the listing completed, holds the id a
-    launch would open, and nothing found here can end the walk that filled it,
-    the headline names that user's tree, because a frontend launch reopens
-    exactly that user; everywhere else it stays the first tree listed, or the
-    compiled stand-in where none is and where the listing came back short, and
-    the caveat says what is not settled.
+@dataclass(frozen=True, slots=True)
+class _Vita3kSelection:
+    """Which user one build's rule opens, in every state the survey can leave.
+
+    ``user_sentence`` and ``user_reason`` answer where the listing keeps a
+    user, ``no_user_sentence`` and ``no_user_reason`` where it keeps none — the
+    assembly picks between them by the listing it states. ``headline`` is the
+    id whose tree the answer names where the rule settles it, and
+    ``build_unestablished`` the sentence that outranks every state where the
+    build is not one atlas reads (:attr:`_PerUserSaves.build_unestablished`),
+    and ``short_listing_sentence`` the one for a root that could not be listed,
+    where the build has one of its own
+    (:attr:`_PerUserSaves.short_listing_sentence`).
     """
-    config_path = _standalone_settings_path(card, homes)
-    result = machine.read_text(config_path)
-    if result.status not in (READ_OK, READ_MISSING):
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"Vita3K's configuration ({config_path}) exists and could not be read — where "
-            "its ux0 tree lives is unknowable here",
-            {"token": card.token, "config": config_path},
+
+    configured: str | None
+    headline: str | None
+    readings: tuple[OptionReading, ...]
+    user_sentence: str
+    user_reason: str
+    no_user_sentence: str
+    no_user_reason: str
+    build_unestablished: str | None = None
+    short_listing_sentence: str | None = None
+
+
+def _vita3k_build(machine: Machine, sandbox: _Sandbox) -> tuple[str | None, str]:
+    """``(release, clause)`` — the build a deploy states, and how an answer says so.
+
+    ``release`` is component_version's text without the line ending the
+    recipe's write leaves on it, or ``None`` where nothing could be read: no
+    deploy tree reaches the file (an arrangement that is not RetroDECK, or a
+    deploy without it), or the file is there and could not be read. ``clause``
+    is the sentence an answer about an unread build opens with.
+    """
+    path = sandbox.bundled(_VITA3K_COMPONENT_VERSION)
+    if path is None:
+        return None, (
+            "nothing atlas reads states which Vita3K build runs here — the one statement it "
+            "reads is the component_version a RetroDECK deploy writes beside the binary, and "
+            "no deploy tree holds one for this install"
         )
-    read = read_scalars(result.text or "" if result.status == READ_OK else "")
-    if read.refusal is not None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"Vita3K's configuration ({config_path}) states a construct atlas does not read "
-            f"({read.refusal}) — where its ux0 tree lives is unknowable here",
-            {"token": card.token, "config": config_path, "reason": read.refusal},
-        )
-    if _VITA3K_PREF_PATH_KEY in read.skipped:
-        # Stated as a nested block, a list or a multi-line scalar: the emulator
-        # reads a value here and atlas did not. That is not an unset key, and
-        # answering the unset key's refusal would name the wrong reason.
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"Vita3K's configuration ({config_path}) states {_VITA3K_PREF_PATH_KEY} as a "
-            "construct atlas does not read — its value is unread, not absent, so where its "
-            "ux0 tree lives is unknowable here",
-            {
-                "token": card.token,
-                "config": config_path,
-                "reason": REASON_KEY_UNREAD,
-                "key": _VITA3K_PREF_PATH_KEY,
-            },
-        )
-    stated = read.get(_VITA3K_PREF_PATH_KEY)
-    if not stated:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
-            f"Vita3K's configuration ({config_path}) names no pref-path, and an empty one "
-            "means a default this build derives at run time rather than writing down "
-            "(config.cpp:189-190) — where its ux0 tree lives is not established here",
-            {"token": card.token, "config": config_path},
-        )
-    host = sandbox.host(_VITA3K_PREF_PATH_KEY, stated)
-    if host.path is None:
-        return Unresolved(
-            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
-            f"the preference path Vita3K's configuration names ({stated!r}) has no "
-            f"spelling on this host — {config_path} read fine, and nothing this answer "
-            "could anchor at",
-            {"token": card.token, "config": config_path, "path": stated},
-        )
-    user_root = os.path.join(host.path, _VITA3K_USER_TREE)
-    found = _per_user_listing(machine, user_root)
-    listing = found.listing
-    user_homes = _vita3k_listed_users(machine, user_root, found.users, found.unstatable)
-    survey = _vita3k_survey(user_homes)
-    user = _vita3k_user(
-        read, homes=user_homes, survey=survey, user_root=user_root
+    result = machine.read_text(path)
+    if result.status != READ_OK:
+        return None, f"{path} states the build Vita3K runs here and could not be read"
+    release = (result.text or "").strip()
+    return release, (
+        f'{path} names release "{release}", which is neither build atlas reads '
+        f"({_VITA3K_BUILD_3996}, {_VITA3K_BUILD_4103})"
     )
-    if user_homes:
+
+
+def _vita3k_3996_selection(
+    read: YamlScalars,
+    *,
+    homes: tuple[_Vita3kListedUser, ...],
+    survey: _PerUserSurvey,
+    user_root: str,
+) -> _Vita3kSelection:
+    """Build 3996's rule: a recorded user reopened by a frontend launch, else the user manager.
+
+    :func:`_vita3k_user` is the rule; this adds the sentence for a tree whose
+    listing keeps no user at all.
+    """
+    user = _vita3k_user(read, homes=homes, survey=survey, user_root=user_root)
+    if homes:
         # Directories were found and none is a user the emulator lists: the
         # recorded user's state is still the sentence, and its ending names
         # the stand-in the answer falls back on.
@@ -12420,6 +12573,578 @@ def _vita3k_savefile_placement(
             "(io.cpp:203), which it would create; it is not a directory found on this "
             "machine"
         )
+    return _Vita3kSelection(
+        configured=user.configured,
+        headline=user.headline,
+        readings=user.readings,
+        user_sentence=user.sentence,
+        user_reason=user.reason,
+        no_user_sentence=no_user_sentence,
+        no_user_reason=_per_user_no_user_reason(survey),
+    )
+
+
+def _vita3k_first_listed(identities: tuple[str, ...]) -> str:
+    """The id ``users.begin()`` names — the smallest key of the emulator's map.
+
+    ``user_list.users`` is a ``std::map<std::string, User>`` (state.h:41 at
+    e6ac4272), ordered by ``std::string``'s compare, which compares the bytes
+    as unsigned chars — the order of the UTF-8 encoding, and the reason the
+    empty id, a ``.hidden``-style name's stem, comes before every other.
+    Encoded with the escapes a file name read off the disk can carry, so a
+    name that is not UTF-8 sorts by the bytes it has.
+    """
+    return min(identities, key=lambda identity: identity.encode("utf-8", "surrogateescape"))
+
+
+def _vita3k_4103_listing_claim(survey: _PerUserSurvey, truncating: tuple[str, ...]) -> str:
+    """How far the users stated here are the users build 4103 would list.
+
+    :func:`_vita3k_listing_claim`'s three claims, with one fact of this build's
+    in the third: the throw an entry whose stat failed can raise out of
+    ``load_users`` is caught nowhere up to ``main`` (main.cpp:216 at e6ac4272,
+    which holds no try), so where the listing ends there, the emulator ends
+    with it rather than going on with what it had listed.
+    """
+    if not survey.unestablished:
+        return "every user Vita3K itself would list is stated"
+    if truncating:
+        named = _series(list(truncating))
+        where = named if len(truncating) == 1 else f"any of {named}"
+        return (
+            "the users stated are the ones established here, since Vita3K's own listing can "
+            f"end at {where}, and at this build that ends the emulator itself: the throw out "
+            "of load_users is caught nowhere up to main (main.cpp:216)"
+        )
+    return (
+        "the users stated are the ones established here rather than every user Vita3K "
+        "itself would list"
+    )
+
+
+def _vita3k_4103_unmatched_record(configured: str | None, *, null_node: bool) -> str:
+    """How config.yml states a record that no listed user answers to."""
+    if configured is None:
+        return f"config.yml records no {_VITA3K_USER_ID_KEY}"
+    if not configured:
+        return (
+            f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "", which no start '
+            "matches (main_window.cpp:857, and app.cpp:198 before a launch)"
+        )
+    record = _vita3k_recorded_record(
+        configured, null_node=null_node, null_sentence=_VITA3K_4103_NULL_NODE_ID_SENTENCE
+    )
+    return f"{record}, which no user listed here answers to"
+
+
+def _vita3k_4103_first_listed_state(
+    configured: str | None,
+    *,
+    null_node: bool,
+    first: str,
+    survey: _PerUserSurvey,
+    user_root: str,
+    ending: str,
+) -> tuple[str | None, str, str]:
+    """No listed user answers to the record: the smallest listed id opens — or may.
+
+    Returns ``(headline, sentence, reason)``. An entry atlas left undecided
+    could hold a user the listing would keep, and two of its keys would move
+    the start: the recorded id, which wins wherever it is listed
+    (main_window.cpp:857, app.cpp:198), and an id smaller than the smallest
+    one found. Neither can move it where the record names no user and the
+    smallest id found is the empty one, which nothing sorts before — the one
+    undecided survey that still settles the user.
+    """
+    lead = _vita3k_4103_unmatched_record(configured, null_node=null_node)
+    if survey.unestablished and (first or configured):
+        held = "the recorded id or a smaller one" if configured else "a smaller one"
+        sentence = (
+            f"{lead}, so the start opens the first user the emulator lists, the smallest id "
+            f"({_VITA3K_4103_SELECTION}) — and which user that is, is not established: an "
+            f"entry left undecided here could hold {held}, so the tree named is the first "
+            f"user listed, and {ending}"
+        )
+        return None, sentence, REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+    if first:
+        which = f'"{first}"'
+        tree = ", created on the first save where no directory of that name exists yet"
+    else:
+        which = "the empty id, which sorts before every other"
+        tree = (
+            ": an empty id composes no segment of its own, so those saves land in "
+            f"{os.path.join(user_root, 'savedata')}, the user root's own, and not under the "
+            "directory that was listed (init_savedata_app_path, io.cpp:165-172)"
+        )
+    undecided = (
+        "; nothing an entry left undecided here could hold sorts before it"
+        if survey.unestablished
+        else ""
+    )
+    sentence = (
+        f"{lead}, so the start opens the first user the emulator lists — the smallest id, "
+        f"{which} (user_list.users is a std::map, state.h:41; {_VITA3K_4103_SELECTION}) — "
+        f"and writes that id back to {_VITA3K_USER_ID_KEY}{undecided}; the tree named is "
+        f"its{tree} — {ending}"
+    )
+    return first, sentence, REASON_FIRST_LISTED_USER_OPENED
+
+
+def _vita3k_4103_user_state(
+    configured: str | None,
+    *,
+    unread: bool,
+    null_node: bool,
+    homes: tuple[_Vita3kListedUser, ...],
+    survey: _PerUserSurvey,
+    user_root: str,
+) -> tuple[str | None, str, str]:
+    """Build 4103's user where its listing keeps one — ``(headline, sentence, reason)``.
+
+    The rule — ``init_current_user`` at every start (main_window.cpp:846-866)
+    and ``ensure_current_user`` before every launch (app.cpp:185-208), the
+    same tests in two bodies — reads the listing ``load_users`` filled before
+    it and asks no one: a non-empty recorded id the listing holds is
+    activated, and otherwise the first key of the map is, and written back to
+    the record (main_window.cpp:857-865, app.cpp:198-207).
+    ``user-auto-connect`` is declared (config.h:190) and read nowhere at this
+    commit, and no launch flag enters the rule, so the start and a frontend
+    launch open the same user. A recorded id that is listed wins whatever else
+    was found: an entry atlas left undecided can at worst end the emulator's
+    listing, which at this build ends the emulator
+    (:func:`_vita3k_4103_listing_claim`), never open another user.
+    """
+    truncating = _vita3k_truncating(homes)
+    ending = f"{_vita3k_4103_listing_claim(survey, truncating)}{survey.aside}"
+    if unread:
+        sentence = (
+            f"config.yml states {_VITA3K_USER_ID_KEY} as a construct atlas does not read, so "
+            "whether a start opens the recorded user or the first one listed "
+            f"({_VITA3K_4103_SELECTION}) is not established — the tree named is the first "
+            f"user listed, and {ending}"
+        )
+        return None, sentence, REASON_CONFIGURED_USER_ID_UNREAD
+    identities = _vita3k_identities(homes)
+    if configured and configured in identities:
+        record = _vita3k_recorded_record(
+            configured, null_node=null_node, null_sentence=_VITA3K_4103_NULL_NODE_ID_SENTENCE
+        )
+        ends = (
+            " — or, where an entry found here ends the emulator's own listing, the emulator "
+            "does not start at all"
+            if truncating
+            else ""
+        )
+        sentence = (
+            f"{record} and that user is among the ones Vita3K itself would list — "
+            f"{_VITA3K_4103_LISTING_RULE} — so every start opens exactly that user, a "
+            f"recorded id that is listed winning over every other ({_VITA3K_4103_SELECTION})"
+            f"{ends}, and the tree named is its, created on the first save where no directory "
+            f"of that name exists yet — {ending}"
+        )
+        return configured, sentence, REASON_CONFIGURED_USER_TREE_NAMED
+    return _vita3k_4103_first_listed_state(
+        configured,
+        null_node=null_node,
+        first=_vita3k_first_listed(identities),
+        survey=survey,
+        user_root=user_root,
+        ending=ending,
+    )
+
+
+def _vita3k_4103_no_user_state(
+    homes: tuple[_Vita3kListedUser, ...], survey: _PerUserSurvey, user_root: str
+) -> tuple[str | None, str, str]:
+    """Build 4103 where its listing keeps no user — ``(headline, sentence, reason)``.
+
+    An empty map makes the start create a user before it reads the record at
+    all (main_window.cpp:849-855, and app.cpp:188-195 before a launch):
+    ``create_user`` takes the first free id, which over an empty map is
+    ``00`` (next_free_id, user.cpp:35-49), writes its user.xml into a
+    directory of that name (save_user, :109-110, :135) and the start opens it.
+    A missing or empty ux0/user is that empty map too — ``load_users``
+    returns before its walk (user.cpp:58-59). Where an entry
+    was left undecided it may be a user the listing keeps, and then the start
+    opens one of those instead, so nothing is created and nothing settled.
+    """
+    created = os.path.join(user_root, _VITA3K_FIRST_USER, "savedata")
+    if survey.unestablished:
+        truncating = _vita3k_truncating(homes)
+        if truncating:
+            named = _series(list(truncating))
+            where = named if len(truncating) == 1 else f"any of {named}"
+            ends = (
+                f", and where its walk ends at {where}, the emulator ends with it, the throw "
+                "out of load_users being caught nowhere up to main (main.cpp:216)"
+            )
+        else:
+            ends = ""
+        sentence = (
+            f"whether any entry below {user_root} is a user Vita3K would list is not "
+            "established: where one is, the start opens one of them, where none is, it "
+            f"creates user {_VITA3K_FIRST_USER} ({_VITA3K_4103_SELECTION}){ends} — the tree "
+            f"named is that user {_VITA3K_FIRST_USER}'s, {created}, stated as the stand-in "
+            f"rather than as a user found here{survey.aside}"
+        )
+        return None, sentence, REASON_LISTED_USER_ACCOUNT_UNESTABLISHED
+    if homes:
+        found = f"no directory below {user_root} is a user Vita3K would list{survey.aside}"
+    else:
+        found = (
+            f"no user directory exists below {user_root}, and load_users lists nothing where "
+            "ux0/user is missing or empty (user.cpp:58-59)"
+        )
+    sentence = (
+        f"{found} — and with no user listed, the start creates user {_VITA3K_FIRST_USER}, "
+        "the first free id (create_user, user.cpp:140-155; next_free_id, :35-49), opens it "
+        f"whatever config.yml records, and writes that id back ({_VITA3K_4103_SELECTION}); "
+        f"the tree named is the one that user writes, {created}, below the directory the "
+        "start creates and not one found on this machine"
+    )
+    return _VITA3K_FIRST_USER, sentence, REASON_FIRST_USER_CREATED
+
+
+def _vita3k_4103_short_listing_sentence(user_root: str) -> str:
+    """What a user root that could not be listed means at build 4103: no start at all.
+
+    ``load_users`` asks ``fs::exists`` and then ``fs::is_empty`` of the root
+    before it walks it (user.cpp:58), both with no ``error_code``, and a
+    listing comes back short by either road those two can throw on. Where the
+    root's own stat fails other than as not found, ``fs::exists`` throws first:
+    ``status`` (operations.cpp:4717-4722) reaches ``status_impl``, whose failed
+    stat throws ``filesystem_error`` where no ``error_code`` was passed
+    (:490-520). Where the root stats and cannot be opened, ``fs::is_empty``
+    throws instead: its failed open goes to ``emit_error``, which throws the
+    same way (operations.cpp:4071-4080, exception.cpp:169-172) — all at the
+    bundled Boost, Vita3K/ext-boost@ff5f55bd. Either throw is caught nowhere
+    up to ``main`` (main.cpp:216), so the emulator does not start, and the tree
+    the answer names is a stand-in for a start that does not happen rather
+    than the one the emulator starts with.
+    """
+    return (
+        f"{user_root} could not be listed, so which users exist below it is not established "
+        "— and at this build the emulator does not start from such a root: load_users asks "
+        "fs::exists and then fs::is_empty of it before anything else (user.cpp:58), the first "
+        "throwing where the root's own stat fails and the second where it cannot be opened, "
+        "and neither throw is caught anywhere up to main (main.cpp:216). The tree named is "
+        f"user {_VITA3K_FIRST_USER}'s, stated as the stand-in rather than as one the emulator "
+        "starts with"
+    )
+
+
+def _vita3k_4103_user_id_provenance(
+    configured: str | None, *, unread: bool, null_node: bool, repeated: bool
+) -> str:
+    """Where the recorded user id came from, in build 4103's terms.
+
+    The grammar is :func:`_vita3k_key_provenance`'s; what differs is what an
+    unset or empty record means to this build: never a user of its own, but
+    the start choosing one and writing its id back (main_window.cpp:849-865,
+    and app.cpp:188-207 before a launch).
+    """
+    return _vita3k_key_provenance(
+        _VITA3K_USER_ID_KEY,
+        configured,
+        unread=unread,
+        repeated=repeated,
+        stated_null_node=_VITA3K_4103_NULL_NODE_ID_SENTENCE if null_node else None,
+        stated_empty=(
+            f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "", which no start '
+            "matches, so the start opens a user of its own choosing and writes its id here "
+            f"(config.h:189; {_VITA3K_4103_SELECTION})"
+        ),
+        unset=(
+            "the start opens a user of its own choosing and writes its id here (config.h:189; "
+            f"{_VITA3K_4103_SELECTION})"
+        ),
+        yaml_cpp_pin=_VITA3K_4103_SOURCES.yaml_cpp_pin,
+    )
+
+
+def _vita3k_4103_selection(
+    read: YamlScalars,
+    *,
+    homes: tuple[_Vita3kListedUser, ...],
+    survey: _PerUserSurvey,
+    user_root: str,
+) -> _Vita3kSelection:
+    """Build 4103's rule, over the listing and the record (:data:`_VITA3K_4103_SELECTION`).
+
+    The readings are pref-path's, which the caller states, and ``user-id``'s:
+    ``user-auto-connect`` governs nothing at this commit, so stating it would
+    name a switch as if it moved the answer.
+    """
+    configured, unread, null_node = _vita3k_recorded_id(read)
+    if survey.listed:
+        headline, user_sentence, user_reason = _vita3k_4103_user_state(
+            configured,
+            unread=unread,
+            null_node=null_node,
+            homes=homes,
+            survey=survey,
+            user_root=user_root,
+        )
+        no_user_sentence, no_user_reason = user_sentence, user_reason
+    else:
+        headline, no_user_sentence, no_user_reason = _vita3k_4103_no_user_state(
+            homes, survey, user_root
+        )
+        user_sentence, user_reason = no_user_sentence, no_user_reason
+    reading = OptionReading(
+        _VITA3K_USER_ID_KEY,
+        configured,
+        _vita3k_4103_user_id_provenance(
+            configured,
+            unread=unread,
+            null_node=null_node,
+            repeated=_VITA3K_USER_ID_KEY in read.repeated,
+        ),
+        None,
+    )
+    return _Vita3kSelection(
+        configured=configured,
+        headline=headline,
+        readings=(reading,),
+        user_sentence=user_sentence,
+        user_reason=user_reason,
+        no_user_sentence=no_user_sentence,
+        no_user_reason=no_user_reason,
+        short_listing_sentence=_vita3k_4103_short_listing_sentence(user_root),
+    )
+
+
+def _vita3k_unread_build_selection(
+    read: YamlScalars,
+    *,
+    survey: _PerUserSurvey,
+    user_root: str,
+    listing: GlobResult,
+    clause: str,
+) -> _Vita3kSelection:
+    """A build atlas does not read: which user a launch opens is not established.
+
+    The two read builds pick the user by different rules, so an answer under
+    either would be one build's rule stated for another. What both share is
+    still stated — the user trees their listing keeps and the savedata path
+    below each — and the headline is what it is wherever the user is not
+    settled: the first tree listed, or the stand-in both builds' redirect
+    comment names.
+    """
+    configured, unread, null_node = _vita3k_recorded_id(read)
+    if survey.listed and listing.status == GLOB_COMPLETE:
+        tree = "the tree named is the first user listed"
+    else:
+        tree = (
+            "the tree named is the one both builds' redirect comment names, user "
+            f"{_VITA3K_FIRST_USER} (io.cpp:203 at cb1f592c, :232 at e6ac4272), stated as that "
+            "rather than as a user found here"
+        )
+    short = (
+        f"; {user_root} could not be listed either, so which users exist below it is not "
+        "established"
+        if listing.status != GLOB_COMPLETE
+        else ""
+    )
+    sentence = (
+        f"which user a launch opens is not established here: {clause}. The two builds "
+        "atlas reads pick it by different rules — build 3996 reopens a recorded user only "
+        "for a launch naming an app on the command line or with user-auto-connect on, and "
+        "otherwise opens the user manager (init_home, gui.cpp:688-696 at cb1f592c); build "
+        "4103 opens the recorded user where it is listed and otherwise the first one listed "
+        f"({_VITA3K_4103_SELECTION}) — so {tree}{survey.aside}{short}"
+    )
+    reading = OptionReading(
+        _VITA3K_USER_ID_KEY,
+        configured,
+        _vita3k_key_provenance(
+            _VITA3K_USER_ID_KEY,
+            configured,
+            unread=unread,
+            repeated=_VITA3K_USER_ID_KEY in read.repeated,
+            stated_null_node=(
+                _vita3k_null_node_id_sentence(_VITA3K_UNREAD_BUILD_SOURCES.yaml_cpp)
+                if null_node
+                else None
+            ),
+            stated_empty=(
+                f'config.yml states {_VITA3K_USER_ID_KEY} as the empty value "", the id both '
+                "builds atlas reads start from (config.h:189 at cb1f592c and at e6ac4272)"
+            ),
+            unset=(
+                "which user that leaves a launch with turns on the build, which is not "
+                "established (config.h:189 at cb1f592c and at e6ac4272)"
+            ),
+            yaml_cpp_pin=_VITA3K_UNREAD_BUILD_SOURCES.yaml_cpp_pin,
+        ),
+        None,
+    )
+    return _Vita3kSelection(
+        configured=configured,
+        headline=None,
+        readings=(reading,),
+        user_sentence=sentence,
+        user_reason=REASON_EMULATOR_BUILD_UNESTABLISHED,
+        no_user_sentence=sentence,
+        no_user_reason=REASON_EMULATOR_BUILD_UNESTABLISHED,
+        build_unestablished=sentence,
+    )
+
+
+# The code half of each build the card pins, keyed by the release the card
+# states: the lines its answers cite and the rule that picks its user. A card
+# pinning a release with no entry here, or an entry no card pins, is a card and
+# code shipped out of step — :func:`_vita3k_sources` refuses the first at the
+# answer, and tests/test_installations.py holds the two key sets equal.
+_VITA3K_BUILD_SOURCES = {
+    _VITA3K_BUILD_3996: _VITA3K_3996_SOURCES,
+    _VITA3K_BUILD_4103: _VITA3K_4103_SOURCES,
+}
+_VITA3K_BUILD_SELECTIONS = {
+    _VITA3K_BUILD_3996: _vita3k_3996_selection,
+    _VITA3K_BUILD_4103: _vita3k_4103_selection,
+}
+
+
+def _vita3k_sources(card: StandaloneSaveCard, pinned: StandaloneBuild | None) -> _Vita3kSources:
+    """The lines an answer under *pinned* cites — both builds' where none applied.
+
+    Raises for a build the card pins and the code has no rule for, the way
+    :meth:`StandaloneSaveCard.cite` does for a slot it does not state: the
+    answer would otherwise state a pinned build as unread.
+    """
+    if pinned is None:
+        return _VITA3K_UNREAD_BUILD_SOURCES
+    if pinned.release not in _VITA3K_BUILD_SOURCES or pinned.release not in _VITA3K_BUILD_SELECTIONS:
+        raise ValueError(
+            f"standalone save card {card.token!r} pins release {pinned.release!r} and no Vita3K "
+            "rule is registered for it — the card and the code shipped out of step"
+        )
+    return _VITA3K_BUILD_SOURCES[pinned.release]
+
+
+def _vita3k_refusal_data(
+    card: StandaloneSaveCard, config_path: str, build: str | None, **stated: DataValue
+) -> dict[str, DataValue]:
+    """A save-card refusal's data: the token, the file, what the refusal adds, and the build.
+
+    Every answer the Vita3K save card gives names the build it was read
+    under, its refusals as much as its per-user caveat, and by the same rule:
+    ``build`` is the release read, whether or not a pinned build answers for
+    it, and absent where nothing could be read (:attr:`_PerUserSaves.build`).
+    The refusals come before any rule picks a user, so the build is read first
+    for them too. Refusals given before the card is reached, and the answers
+    to other questions, read no build and carry none.
+    """
+    data: dict[str, DataValue] = {"token": card.token, "config": config_path, **stated}
+    if build is not None:
+        data["build"] = build
+    return data
+
+
+def _vita3k_savefile_placement(
+    machine: Machine,
+    *,
+    card: StandaloneSaveCard,
+    homes: _XdgHomes,
+    sandbox: _Sandbox,
+    system: str,
+    command: str,
+    extra_caveats: tuple[Caveat, ...],
+    content_path: str | None = None,
+    cwd: str | None = None,
+) -> SavefilePlacement | Unresolved:
+    """Vita3K's save answer: the ux0 tree below the preference path.
+
+    Which build runs decides which rule picks the user, so the build is read
+    first — the release a RetroDECK deploy writes beside the binary
+    (:func:`_vita3k_build`) — and each build atlas reads answers by its own
+    rule: 3996 by :func:`_vita3k_3996_selection`, 4103 by
+    :func:`_vita3k_4103_selection`. A build that is neither, or none read at
+    all, answers what the two share and states the user as not established
+    (:func:`_vita3k_unread_build_selection`).
+
+    ``pref-path`` is the one key that matters, and an empty one means the
+    emulator's own default preference path (config.cpp:189-190 at cb1f592c,
+    :283-284 at e6ac4272) — a location the build derives at run time rather
+    than writing down, so an unset key is a refusal here rather than an
+    invented directory.
+
+    Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
+    id (io.cpp:136-143 at cb1f592c, :165-172 at e6ac4272) — and
+    ``ux0/user/savedata`` for the user keyed by the empty id, which composes no
+    segment of its own. Every user directory the emulator's listing keeps —
+    one whose user.xml loads — becomes a group of its own with the recorded id
+    stated beside them, the directories it passes over are stated as skipped,
+    and one whose user.xml atlas could not read is stated as unestablished;
+    where the build's rule settles the user, the headline names that user's
+    tree, and everywhere else it stays the first tree listed, or the compiled
+    stand-in where none is and where the listing came back short, and the
+    caveat says what is not settled.
+    """
+    build, clause = _vita3k_build(machine, sandbox)
+    pinned = card.build_for(build)
+    sources = _vita3k_sources(card, pinned)
+    config_path = _standalone_settings_path(card, homes)
+    result = machine.read_text(config_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) exists and could not be read — where "
+            "its ux0 tree lives is unknowable here",
+            _vita3k_refusal_data(card, config_path, build),
+        )
+    read = read_scalars(result.text or "" if result.status == READ_OK else "")
+    if read.refusal is not None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) states a construct atlas does not read "
+            f"({read.refusal}) — where its ux0 tree lives is unknowable here",
+            _vita3k_refusal_data(card, config_path, build, reason=read.refusal),
+        )
+    if _VITA3K_PREF_PATH_KEY in read.skipped:
+        # Stated as a nested block, a list or a multi-line scalar: the emulator
+        # reads a value here and atlas did not. That is not an unset key, and
+        # answering the unset key's refusal would name the wrong reason.
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) states {_VITA3K_PREF_PATH_KEY} as a "
+            "construct atlas does not read — its value is unread, not absent, so where its "
+            "ux0 tree lives is unknowable here",
+            _vita3k_refusal_data(
+                card, config_path, build, reason=REASON_KEY_UNREAD, key=_VITA3K_PREF_PATH_KEY
+            ),
+        )
+    stated = read.get(_VITA3K_PREF_PATH_KEY)
+    if not stated:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"Vita3K's configuration ({config_path}) names no pref-path, and an empty one "
+            "means a default this build derives at run time rather than writing down "
+            f"({sources.pref_default}) — where its ux0 tree lives is not established here",
+            _vita3k_refusal_data(card, config_path, build),
+        )
+    host = sandbox.host(_VITA3K_PREF_PATH_KEY, stated)
+    if host.path is None:
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
+            f"the preference path Vita3K's configuration names ({stated!r}) has no "
+            f"spelling on this host — {config_path} read fine, and nothing this answer "
+            "could anchor at",
+            _vita3k_refusal_data(card, config_path, build, path=stated),
+        )
+    user_root = os.path.join(host.path, _VITA3K_USER_TREE)
+    found = _per_user_listing(machine, user_root)
+    listing = found.listing
+    user_homes = _vita3k_listed_users(machine, user_root, found.users, found.unstatable)
+    survey = _vita3k_survey(user_homes, sources)
+    if pinned is None:
+        selection = _vita3k_unread_build_selection(
+            read, survey=survey, user_root=user_root, listing=listing, clause=clause
+        )
+    else:
+        rule = _VITA3K_BUILD_SELECTIONS[pinned.release]
+        selection = rule(read, homes=user_homes, survey=survey, user_root=user_root)
     return _per_user_savedata_placement(
         machine,
         card=card,
@@ -12428,11 +13153,11 @@ def _vita3k_savefile_placement(
         shape=_PerUserSaves(
             user_root=user_root,
             first_user=_VITA3K_FIRST_USER,
-            names_citation="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
-            user_sentence=user.sentence,
-            no_user_sentence=no_user_sentence,
-            user_reason=user.reason,
-            no_user_reason=_per_user_no_user_reason(survey),
+            names_citation=sources.names,
+            user_sentence=selection.user_sentence,
+            no_user_sentence=selection.no_user_sentence,
+            user_reason=selection.user_reason,
+            no_user_reason=selection.no_user_reason,
             skipped=survey.skipped,
             unestablished=survey.unestablished,
             mode="pref-path",
@@ -12443,15 +13168,19 @@ def _vita3k_savefile_placement(
                     f'config.yml: {_VITA3K_PREF_PATH_KEY}: "{stated}"',
                     None,
                 ),
-                *user.readings,
+                *selection.readings,
             ),
             reading_file=config_path if result.status == READ_OK else None,
             provenance=(
                 f"standalone save card '{card.token}': the preference path from config.yml "
-                "(config.cpp:189-190 at commit cb1f592c)"
+                f"({sources.pref_provenance})"
             ),
-            configured_user=user.configured,
-            headline_user=user.headline,
+            configured_user=selection.configured,
+            headline_user=selection.headline,
+            build_unestablished=selection.build_unestablished,
+            build=build,
+            source=None if pinned is None else pinned.provenance,
+            short_listing_sentence=selection.short_listing_sentence,
         ),
         extra_caveats=extra_caveats,
     )
