@@ -13,10 +13,16 @@ citation pointing at a line that no longer said what it said.
 
 Three passes, weakest last:
 
-1. **The wired trees.** Every row of ``content_tree_wiring.json`` against the
-   ``dir_prep`` at its cited line — both sides of the pair, with the
-   component's own variables expanded, because half of them name the emulator
-   side through a variable ``component_functions.sh`` defines.
+1. **The wired trees.** Every row of ``content_tree_wiring.json`` against
+   every line it cites — the ``dir_prep`` of the reset and of the postmove
+   branch alike, both sides of the pair, with the component's own variables
+   expanded, because half of them name the emulator side through a variable
+   ``component_functions.sh`` defines; and the assignment of that variable,
+   where the row cites it, against the emulator side. The table holds one row
+   set per RetroDECK version it was read at, and only the set of the version
+   the deployment states about itself (its ``version`` file) is read back:
+   the others cite scripts that are no longer deployed anywhere this suite
+   can see, which is what keeping them as evidence means.
 2. **Settings addresses.** Every entry of ``emulator_settings.json`` against
    the path the component pins for a file of that name, with the one
    deliberate disagreement written down rather than dodged.
@@ -30,10 +36,13 @@ Three passes, weakest last:
    already said which emulator). So the component is resolved from the same
    string where one is named there, and otherwise from the token the entry
    sits under. One citation resolves neither way and is listed as such rather
-   than dropped quietly.
+   than dropped quietly. The rows of a wiring set read at another version
+   are skipped here for the same reason pass one skips them.
 
 Skipped where RetroDECK is not deployed, by the same path check that silences
-the rest of the machine-bound tier.
+the rest of the machine-bound tier. A deployment whose ``version`` file is
+missing or unreadable is not "not deployed": nothing could then say which
+wiring row set to read, so the passes that need it fail instead of skipping.
 """
 
 import json
@@ -48,6 +57,9 @@ DATA = Path(__file__).resolve().parent.parent / "atlas" / "data"
 COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
 )
+# The release the deployment states about itself, one line beside the
+# components tree. It is what picks the wiring row set this suite can read.
+VERSION_FILE = COMPONENTS.parent / "version"
 
 # The trailing `(?:-(\d+))?` is what makes a range a range here: a citation to
 # `component_functions.sh:3-12` used to match only `:3`, so nine of the ten
@@ -70,7 +82,7 @@ SCRIPT_NAME = re.compile(r"^component_[a-z_]+\.sh$")
 # module docstring can point at a number the suite keeps rather than carry one
 # that rots. Move it when a citation is added, removed or respelled from one
 # form into the other, not to quiet a test.
-CITATION_SPANS = (108, 107)
+CITATION_SPANS = (134, 140)
 # Only the plain `name="value"` form, which is every assignment these scripts
 # make. Anything else is left alone rather than half-understood.
 ASSIGNMENT = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*$')
@@ -243,7 +255,37 @@ def _unnamed_spans(text: str) -> list[str]:
     return unnamed
 
 
-def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, str, int]]]:
+def _deployed_version() -> str | None:
+    """The version the deployed RetroDECK states, or ``None`` where none is deployed.
+
+    Deployed and stating nothing readable fails the calling test: the row set
+    to read cannot be chosen, and skipping would let the wiring passes go
+    quiet on exactly the deployment that broke them. A version file that
+    cannot be read raises out of the read itself, which fails the test the
+    same way.
+    """
+    if not _deployed():
+        return None
+    stated = VERSION_FILE.read_text(encoding="utf-8").strip()
+    if not stated:
+        pytest.fail(
+            f"RetroDECK is deployed at {COMPONENTS} and its version file {VERSION_FILE} is empty "
+            "— nothing says which wiring row set to check"
+        )
+    return stated
+
+
+def _wiring_version(file_name: str, keys: tuple[str, ...], document: object) -> str | None:
+    """The version a string under a wiring row set was read at — ``None`` anywhere else."""
+    if file_name != "content_tree_wiring.json" or len(keys) < 3 or keys[0] != "arrangements":
+        return None
+    assert isinstance(document, dict)
+    return document["arrangements"][keys[1]][int(keys[2])]["version"]
+
+
+def _citations() -> tuple[
+    list[tuple[str, str, int, str, str | None]], set[tuple[str, str, str, int]]
+]:
     """Every component-script citation the packaged data names, and the ones nothing scopes.
 
     Collection-time work stays collection-time work: the *check* on the second
@@ -252,14 +294,17 @@ def _citations() -> tuple[list[tuple[str, str, int, str]], set[tuple[str, str, s
     citation would read as "the citation canary is gone" instead of "one
     citation needs a component name".
     """
-    found: list[tuple[str, str, int, str]] = []
+    found: list[tuple[str, str, int, str, str | None]] = []
     unresolved: set[tuple[str, str, str, int]] = set()
     for path in sorted(DATA.glob("*.json")):
         document = json.loads(path.read_text(encoding="utf-8"))
         for keys, text in _strings(document):
-            found.extend(_named_citations(text, path.name))
+            version = _wiring_version(path.name, keys, document)
             scoped, unscoped = _bare_citations(text, keys, _component_in_scope(keys, text), path.name)
-            found.extend(scoped)
+            found.extend(
+                (*citation, version)
+                for citation in (*_named_citations(text, path.name), *scoped)
+            )
             unresolved |= unscoped
     return found, unresolved
 
@@ -323,14 +368,21 @@ def test_no_citation_claims_a_script_line_without_naming_the_script():
 
 WIRING = json.loads((DATA / "content_tree_wiring.json").read_text(encoding="utf-8"))
 WIRING_ROWS = [
-    # The first line of the citation, and only it: this pass looks for the
-    # `dir_prep` that wires the pair, which sits on one line. A row citing a
-    # range would have the rest of it read by pass three, where "these lines
-    # still say something" is the claim being made.
-    (arrangement, row, component, script, int(first))
-    for arrangement, block in WIRING["arrangements"].items()
+    # Every line a row cites: each named citation (the reset `dir_prep`, an
+    # upgrade block's), and the bare ones that continue the first of them (the
+    # postmove `dir_prep`, the variable the target is spelled with) — a row
+    # cites single lines, and pass three reads any range beyond its first.
+    (block["version"], row, component, script, int(first))
+    for row_sets in WIRING["arrangements"].values()
+    for block in row_sets
     for row in block["rows"]
-    for component, script, first, _last in CITATION.findall(row["source"])
+    for component, script, first, _last in [
+        *CITATION.findall(row["source"]),
+        *(
+            (CITATION.findall(row["source"])[0][0], script, first, last)
+            for script, first, last in BARE_CITATION.findall(row["source"])
+        ),
+    ]
 ]
 SETTINGS_FILES = [
     (token, name, file)
@@ -367,42 +419,81 @@ def _deployed() -> bool:
     return COMPONENTS.is_dir()
 
 
+def _skip_unless_deployed_version(version: str) -> None:
+    """Skip a citation read at a release other than the deployed one."""
+    deployed = _deployed_version()
+    if deployed is None:
+        pytest.skip("RetroDECK is not deployed")
+    if version != deployed:
+        pytest.skip(
+            f"cited at RetroDECK {version} and {deployed} is deployed — that release's scripts "
+            "are not here to read"
+        )
+
+
 class TestTheWiredTreesStillSayWhatTheRowsState:
-    """Pass one: the ``dir_prep`` at the cited line, both sides, expanded."""
+    """Pass one: every line a row cites, both sides of the pair, expanded."""
 
     @pytest.mark.parametrize(
-        ("row", "component", "script", "line"),
-        [(row, *rest) for _, row, *rest in WIRING_ROWS],
-        ids=[f"{r['family']}:{r['hub']}" for _, r, _, _, _ in WIRING_ROWS],
+        ("version", "row", "component", "script", "line"),
+        WIRING_ROWS,
+        ids=[f"{v}:{r['family']}:{r['hub']}:{s}:{ln}" for v, r, _, s, ln in WIRING_ROWS],
     )
     def test_the_cited_line_wires_the_pair_the_row_states(
-        self, row, component, script, line
+        self, version, row, component, script, line
     ):
+        _skip_unless_deployed_version(version)
         lines = _lines(component, script)
-        if lines is None:
-            pytest.skip(f"{component}/{script} is not deployed")
+        assert lines is not None, (
+            f"the {row['family']} row for {row['hub']!r} cites {component}/{script}, and RetroDECK "
+            f"{version} deploys no such script"
+        )
         assert line <= len(lines), (
             f"{component}/{script} has {len(lines)} lines and the row cites :{line} — the "
             "script moved under the citation"
         )
         text = lines[line - 1]
+        table = _variables(component)
+        expected = f"{BASE_VARIABLES[row['base']]}/{row['path']}"
+        assignment = ASSIGNMENT.match(text)
+        if assignment is not None:
+            # The variable the dir_prep spells the emulator side with.
+            emulator = _expand(assignment.group(2), table)
+            assert emulator.rstrip("/") == expected, (
+                f"{component}/{script}:{line} sets {assignment.group(1)} to {emulator!r} and the "
+                f"row states the emulator side as {expected!r} — the target moved"
+            )
+            return
         pair = DIR_PREP.search(text)
         assert pair is not None, (
             f"{component}/{script}:{line} is not a dir_prep any more: {text.strip()!r} — the "
             f"{row['family']} row for {row['hub']!r} cites a wiring that is no longer there"
         )
-        table = _variables(component)
         hub, emulator = (_expand(side, table) for side in pair.groups())
-        assert row["hub"] in hub, (
+        stated = f"${row['family']}_path/{row['hub']}"
+        assert hub.rstrip("/") == stated, (
             f"{component}/{script}:{line} links {hub!r}, and the row states the hub side as "
-            f"{row['hub']!r} — the distribution renamed its own tree"
+            f"{stated!r} — the distribution renamed its own tree, or the line wires another"
         )
-        expected = f"{BASE_VARIABLES[row['base']]}/{row['path']}"
         assert emulator.rstrip("/") == expected, (
             f"{component}/{script}:{line} links to {emulator!r} and the row states {expected!r} "
             "— the emulator side of the pair moved, so every answer that walks this link is "
             "pointing at the old place"
         )
+
+
+def test_the_deployed_release_has_a_wiring_row_set():
+    # The all-skip guard for pass one, and the canary's question in one: a
+    # release the table was never read at skips every row above, and the
+    # health check measures that release against nothing.
+    deployed = _deployed_version()
+    if deployed is None:
+        pytest.skip(f"nothing is deployed at {COMPONENTS}")
+    read_at = sorted({version for version, *_ in WIRING_ROWS})
+    assert deployed in read_at, (
+        f"RetroDECK {deployed} is deployed and the wiring table holds row sets for {read_at} "
+        "only — read the release's dir_prep pairs into a row set of its own"
+    )
 
 
 class TestTheCopiedFilesStillSayWhatTheCardStates:
@@ -496,11 +587,13 @@ class TestEveryCitationStillPointsSomewhere:
     """Pass three: the weakest check, over all of them."""
 
     @pytest.mark.parametrize(
-        ("component", "script", "line", "source"),
+        ("component", "script", "line", "source", "version"),
         CITATIONS,
-        ids=[f"{s}:{c}/{n}:{ln}" for c, n, ln, s in CITATIONS],
+        ids=[f"{s}:{c}/{n}:{ln}" + (f"@{v}" if v else "") for c, n, ln, s, v in CITATIONS],
     )
-    def test_the_cited_script_and_line_exist(self, component, script, line, source):
+    def test_the_cited_script_and_line_exist(self, component, script, line, source, version):
+        if version is not None:
+            _skip_unless_deployed_version(version)
         lines = _lines(component, script)
         if lines is None:
             if not _deployed():

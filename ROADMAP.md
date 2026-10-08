@@ -170,7 +170,7 @@ The four firmware entry points ship: live `.info` declarations from the installe
 - **The copy list covers one component's prepare step, and two more write into the firmware root.** The entries in
   `distribution_supplied.json` are the RetroArch component's, and each is a `cp` whose source stays on disk to be
   hashed. Two other steps place files there and each is blocked on something different. PPSSPP's own component extracts
-  `ppsspp_foss_bios.tar.gz` into `$bios_path/PPSSPP` (`components/ppsspp/component_prepare.sh:37`,
+  `ppsspp_foss_bios.tar.gz` into `$bios_path/PPSSPP` (`components/ppsspp/component_prepare.sh:38`,
   `--strip-components=1 assets/`) — the same destination the RetroArch entry already covers, so what lands there has two
   origins and only one of them leaves a file to compare against; this one wants the archive-member comparison the
   unclaimed half above needs anyway. xemu copies `xbox_hdd.qcow2` to the firmware root when it is absent

@@ -428,8 +428,9 @@ HEALTH_ISSUE_CATALOGUE_INVALID = "catalogue-invalid"
 # reads a plain directory of its own, and content filed in the hub never
 # reaches it. One finding per broken pair; ``data.problem`` keeps the three
 # ways apart (missing / not-a-link / diverted). Checked only when the marker
-# names exactly the version the wiring table was read at — any other version
-# made promises atlas never read, so no row is checked there (fail closed).
+# names exactly a version the wiring table was read at, and then against that
+# version's own pairs — any other version made promises atlas never read, so
+# no row is checked there (fail closed).
 HEALTH_ISSUE_CONTENT_TREE_UNWIRED = "content-tree-unwired"
 # RetroDECK is installed and its marker is not there: its Flatpak is deployed
 # and ``retrodeck.json`` is missing. RetroDECK writes that marker at the start of
@@ -15511,11 +15512,11 @@ def _malformed_marker_paths(config: Mapping[str, Any]) -> tuple[str, str] | None
 def _marker_version(config: Mapping[str, Any]) -> str | None:
     """The version a ``retrodeck.json`` states about itself — ``None`` for none.
 
-    One definition of "this marker names a version", used by both checks that
-    ask: the per-card version comparison and the arrangement-level one. Two
-    readings of the same key could disagree about whether a machine stated
-    anything, and then one caveat would report drift where the other reported
-    silence.
+    One definition of "this marker names a version", used by every check that
+    asks: the per-card version comparison, the arrangement-level one, and the
+    content-tree wiring's choice of row set. Two readings of the same key
+    could disagree about whether a machine stated anything, and then one
+    caveat would report drift where the other reported silence.
 
     Empty is *unstated*, because that is RetroDECK's own spelling for it: the
     shipped default config carries ``"version": ""`` and the first run fills it
@@ -18548,12 +18549,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         Like the catalogue check above, this lives on the health question and
         nowhere else: no answer's own question reads the wiring state, so no
-        answer pays for it. Every gate fails closed. A wiring table pinned to
-        a version the marker does not name checks nothing — that version's
-        promise was never read. A hub tree that is not a directory files
-        nothing, so its pair supports no finding. And an emulator-side path
-        whose ``stat`` fails is a path atlas could not read, which is never
-        evidence of a broken link.
+        answer pays for it. Every gate fails closed. A marker naming a version
+        the table holds no row set for checks nothing — that version's promise
+        was never read. A hub tree that is not a directory files nothing, so
+        its pair supports no finding. And an emulator-side path whose ``stat``
+        fails is a path atlas could not read, which is never evidence of a
+        broken link.
 
         The wired test is deliberately weak: the emulator-side path must
         resolve *into the family's hub*, not onto the exact tree this version
@@ -18563,8 +18564,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         wiring, not a break. What the finding states is the pair with **no**
         hub backing at all.
         """
-        wiring = lookup_content_tree_wiring(self.kind)
-        if wiring is None or config.get("version") != wiring.version:
+        version = _marker_version(config)
+        wiring = lookup_content_tree_wiring(self.kind, version) if version is not None else None
+        if wiring is None:
             return ()
         homes = self._xdg_homes()
         bases = {
