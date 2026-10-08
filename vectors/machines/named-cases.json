@@ -438,7 +438,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/Emulation/retrodeck\", \"saves_path\": \"/run/media/deck/Emulation/retrodeck/saves\"}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/Emulation/retrodeck\", \"saves_path\": \"/run/media/deck/Emulation/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -484,6 +485,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
         "dirs": [
@@ -1236,6 +1238,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/ra-saves/.keep": ""
@@ -2632,6 +2635,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -2710,6 +2714,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -2788,6 +2793,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command>%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -2846,6 +2852,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
         },
@@ -2904,6 +2911,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
@@ -2983,6 +2991,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n  <alternativeEmulator>\n    <label>ParaLLEl N64</label>\n  </alternativeEmulator>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
@@ -3062,6 +3071,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>Mupen64Plus-Next</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
@@ -3226,7 +3236,7 @@
     },
     {
       "name": "retrodeck-cfg-missing-platform-default-applies",
-      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:2133-2134), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982).",
+      "rationale": "A RetroDECK whose retroarch.cfg is missing: RetroArch initializes platform defaults before config load (platform_unix.c:2133-2134), so the effective root is 'saves' under the config tree — never the ROM's directory — and the upstream compile defaults govern sorting (sort_savefiles_enable=true, config.def.h:982). The missing file is stated rather than left to this prose: health finds emulator-config-missing naming the cfg, and the same finding rides the save answer, which leaned on the defaults the file would have overridden.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3251,7 +3261,14 @@
               "retrodeck"
             ],
             "root": "/mnt/sd/retrodeck",
-            "health": []
+            "health": [
+              {
+                "code": "emulator-config-missing",
+                "data": {
+                  "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+                }
+              }
+            ]
           }
         ],
         "savefile_location": {
@@ -3268,13 +3285,91 @@
             "complete": false,
             "groups": []
           },
-          "granularity": null,
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+              }
+            },
             {
               "code": "no-core",
               "data": {}
             }
-          ]
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-cfg-unreadable-platform-default-applies",
+      "rationale": "A RetroDECK whose retroarch.cfg exists and cannot be read: RetroArch's platform defaults stand in exactly as for a missing file, and the finding is config-unreadable with the path and the read status — the code a bare RetroArch states its own cfg with — on health and on the save answer that read the file.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "config-unreadable",
+                "data": {
+                  "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg",
+                  "status": "unreadable"
+                }
+              }
+            ]
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves/<library_name>",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "library_name"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "config-unreadable",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg",
+                "status": "unreadable"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
         }
       }
     },
@@ -3355,6 +3450,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/flash/game.swf": ""
         },
@@ -3553,6 +3649,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/roms/gb/Tetris (World).zip": "",
@@ -3636,7 +3733,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": {
             "status": "unreadable"
-          }
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -3672,7 +3770,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "not json {{"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "not json {{",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -3707,7 +3806,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": 5}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": 5}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -8094,7 +8194,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 0}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 0}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -8194,6 +8295,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
             "status": "unreadable"
           }
@@ -8336,6 +8438,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
             "status": "unreadable"
           },
@@ -8392,6 +8495,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/ra-saves/.keep": ""
@@ -10300,6 +10404,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n  <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<game>\n\t\t<path>./Paper Mario.z64</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
@@ -13356,6 +13461,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system>\n    <name>gbc</name>\n    <path>/mnt/sd/retrodeck/roms/gbc</path>\n    <extension>.gbc .GBC .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
@@ -13510,6 +13616,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system>\n    <name>gbc</name>\n    <path>/mnt/sd/retrodeck/roms/gbc</path>\n    <extension>.gbc .GBC .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
@@ -13576,6 +13683,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList>\n<loadExclusive/>\n  <system>\n    <name>gbc</name>\n    <path>/mnt/sd/retrodeck/roms/gbc</path>\n    <extension>.gbc .GBC .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
@@ -13643,6 +13751,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -14003,6 +14112,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "﻿<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -15821,6 +15931,97 @@
       }
     },
     {
+      "name": "a-launchability-judgment-that-reads-the-cfg-carries-its-missing-file",
+      "rationale": "The libretro entry needs its core, so the launchability answer reads retroarch.cfg to find the core directory — and with the file missing that directory is RetroArch's default, so emulator-config-missing rides the answer. Only a judgment that read the file carries it: a-launchability-judgment-that-reads-no-cfg-carries-no-cfg-finding is the other half.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/dreamcast/Game.chd": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "dreamcast",
+          "content_path": "/mnt/sd/retrodeck/roms/dreamcast/Game.chd"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/flycast_libretro.so": {
+            "library_name": "Flycast",
+            "valid_extensions": "chd|cdi|elf|cue|gdi|lst|bin|dat|zip|7z|m3u",
+            "block_extract": true
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "emulator-config-missing",
+                "data": {
+                  "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+                }
+              }
+            ]
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".chd",
+          "accepted": [
+            ".chd",
+            ".cue",
+            ".gdi"
+          ],
+          "entry": {
+            "system": "dreamcast",
+            "label": "Flycast",
+            "kind": "libretro",
+            "core_so": "flycast_libretro.so",
+            "emulator": "flycast_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {}
+              }
+            ]
+          },
+          "alternatives": [],
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+              }
+            },
+            {
+              "code": "entry-format-unestablished",
+              "data": {
+                "entry": "Flycast",
+                "extension": ".chd"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "a-track-file-is-not-accepted-and-says-which-token-missed",
       "rationale": "A multi-file GDI rip's track file yields .bin, and the dreamcast accept-list deliberately carries no such token — ES-DE never scans it (the comparison is exact and case-sensitive, SystemData.cpp:669), so a client's largest-file fallback is steered away from the track and toward the .gdi/.cue the list declares. The answer carries the derived token and the declared list, which is everything the remedy needs.",
       "input": {
@@ -15898,6 +16099,60 @@
             ],
             "root": "/mnt/sd/retrodeck",
             "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "needs-installation",
+          "extension": ".pkg",
+          "accepted": [
+            ".desktop",
+            ".iso",
+            ".ps3",
+            ".ps3dir"
+          ],
+          "entry": null,
+          "alternatives": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-launchability-judgment-that-reads-no-cfg-carries-no-cfg-finding",
+      "rationale": "The same missing retroarch.cfg under a judgment of a standalone entry alone: no core is needed, the file is never opened, and the answer carries no finding about it — health still states it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .cue .gdi</extension>\n    <command label=\"Flycast\">retroarch -L /app/cores/flycast_libretro.so %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.desktop .iso .ps3 .ps3dir</extension>\n    <command label=\"RPCS3\">%EMULATOR_RPCS3% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/ps3/Game.pkg": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "ps3",
+          "content_path": "/mnt/sd/retrodeck/roms/ps3/Game.pkg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "emulator-config-missing",
+                "data": {
+                  "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+                }
+              }
+            ]
           }
         ],
         "launchable": {
@@ -16539,6 +16794,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
         },
         "dirs": [
@@ -16642,6 +16898,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
         },
         "dirs": [
@@ -16721,6 +16978,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
         },
         "dirs": [
@@ -16788,6 +17046,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>ps4-homebrew</name><fullname>PS4 Homebrew</fullname><path>/mnt/sd/retrodeck/roms/ps4</path>\n    <extension>.pkg</extension>\n    <command label=\"Kyty\">%EMULATOR_KYTY% %ROM%</command>\n    <platform>ps4</platform>\n  </system>\n  <system><name>homegrown</name><fullname>Homegrown Engine</fullname><path>/mnt/sd/retrodeck/roms/homegrown</path>\n    <extension>.hgx</extension>\n    <command label=\"HG\">%EMULATOR_HG% %ROM%</command>\n    <platform>selfmade</platform>\n  </system>\n  <system><name>secret</name><fullname>Private Shelf</fullname><path>/mnt/sd/retrodeck/roms/secret</path>\n    <extension>.bin</extension>\n    <command label=\"Runner\">%EMULATOR_RUNNER% %ROM%</command>\n    <platform>ignore</platform>\n  </system>\n</systemList>\n"
         },
@@ -16871,6 +17130,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -16923,6 +17183,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -17123,6 +17384,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -17176,6 +17438,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -17228,6 +17491,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -17277,6 +17541,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>cps2</name><fullname>Capcom Play System II</fullname><path>%ROMPATH%/cps2</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  <system><name>scummvm</name><fullname>ScummVM Game Engine</fullname><path>%ROMPATH%/scummvm</path>\n    <extension>.scummvm .SCUMMVM</extension>\n    <command label=\"ScummVM\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/scummvm_libretro.so %ROM%</command>\n    <platform>scummvm</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -17329,6 +17594,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>cps1</name><fullname>Capcom Play System I</fullname><path>%ROMPATH%/cps1</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"FinalBurn Neo\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/fbneo_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <system><name>mame</name><fullname>Multiple Arcade Machine Emulator</fullname><path>%ROMPATH%/mame</path>\n    <extension>.zip .ZIP</extension>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n    <platform>arcade</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>doom</name><fullname>Doom</fullname><path>%ROMPATH%/doom</path>\n    <extension>.wad .WAD</extension>\n    <command label=\"PrBoom+\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/prboom_libretro.so %ROM%</command>\n    <platform>pc, pcwindows</platform>\n  </system>\n  -->\n</systemList>\n"
         },
         "dirs": [
@@ -17382,6 +17648,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>ps4-homebrew</name><fullname>PS4 Homebrew</fullname><path>/mnt/sd/retrodeck/roms/ps4</path>\n    <extension>.pkg</extension>\n    <command label=\"Kyty\">%EMULATOR_KYTY% %ROM%</command>\n    <platform>ps4</platform>\n  </system>\n  <system><name>homegrown</name><fullname>Homegrown Engine</fullname><path>/mnt/sd/retrodeck/roms/homegrown</path>\n    <extension>.hgx</extension>\n    <command label=\"HG\">%EMULATOR_HG% %ROM%</command>\n    <platform>selfmade</platform>\n  </system>\n  <system><name>secret</name><fullname>Private Shelf</fullname><path>/mnt/sd/retrodeck/roms/secret</path>\n    <extension>.bin</extension>\n    <command label=\"Runner\">%EMULATOR_RUNNER% %ROM%</command>\n    <platform>ignore</platform>\n  </system>\n</systemList>\n"
         },
@@ -17819,7 +18086,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/run/media/deck/SD/retrodeck/bios\"}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/run/media/deck/SD/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -17853,7 +18121,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -17887,7 +18156,8 @@
       "input": {
         "home": "/home/deck",
         "files": {
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": ""
         },
         "dirs": [
           "/home/deck/retrodeck/saves",
@@ -17916,6 +18186,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/run/media/deck/SD/retrodeck/roms\" />\n"
         },
         "dirs": [
@@ -17952,6 +18223,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"~/roms\" />\n"
         },
         "dirs": [
@@ -17987,6 +18259,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\", \"bios_path\": \"/home/deck/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/retrodeck/roms\"\n"
         },
         "dirs": [
@@ -18024,6 +18297,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/SD/retrodeck\", \"saves_path\": \"/run/media/deck/SD/retrodeck/saves\", \"bios_path\": \"/run/media/deck/SD/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/run/media/deck/SD/retrodeck/roms\" />\n"
         }
       },

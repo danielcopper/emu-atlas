@@ -11,6 +11,7 @@ from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine, RealMachine
 
 RETRODECK_JSON = "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
+RETRODECK_CFG = "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 EMUDECK_SETTINGS = "/home/deck/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 NATIVE_CFG = "/home/deck/.config/retroarch/retroarch.cfg"
@@ -123,6 +124,7 @@ class TestHealth:
         installs = _detect(
             {
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
+                RETRODECK_CFG: "",
                 "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
             },
             dirs=["/mnt/sd/retrodeck/saves", "/mnt/sd/retrodeck/bios", RETRODECK_DEFAULT_ROMS],
@@ -133,6 +135,7 @@ class TestHealth:
         installs = _detect(
             {
                 RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
+                RETRODECK_CFG: "",
                 "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
             },
             dirs=["/mnt/sd/retrodeck/bios", RETRODECK_DEFAULT_ROMS],

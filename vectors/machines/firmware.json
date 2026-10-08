@@ -319,6 +319,105 @@
       }
     },
     {
+      "name": "retrodeck-firmware-without-retroarch-cfg-states-the-missing-file",
+      "rationale": "The firmware answer reads RetroDECK's retroarch.cfg for the system directory and the core directories, so with the file missing it leans on RetroArch's defaults the way the save answer does, and the health finding emulator-config-missing rides it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/demo_psx_libretro.info": "display_name = \"Sony - PlayStation (Demo)\"\nsystemname = \"Sony - PlayStation\"\nfirmware_count = 2\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware1_path = \"psxonpsp660.bin\"\nfirmware1_opt = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/demo_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/mnt/sd/retrodeck/bios/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "demo_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "emulator-config-missing",
+                "data": {
+                  "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+                }
+              }
+            ]
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "demo_psx_libretro.so",
+              "emulator": "demo_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "absent",
+              "locating": "unestablished",
+              "requirements_met": null,
+              "system_firmware": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-declaration-unknown",
+                  "data": {
+                    "core_so": "demo_psx_libretro.so"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
+              }
+            },
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "core_so": "demo_psx_libretro.so"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "firmware-two-cores-one-identity-two-names",
       "rationale": "The case that decides the model. Gambatte wants gb_bios.bin, SameBoy wants dmg_boot.bin, and the packaged table carries both under one md5. The bytes are on disk under Gambatte's name, so Gambatte verifies and SameBoy is genuinely missing — a byte-identical file under the other name does not satisfy it, because SameBoy opens dmg_boot.bin and nothing else. Each emulator answers with its whole declaration set, so the Game Boy Color boot ROMs come along carrying system=gbc rather than being silently dropped. identify_firmware then answers the download flow from the same fixture: one content, both destinations, so the client can say 'copy what you already have' instead of 'download this'.",
       "input": {
