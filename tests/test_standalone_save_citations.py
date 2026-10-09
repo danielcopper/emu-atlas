@@ -93,6 +93,8 @@ SLOTS_THE_PROSE_REPEATS = (
     "slot_devices",
     "slot_parse",
     "split_path",
+    "title_created",
+    "title_id",
 )
 
 

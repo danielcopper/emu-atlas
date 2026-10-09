@@ -1588,6 +1588,8 @@ class TestTheDataRegistryReading:
             ("filenames-content-conditional", "files_established_for"): (
                 "FILES_ESTABLISHED_FOR_TOKENS"
             ),
+            ("filenames-content-conditional", "save_id_spelling"): "SAVE_ID_SPELLINGS",
+            ("file-names-unestablished", "save_id_spelling"): "SAVE_ID_SPELLINGS",
             ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",

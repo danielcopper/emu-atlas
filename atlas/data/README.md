@@ -135,7 +135,8 @@ The two a placement speaks, which can reach a caller as a hole in `SavefilePlace
   file set is honestly unknown.
 - `<save_id>` — the content's platform-native id (Flycast names a per-game VMU after the disc's product number). atlas
   never fills it, because reading an id out of a ROM is identification, not location. It stays in the stated name and
-  `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name.
+  `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name. A group whose `files` name
+  it states what fills it in `save_id` (below), and the loader refuses the group without one.
 
 And two a card's **own selection rule** fills from a machine read (`RULE_FILLED_TEMPLATES`), which therefore belong only
 to a card that states a `governing_rule` — the loader refuses one on a card with no rule behind it. Neither is ever a
@@ -191,6 +192,16 @@ hole: where that read fails the rule selects a mode with no such segment.
   paragraph to read. A card that needs a class the tokens do not name adds one to that tuple and to the sentence that
   lists them in `docs/how-to-use.md`, rather than writing a sentence into the token. The scope needs a declared `files`
   to scope, and both the note and the citation need a scope to belong to; the loader enforces all three.
+
+### `save_id` — what fills the hole, and how the value is spelled
+
+A group whose `files` carry `<save_id>` states `"save_id": {"fill": …, "spelling": …}`. `fill` is the sentence a caller
+reads — Flycast's is the disc's product number with the characters the core replaces, SwanStation's the game code it
+reads off the disc — and `spelling` one word of `atlas.placement.SAVE_ID_SPELLINGS`, `title-id-words` or `path-segment`,
+which a caller checks a value against before filling (`atlas.checked_save_id`). Both reach the answer as the
+`filenames-content-conditional` caveat's `save_id` and `save_id_spelling`. The loader requires the field exactly where a
+name carries the hole and refuses it anywhere else: on a group whose names carry none, on a cross-root group (whose
+names reach no answer's `needs`), and on a second group of the same directory, since the answer states one fill.
 
 ### A group at another root — the spanning save
 
@@ -566,9 +577,10 @@ else's answer and look exactly like a verified one. Two tests cross the slots wi
 its card states, and every slot a card states, some reading names.
 
 Eleven cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
-EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and the Wii NAND's
-unnamed `title/` tree. PrimeHack (shiiion/dolphin 81bfb96, and 53f53e0 for the Flathub build EmuDeck installs): the same
-reading, the same shape, and its own evidence — the fork inherits Dolphin's save tree whole and hangs it off a user
+EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and a Wii title's
+save directory in the NAND, `title/<save_id>/data` with the whole title id as the hole, beside a listing of the title
+directories the NAND holds. PrimeHack (shiiion/dolphin 81bfb96, and 53f53e0 for the Flathub build EmuDeck installs): the
+same reading, the same shape, and its own evidence — the fork inherits Dolphin's save tree whole and hangs it off a user
 directory whose name belongs to the build (#246). PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's
 `settings` is `null`, the honest spelling of "no file governs this" — and savedata is one unnamed directory per game
 below `PSP/SAVEDATA`. xemu (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read

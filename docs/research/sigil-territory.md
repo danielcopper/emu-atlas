@@ -1299,6 +1299,14 @@ PCSX2 spells the serial as sigil's `title_id` does — `GSTextureReplacements.cp
 **LRPS2 (I8).** Nothing to fill on the host: sigil's PS2 `save_id` names a folder inside the memory-card image atlas
 states, the layering the guide warns about (`docs/how-to-use.md`, "The layering trap").
 
+**Dolphin (I11).** Past atlas's pin (`cfb5f0d`), #614 makes I11 a `different` row, like I5: atlas's Wii answer declares
+the hole, `title/<save_id>/data` below the NAND root, filled with both words of the title id (`00010000/524d4745` for a
+game disc) — the high word is the title's category and stays part of the hole. sigil's `save_id` from a disc is the low
+word alone, in lower case, `usage` `folder-exact` (`src/wii.c:75-77`, `:178-180`); from a `.wad` it is both words
+(`:134-137`). Beside the hole the answer lists the title directories the NAND holds, spelled `<hi>/<lo>`
+(`save-id-candidates`), so a client holding the low word reads the high word off the one entry that matches, and two
+matches leave the hole unfilled.
+
 ## Open items
 
 Each **[O]** above, with what would close it:

@@ -241,6 +241,7 @@ from .placement import (
     CAVEAT_NO_CORE,
     CAVEAT_PATCH_FORMATS_UNESTABLISHED,
     CAVEAT_SANDBOX_PATH_UNTRANSLATED,
+    CAVEAT_SAVE_ID_CANDIDATES,
     CAVEAT_SOFT_PATCHING_APPLIES,
     CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
     CAVEAT_SAVE_DIR_UNLISTABLE,
@@ -283,6 +284,8 @@ from .placement import (
     TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
     TEMPLATE_SAVE_ID,
+    SAVE_ID_SPELLING_PATH_SEGMENT,
+    SAVE_ID_SPELLING_TITLE_ID_WORDS,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
     FILE_SET_UNKNOWN,
@@ -3403,6 +3406,23 @@ def _card_file_set(
     )
 
 
+def _established_for_scope(mode: SaveMode) -> str:
+    """The sentence a scoped file list adds to its caveat's message.
+
+    The scope's token is the branch and rides in the data; the card's own
+    paragraph about that class is prose and rides here beside it.
+    """
+    if mode.files_established_for is None:
+        return ""
+    note = f" {mode.files_established_note}" if mode.files_established_note else ""
+    return (
+        " Which files exist at all was established for one class of content only "
+        f"({mode.files_established_for}): another content class connects a different set "
+        "of devices, so a name stated here may never appear for it, and one that does may "
+        f"be missing.{note}"
+    )
+
+
 def _file_set_caveats(
     card: CoreCard, mode: SaveMode, *, mode_value: str, rom_stem: str | None
 ) -> list[Caveat]:
@@ -3424,11 +3444,19 @@ def _file_set_caveats(
                 {"core": card.key, "mode": mode_value},
             )
         ]
-    if mode.files_without_save_id is not None or mode.files_established_for is not None:
+    if (
+        mode.files_without_save_id is not None
+        or mode.files_established_for is not None
+        or mode.save_id is not None
+    ):
         stated = _card_files(mode.files, rom_stem) or mode.files
         data: dict[str, DataValue] = {"core": card.key, "mode": mode_value, "files": stated}
         spelling = ""
-        scope = ""
+        if mode.save_id is not None:
+            # The card's own fill and spelling, so the hole in the names
+            # never reaches a caller without what fills it (#614).
+            data["save_id"] = mode.save_id.fill
+            data["save_id_spelling"] = mode.save_id.spelling
         if mode.files_without_save_id is not None:
             alternative = _card_files(mode.files_without_save_id, rom_stem) or mode.files_without_save_id
             data["files_without_save_id"] = alternative
@@ -3439,15 +3467,7 @@ def _file_set_caveats(
             )
         if mode.files_established_for is not None:
             data["files_established_for"] = mode.files_established_for
-            # The token is the branch; the card's own paragraph about that
-            # class is prose and rides in the message beside it.
-            note = f" {mode.files_established_note}" if mode.files_established_note else ""
-            scope = (
-                " Which files exist at all was established for one class of content only "
-                f"({mode.files_established_for}): another content class connects a different set "
-                "of devices, so a name stated here may never appear for it, and one that does may "
-                f"be missing.{note}"
-            )
+        scope = _established_for_scope(mode)
         if mode.files_citation is not None:
             data["citation"] = mode.files_citation
         return [
@@ -6313,6 +6333,7 @@ def _pcsx2_texture_placement(
                     "token": card.token,
                     "root": root,
                     "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                    "save_id_spelling": SAVE_ID_SPELLING_PATH_SEGMENT,
                     "load_stage": _PCSX2_TEXTURE_LOAD_STAGE,
                     "dump_stage": _PCSX2_TEXTURE_DUMP_STAGE,
                     "citation": (
@@ -6829,6 +6850,8 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
         "session_overrides",  # the GCIFolder*PathOverride keys a session sets
         "gci_names",  # how a .gci file inside a folder card is named
         "nand_tree",  # the Wii NAND's title/<hi>/<lo>/data shape
+        "title_id",  # where a disc's title id comes from: its game partition's ticket
+        "title_created",  # the disc boot that creates title/<hi>/<lo>/data
         "wii_dir",  # the NAND's default directory below the user directory
         "agp_paths",  # the AgpCartA/BPath keys a GBA cartridge adapter reads
         "agp_save",  # how the adapter loads, sizes and writes back its .sav
@@ -7990,10 +8013,9 @@ def _unnamed_tree_placement(
     physical: str | None,
     provenance: str,
 ) -> SavefilePlacement:
-    """One unnamed per-game tree as a whole answer — the shape three cards share.
+    """One unnamed per-game tree as a whole answer — a PSP memstick's savedata.
 
-    A Wii NAND, a PSP memstick's savedata and a Wii U MLC make the same claim:
-    the tree is stated, its entries are named by the game and refused, and the
+    The tree is stated, its entries are named by the game and refused, and the
     granularity is per-game-files with the readings that located the tree.
     """
     return SavefilePlacement(
@@ -8028,6 +8050,57 @@ def _unnamed_tree_placement(
     )
 
 
+def _per_title_placement(
+    card: StandaloneSaveCard,
+    *,
+    directory: str,
+    physical: str | None,
+    caveats: Sequence[Caveat],
+    mode: str,
+    readings: tuple[OptionReading, ...],
+    provenance: str,
+    extra_groups: tuple[FileGroup, ...] = (),
+) -> SavefilePlacement:
+    """One title's save directory as a whole answer — the shape Cemu, Azahar and Dolphin's Wii share.
+
+    The directory is keyed by the title id, which stays the ``save_id`` hole;
+    the files below it are the game's own writes, so its group is unnamed and
+    the unit is ``per-game-directory``. *extra_groups* are directories stated
+    beside it (Azahar's extdata).
+    """
+    return SavefilePlacement(
+        dir=directory,
+        root_kind=ROOT_EMULATOR_DIRECTORY,
+        needs=(HOLE_SAVE_ID,),
+        fallback_dir=None,
+        file_set=FileSet(
+            FILE_SET_DECLARED,
+            (),
+            f"declared by standalone save card '{card.token}'",
+            complete=False,
+            groups=(
+                FileGroup(
+                    dir=directory,
+                    files=None,
+                    granularity=GRANULARITY_PER_GAME_DIRECTORY,
+                    role=ROLE_BATTERY,
+                ),
+                *extra_groups,
+            ),
+        ),
+        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        caveats=tuple(caveats),
+        physical_dir=physical,
+        granularity=Granularity(
+            value=GRANULARITY_PER_GAME_DIRECTORY,
+            mode=mode,
+            readings=readings,
+            alternatives=(),
+            provenance=provenance,
+        ),
+    )
+
+
 def _dolphin_wii_answer(
     values: Mapping[tuple[str, str], str],
     *,
@@ -8038,14 +8111,19 @@ def _dolphin_wii_answer(
     card: StandaloneSaveCard,
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
-    """The Wii answer: the NAND's title tree, one unnamed directory per title.
+    """The Wii answer: one title's save directory in the NAND, keyed by its title id.
 
     ``NANDRootPath`` governs where the NAND lives (the default is the ``Wii``
-    tree below the user directory, CommonPaths.h:49 at 2603a); the saves
-    inside it are ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at
-    2603a), the title id a fact of the disc that no read of the content path
-    recovers. The key is matched the way the emulator matches it — ASCII
-    case-insensitively (the chain is on :func:`_parse_sectioned_ini`, #295).
+    tree below the user directory, CommonPaths.h:49 at 2603a); a title's save
+    inside it is ``title/<hi:08x>/<lo:08x>/data`` (NandPaths.cpp:63-71 at
+    2603a), the title id the one the disc's game partition ticket states
+    (VolumeWii.cpp:269-275). No read of the content path recovers it, so it
+    stays the ``save_id`` hole, high word included — the high word is the
+    title's category and not one fixed value. Beside the hole the answer lists
+    the titles the NAND already holds, spelled the way the hole is filled
+    (:func:`_wii_title_listing`). The key is matched the way the emulator
+    matches it — ASCII case-insensitively (the chain is on
+    :func:`_parse_sectioned_ini`, #295).
     """
     cite = _cites(card, homes)
     configured, spelled = _simpleini_value(values, "General", "NANDRootPath")
@@ -8072,37 +8150,99 @@ def _dolphin_wii_answer(
             "[General] NANDRootPath is unset — the NAND defaults to the Wii tree below the "
             f"user directory ({cite('wii_dir')} at {cite('build')})",
         )
-    directory = os.path.join(nand_root, "title")
+    title_tree = os.path.join(nand_root, "title")
+    directory = os.path.join(title_tree, TEMPLATE_SAVE_ID, "data")
     # The link walk stops at the NAND root: the ``title`` tree below it is
-    # created at the first Wii save, so its absence is no dead link — the
+    # created at the first Wii disc boot, so its absence is no dead link — the
     # root's own resolution is the boundary the arrangement reroutes.
     resolved_root, link_caveats = _link_view(machine, nand_root)
-    physical = os.path.join(resolved_root, "title") if resolved_root else None
+    physical = (
+        os.path.join(resolved_root, "title", TEMPLATE_SAVE_ID, "data") if resolved_root else None
+    )
     caveats.extend(link_caveats)
     caveats.append(
         Caveat(
             CAVEAT_FILE_NAMES_UNESTABLISHED,
-            "a Wii save lives in title/<title id>/data below the NAND root, and the title id "
-            "is the disc's own — it follows from nothing atlas reads; back the tree up whole",
+            "the files below a title's save directory are the game's own writes — move the "
+            "directory whole; fill <save_id> with the title id the disc's ticket states, high "
+            "word then low word, each 8 lowercase hex digits, as two path segments. The high "
+            "word is the title's category and part of the id, not a fixed prefix",
             {
                 "token": card.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
-                "citation": f"{cite('nand_tree')} at {cite('build')}",
+                "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "save_id_spelling": SAVE_ID_SPELLING_TITLE_ID_WORDS,
+                "citation": f"{cite('nand_tree')} and {cite('title_id')} at {cite('build')}",
             },
         )
     )
-    return _unnamed_tree_placement(
+    listing = _wii_title_listing(machine, title_tree, token=card.token, cite=cite)
+    if listing is not None:
+        caveats.append(listing)
+    return _per_title_placement(
         card,
         directory=directory,
+        physical=physical,
+        caveats=caveats,
         mode="nand",
         readings=(_reading_with_file(reading, ini_path),),
-        caveats=tuple(caveats),
-        physical=physical,
         provenance=(
-            f"standalone save card '{card.token}': the Wii NAND tree "
+            f"standalone save card '{card.token}': a title's save directory in the Wii NAND "
             f"({cite('nand_tree')} at {cite('build')})"
         ),
+    )
+
+
+# The shape Dolphin gives each word of a title directory's name: eight
+# lowercase hex digits (``{:08x}``, NandPaths.cpp:63-67 at 2603a). A name of
+# any other shape is no directory the emulator created for a title.
+_WII_TITLE_WORD_PATTERN = "[0-9a-f]" * 8
+
+
+def _wii_title_listing(
+    machine: Machine, title_tree: str, *, token: str, cite: _Cite
+) -> Caveat | None:
+    """Every title directory below the NAND's ``title`` tree, spelled like the hole it fills.
+
+    A caller whose source names a Wii disc by its low word alone finds that
+    word here and reads the high word off the entry, rather than assuming
+    one. Dolphin creates ``title/<hi>/<lo>/data`` every time it boots a disc
+    (the ES DIVerify the emulated boot ends with), so a game started once is
+    listed whether or not it has saved. An absent or empty tree states
+    nothing; a tree that could not be listed in full states what it could
+    read beside where the listing stopped.
+    """
+    pattern = os.path.join(
+        _glob_escape(title_tree), _WII_TITLE_WORD_PATTERN, _WII_TITLE_WORD_PATTERN, ""
+    )
+    listing = machine.glob(pattern)
+    if not listing.matches and not listing.unreadable:
+        return None
+    titles = tuple(os.path.relpath(match, title_tree) for match in listing.matches)
+    found = f"holds {len(titles)} title director{'y' if len(titles) == 1 else 'ies'}"
+    stopped = (
+        f", and {', '.join(listing.unreadable)} could not be read, so a title may be missing "
+        "from the list"
+        if listing.unreadable
+        else ""
+    )
+    return Caveat(
+        CAVEAT_SAVE_ID_CANDIDATES,
+        f"{title_tree} {found}, each spelled as the <save_id> it fills{stopped}. The emulator "
+        "creates a title's directory when it boots the disc, so a low word that matches one "
+        "entry names the whole id, two entries leave it ambiguous, and none means no disc of "
+        "that word was started here",
+        {
+            "token": token,
+            "dir": title_tree,
+            "titles": titles,
+            # Where the walk stopped, and empty where it read everything: a
+            # listing that holds nothing because nothing could be read is never
+            # mistaken for a tree no disc was started in.
+            "unreadable": listing.unreadable,
+            "citation": f"{cite('title_created')} at {cite('build')}",
+        },
     )
 
 
@@ -8731,43 +8871,23 @@ def _cemu_savefile_placement(
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "save_id_spelling": SAVE_ID_SPELLING_TITLE_ID_WORDS,
                 "citation": "nn_save.cpp:133-145 at Cemu 2.6 — "
                 "'/vol/storage_mlc01/usr/save/%08x/%08x/user/%08x/' and 'user/common/'",
             },
         )
     )
     stated_xml = xml_path if result.status == READ_OK else None
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(HOLE_SAVE_ID,),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(
-                    dir=directory,
-                    files=None,
-                    granularity=GRANULARITY_PER_GAME_DIRECTORY,
-                    role=ROLE_BATTERY,
-                ),
-            ),
-        ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
-        caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value=GRANULARITY_PER_GAME_DIRECTORY,
-            mode="mlc",
-            readings=(_reading_with_file(reading, stated_xml),),
-            alternatives=(),
-            provenance=(
-                f"standalone save card '{card.token}': the MLC from settings.xml "
-                "(ActiveSettings.cpp:242-268 at 2.6)"
-            ),
+    return _per_title_placement(
+        card,
+        directory=directory,
+        physical=physical,
+        caveats=caveats,
+        mode="mlc",
+        readings=(_reading_with_file(reading, stated_xml),),
+        provenance=(
+            f"standalone save card '{card.token}': the MLC from settings.xml "
+            "(ActiveSettings.cpp:242-268 at 2.6)"
         ),
     )
 
@@ -8953,6 +9073,7 @@ def _azahar_savefile_placement(
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "save_id_spelling": SAVE_ID_SPELLING_TITLE_ID_WORDS,
                 "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — "
                 "'{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; "
                 "ID0/ID1 are all-zero (archive.h:22-24)",
@@ -8974,42 +9095,23 @@ def _azahar_savefile_placement(
             },
         )
     )
-    return SavefilePlacement(
-        dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
-        needs=(HOLE_SAVE_ID,),
-        fallback_dir=None,
-        file_set=FileSet(
-            FILE_SET_DECLARED,
-            (),
-            f"declared by standalone save card '{card.token}'",
-            complete=False,
-            groups=(
-                FileGroup(
-                    dir=directory,
-                    files=None,
-                    granularity=GRANULARITY_PER_GAME_DIRECTORY,
-                    role=ROLE_BATTERY,
-                ),
-                FileGroup(
-                    dir=extdata,
-                    files=None,
-                    granularity=GRANULARITY_PER_GAME_FILES,
-                    role=ROLE_BATTERY,
-                ),
-            ),
+    return _per_title_placement(
+        card,
+        directory=directory,
+        physical=physical,
+        caveats=caveats,
+        mode="sdmc",
+        readings=tuple(readings),
+        provenance=(
+            f"standalone save card '{card.token}': the emulated SD from qt-config.ini "
+            "(config.cpp:480-498 at 2125.1.1)"
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
-        caveats=tuple(caveats),
-        physical_dir=physical,
-        granularity=Granularity(
-            value=GRANULARITY_PER_GAME_DIRECTORY,
-            mode="sdmc",
-            readings=tuple(readings),
-            alternatives=(),
-            provenance=(
-                f"standalone save card '{card.token}': the emulated SD from qt-config.ini "
-                "(config.cpp:480-498 at 2125.1.1)"
+        extra_groups=(
+            FileGroup(
+                dir=extdata,
+                files=None,
+                granularity=GRANULARITY_PER_GAME_FILES,
+                role=ROLE_BATTERY,
             ),
         ),
     )
@@ -9244,19 +9346,40 @@ def _duckstation_per_game_slot(
             "outranks it"
         )
         citation = "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
-    caveat = Caveat(
-        CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+    message = (
         f"slot {n} names its card by {fill}; a running game without that fact falls back to "
-        f"the shared card ({shared_fallback})",
-        {
-            "token": card.token,
-            "mode": mode,
-            "files": (name,),
-            "files_without_save_id": (shared_fallback,),
-            "save_id": fill,
-            "citation": citation,
-        },
+        f"the shared card ({shared_fallback})"
     )
+    # The fill rides under the hole the name carries: the file-title mode
+    # names its card by the content's stem, which is ``rom_stem`` and never
+    # ``save_id`` (#614).
+    if mode == "PerGameFileTitle":
+        caveat = Caveat(
+            CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+            message,
+            {
+                "token": card.token,
+                "mode": mode,
+                "files": (name,),
+                "files_without_save_id": (shared_fallback,),
+                "rom_stem": fill,
+                "citation": citation,
+            },
+        )
+    else:
+        caveat = Caveat(
+            CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+            message,
+            {
+                "token": card.token,
+                "mode": mode,
+                "files": (name,),
+                "files_without_save_id": (shared_fallback,),
+                "save_id": fill,
+                "save_id_spelling": SAVE_ID_SPELLING_PATH_SEGMENT,
+                "citation": citation,
+            },
+        )
     return _DuckSlot(
         mode=mode,
         group=FileGroup(

@@ -57,6 +57,7 @@ the results in.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Sequence, TypeAlias, TypeVar
@@ -441,6 +442,21 @@ CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
 # would be the failure this project exists to avoid. `data` carries `dir` and a
 # `citation` for the reading behind it.
 CAVEAT_FILE_NAMES_UNESTABLISHED = "file-names-unestablished"
+# The title directories an emulator's NAND holds, each spelled the way the
+# answer's ``save_id`` hole is filled (``"<hi>/<lo>"``), so a caller whose
+# source knows a game by part of its title id — a Wii disc's low word — can
+# match it here: one entry with that word fills the hole, two leave it
+# ambiguous, and none means no title of that word was ever started on this
+# machine. Dolphin creates a disc's ``title/<hi>/<lo>/data`` the moment it
+# boots the disc, so a started game is listed before it saves anything.
+# ``data`` carries the ``dir`` listed, the ``titles`` found there (only the
+# names of the shape the emulator creates, eight lowercase hex digits at both
+# levels), the ``citation`` for that creation, and ``unreadable``: where the
+# listing stopped, empty where it read the whole tree. That rides on this
+# code rather than a code of its own, so that the code's absence keeps
+# meaning "the tree is empty or not there" and a listing that holds nothing
+# because nothing could be read is never mistaken for one.
+CAVEAT_SAVE_ID_CANDIDATES = "save-id-candidates"
 # A directory under this answer's own root that the card states and the
 # observation did not read. An observed set's groups describe the one directory
 # that was read, so a mode whose parts lie in sibling subdirectories — Kronos's
@@ -959,6 +975,11 @@ class Caveat:
     def __post_init__(self) -> None:
         if not self.code:
             raise ValueError("Caveat: code must be a non-empty stable identifier")
+        if ("save_id" in self.data) != ("save_id_spelling" in self.data):
+            raise ValueError(
+                "Caveat: a 'save_id' fill and its 'save_id_spelling' are stated together or not "
+                f"at all ({self.code})"
+            )
         _check_enumerations("Caveat", self.code, self.data)
         object.__setattr__(
             self,
@@ -1087,6 +1108,102 @@ def checked_cwd(cwd: str | None) -> str | None:
     if cwd is not None and not os.path.isabs(cwd):
         raise ValueError(f"cwd must be an absolute path, got {cwd!r}")
     return cwd
+
+
+# How a ``save_id`` fill is spelled, under ``data["save_id_spelling"]`` beside
+# the sentence under ``data["save_id"]`` that says what fills it. The two ride
+# together — the constructor refuses either without the other — and an answer
+# whose ``needs`` holds the hole carries a caveat stating both, so a caller
+# never has to fill ``<save_id>`` from prose. A closed vocabulary, because a
+# caller checks its value against it before filling (:func:`checked_save_id`):
+# a source that hands over a Wii disc's low word alone is caught as one word
+# short instead of naming a folder the emulator never opens.
+SaveIdSpelling = Literal["title-id-words", "path-segment"]
+SAVE_ID_SPELLING_TITLE_ID_WORDS: SaveIdSpelling = "title-id-words"
+"""The title id as its two words: eight lowercase hex digits for the high word, ``/``, and
+eight for the low word, such as ``00010000/524d4745`` — two path segments, composed the way
+the emulator composes them.
+"""
+SAVE_ID_SPELLING_PATH_SEGMENT: SaveIdSpelling = "path-segment"
+"""One path segment naming an entry of its own: a serial, a product number or a game's title,
+spelled the way the emulator spells it. Never empty, ``.`` or ``..``, and never holding ``/`` or
+a NUL — a value that would leave the directory it is joined below, or end the path early.
+"""
+SAVE_ID_SPELLINGS = (SAVE_ID_SPELLING_TITLE_ID_WORDS, SAVE_ID_SPELLING_PATH_SEGMENT)
+_TITLE_ID_WORD = re.compile(r"[0-9a-f]{8}")
+# The segments that name no entry of their own: nothing, this directory, its parent.
+_NOT_AN_ENTRY = ("", ".", "..")
+
+
+def checked_save_id(spelling: str, value: str) -> str:
+    """*value* as a ``save_id`` fill of *spelling* takes it, or :class:`ValueError`.
+
+    *spelling* is the ``save_id_spelling`` the answer states beside its
+    ``save_id`` fill. A value that does not have that shape names no folder
+    the emulator opens — a low word without its high word, an uppercase id,
+    a serial with a ``/`` in it — and a caller joins the value into a path it
+    then writes below, so ``..`` or a NUL would send that write elsewhere. It
+    raises rather than being filled in.
+    """
+    if spelling == SAVE_ID_SPELLING_TITLE_ID_WORDS:
+        words = value.split("/")
+        if len(words) != 2 or not all(_TITLE_ID_WORD.fullmatch(word) for word in words):
+            raise ValueError(
+                f"save_id spelled {spelling!r} is two words of eight lowercase hex digits "
+                f"joined by '/', got {value!r}"
+            )
+    elif spelling == SAVE_ID_SPELLING_PATH_SEGMENT:
+        if value in _NOT_AN_ENTRY or "/" in value or "\0" in value:
+            raise ValueError(
+                f"save_id spelled {spelling!r} is one path segment naming an entry of its own — "
+                f"not empty, '.' or '..', and without '/' or a NUL — got {value!r}"
+            )
+    else:
+        raise ValueError(f"save_id spelling must be one of {list(SAVE_ID_SPELLINGS)}, got {spelling!r}")
+    return value
+
+
+def _check_save_id_stated(what: str, needs: tuple[str, ...], caveats: tuple["Caveat", ...]) -> None:
+    """Refuse an answer whose ``save_id`` hole and its stated fill disagree.
+
+    The hole and the fill are one fact told twice: ``needs`` — or a caveat
+    naming ``<save_id>`` in a path or file name it states — says there is an
+    id to fill, and a caveat's ``save_id`` and ``save_id_spelling`` say with
+    what and in which shape. Either without the other leaves a caller filling
+    a hole nobody described, or reading a description of a hole the answer
+    does not have. The caveat's names count because an answer can carry the
+    hole there alone: Flycast's and SwanStation's per-game modes, asked
+    without content under a content-sorted save root, leave the file set
+    unknown and ``needs`` holding ``content_dir`` only, while their card's
+    caveat names ``<save_id>.A1.bin`` — so ``needs`` alone would refuse an
+    answer that states its fill exactly where its hole is.
+    """
+    held = HOLE_SAVE_ID in needs or any(_names_save_id(caveat) for caveat in caveats)
+    stated = any(HOLE_SAVE_ID in caveat.data for caveat in caveats)
+    if held != stated:
+        raise ValueError(
+            f"{what}: the answer {'carries' if held else 'carries no'} {TEMPLATE_SAVE_ID} and "
+            f"{'no' if held else 'a'} caveat states its fill — the hole and its spelling ride together"
+        )
+
+
+def _names_save_id(caveat: "Caveat") -> bool:
+    """Does a path or name this caveat states keep the ``<save_id>`` template?"""
+    return any(
+        TEMPLATE_SAVE_ID in word
+        for key, value in caveat.data.items()
+        if key not in (HOLE_SAVE_ID, "save_id_spelling")
+        for word in _data_words(value)
+    )
+
+
+def _data_words(value: "DataValue") -> tuple[str, ...]:
+    """Every string one data value states — a mapping's subjects as well as its words."""
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, Mapping):
+        return (*value.keys(), *value.values())
+    return tuple(value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1518,6 +1635,7 @@ class SavefilePlacement:
             raise ValueError("SavefilePlacement: dir must be non-empty (an unanswerable placement is Unresolved)")
         if self.root_kind not in ROOT_KINDS:
             raise ValueError(f"SavefilePlacement: root_kind must be one of {ROOT_KINDS}, got {self.root_kind!r}")
+        _check_save_id_stated("SavefilePlacement", self.needs, self.caveats)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1728,6 +1846,10 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         (CAVEAT_FILENAMES_CONTENT_CONDITIONAL, "files_established_for"): (
             FILES_ESTABLISHED_FOR_TOKENS
         ),
+        # The two codes a ``save_id`` fill rides on: a card's or an emulator's
+        # file names keyed by the content's id, and a per-title directory.
+        (CAVEAT_FILENAMES_CONTENT_CONDITIONAL, "save_id_spelling"): SAVE_ID_SPELLINGS,
+        (CAVEAT_FILE_NAMES_UNESTABLISHED, "save_id_spelling"): SAVE_ID_SPELLINGS,
         # A mapping-valued pair: the listing states one reading per kept file,
         # keyed by its path, so the vocabulary closes the mapped words rather
         # than the mapping as a whole.
@@ -2048,6 +2170,7 @@ class TexturePlacement:
             )
         if self.keying is not None and self.keying not in KEYINGS:
             raise ValueError(f"TexturePlacement: keying must be one of {KEYINGS}, got {self.keying!r}")
+        _check_save_id_stated("TexturePlacement", self.needs, self.caveats)
 
 
 @dataclass(frozen=True, slots=True)

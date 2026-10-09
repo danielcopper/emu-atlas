@@ -9,6 +9,7 @@ from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+    CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_SAVE_ROOT_REDIRECTED,
@@ -16,6 +17,8 @@ from atlas.placement import (
     ENUMERATED_DATA,
     FIRMWARE_SEARCH_READINGS,
     REASON_ACTIVE_USER_UNRECORDED,
+    SAVE_ID_SPELLING_PATH_SEGMENT,
+    SAVE_ID_SPELLING_TITLE_ID_WORDS,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_STANDALONE,
     Caveat,
@@ -32,6 +35,7 @@ from atlas.placement import (
     TexturePlacement,
     build_savefile_placement,
     build_savestate_placement,
+    checked_save_id,
     file_set_holes,
     needs_with_file_set,
 )
@@ -555,3 +559,130 @@ class TestAnEnumeratedValueIsRefusedAtConstruction:
             assert len(set(vocabulary)) == len(vocabulary), f"{code}.{key} repeats a value"
         # A code with no enumeration must not be listed by accident.
         assert (CAVEAT_SAVE_ROOT_REDIRECTED, "key") not in ENUMERATED_DATA
+
+
+class TestASaveIdIsCheckedAgainstItsSpelling:
+    """``checked_save_id``: a caller's value has the shape the answer states, or it raises (#614)."""
+
+    def test_a_title_id_spelled_as_its_two_words_is_taken(self):
+        assert checked_save_id(SAVE_ID_SPELLING_TITLE_ID_WORDS, "00010000/524d4745") == "00010000/524d4745"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("524d4745", id="the-low-word-alone"),
+            pytest.param("00010000/524D4745", id="uppercase"),
+            pytest.param("00010000/524d474", id="seven-digits"),
+            pytest.param("0001000/0524d4745", id="the-boundary-in-the-wrong-place"),
+            pytest.param("00010000/524d4745/data", id="a-third-segment"),
+            pytest.param("0001000g/524d4745", id="not-hex"),
+            pytest.param("00010000/524d4745\n", id="a-trailing-newline"),
+            pytest.param("../00010000/524d4745", id="a-parent-segment-before"),
+            pytest.param("00010000/..", id="a-parent-segment-as-a-word"),
+        ],
+    )
+    def test_a_title_id_of_another_shape_raises(self, value):
+        with pytest.raises(ValueError, match="title-id-words"):
+            checked_save_id(SAVE_ID_SPELLING_TITLE_ID_WORDS, value)
+
+    @pytest.mark.parametrize("value", ["SLUS-20062", "...", "..SLUS", "a b"])
+    def test_a_path_segment_is_taken(self, value):
+        # Dots inside a name are a name: only "." and ".." stand for a directory.
+        assert checked_save_id(SAVE_ID_SPELLING_PATH_SEGMENT, value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("a/b", id="two-segments"),
+            pytest.param("/", id="a-separator-alone"),
+            pytest.param("", id="empty"),
+            pytest.param(".", id="this-directory"),
+            pytest.param("..", id="the-parent-directory"),
+            pytest.param("../SLUS-20062", id="a-climb-out"),
+            pytest.param("SLUS\x0020062", id="a-nul"),
+        ],
+    )
+    def test_a_path_segment_of_another_shape_raises(self, value):
+        with pytest.raises(ValueError, match="path-segment"):
+            checked_save_id(SAVE_ID_SPELLING_PATH_SEGMENT, value)
+
+    def test_a_spelling_outside_the_vocabulary_raises(self):
+        with pytest.raises(ValueError, match="spelling must be one of"):
+            checked_save_id("serial", "SLUS-20062")
+
+
+def _fill(**extra: tuple[str, ...]) -> Caveat:
+    """The caveat a ``save_id`` hole needs beside it: the fill and its spelling."""
+    return Caveat(
+        CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+        "a message",
+        {"save_id": "the serial", "save_id_spelling": SAVE_ID_SPELLING_PATH_SEGMENT, **extra},
+    )
+
+
+class TestTheSaveIdHoleAndItsFillRideTogether:
+    """The answer carries ``<save_id>`` exactly when a caveat states its fill and spelling (#614)."""
+
+    def test_a_fill_without_its_spelling_is_refused(self):
+        with pytest.raises(ValueError, match="stated together"):
+            Caveat(CAVEAT_FILENAMES_CONTENT_CONDITIONAL, "a message", {"save_id": "the serial"})
+
+    def test_a_spelling_without_its_fill_is_refused(self):
+        with pytest.raises(ValueError, match="stated together"):
+            Caveat(
+                CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+                "a message",
+                {"save_id_spelling": SAVE_ID_SPELLING_PATH_SEGMENT},
+            )
+
+    @pytest.mark.parametrize("code", [CAVEAT_FILENAMES_CONTENT_CONDITIONAL, CAVEAT_FILE_NAMES_UNESTABLISHED])
+    def test_a_spelling_outside_the_vocabulary_is_refused(self, code):
+        with pytest.raises(ValueError, match=f"{code}.save_id_spelling"):
+            Caveat(code, "a message", {"save_id": "the serial", "save_id_spelling": "serial"})
+
+    def test_a_hole_in_needs_without_a_fill_is_refused(self):
+        with pytest.raises(ValueError, match="no caveat states its fill"):
+            _savefile(needs=("save_id",), caveats=())
+
+    def test_a_fill_without_a_hole_is_refused(self):
+        # The DuckStation file-title mode stated its rom_stem fill under this
+        # key: the answer carried no <save_id> and still described one.
+        fill = _fill(files=("game_1.mcd",))
+        with pytest.raises(ValueError, match="carries no <save_id> and a caveat states its fill"):
+            _savefile(needs=(), caveats=(fill,))
+
+    def test_a_hole_named_only_in_a_caveat_needs_its_fill(self):
+        named = Caveat(CAVEAT_FILENAMES_CONTENT_CONDITIONAL, "a message", {"files": ("<save_id>.A1.bin",)})
+        with pytest.raises(ValueError, match="no caveat states its fill"):
+            _savefile(needs=("content_dir",), caveats=(named,))
+
+    def test_a_hole_named_only_in_the_caveat_that_fills_it_stands(self):
+        # Flycast's and SwanStation's per-game modes asked without content
+        # under a content-sorted root: needs holds the directory's hole, the
+        # caveat the names' — and the fill beside them.
+        p = _savefile(needs=("content_dir",), caveats=(_fill(files=("<save_id>.A1.bin",)),))
+        assert p.needs == ("content_dir",)
+
+    def test_a_hole_with_its_fill_stands(self):
+        assert _savefile(needs=("save_id",), caveats=(_fill(),)).needs == ("save_id",)
+
+    def test_a_texture_answer_is_held_to_the_same_rule(self):
+        with pytest.raises(ValueError, match="TexturePlacement"):
+            TexturePlacement(
+                dir="/textures/<save_id>", needs=("save_id",), enabled=None, keying=None, sources=(), caveats=()
+            )
+        placed = TexturePlacement(
+            dir="/textures/<save_id>", needs=("save_id",), enabled=None, keying=None, sources=(), caveats=(_fill(),)
+        )
+        assert placed.needs == ("save_id",)
+
+
+def _savefile(*, needs: tuple[str, ...], caveats: tuple[Caveat, ...]) -> SavefilePlacement:
+    return SavefilePlacement(
+        dir="/saves",
+        root_kind=ROOT_SAVEFILE_DIRECTORY,
+        needs=needs,
+        file_set=UNKNOWN_FILE_SET,
+        sources=(),
+        caveats=caveats,
+    )

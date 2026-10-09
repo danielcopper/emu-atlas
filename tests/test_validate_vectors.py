@@ -339,6 +339,15 @@ def _texture(**overrides) -> Vector:
     }
 
 
+def _save_id_caveat(**data) -> Vector:
+    """A caveat stating a ``save_id`` fill and its spelling, the pair a hole needs."""
+    return {
+        "code": "filenames-content-conditional",
+        "data": {"files": ["<save_id>.bin"], "save_id": "the serial", "save_id_spelling": "path-segment",
+                 **data},
+    }
+
+
 def _base_texture(**overrides) -> Vector:
     return _vector(
         {"texture_pack_location": _texture(**overrides)},
@@ -774,6 +783,22 @@ PLACEMENT_CASES = [
     case(_base_placement(root_kind="nope"), "savefile_location.root_kind must be one of", id="placement-root-kind"),
     case(_base_placement(needs="content_dir"), "savefile_location.needs must be a list", id="placement-needs-not-list"),
     case(_base_placement(needs=["rom_step"]), "savefile_location.needs must be holes from", id="placement-unknown-hole"),
+    # The save_id hole and the caveat stating its fill ride together (#614):
+    # each without the other, a fill without its spelling, and a spelling
+    # outside the vocabulary.
+    case(_base_placement(needs=["save_id"]), "savefile_location carries <save_id> and no caveat states its fill",
+         id="placement-save-id-hole-without-its-fill"),
+    case(_base_placement(caveats=[_save_id_caveat(files=["a.bin"])]),
+         "savefile_location carries no <save_id> and a caveat states its fill",
+         id="placement-save-id-fill-without-its-hole"),
+    case(_base_placement(caveats=[{"code": "filenames-content-conditional", "data": {"files": ["<save_id>.bin"]}}]),
+         "savefile_location carries <save_id> and no caveat states its fill",
+         id="placement-save-id-named-in-a-caveat-without-its-fill"),
+    case(_base_placement(needs=["save_id"], caveats=[{"code": "filenames-content-conditional",
+                                                      "data": {"save_id": "the serial"}}]),
+         "states one of 'save_id' and 'save_id_spelling' without the other", id="placement-save-id-without-spelling"),
+    case(_base_placement(needs=["save_id"], caveats=[_save_id_caveat(save_id_spelling="serial")]),
+         "save_id_spelling must be one of", id="placement-save-id-spelling-outside-the-vocabulary"),
     case(_base_placement(fallback_dir=""), "must be null or a non-empty string", id="placement-empty-fallback"),
     case(_base_placement(physical_dir=7), "must be null or a non-empty string", id="placement-physical-type"),
     case(_vector({"savefile_location": {**_placement(), "stray": 1}}, installed=True, savefile_query={"content_path": ROM}),
@@ -837,6 +862,8 @@ TEXTURE_CASES = [
     case(_base_texture(dir=""), "texture_pack_location.dir must be a non-empty string", id="texture-empty-dir"),
     case(_base_texture(needs="content_dir"), "texture_pack_location.needs must be a list", id="texture-needs-not-list"),
     case(_base_texture(needs=["rom_step"]), "texture_pack_location.needs must be holes from", id="texture-unknown-hole"),
+    case(_base_texture(needs=["save_id"]), "texture_pack_location carries <save_id> and no caveat states its fill",
+         id="texture-save-id-hole-without-its-fill"),
     case(_base_texture(physical_dir=""), "must be null or a non-empty string", id="texture-empty-physical"),
     # Nothing can be link-resolved through a hole, so a vector stating both
     # pins an answer the resolver cannot give.
@@ -1647,8 +1674,15 @@ ACCEPTED_CASES = [
                                              "data": {"label": "PPSSPP", "system": "psp"}}}),
                  id="a-standalone-entry-answering-unresolved"),
     pytest.param(_base_placement(needs=["content_dir", "library_name", "save_id"],
-                                 file_set=_file_set(state="declared", files=["<save_id>.bin"])),
+                                 file_set=_file_set(state="declared", files=["<save_id>.bin"]),
+                                 caveats=[{"code": "filenames-content-conditional",
+                                           "data": {"files": ["<save_id>.bin"], "save_id": "the serial",
+                                                    "save_id_spelling": "path-segment"}}]),
                  id="a-template-placement-naming-every-hole"),
+    # Flycast's and SwanStation's per-game modes asked without content: the
+    # hole rides in the caveat's names alone, and its fill beside it.
+    pytest.param(_base_placement(needs=["content_dir"], caveats=[_save_id_caveat()]),
+                 id="a-save-id-hole-named-only-in-the-caveat-that-fills-it"),
     pytest.param(_base_placement(granularity=_granularity(value="per-game-files")),
                  id="a-granularity-with-alternatives"),
     pytest.param(_base_firmware(root=None, cores=[], unclaimed=[],
@@ -1920,6 +1954,9 @@ class TestTheVocabularyIsOneVocabulary:
         assert self._exported("GRANULARITY_") == set(atlas.GRANULARITIES) | {atlas.GRANULARITY_NONE}
         assert atlas.GRANULARITY_NONE not in atlas.GRANULARITIES
         assert validate_vectors.GRANULARITY_VALUE_NONE == atlas.GRANULARITY_NONE
+
+    def test_the_save_id_spelling_vocabularies_match(self):
+        assert validate_vectors.KNOWN_SAVE_ID_SPELLINGS == set(atlas.SAVE_ID_SPELLINGS)
 
     def test_the_root_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)
