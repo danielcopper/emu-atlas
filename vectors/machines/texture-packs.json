@@ -786,9 +786,11 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title/<save_id>/data",
           "root_kind": "emulator_directory",
-          "needs": [],
+          "needs": [
+            "save_id"
+          ],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
@@ -797,9 +799,9 @@
             "complete": false,
             "groups": [
               {
-                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title/<save_id>/data",
                 "files": null,
-                "granularity": "per-game-files",
+                "granularity": "per-game-directory",
                 "role": "battery"
               }
             ]
@@ -826,14 +828,16 @@
               "code": "file-names-unestablished",
               "data": {
                 "token": "PRIMEHACK",
-                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title/<save_id>/data",
                 "role": "battery",
-                "citation": "NandPaths.cpp:49-58 at shiiion/dolphin 81bfb96"
+                "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "save_id_spelling": "title-id-words",
+                "citation": "NandPaths.cpp:49-58 and VolumeWii.cpp:272-278 at shiiion/dolphin 81bfb96"
               }
             }
           ],
           "granularity": {
-            "value": "per-game-files",
+            "value": "per-game-directory",
             "mode": "nand",
             "readings": [
               {
@@ -1284,6 +1288,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1354,6 +1359,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1425,6 +1431,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1491,6 +1498,7 @@
                 "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1547,6 +1555,7 @@
                 "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1603,6 +1612,7 @@
                 "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/mytextures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -1774,6 +1784,7 @@
                 "token": "PCSX2",
                 "root": "/home/deck/Emulation/storage/pcsx2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -2214,6 +2225,7 @@
                 "token": "PCSX2",
                 "root": "/home/deck/.var/app/net.retrodeck.retrodeck/data/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -2332,6 +2344,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -2401,6 +2414,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -2558,6 +2572,7 @@
                 "token": "PCSX2",
                 "root": "/var/data/pcsx2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"
@@ -2627,6 +2642,7 @@
                 "token": "PCSX2",
                 "root": "/mnt/sd/retrodeck/texture_packs/PCSX2/textures",
                 "save_id": "the disc's serial, as PCSX2 reads it off the running game",
+                "save_id_spelling": "path-segment",
                 "load_stage": "replacements",
                 "dump_stage": "dumps",
                 "citation": "GSTextureReplacements.cpp:39-40, :262-265 and :400-412 at v2.6.3"

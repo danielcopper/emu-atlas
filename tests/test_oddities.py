@@ -3678,7 +3678,11 @@ class TestStrictLoaders:
 
     def test_known_file_templates_are_kept_verbatim(self):
         text = self._mode_card(
-            {"granularity": "per-game-file", "files": ["<save_id>.A1.bin", "<rom_stem>.srm"]}
+            {
+                "granularity": "per-game-file",
+                "files": ["<save_id>.A1.bin", "<rom_stem>.srm"],
+                "save_id": {"fill": "the disc's product number", "spelling": "path-segment"},
+            }
         )
         assert load_oddities(text)[0].modes["always"].files == ("<save_id>.A1.bin", "<rom_stem>.srm")
 
@@ -3957,6 +3961,7 @@ class TestStrictLoaders:
                                     files=["<save_id>.srm"],
                                     files_without_save_id=["<rom_stem>.srm"],
                                     observe=["<save_id>.srm", "<save_id>.bak"],
+                                    save_id={"fill": "the disc's serial", "spelling": "path-segment"},
                                 )
                             },
                         },
@@ -5437,3 +5442,136 @@ def test_a_rule_filled_template_in_observe_needs_a_rule_too():
 
     with pytest.raises(ValueError, match="declares no governing_rule"):
         load_oddities(card)
+
+
+def _shipped_cards_without_a_fill(core: str) -> str:
+    """The shipped card file with one core's ``save_id`` fills removed."""
+    document = json.loads(importlib.resources.files("atlas.data").joinpath("core_oddities.json").read_text())
+    for mode in document["cores"][core]["saves"]["modes"].values():
+        for group in mode.get("groups", []):
+            group.pop("save_id", None)
+    return json.dumps(document)
+
+
+def _one_group_card(group: dict[str, Any], *more: dict[str, Any]) -> str:
+    return json.dumps(
+        {
+            "schema": 1,
+            "cores": {
+                "x": {
+                    "identifiers": {"library_name": ["X"]},
+                    "saves": {
+                        "modes": {
+                            "always": {"root": "savefile_directory", "groups": [group, *more]}
+                        }
+                    },
+                }
+            },
+        }
+    )
+
+
+_FILL = {"fill": "the disc's serial", "spelling": "path-segment"}
+
+
+class TestASaveIdHoleStatesItsFill:
+    """A card group naming ``<save_id>`` says what fills it and how it is spelled (#614)."""
+
+    @pytest.mark.parametrize("core", ["flycast", "swanstation"])
+    def test_a_shipped_card_without_its_fill_is_refused(self, core):
+        text = _shipped_cards_without_a_fill(core)
+        with pytest.raises(ValueError, match="states no 'save_id'"):
+            load_oddities(text)
+
+    def test_every_shipped_group_naming_the_hole_states_its_fill(self):
+        unfilled = [
+            (card.key, name)
+            for card in load_oddities()
+            for name, mode in card.modes.items()
+            for group in mode.groups
+            if group.files and any("<save_id>" in f for f in group.files) and group.save_id is None
+        ]
+        assert unfilled == []
+
+    def test_a_fill_for_names_without_the_hole_is_refused(self):
+        text = _one_group_card(
+            {"granularity": "per-game-file", "role": "battery", "files": ["a.srm"], "save_id": _FILL}
+        )
+        with pytest.raises(ValueError, match="no name in 'files' carries"):
+            load_oddities(text)
+
+    @pytest.mark.parametrize(
+        "fill",
+        [
+            pytest.param({"fill": "the disc's serial"}, id="no-spelling"),
+            pytest.param({**_FILL, "citation": "x.cpp:1"}, id="a-third-key"),
+            pytest.param("the disc's serial", id="a-sentence-alone"),
+        ],
+    )
+    def test_a_fill_of_another_shape_is_refused(self, fill):
+        text = _one_group_card(
+            {"granularity": "per-game-file", "role": "battery", "files": ["<save_id>.mcd"], "save_id": fill}
+        )
+        with pytest.raises(ValueError, match="exactly 'fill' and 'spelling'"):
+            load_oddities(text)
+
+    def test_an_empty_fill_is_refused(self):
+        text = _one_group_card(
+            {
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files": ["<save_id>.mcd"],
+                "save_id": {"fill": "  ", "spelling": "path-segment"},
+            }
+        )
+        with pytest.raises(ValueError, match="not an empty string"):
+            load_oddities(text)
+
+    def test_a_spelling_outside_the_vocabulary_is_refused(self):
+        text = _one_group_card(
+            {
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files": ["<save_id>.mcd"],
+                "save_id": {"fill": "the disc's serial", "spelling": "serial"},
+            }
+        )
+        with pytest.raises(ValueError, match="save_id.spelling must be one of"):
+            load_oddities(text)
+
+    def test_a_cross_root_group_cannot_carry_the_hole(self):
+        # Its names reach no answer's needs, so the fill would describe a hole
+        # the answer does not have.
+        text = _one_group_card(
+            {"granularity": "per-game-file", "role": "battery", "files": ["a.srm"]},
+            {
+                "root": "system_directory",
+                "granularity": "per-game-file",
+                "role": "battery",
+                "files": ["<save_id>.mcd"],
+                "save_id": _FILL,
+            },
+        )
+        with pytest.raises(ValueError, match="cross-root group"):
+            load_oddities(text)
+
+    def test_two_fills_in_one_directory_are_refused(self):
+        # The answer states one fill; the second would be dropped from it.
+        group = {"granularity": "per-game-file", "role": "memory-card", "save_id": _FILL}
+        text = _one_group_card({**group, "files": ["<save_id>_1.mcd"]}, {**group, "files": ["<save_id>_2.mcd"]})
+        with pytest.raises(ValueError, match="both state a save_id fill"):
+            load_oddities(text)
+
+    def test_the_card_s_fill_and_spelling_reach_the_answer(self):
+        p = _flycast_query(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: CFG,
+                OPTIONS_CFG: 'reicast_per_content_vmus = "VMU A1"\n',
+                SAVES_KEEP: "",
+            }
+        )
+        assert p.needs == ("save_id",)
+        conditional = [c for c in p.caveats if c.code == atlas.CAVEAT_FILENAMES_CONTENT_CONDITIONAL]
+        assert [c.data["save_id_spelling"] for c in conditional] == [atlas.SAVE_ID_SPELLING_PATH_SEGMENT]
+        assert str(conditional[0].data["save_id"]).startswith("the disc's product number")

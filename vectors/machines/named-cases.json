@@ -1565,6 +1565,8 @@
                 "files": [
                   "<save_id>.A1.bin"
                 ],
+                "save_id": "the disc's product number, read from its header with trailing blanks trimmed and each of ' /\\:*?|<>' replaced by '_'",
+                "save_id_spelling": "path-segment",
                 "files_without_save_id": [
                   "Dreamcast Game (Europe).A1.bin"
                 ],
@@ -1732,6 +1734,8 @@
                   "<save_id>.C1.bin",
                   "<save_id>.D1.bin"
                 ],
+                "save_id": "the disc's product number, read from its header with trailing blanks trimmed and each of ' /\\:*?|<>' replaced by '_'",
+                "save_id_spelling": "path-segment",
                 "files_without_save_id": [
                   "Multi Disc Game (Europe).A1.bin",
                   "Multi Disc Game (Europe).B1.bin",
@@ -2559,6 +2563,8 @@
                 "files": [
                   "<save_id>.A1.bin"
                 ],
+                "save_id": "the disc's product number, read from its header with trailing blanks trimmed and each of ' /\\:*?|<>' replaced by '_'",
+                "save_id_spelling": "path-segment",
                 "files_without_save_id": [
                   "Dreamcast Game (Europe).A1.bin"
                 ],

@@ -435,6 +435,9 @@ KNOWN_STATE_ROOT_KINDS = {
 # unknown, because a client reads it as work it is supposed to do. Nothing a
 # config states belongs here either; that is atlas's own to resolve.
 KNOWN_HOLES = {"content_dir", "content_dir_name", "cwd", "library_name", "region", "rom_stem", "save_id"}
+# How a ``save_id`` fill is spelled — the value of a caveat's
+# ``save_id_spelling``, which rides beside its ``save_id`` fill sentence.
+KNOWN_SAVE_ID_SPELLINGS = {"title-id-words", "path-segment"}
 KNOWN_GRANULARITIES = {
     "shared-card",
     "shared-file",
@@ -570,6 +573,7 @@ KNOWN_CAVEAT_CODES = {
     "save-root-revoked",
     "save-root-unresolvable",
     "save-dir-unlistable",
+    "save-id-candidates",
     "emulator-read-unestablished",
     "emulator-config-unread",
     "feature-switch-absent",
@@ -1413,6 +1417,53 @@ def _validate_caveats(name: str, caveats: Any) -> None:
                 f"{name}: caveat data values must each be a string, a list of strings, or one "
                 f"of the documented objects of strings, got {data!r}"
             )
+        _validate_save_id_fill(name, caveat["code"], data)
+
+
+def _validate_save_id_fill(name: str, code: str, data: dict[str, Any]) -> None:
+    """A ``save_id`` fill sentence and its spelling ride together, the spelling a known word."""
+    if ("save_id" in data) != ("save_id_spelling" in data):
+        fail(f"{name}: {code} states one of 'save_id' and 'save_id_spelling' without the other")
+    spelling = data.get("save_id_spelling")
+    if spelling is not None and spelling not in KNOWN_SAVE_ID_SPELLINGS:
+        fail(
+            f"{name}: {code}.save_id_spelling must be one of {sorted(KNOWN_SAVE_ID_SPELLINGS)}, "
+            f"got {spelling!r}"
+        )
+
+
+def _validate_save_id_stated(name: str, needs: list[str], caveats: list[Any], what: str) -> None:
+    """The answer carries ``<save_id>`` exactly when a caveat states what fills it.
+
+    It carries the hole in ``needs``, or in a path or file name one of its
+    caveats states — the fill's own keys aside. The caveat's names count
+    because Flycast's and SwanStation's per-game modes, asked without content
+    under a content-sorted save root, carry the hole there alone: their file
+    set is unknown and ``needs`` holds ``content_dir`` only.
+    """
+    named = any(
+        "<save_id>" in word
+        for caveat in caveats
+        for key, value in caveat["data"].items()
+        if key not in ("save_id", "save_id_spelling")
+        for word in _data_words(value)
+    )
+    held = "save_id" in needs or named
+    stated = any("save_id" in caveat["data"] for caveat in caveats)
+    if held != stated:
+        fail(
+            f"{name}: {what} {'carries' if held else 'carries no'} <save_id> and "
+            f"{'no' if held else 'a'} caveat states its fill — the hole and its spelling ride together"
+        )
+
+
+def _data_words(value: Any) -> list[str]:
+    """Every string one caveat data value states: itself, its items, or an object's keys and values."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [*value.keys(), *value.values()]
+    return list(value)
 
 
 # The only places a data value is an OBJECT of strings rather than a string or
@@ -1592,6 +1643,7 @@ def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str],
             fail(f"{name}: {what}.{opt_dir} must be null or a non-empty string")
     _validate_file_set(name, placement["file_set"])
     _validate_caveats(name, placement["caveats"])
+    _validate_save_id_stated(name, needs, placement["caveats"], what)
 
 
 def _validate_savefile_placement(name: str, placement: Any) -> None:
@@ -1743,6 +1795,7 @@ def _validate_texture_placement(name: str, placement: Any, what: str) -> None:
     if keying is not None and keying not in KNOWN_KEYINGS:
         fail(f"{name}: {what}.keying must be null or one of {sorted(KNOWN_KEYINGS)}")
     _validate_caveats(name, placement["caveats"])
+    _validate_save_id_stated(name, needs, placement["caveats"], what)
 
 
 def _validate_texture_outcome(name: str, outcome: Any, what: str = "texture_pack_location") -> None:

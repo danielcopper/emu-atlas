@@ -500,6 +500,42 @@ class TestWhatTheContentReadFoundReachesTheRequirement:
         assert self._wrong("firmware-content-unidentified", "unrecognised", identity=False) == []
 
 
+def listed_titles(directory: Path | None = None) -> list[tuple[str, str]]:
+    """``(where, entry)`` for every title a ``save-id-candidates`` listing in the corpus states."""
+    return [
+        (where, title)
+        for where, expected in expected_blocks(directory)
+        for code, data in caveat_blocks(expected)
+        if code == atlas.CAVEAT_SAVE_ID_CANDIDATES
+        for title in data["titles"]
+    ]
+
+
+def _refused_by_the_checker(title: str) -> bool:
+    try:
+        atlas.checked_save_id(atlas.SAVE_ID_SPELLING_TITLE_ID_WORDS, title)
+    except ValueError:
+        return True
+    return False
+
+
+class TestEveryListedTitleFillsTheHoleAsSpelled:
+    """A listed title is a ``save_id`` a caller fills as it stands, so it passes the checker (#614).
+
+    Checked with :func:`atlas.checked_save_id` itself rather than a pattern
+    spelled here: the listing and the check a caller runs before filling are
+    one rule, and two spellings of it could drift apart.
+    """
+
+    def test_every_listed_title_passes_the_checker(self):
+        refused = [(where, title) for where, title in listed_titles() if _refused_by_the_checker(title)]
+        assert refused == []
+
+    def test_the_corpus_lists_titles_to_check(self):
+        # Without this the test above passes over a corpus that lists none.
+        assert listed_titles()
+
+
 class TestUnknownNoLongerCarriesAReadFailure:
     """``unknown`` beside an identity used to mean two things, and now means one.
 
@@ -620,6 +656,8 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
         ("filenames-content-conditional", "files_established_for"): (
             atlas.FILES_ESTABLISHED_FOR_TOKENS
         ),
+        ("filenames-content-conditional", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
+        ("file-names-unestablished", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
         ("firmware-search-candidates", "readings"): atlas.FIRMWARE_SEARCH_READINGS,
         ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
         ("system-firmware-world-knowledge", "evidence"): atlas.STATED_EVIDENCE_WORDS,
@@ -687,6 +725,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
             ),
             (placement, "ESTABLISHED_FOR_", atlas.FILES_ESTABLISHED_FOR_TOKENS),
             (placement, "READING_", atlas.FIRMWARE_SEARCH_READINGS),
+            (placement, "SAVE_ID_SPELLING_", atlas.SAVE_ID_SPELLINGS),
             (retroarch_cfg, "CFG_LAYER_", atlas.CFG_LAYER_KINDS),
         ):
             declared = {
@@ -703,6 +742,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
             (placement, "REASON_"),
             (placement, "ESTABLISHED_FOR_"),
             (placement, "READING_"),
+            (placement, "SAVE_ID_SPELLING_"),
         ):
             for name, value in vars(module).items():
                 if name.startswith(prefix) and isinstance(value, str):

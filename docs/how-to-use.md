@@ -862,8 +862,9 @@ for g in placement.file_set.groups:
 
 `per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
 packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title MLC subtree — is the first). Its `dir` may
-carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat, exactly as the
-file-name templates do it.
+carry a `<save_id>` template, with the hole in `needs` and the fill spelled out in the answer's caveat beside its
+`save_id_spelling`, exactly as the file-name templates do it — Cemu's MLC unit, Azahar's 3DS unit and Dolphin's Wii
+`title/<save_id>/data` carry one.
 
 Where a card decomposed the answer, one walk over `groups` reaches every directory that card knows about.
 `placement.dir` and `placement.file_set.files` stay exactly what they always were — the first group's directory and the
@@ -1038,6 +1039,15 @@ So check `needs` before joining names onto `dir`, exactly as you already do befo
 whole answer atlas can give: identifying content is not locating a save, so atlas never opens a ROM to read an id out of
 it.
 
+Before filling, check the value against the spelling the answer states beside the fill:
+
+```python
+fill = next(c for c in placement.caveats if "save_id" in c.data)
+atlas.checked_save_id(fill.data["save_id_spelling"], value)  # raises ValueError on a value of the wrong shape
+```
+
+A low word handed over where the hole takes the whole title id is such a value.
+
 **Composing the two.** Fill `save_id` from whatever supplier knows the platform's id scheme — for example
 [argosy-sigil](https://github.com/rommapp/argosy-sigil), which derives platform-native ids from ROM binaries and
 deliberately leaves the emulator-side prefix and suffix to its consumer. It is _one_ supplier, not a dependency: atlas
@@ -1122,6 +1132,7 @@ all.
 | `filenames-content-conditional`   | the file set depends on the content: `data` carries the id-less spelling and the scope token, below                        |
 | `file-set-spans-roots`            | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                              |
 | `file-names-unestablished`        | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                          |
+| `save-id-candidates`              | the title directories the NAND holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                    |
 | `file-set-directories-unread`     | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                           |
 | `file-set-across-systems`         | no system was named; the set holds for every system in `data["systems"]` and for no other                                  |
 | `core-unqueryable`                | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                                    |
@@ -1340,13 +1351,24 @@ file you passed), `single-disk-image`, `unpacked-game-directory`, `raw-cartridge
 `default-save-name` (content that does not rename the save). Where the card states a paragraph about that class — most
 do, `console` does not — it is in `message`, not in the data.
 
+`save_id_spelling` on `filenames-content-conditional` and `file-names-unestablished` — how the `save_id` fill beside it
+is spelled, so a value can be checked before it fills the hole: `title-id-words` (two words of eight lowercase hex
+digits joined by `/`, such as `00010000/524d4745` — Cemu, Azahar, and Dolphin's and PrimeHack's Wii answer) or
+`path-segment` (one segment naming an entry of its own — never empty, `.` or `..`, and never holding `/` or a NUL —
+Flycast, SwanStation, DuckStation's per-game cards, PCSX2's texture directory). It rides wherever `save_id` does and
+nowhere else, and an answer carries a `save_id` fill exactly where it carries the `<save_id>` hole — in `needs`, or in a
+path or file name a caveat states. `atlas.checked_save_id(spelling, value)` returns the value or raises `ValueError`; a
+Wii disc's low word alone (`524d4745`) fails `title-id-words`, which is the point, and a `..` fails `path-segment`, so a
+checked value never leads a write out of the directory it fills.
+
 `invalid-save-directory.layer` — which layer of RetroArch's override chain stated the refused directory: `global`,
 `core-override`, `content-dir-override` or `game-override`, with `data["file"]` naming the file itself. The two were one
 string before, and splitting them is what lets a client act on the kind without parsing the path back out.
 
 Five keys stay prose on purpose, because nothing branches on them: `citation` on the codes that carry one; the hole-fill
 descriptions `save_id` and `rom_stem` on `filenames-content-conditional` and `file-names-unestablished`, each saying in
-words what a caller must know to fill that hole, which no closed set could say; `names` on `savestate-inside-image`,
+words what a caller must know to fill that hole, which no closed set could say — the shape of a `save_id` value is the
+one part that is closed, and it rides beside the sentence as `save_id_spelling`; `names` on `savestate-inside-image`,
 which describes how the entries inside a disk image are named rather than listing them; and `description` on
 `firmware-image-identified` and `firmware-image-unlisted`, which reproduces the core's own format string for rendering
 to a person (see the firmware section).
@@ -1424,39 +1446,50 @@ p.granularity.mode   # 'folder+none' — what sits in card slots A and B, read f
 The granularity block is the same machinery the rule cards use: the readings name the switches that decided the mode
 (`SlotA = 8` is the GCI-folder device) and the alternative names the one edit to the other scheme — `SlotA = 1`, the raw
 card, where every game of a region shares one `MemoryCardA.<region>.raw` and the granularity says so. The Wii answer
-(`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
-citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that is not there at
-all — an emulator never started — is answered from its compiled defaults with `emulator-config-missing` (`token`,
-`config`) beside them, so the answer says the place is the defaults' rather than a reading. Its readings still name
-`Dolphin.ini` as their options file: that is where a switch is edited, and Dolphin reads a file holding nothing but the
-edited key. A config that exists and cannot be read refuses the whole question with `emulator-config-unreadable` — there
-is no standard frame to step aside to. A config that reads fine but states an absolute directory only the emulator's
-sandbox can spell refuses with `emulator-config-path-untranslatable` instead — the same fact the
-`sandbox-path-untranslated` caveat states where an answer still stands around it, said as the outcome where nothing else
-anchors, with the stated value in `data.path`. `data.path` is always the primary value; where one refusal covers several
-stated files (xemu's save answer, naming a disk image and an EEPROM), `data.paths` additionally lists every
-untranslatable value — the disk image first, then the EEPROM — whenever more than one is named. Which spellings
-translate follows from the launch: where atlas can place it inside a sandbox, that app's bind points lead to its own
-trees below `~/.var/app` and `/app` leads to its deployed files, while the sandbox-only prefixes left over are refused.
-Where it cannot — an AppImage, an unpacked binary, a native install — every spelling but `/app` is the host path it
-names, and `/app` alone is still refused rather than probed as an ordinary directory of this machine, because it names a
-deployed package no launch here runs (#317). The firmware answers follow that rule too, and they follow it per launch
-(#350): a standalone entry's sandbox is built from the same trees that entry's own launch reads, so the app whose
-deployed files an `/app` value resolves against is the app the row launches. Everything the answer takes off those trees
-is the row's own in the same way, down to whether the launch runs with a flatpak's pinned `XDG_CONFIG_HOME` (#492). Two
-emulators show why that has to be the row's: two rows can launch one emulator differently — EmuDeck's melonDS through
-its AppImage, which is unsandboxed, and through the installed flatpak, whose bases are pinned — and DuckStation is the
-one carded emulator whose answer reads the flag, picking between two DataRoot candidates by whether that variable is
-set. melonDS itself discards it, so neither row above would answer differently; the rule is written for the launch that
-is both at once. Where that launch runs no app at all — an AppImage, or the executable EmuDeck unpacks from one — an
-`/app` value lands nowhere and rides the `sandbox-path-untranslated` caveat beside an answer that still stands — the
-caveat, never the `emulator-config-path-untranslatable` outcome, because a firmware answer is the emulator's own row and
-always states one: an unreachable value withdraws what rested on it — that one file, or the directory a search would
-have read — and the row stands, with the caveat naming the value nothing was read at. Savestates are their own wiring
-and their own card family (`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it,
-and an emulator without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers
-(since #284 every save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today
-that refusal marks the rows neither family has examined).
+(`system="wii"`) is one title's save directory, `<NAND root>/title/<save_id>/data`, granularity `per-game-directory`,
+with `save_id` in `needs` and `physical_dir` pointing at the real tree behind the arrangement's symlink. The id is the
+one the disc's game partition ticket states, high word then low word, and `file-names-unestablished` spells the fill
+(`save_id_spelling: 'title-id-words'`). The high word is the title's category and stays part of the hole: a game disc is
+`00010000`, but not every disc is. Beside the hole rides `save-id-candidates` (`dir`, `titles`, `unreadable`,
+`citation`), the title directories the NAND already holds, each spelled `"<hi>/<lo>"` the way the hole is filled.
+Dolphin creates a disc's `title/<hi>/<lo>/data` every time it boots the disc (`ES.cpp:830-870`, called at
+`Boot_BS2Emu.cpp:621` at 2603a), so a game started once is listed even before it saves. A caller whose source names the
+disc by its low word alone — RomM's `save_target` does — matches that word against `titles`: one entry fills the hole,
+two leave it ambiguous, none means no disc of that word was started on this machine. Only names of the shape Dolphin
+creates (eight lowercase hex digits at both levels) are listed; an absent or empty `title` tree states no caveat at all,
+and `data["unreadable"]` names where the listing stopped — empty when it read the whole tree — so a missing match in a
+partial listing is not mistaken for "never started". A config that is not there at all — an emulator never started — is
+answered from its compiled defaults with `emulator-config-missing` (`token`, `config`) beside them, so the answer says
+the place is the defaults' rather than a reading. Its readings still name `Dolphin.ini` as their options file: that is
+where a switch is edited, and Dolphin reads a file holding nothing but the edited key. A config that exists and cannot
+be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to. A
+config that reads fine but states an absolute directory only the emulator's sandbox can spell refuses with
+`emulator-config-path-untranslatable` instead — the same fact the `sandbox-path-untranslated` caveat states where an
+answer still stands around it, said as the outcome where nothing else anchors, with the stated value in `data.path`.
+`data.path` is always the primary value; where one refusal covers several stated files (xemu's save answer, naming a
+disk image and an EEPROM), `data.paths` additionally lists every untranslatable value — the disk image first, then the
+EEPROM — whenever more than one is named. Which spellings translate follows from the launch: where atlas can place it
+inside a sandbox, that app's bind points lead to its own trees below `~/.var/app` and `/app` leads to its deployed
+files, while the sandbox-only prefixes left over are refused. Where it cannot — an AppImage, an unpacked binary, a
+native install — every spelling but `/app` is the host path it names, and `/app` alone is still refused rather than
+probed as an ordinary directory of this machine, because it names a deployed package no launch here runs (#317). The
+firmware answers follow that rule too, and they follow it per launch (#350): a standalone entry's sandbox is built from
+the same trees that entry's own launch reads, so the app whose deployed files an `/app` value resolves against is the
+app the row launches. Everything the answer takes off those trees is the row's own in the same way, down to whether the
+launch runs with a flatpak's pinned `XDG_CONFIG_HOME` (#492). Two emulators show why that has to be the row's: two rows
+can launch one emulator differently — EmuDeck's melonDS through its AppImage, which is unsandboxed, and through the
+installed flatpak, whose bases are pinned — and DuckStation is the one carded emulator whose answer reads the flag,
+picking between two DataRoot candidates by whether that variable is set. melonDS itself discards it, so neither row
+above would answer differently; the rule is written for the launch that is both at once. Where that launch runs no app
+at all — an AppImage, or the executable EmuDeck unpacks from one — an `/app` value lands nowhere and rides the
+`sandbox-path-untranslated` caveat beside an answer that still stands — the caveat, never the
+`emulator-config-path-untranslatable` outcome, because a firmware answer is the emulator's own row and always states
+one: an unreachable value withdraws what rested on it — that one file, or the directory a search would have read — and
+the row stands, with the caveat naming the value nothing was read at. Savestates are their own wiring and their own card
+family (`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it, and an emulator
+without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
+save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
+marks the rows neither family has examined).
 
 **A GameCube card atlas cannot reach is not an empty slot.** A slot whose card path only the emulator's sandbox can
 spell still holds the card the emulator writes to — whether those writes are kept cannot be told from here — and the
