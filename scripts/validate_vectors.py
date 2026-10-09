@@ -47,6 +47,7 @@ INPUT_FIELDS_OPTIONAL = {
     "catalogue_query",
     "systems_query",
     "launchable_query",
+    "launch_command_query",
     "rom_location_query",
     "entry_savefile_query",
     "savestate_query",
@@ -90,6 +91,18 @@ KNOWN_LAUNCH_VERDICTS = {
     "needs-installation",
     "unknown",
 }
+# The launch command question (issue #573) is asked of one file as one
+# system's content, optionally of the entry a label names; the file is the
+# frontend's spelling and absolute, as the question requires.
+LAUNCH_COMMAND_QUERY_FIELDS = {"installation", "system", "content_path", "label"}
+# A command taken apart, mirrored from atlas.launch_command: the program's four
+# keys whatever its variant, and the closed sets of variants and of what one
+# %INJECT% did.
+LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections"}
+PROGRAM_FIELDS = {"variant", "app_id", "command", "path"}
+KNOWN_PROGRAM_VARIANTS = {"flatpak", "appimage", "native"}
+WORKING_FOLDER_FIELDS = {"frontend_path", "host_path", "created_if_missing"}
+KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
 # ROM placement is asked of one system; content plays no part in where a
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
@@ -456,6 +469,20 @@ KNOWN_CAVEAT_CODES = {
     "launch-resolution-unsupported",
     "launch-path-unestablished",
     "run-game-differs",
+    "launch-command-shell-syntax",
+    "launch-command-env-option",
+    "launch-command-desktop-file",
+    "launch-command-entry-invalid",
+    "launch-command-inject-unreadable",
+    "launch-command-inject-loop",
+    "launch-command-label-unknown",
+    "frontend-build-unpinned",
+    "launch-command-placeholder-unknown",
+    "launch-command-argument-broken",
+    "launch-command-second-shell-unsafe",
+    "launch-command-rom-root-unestablished",
+    "launch-command-no-program",
+    "launch-command-beyond-limits",
     "no-core",
     "core-unqueryable",
     "sorted-dir-missing",
@@ -782,6 +809,25 @@ def _validate_roots_query(name: str, query: Any) -> None:
         fail(f"{name}: input.roots_query.installation must be one of {sorted(ROOTS_KINDS)}")
 
 
+def _validate_launch_command_query(name: str, query: Any) -> None:
+    # The file and its system are the question's subject; the label is the one
+    # optional choice of entry, and an absolute path is what the question takes.
+    if not isinstance(query, dict):
+        fail(f"{name}: input.launch_command_query must be an object")
+    keys = set(query)
+    if not {"system", "content_path"} <= keys or not keys <= LAUNCH_COMMAND_QUERY_FIELDS:
+        fail(
+            f"{name}: input.launch_command_query must carry 'system' and 'content_path' plus "
+            "optional 'label' and 'installation'"
+        )
+    for key in keys:
+        if not isinstance(query[key], str) or not query[key]:
+            fail(f"{name}: input.launch_command_query.{key} must be a non-empty string")
+    if not query["content_path"].startswith("/"):
+        fail(f"{name}: input.launch_command_query.content_path must be absolute")
+    _validate_handle_selector(name, "launch_command_query", query)
+
+
 def _validate_launchable_query(name: str, query: Any) -> None:
     # Both halves are the question's subject: a verdict without a file has
     # nothing to derive an extension from, and one without a system has no
@@ -1066,6 +1112,7 @@ _OWN_QUERY_VALIDATORS = {
     "catalogue_query": _validate_catalogue_query,
     "systems_query": _validate_systems_query,
     "launchable_query": _validate_launchable_query,
+    "launch_command_query": _validate_launch_command_query,
     "rom_location_query": _validate_rom_location_query,
     "firmware_query": _validate_firmware_query,
     "identify_query": _validate_identify_query,
@@ -3170,6 +3217,68 @@ def _validate_launchable(name: str, answer: Any) -> None:
     _validate_caveats(name, answer["caveats"])
 
 
+def _validate_launch_command(name: str, answer: Any) -> None:
+    """A launch command answer: the entry, the command taken apart, and a stated reason wherever there is none.
+
+    A command stands only beside a startable entry. Without one the answer
+    says why: a caveat of its own, or the entry's own launch reason where the
+    entry is not startable.
+    """
+    _require_exact(name, answer, {"entry", "command", "caveats"}, "expected.launch_command")
+    entry, command = answer["entry"], answer["command"]
+    if entry is not None:
+        _validate_emulator(name, entry)
+    _validate_caveats(name, answer["caveats"])
+    startable = entry is not None and entry.get("availability") == "startable"
+    if command is None:
+        if not answer["caveats"] and (entry is None or startable):
+            fail(f"{name}: expected.launch_command without a command states why")
+        return
+    if not startable:
+        fail(f"{name}: expected.launch_command carries a command beside a startable entry alone")
+    _validate_command_body(name, command)
+
+
+def _validate_command_body(name: str, command: Any) -> None:
+    """One command taken apart: the program by its variant, plain-string arguments, the environment, the folder."""
+    _require_exact(name, command, LAUNCH_COMMAND_FIELDS, "expected.launch_command.command")
+    _validate_program(name, command["program"])
+    arguments = command["arguments"]
+    if not isinstance(arguments, list) or not all(isinstance(argument, str) for argument in arguments):
+        fail(f"{name}: the command's arguments must be a list of strings")
+    for variable in command["environment"]:
+        _require_exact(name, variable, {"name", "value"}, "each environment variable")
+        if not (isinstance(variable["name"], str) and variable["name"]) or not isinstance(variable["value"], str):
+            fail(f"{name}: an environment variable has a non-empty name and a string value")
+    if command["working_folder"] is not None:
+        _validate_working_folder(name, command["working_folder"])
+    for injection in command["injections"]:
+        _require_exact(name, injection, {"file", "outcome"}, "each injection")
+        if injection["outcome"] not in KNOWN_INJECTION_OUTCOMES:
+            fail(f"{name}: an injection's outcome must be one of {sorted(KNOWN_INJECTION_OUTCOMES)}")
+
+
+def _validate_program(name: str, program: Any) -> None:
+    """The program's four keys: the ones its variant uses stated, the others null."""
+    _require_exact(name, program, PROGRAM_FIELDS, "the command's program")
+    if program["variant"] not in KNOWN_PROGRAM_VARIANTS:
+        fail(f"{name}: program.variant must be one of {sorted(KNOWN_PROGRAM_VARIANTS)}")
+    used = {"app_id", "command"} if program["variant"] == "flatpak" else {"path"}
+    for key in PROGRAM_FIELDS - {"variant"}:
+        stated = isinstance(program[key], str) and bool(program[key])
+        if stated != (key in used) or (key not in used and program[key] is not None):
+            fail(f"{name}: a {program['variant']} program carries {sorted(used)} and null elsewhere")
+
+
+def _validate_working_folder(name: str, folder: Any) -> None:
+    """The folder in the frontend's spelling, the host's or null, and whether the frontend creates it."""
+    _require_exact(name, folder, WORKING_FOLDER_FIELDS, "the working folder")
+    if not isinstance(folder["frontend_path"], str) or not isinstance(folder["created_if_missing"], bool):
+        fail(f"{name}: the working folder has a frontend_path and a created_if_missing flag")
+    if folder["host_path"] is not None and not str(folder["host_path"]).startswith("/"):
+        fail(f"{name}: the working folder's host_path is absolute or null")
+
+
 def _validate_systems(name: str, answer: Any) -> None:
     """A systems answer: what the catalogue declares, and why nothing when nothing."""
     if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
@@ -3282,6 +3391,7 @@ _EXPECTED_KEYS = {
     "catalogue",
     "systems",
     "launchable",
+    "launch_command",
     "rom_location",
     "entry_savefile_location",
     "savestate_location",
@@ -3309,6 +3419,7 @@ _EXPECTATION_PAIRINGS = (
     ("platform_ids", "platform_ids_query"),
     ("roots", "roots_query"),
     ("launchable", "launchable_query"),
+    ("launch_command", "launch_command_query"),
     ("rom_location", "rom_location_query"),
     ("savefile_location", "savefile_query"),
     ("entry_savefile_location", "entry_savefile_query"),
@@ -3344,6 +3455,7 @@ _RESOLVER_EXPECTATIONS = {
     "catalogue",
     "systems",
     "launchable",
+    "launch_command",
     "firmware",
     "identification",
     "systems_for_platform",
@@ -3402,6 +3514,7 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         _BlockCheck("platform_ids", _validate_platform_ids),
         _BlockCheck("roots", _validate_roots),
         _BlockCheck("launchable", _validate_launchable),
+        _BlockCheck("launch_command", _validate_launch_command),
         _BlockCheck("savestate_location", _validate_savestate_outcome),
         _BlockCheck("screenshot_location", _validate_screenshot_outcome),
         _BlockCheck(

@@ -44,6 +44,7 @@ _QUERY_KEY = {
     "texture_pack_location": "texture_query",
     "soft_patch_candidates": "soft_patch_query",
     "mod_location": "mod_query",
+    "launch_command": "launch_command_query",
 }
 
 # Questions the corpus asks that the CLI deliberately does not carry: the
@@ -106,6 +107,10 @@ def _question_argv(question: str, query) -> list[str]:
         return ["rom-location", query["system"]]
     if question == "launchable":
         return ["launchable", query["system"], query["content_path"]]
+    if question == "launch_command":
+        return ["launch-command", "--system", query["system"], "--content", query["content_path"]] + _flag(
+            "--label", query.get("label")
+        )
     if question == "firmware":
         return _firmware_argv(query)
     if question == "identification":

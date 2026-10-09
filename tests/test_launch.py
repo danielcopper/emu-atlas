@@ -172,6 +172,19 @@ class TestTheEmulatorIsFoundTheWayESDEFindsIt:
             entry,
         )
 
+    def test_a_pipe_entry_with_nothing_after_it_runs_the_file_it_found(self):
+        # FileData.cpp:2581-2583: an empty replacement is no replacement, and
+        # ES-DE substitutes the found path, escaped, as without a |.
+        entry = "/x/My Emu|"
+        rules = layered({"X": EmulatorRules(static_paths=(entry,))})
+        view = View(files={"/x/My Emu"})
+        lookup = LaunchLookup(rules, view)
+        answer = lookup.resolve("%EMULATOR_X% %ROM%", loads_core=False)
+        assert answer.launcher == atlas.Launcher("/x/My Emu", None, APP, "staticpath", entry)
+        parts = lookup.command_parts("%EMULATOR_X% %ROM%", loads_core=False)
+        assert parts is not None
+        assert parts.emulator.substituted == "/x/My\\ Emu"
+
     def test_espath_and_rompath_expand_and_the_path_is_normalized(self):
         rules = layered({"X": EmulatorRules(static_paths=("%ESPATH%/x", "%ROMPATH%//tools/y/"))})
         view = View(files={"/roms///tools/y/"}, rom="/roms/")

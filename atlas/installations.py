@@ -117,7 +117,13 @@ from .firmware import (
     xemu_file_value,
 )
 from .find_rules import NO_FIND_RULES, FindRules, merge_find_rules, parse_find_rules
-from .find_rules import Availability
+from .find_rules import (
+    AVAILABILITY_STARTABLE,
+    CAVEAT_FRONTEND_BUILD_UNPINNED,
+    CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
+    CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+    Availability,
+)
 from .launch import (
     PROBE_HIT,
     PROBE_MISS,
@@ -130,6 +136,7 @@ from .launch import (
     command_unsupported,
     unsupported,
 )
+from .launch_command import TOO_LARGE, CommandInputs, LaunchCommand, TooLarge, take_apart
 from .launch_formats import lookup_install_first, lookup_standalone_launch
 from .firmware import firmware_for_core as _resolve_for_core
 from .firmware import firmware_for_system as _resolve_for_system
@@ -139,6 +146,7 @@ from .machine import (
     ARCHIVE_MISSING,
     FileStamp,
     StampingMachine,
+    BoundedReadingMachine,
     DIGEST_MD5,
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
@@ -1503,6 +1511,53 @@ class _SandboxLaunchView:
         if kind == KIND_INACCESSIBLE:
             return PROBE_UNKNOWN
         return PROBE_HIT if kind == KIND_FILE else PROBE_MISS
+
+    def is_directory(self, path: str) -> Probe:
+        """ES-DE's ``isDirectory`` on the sandbox's *path*, links followed (``FileSystemUtil.cpp:1035-1050``)."""
+        if not path.startswith("/"):
+            return PROBE_UNKNOWN
+        host = self._resolve(path, follow_last=True)
+        if host is None:
+            return PROBE_UNKNOWN
+        if isinstance(host, _Hidden):
+            return PROBE_MISS
+        kind = self.machine.path_kind(host)
+        if kind == KIND_INACCESSIBLE:
+            return PROBE_UNKNOWN
+        return PROBE_HIT if kind == KIND_DIRECTORY else PROBE_MISS
+
+    def host_path(self, path: str) -> str | None:
+        """Where the host reads the sandbox's *path*, links followed — ``None`` where it cannot be told or the
+        sandbox shows nothing there.
+        """
+        if not path.startswith("/"):
+            return None
+        host = self._resolve(path, follow_last=True)
+        return host if isinstance(host, str) else None
+
+    def read_text_within(self, path: str, limit: int) -> ReadResult | TooLarge | None:
+        """The text at the sandbox's *path*, read through the host no further than *limit* + 1 bytes — missing where
+        the sandbox shows nothing there, ``too-large`` where the file holds more than *limit*, ``None`` where what it
+        shows cannot be told.
+
+        A machine that cannot bound its read (:class:`~atlas.machine.BoundedReadingMachine`)
+        is asked the file's size first and read only within the bound.
+        """
+        if not path.startswith("/"):
+            return None
+        host = self._resolve(path, follow_last=True)
+        if host is None:
+            return None
+        if isinstance(host, _Hidden):
+            return ReadResult(READ_MISSING)
+        machine = self.machine
+        if isinstance(machine, BoundedReadingMachine):
+            read = machine.read_text_within(host, limit)
+            return TOO_LARGE if read is None else read
+        size = machine.file_size(host)
+        if size is not None and size > limit:
+            return TOO_LARGE
+        return machine.read_text(host)
 
     def listing(self, directory: str) -> tuple[str, ...] | None:
         """The names in the sandbox's *directory*, read through the host — all of them, hidden ones included.
@@ -17051,6 +17106,30 @@ class LaunchabilityAnswer:
     """
 
 
+@dataclass(frozen=True, slots=True)
+class LaunchCommandAnswer:
+    """The command the frontend would run for one file, taken apart — or why it is not.
+
+    ``entry`` is the catalogue entry the command belongs to: the one a label
+    names, or the frontend's own choice (per-game override first). ``command``
+    is ``None`` exactly where the answer refuses, and then one caveat says why:
+    the entry's own launch reason where it is not startable, or one among the
+    answer's caveats.
+    """
+
+    entry: EmulatorEntry | None = None
+    """The catalogue entry whose command this is — ``null`` where none was chosen: the system has none, the label
+    names none, or there is no catalogue to choose from.
+    """
+    command: LaunchCommand | None = None
+    """The command taken apart, every placeholder resolved — ``null`` where the answer refuses."""
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, its refusal among them, stated structurally so a client branches on the
+    code rather than on prose.
+    """
+
+
 # Flatpak's per-app overrides are GKeyFile INI, and only the environment they
 # assign is read here — the [Environment] group's KEY=VALUE lines and the
 # [Context] group's unset-environment list. Value semantics follow
@@ -18615,6 +18694,38 @@ def _launchable_with_caveats(
     return cast(LaunchabilityAnswer, _dc_replace(answer, caveats=caveats))
 
 
+def _launch_command_with_caveats(
+    answer: LaunchCommandAnswer, caveats: tuple[Caveat, ...]
+) -> LaunchCommandAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(LaunchCommandAnswer, _dc_replace(answer, caveats=caveats))
+
+
+def _chosen_entry(
+    entries: tuple[EmulatorEntry, ...], label: str | None, system: str
+) -> EmulatorEntry | Caveat | None:
+    """The entry a launch command is asked of: the one *label* names, or the frontend's first.
+
+    ``None`` where there are no entries at all — the catalogue answer's own
+    caveats say why — and ``launch-command-label-unknown`` where there are and
+    none carries *label*. ES-DE matches a label exactly
+    (``SystemData::getLaunchCommandFromLabel``, ``es-app/src/SystemData.cpp:1303-1313``
+    @ v3.4.1).
+    """
+    if not entries:
+        return None
+    if label is None:
+        return entries[0]
+    for entry in entries:
+        if entry.label == label:
+            return entry
+    return Caveat(
+        CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
+        f"no catalogue entry of system {system!r} is labelled {label!r}",
+        {"system": system, "label": label},
+    )
+
+
 class _EntryCoreReader:
     """The installed core behind a libretro entry — read lazily, each source once.
 
@@ -19492,6 +19603,41 @@ class _CatalogueQueries:
         )
 
     @one_question
+    def launch_command(self, system: str, content_path: str, *, label: str | None = None) -> LaunchCommandAnswer:
+        """The command the frontend would run for *content_path* as *system* content, taken apart.
+
+        The entry is the one *label* names — the catalogue's label, unique per
+        system and what ES-DE stores for a per-game choice — or, without one,
+        the entry :meth:`emulators_for` puts first for this file, per-game
+        override first. Its command is assembled the way ES-DE's
+        ``launchGame`` assembles it and read the way the frontend's shell reads
+        it (:mod:`atlas.launch_command`): the program and how it is started,
+        the arguments in the frontend's spelling, the environment a leading
+        ``env`` sets, the working folder in both spellings, and every
+        ``%INJECT%`` with what came of it.
+
+        The question does not judge whether the frontend takes the file at all;
+        :meth:`launchable` answers that. *content_path* is the path as the
+        frontend sees it and must be absolute, or this raises ``ValueError``.
+
+        ``command`` is ``None`` exactly where the answer refuses: a label the
+        system does not carry (``launch-command-label-unknown``), an entry
+        whose launch is not ``startable`` (its own reason caveat), a frontend
+        build no reading of ES-DE is pinned for (``frontend-build-unpinned``),
+        or a command atlas does not take apart — shell syntax beyond plain
+        words, an ``env`` option, a ``.desktop`` file, an entry ES-DE itself
+        refuses, an ``%INJECT%`` file it cannot read or one that injects
+        itself. RetroDECK takes its commands apart; EmuDeck's entries are not
+        evaluated yet, and a bare RetroArch has no frontend catalogue at all.
+        """
+        if not os.path.isabs(content_path):
+            raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
+        answer, version = self._launch_command_answer(system, content_path, label)
+        return _launch_command_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
+        )
+
+    @one_question
     def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer:
         """Whether *content_path* launches as *system* content here — and why not, when not.
 
@@ -19523,11 +19669,12 @@ class _CatalogueQueries:
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
 
-    # The two public questions above are the whole catalogue surface, and a
-    # handle overrides the two below instead: what it *answers* is its own,
-    # how the answer states its arrangement's evidence is not. Splitting them
-    # is what makes "every answer says what atlas has established about this
-    # arrangement" a property of the surface rather than of remembering.
+    # The public questions above are the whole catalogue surface, and a
+    # handle overrides the ``_…_answer`` methods below instead: what it
+    # *answers* is its own, how the answer states its arrangement's evidence
+    # is not. Splitting them is what makes "every answer says what atlas has
+    # established about this arrangement" a property of the surface rather
+    # than of remembering.
     #
     # Which is why the version the arrangement states about itself travels back
     # with the answer: the evidence above is weighed against it, and the handle
@@ -19567,11 +19714,48 @@ class _CatalogueQueries:
             version,
         )
 
+    def _launch_command_answer(
+        self, system: str, content_path: str, label: str | None
+    ) -> tuple[LaunchCommandAnswer, str | None]:
+        # The command is the chosen entry's, so its refusals start as the
+        # catalogue's: no catalogue, no entry, an entry the lookup does not
+        # find. Taking a command apart is the handle's own, and only a handle
+        # that evaluates it overrides this.
+        answer, version = self._catalogue_answer(system, content_path=content_path)
+        chosen = _chosen_entry(answer.entries, label, system)
+        if isinstance(chosen, Caveat):
+            return LaunchCommandAnswer(None, None, answer.sources, (*answer.caveats, chosen)), version
+        if chosen is None or chosen.availability != AVAILABILITY_STARTABLE:
+            return LaunchCommandAnswer(chosen, None, answer.sources, answer.caveats), version
+        unevaluated = Caveat(
+            CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+            "taking this arrangement's launch command apart is not evaluated here",
+            {"installation": self.kind},
+        )
+        return LaunchCommandAnswer(chosen, None, answer.sources, (*answer.caveats, unevaluated)), version
+
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
         # Same refusal as the two above, for the same reason: where a system's
         # ROMs live is declared in the catalogue this arrangement does not have,
         # so the honest answer names the absence rather than a directory.
         return RomPlacement(caveats=(*self.health().issues, self._catalogue_absence())), None
+
+
+def _build_unpinned(build: str | None) -> Caveat:
+    """The refusal of a launch command for an ES-DE build no reading of ``launchGame`` is pinned for."""
+    if build is None:
+        return Caveat(
+            CAVEAT_FRONTEND_BUILD_UNPINNED,
+            "the deployed frontend states no build atlas can read, and atlas's reading of how ES-DE builds a launch "
+            "command is pinned to one build — what this one would run is not established",
+            {},
+        )
+    return Caveat(
+        CAVEAT_FRONTEND_BUILD_UNPINNED,
+        f"the deployed frontend states build {build}, and atlas's reading of how ES-DE builds a launch command is "
+        "pinned to another — what this build would run is not established",
+        {"version": build},
+    )
 
 
 def _not_set_up(marker_issues: tuple[Caveat, ...]) -> Caveat | None:
@@ -20157,9 +20341,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     _ESDE_BINARY_DIR = "/app/retrodeck/components/es-de/bin"
     # The ES-DE build the launch lookup mirrors: RetroDECK's fork at this tag,
     # whose FileData::findEmulator is line for line ES-DE v3.4.1's
-    # (es-app/src/FileData.cpp:2398-2763 there, :2285-2650 upstream). The
+    # (es-app/src/FileData.cpp:2398-2763 there, :2285-2650 upstream), and whose
+    # launchGame differs from v3.4.1's on Linux only in reading a .desktop
+    # file's Path= key, which atlas.launch_command refuses to follow. The
     # deploy names its build in components/es-de/component_version.
     ESDE_FORK_BUILD = "retrodeck-main-20260926-172324"
+    # Where the deploy names that build, one line under its files/ — read at
+    # answer time by the launch command question and by the launch tripwire.
+    ESDE_COMPONENT_VERSION = "retrodeck/components/es-de/component_version"
     # RetroDECK's direct start, under the deploy's files/.
     _RUN_GAME_SH = "libexec/run_game.sh"
     # The deployed lines the launch lookup's reading of RetroDECK's scripts
@@ -20300,16 +20489,23 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         directory = self._rom_root().directory
         return None if directory is None else directory.rstrip("/") + "/"
 
-    def _launch_for(self) -> Callable[[EmulatorSpec], LaunchResolution]:
-        """Each entry's launch answer, the find rules and the sandbox read once — and only once an entry asks."""
-        lookups: list[LaunchLookup] = []
+    def _launch_for(
+        self, lookups: "list[tuple[LaunchLookup, _SandboxLaunchView]] | None" = None
+    ) -> Callable[[EmulatorSpec], LaunchResolution]:
+        """Each entry's launch answer, the find rules and the sandbox read once — and only once an entry asks.
+
+        *lookups* is where the one lookup and its view are kept, for a caller
+        that asks them again after the entries are built.
+        """
+        held: list[tuple[LaunchLookup, _SandboxLaunchView]] = [] if lookups is None else lookups
 
         def launch_for(spec: EmulatorSpec) -> LaunchResolution:
             if spec.kind == KIND_RETROARCH_FOREIGN_CORE:
                 return command_unsupported("the entry hands RetroArch a core file this host cannot load")
-            if not lookups:
-                lookups.append(LaunchLookup(self._find_rules(), self._launch_view()))
-            return lookups[0].resolve(spec.command, loads_core=spec.kind == KIND_LIBRETRO)
+            if not held:
+                view = self._launch_view()
+                held.append((LaunchLookup(self._find_rules(), view), view))
+            return held[0][0].resolve(spec.command, loads_core=spec.kind == KIND_LIBRETRO)
 
         return launch_for
 
@@ -20651,6 +20847,78 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             version,
         )
+
+    def _launch_command_answer(
+        self, system: str, content_path: str, label: str | None
+    ) -> tuple[LaunchCommandAnswer, str | None]:
+        """RetroDECK's launch command — the catalogue snapshot its launchability answer takes, the entry's own lookup.
+
+        The entry's verdict and the texts its command is built from come out of
+        one :class:`~atlas.launch.LaunchLookup` over one read of the find rules
+        and the sandbox, so the command can never name something the verdict
+        did not find. The command is taken apart only for the ES-DE build the
+        reading is pinned to (:data:`ESDE_FORK_BUILD`); any other build answers
+        ``frontend-build-unpinned`` with the version the deploy states.
+        """
+        config, marker_issues = self._read_marker()
+        if (finding := _not_set_up(marker_issues)) is not None:
+            return LaunchCommandAnswer(caveats=(finding,)), None
+        findings = self._health_from(config, marker_issues).issues
+        root = self._config_path(config, "rd_home_path", "")[0]
+        by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
+        invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
+        version = _marker_version(config)
+        if not read:
+            return LaunchCommandAnswer(caveats=(*findings, *_catalogue_unread_caveat(system))), version
+        status = self._catalogue_exclusive(root, system) if exclusive else ()
+        anchor = self._esde_system_dir(by_system, system)
+        lookups: list[tuple[LaunchLookup, _SandboxLaunchView]] = []
+        entries = _entries_from(
+            self,
+            _declared_entries(by_system, system),
+            self._gamelist_selections_at(root, system),
+            system_roms_dir=anchor.directory,
+            content_path=content_path,
+            launch_for=self._launch_for(lookups),
+        )
+        sources = (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,)
+        caveats = (*findings, *invalid, *status, *anchor.caveats)
+        chosen = _chosen_entry(entries, label, system)
+        if chosen is None:
+            unknown = Caveat(
+                CAVEAT_SYSTEM_UNKNOWN,
+                f"the catalogue was read and declares no entry for system {system!r}",
+                {"system": system},
+            )
+            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, unknown)), version
+        if isinstance(chosen, Caveat):
+            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, chosen)), version
+        if chosen.availability != AVAILABILITY_STARTABLE or not lookups:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
+        build = self._deployed_esde_build()
+        if build != self.ESDE_FORK_BUILD:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _build_unpinned(build))), version
+        lookup, view = lookups[0]
+        parts = lookup.command_parts(chosen.command, loads_core=chosen.kind == KIND_LIBRETRO)
+        if parts is None:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
+        inputs = CommandInputs(
+            content_path=content_path,
+            parts=parts,
+            home=self._esde_config_home(),
+            es_path=self._ESDE_BINARY_DIR,
+            rom_directory=self._launch_rom_directory(),
+        )
+        taken = take_apart(chosen.command, inputs, view)
+        return LaunchCommandAnswer(chosen, taken.command, sources, (*caveats, *taken.caveats)), version
+
+    def _deployed_esde_build(self) -> str | None:
+        """The ES-DE build the running deploy states, ``None`` where no deploy runs or the file cannot be read."""
+        deploy = _running_deploy(self._machine, self._home, self._APP_ID)
+        if deploy is None:
+            return None
+        text = self._machine.read_text(os.path.join(deploy.files, self.ESDE_COMPONENT_VERSION)).text
+        return None if text is None else text.strip()
 
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
         """RetroDECK's ROM placement — the catalogue's declaration, resolved ES-DE's way.
@@ -24346,6 +24614,10 @@ class Installation(Protocol):
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
 
     def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer: ...
+
+    def launch_command(
+        self, system: str, content_path: str, *, label: str | None = None
+    ) -> LaunchCommandAnswer: ...
 
     def rom_location(self, system: str) -> RomPlacement: ...
 

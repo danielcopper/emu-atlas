@@ -52,6 +52,7 @@ from .installations import (
     Health,
     Installation,
     LaunchabilityAnswer,
+    LaunchCommandAnswer,
     PlatformSystemsAnswer,
     RomPlacement,
     RootsAnswer,
@@ -59,6 +60,7 @@ from .installations import (
     SystemsAnswer,
 )
 from .launch import Launcher
+from .launch_command import LaunchCommand
 from .platforms import PlatformIdentities
 from .placement import (
     Caveat,
@@ -731,6 +733,47 @@ def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
         "alternatives": list(answer.alternatives),
         "caveats": _caveats_contract(answer.caveats),
+    }
+
+
+def launch_command_contract(answer: LaunchCommandAnswer) -> dict[str, Any]:
+    """The stable form of a launch command answer — the entry, the command taken apart, and why not when not.
+
+    ``command`` is ``null`` exactly where the answer refuses. ``program`` keeps
+    all four keys whatever its ``variant``, the ones that variant does not use
+    ``null`` — a ``flatpak`` program carries ``app_id`` and ``command``, an
+    ``appimage`` or ``native`` one its ``path``. ``environment`` is a list, in
+    the order the command sets the variables, because the order is the
+    command's. ``working_folder`` is ``null`` where the command names none.
+    """
+    return {
+        "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
+        "command": _launch_command_body(answer.command) if answer.command is not None else None,
+        "caveats": _caveats_contract(answer.caveats),
+    }
+
+
+def _launch_command_body(command: LaunchCommand) -> dict[str, Any]:
+    """One command taken apart, as the launch command answer carries it."""
+    program = command.program
+    folder = command.working_folder
+    return {
+        "program": {
+            "variant": program.variant,
+            "app_id": program.app_id,
+            "command": program.command,
+            "path": program.path,
+        },
+        "arguments": list(command.arguments),
+        "environment": [{"name": variable.name, "value": variable.value} for variable in command.environment],
+        "working_folder": None
+        if folder is None
+        else {
+            "frontend_path": folder.frontend_path,
+            "host_path": folder.host_path,
+            "created_if_missing": folder.created_if_missing,
+        },
+        "injections": [{"file": injection.file, "outcome": injection.outcome} for injection in command.injections],
     }
 
 

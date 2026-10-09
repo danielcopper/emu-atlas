@@ -181,8 +181,10 @@ data, never free text alone and never silence.
   at all is its own stated case. An empty answer distinguishes "this identifier is unknown here" from "nothing declares
   firmware for it"; the two mean different things to a client.
 - **Systems, launchability, screenshots** — `systems()` enumerates what the frontend catalogue declares,
-  `launchable(system, content_path)` answers whether a file would launch as that system's content and why not, and
-  `screenshot_location(...)` keeps screenshots out of every sync's file set.
+  `launchable(system, content_path)` answers whether a file would launch as that system's content and why not,
+  `launch_command(system, content_path, label=...)` takes the command the frontend would run for it apart into program,
+  arguments, environment and working folder, and `screenshot_location(...)` keeps screenshots out of every sync's file
+  set.
 - **The platform crosswalk** — `systems_for_platform(vocabulary, value)` and `platform_ids(system)` translate between
   the machine's catalogue and the public platform identities in both directions: the `<platform>` tags read live off the
   catalogue, the identity table packaged, versioned and regenerated from pinned upstreams.

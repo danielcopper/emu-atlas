@@ -77,6 +77,7 @@ classDiagram
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
         +launchable(system, content_path) LaunchabilityAnswer
+        +launch_command(system, content_path, label) LaunchCommandAnswer
         +firmware_for_core(core_so, verify) FirmwareAnswer
         +firmware_for_system(system, verify) FirmwareAnswer
         +firmware_inventory(verify) FirmwareAnswer

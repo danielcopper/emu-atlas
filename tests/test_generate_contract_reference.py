@@ -1593,6 +1593,8 @@ class TestTheDataRegistryReading:
             ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
+            ("launch-command-beyond-limits", "limit"): "LAUNCH_COMMAND_LIMITS",
+            ("launch-command-shell-syntax", "construct"): "SHELL_CONSTRUCTS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
             # Built by splat from REFUSAL_CODES, so no literal tuple in the
             # source holds these members. The exported names were what kept

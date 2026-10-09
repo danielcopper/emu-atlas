@@ -281,6 +281,48 @@ class TestAScopedDigest:
         assert real.file_digest(str(target), "md5", first_bytes=600) == hashlib.md5(b"A" * 600).hexdigest()
 
 
+class TestABoundedRead:
+    """A text read that never loads more of a file than its caller's bound — the bound holds on the read itself."""
+
+    def test_the_real_machine_reads_no_further_than_the_bound(self, tmp_path):
+        small, exact, over = tmp_path / "small", tmp_path / "exact", tmp_path / "over"
+        small.write_bytes(b"-a\r\n")
+        exact.write_bytes(b"x" * 16)
+        over.write_bytes(b"x" * 17)
+        real = RealMachine()
+        assert real.read_text_within(str(small), 16) == ReadResult("ok", "-a\r\n")
+        assert real.read_text_within(str(exact), 16) == ReadResult("ok", "x" * 16)
+        assert real.read_text_within(str(over), 16) is None
+
+    def test_a_huge_file_is_answered_without_being_loaded(self, tmp_path):
+        # A sparse file: 8 GiB on paper, nothing on disk. Reading it whole
+        # would not return; the bound answers at once.
+        huge = tmp_path / "huge"
+        with huge.open("wb") as f:
+            f.truncate(8 << 30)
+        assert RealMachine().read_text_within(str(huge), 4096) is None
+
+    def test_the_real_machine_reads_no_fifo_and_no_directory(self, tmp_path):
+        fifo = tmp_path / "fifo"
+        os.mkfifo(fifo)
+        real = RealMachine()
+        assert real.read_text_within(str(fifo), 16) == ReadResult("unreadable")
+        assert real.read_text_within(str(tmp_path), 16) == ReadResult("unreadable")
+        assert real.read_text_within(str(tmp_path / "gone"), 16) == ReadResult("missing")
+
+    def test_the_real_machine_states_invalid_text_within_the_bound(self, tmp_path):
+        bad = tmp_path / "bad"
+        bad.write_bytes(b"\xff\xfe")
+        assert RealMachine().read_text_within(str(bad), 16) == ReadResult("invalid-text")
+
+    def test_the_fixture_machine_answers_the_same_and_a_blob_by_its_size(self):
+        m = FixtureMachine({"/a/exact": "x" * 16, "/a/over": "x" * 17, "/a/blob": {"md5": "m", "size": 1 << 31}})
+        assert m.read_text_within("/a/exact", 16) == ReadResult("ok", "x" * 16)
+        assert m.read_text_within("/a/over", 16) is None
+        assert m.read_text_within("/a/blob", 4096) is None
+        assert m.read_text_within("/a/gone", 16) == ReadResult("missing")
+
+
 class TestGlobOutcome:
     """"Nothing there" and "could not look" stop being the same empty list.
 
