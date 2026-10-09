@@ -469,6 +469,70 @@
       }
     },
     {
+      "name": "pcsx2-without-its-ini-answers-the-compiled-sstates-and-says-no-file-was-read",
+      "rationale": "The states twin of the missing PCSX2.ini: the compiled sstates below the DataRoot, as for an unset key, and emulator-config-missing because no file was read at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "PCSX2",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "PCSX2",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/sstates",
+                "pattern": "<serial> (<crc>).<slot>.p2s",
+                "citation": "VMManager.cpp:1790-1806 at v2.6.3"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "pcsx2-an-unreadable-ini-refuses-the-states-question",
       "rationale": "The states answer hangs on PCSX2's own configuration, and this PCSX2.ini exists and cannot be read. There is no frame to step aside to, so the outcome is the emulator-config-unreadable refusal with the file named — never the compiled default dressed as a reading.",
       "input": {
@@ -629,6 +693,140 @@
             "groups": []
           },
           "caveats": []
+        }
+      }
+    },
+    {
+      "name": "melonds-with-neither-file-answers-the-states-beside-the-rom-and-says-no-file-was-read",
+      "rationale": "The states twin of the missing melonDS configuration: SavestatePath falls to its empty default and the states land beside the ROM, with emulator-config-missing naming the TOML.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/roms/nds",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.ml1",
+              "Some Game.ml2",
+              "Some Game.ml3",
+              "Some Game.ml4",
+              "Some Game.ml5",
+              "Some Game.ml6",
+              "Some Game.ml7",
+              "Some Game.ml8"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MELONDS",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "melonds-a-toml-that-does-not-parse-answers-the-states-defaults-and-says-it-was-not-read",
+      "rationale": "The states twin of the unparseable melonDS.toml: the emulator catches the syntax error and runs on its factory defaults (Config.cpp:792, :797-804 at 1.1), so the states land beside the ROM and the answer carries emulator-config-unreadable with the reason unparseable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0\nSavestatePath = \"/mnt/sd/retrodeck/states/nds\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": ""
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/retrodeck/roms/nds",
+          "root_kind": "content_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.ml1",
+              "Some Game.ml2",
+              "Some Game.ml3",
+              "Some Game.ml4",
+              "Some Game.ml5",
+              "Some Game.ml6",
+              "Some Game.ml7",
+              "Some Game.ml8"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-unreadable",
+              "data": {
+                "token": "MELONDS",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml",
+                "reason": "unparseable"
+              }
+            }
+          ]
         }
       }
     },
@@ -952,6 +1150,70 @@
             "groups": []
           },
           "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DUCKSTATION",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/savestates",
+                "pattern": "<serial>_<slot>.sav",
+                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-without-a-settings-ini-answers-the-default-states-and-says-no-file-was-read",
+      "rationale": "No settings.ini on the one DataRoot the RetroDECK sandbox leaves: the states directory is the compiled savestates below it, and emulator-config-missing names the settings.ini whose absence put the default in force.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">%EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <extension>.ps3</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n  <system>\n    <name>n3ds</name>\n    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds</extension>\n    <command label=\"Azahar (Standalone)\">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>nds</name>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .zip</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n  </system>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/savestates",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            },
             {
               "code": "file-names-unestablished",
               "data": {
@@ -1432,6 +1694,52 @@
       }
     },
     {
+      "name": "xemu-without-its-toml-refuses-the-states-as-a-missing-file",
+      "rationale": "The states twin of the missing xemu.toml: with no hard-disk image named by any default there is no snapshot store, and the refusal is emulator-config-missing rather than emulator-config-unreadable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"xemu (Standalone)\">%INJECT%=%BASENAME%.esprefix %EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "entry_savestate_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "unresolved": {
+            "code": "emulator-config-missing",
+            "data": {
+              "token": "XEMU",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "xemu-no-disk-image-means-no-snapshot-store",
       "rationale": "A machine with no hard-disk image configured cannot snapshot at all — QEMU refuses with 'no block device can store vmstate for snapshot' (block/snapshot.c:781-782 at v0.8.135) — so the answer refuses with the fact named instead of inventing a directory: emulator-config-unreadable, the same code the save answer uses where nothing its configuration names can anchor an answer.",
       "input": {
@@ -1836,7 +2144,7 @@
     },
     {
       "name": "mame-no-inipath-means-the-compiled-search-path-below-the-startdir",
-      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The SHIPPED builds' compiled search path is $HOME/.mame;/app/share/mame/ini — the Flathub build define, byte-proven in the shipped binary; upstream's #ifndef fallback $HOME/.mame;.;ini is unreachable here — and on this machine both elements come up empty: no ~/.mame/mame.ini exists, and RetroDECK's deploy carries no /app/share/mame at all (the component relocates the Flathub tree where the compiled address never looks). So the compiled state_directory default 'sta' governs — a relative path, resolved against the working directory the command pins — and the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
+      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The SHIPPED builds' compiled search path is $HOME/.mame;/app/share/mame/ini — the Flathub build define, byte-proven in the shipped binary; upstream's #ifndef fallback $HOME/.mame;.;ini is unreachable here — and on this machine both elements come up empty: no ~/.mame/mame.ini exists, and RetroDECK's deploy carries no /app/share/mame at all (the component relocates the Flathub tree where the compiled address never looks). So the compiled state_directory default 'sta' governs (stated as emulator-config-missing, naming the mame.ini the search looked for) — a relative path, resolved against the working directory the command pins — and the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1917,6 +2225,13 @@
             "groups": []
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
             {
               "code": "savestate-support-machine-dependent",
               "data": {
@@ -2013,6 +2328,13 @@
           },
           "caveats": [
             {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
+            {
               "code": "savestate-support-machine-dependent",
               "data": {
                 "token": "MAME",
@@ -2108,6 +2430,13 @@
             "groups": []
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
             {
               "code": "save-dir-launch-dependent",
               "data": {
@@ -2212,6 +2541,13 @@
           },
           "caveats": [
             {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
+            {
               "code": "savestate-support-machine-dependent",
               "data": {
                 "token": "MAME",
@@ -2309,6 +2645,13 @@
             "groups": []
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
             {
               "code": "savestate-support-machine-dependent",
               "data": {
@@ -3408,6 +3751,104 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>adam</name>\n    <path>%ROMPATH%/adam</path>\n    <extension>.dsk .DSK</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%</command>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/mame.ini": "#\n# CORE OUTPUT DIRECTORY OPTIONS\n#\nnvram_directory           /mnt/sd/retrodeck/saves/mame-sa/nvram\nstate_directory           /mnt/sd/retrodeck/states/mame-sa\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ui.ini": "# ui\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/adam.ini": "state_directory           /mnt/sd/adam-states\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/states/mame-sa",
+          "/mnt/sd/adam-states",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savestate_query": {
+          "system": "adam"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/mnt/sd/adam-states/adam",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "token": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mame-a-driver-ini-stating-the-root-is-a-reading-without-mame-ini",
+      "rationale": "No mame.ini on the search path, and adam.ini states state_directory itself: the root the answer names is that file's, so it is a reading like any other and no emulator-config-missing rides it. The caveat is for the root the compiled default supplies, which mame-no-inipath-means-the-compiled-search-path-below-the-startdir shows.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>adam</name>\n    <path>%ROMPATH%/adam</path>\n    <extension>.dsk .DSK</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -inipath /var/config/mame/ini -rompath %GAMEDIR%\\;%ROMPATH%/adam adam -flop1 %ROM%</command>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/ui.ini": "# ui\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/mame/ini/adam.ini": "state_directory           /mnt/sd/adam-states\n"
         },

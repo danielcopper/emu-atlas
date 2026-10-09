@@ -33,6 +33,7 @@ from tests.answers import screenshot_placed, mod_placed, placed, state_placed, t
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
+RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 EMUDECK_SETTINGS = f"{HOME}/.config/EmuDeck/settings.sh"
 STANDALONE_CFG = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg"
 NATIVE_CFG = f"{HOME}/.config/retroarch/retroarch.cfg"
@@ -248,7 +249,11 @@ def _retrodeck(version: str | None = None) -> atlas.Installation:
     marker: dict[str, object] = {"paths": paths}
     if version is not None:
         marker["version"] = version
-    files = {RETRODECK_JSON: json.dumps(marker), "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
+    files = {
+        RETRODECK_JSON: json.dumps(marker),
+        RETRODECK_CFG: "",
+        "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+    }
     dirs = [
         "/mnt/sd/retrodeck/saves",
         "/mnt/sd/retrodeck/bios",

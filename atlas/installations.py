@@ -94,6 +94,7 @@ from .firmware import (
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNESTABLISHED,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+    CAVEAT_EMULATOR_CONFIG_UNREADABLE,
     CAVEAT_EMULATOR_LIST_DERIVED,
     CAVEAT_FIRMWARE_ROOT_MISSING,
     CAVEAT_INFO_PATH_UNRESOLVED,
@@ -215,8 +216,10 @@ from .placement import (
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FILE_SET_ACROSS_SYSTEMS,
     CAVEAT_FILE_SET_DIRECTORIES_UNREAD,
+    CAVEAT_EMULATOR_CONFIG_MISSING,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
     CAVEAT_EMULATOR_READ_UNESTABLISHED,
+    SETTINGS_FILE_NOT_READ_CODES,
     CAVEAT_FEATURE_SWITCH_ABSENT,
     CAVEAT_SORTED_DIR_UNCREATABLE,
     CAVEAT_CORE_MULTI_OPTION,
@@ -284,6 +287,7 @@ from .placement import (
     FILE_SET_UNKNOWN,
     GRANULARITY_NONE,
     UNKNOWN_FILE_SET,
+    UNRESOLVED_EMULATOR_CONFIG_MISSING,
     UNRESOLVED_EMULATOR_CONFIG_PATH_UNTRANSLATABLE,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
     UNRESOLVED_MOD_WIRING_UNESTABLISHED,
@@ -312,6 +316,7 @@ from .placement import (
     REASON_SESSION_OVERRIDE_SET,
     REASON_SLOT_DEVICE_UNINTERPRETED,
     REASON_SLOT_HOLDS_AGP_DEVICE,
+    REASON_UNPARSEABLE,
     REASON_UNSET_USER_ID_IS_LISTED,
     REASON_USER_LISTING_UNESTABLISHED,
     REASON_VIRTUAL_SD_DISABLED,
@@ -457,6 +462,47 @@ HEALTH_ISSUE_NOT_SET_UP = "not-set-up"
 # the placement routes refuse a not-set-up installation with this outcome,
 # health and every other answer state it as the finding of the same spelling.
 UNRESOLVED_NOT_SET_UP = HEALTH_ISSUE_NOT_SET_UP
+# RetroDECK's own retroarch.cfg is not there, so RetroArch's compiled platform
+# defaults decide every directory the cfg would name — the saves and states
+# below ``<config dir>/saves`` and ``/states`` among them. One code with the
+# standalone routes' missing settings file (``emulator-config-missing``,
+# :data:`atlas.placement.CAVEAT_EMULATOR_CONFIG_MISSING`), carrying the file
+# alone in ``config``: there is no card for RetroArch, and ``token`` names a
+# card on every code that carries it, so the file is the whole fact. Unlike a
+# standalone emulator's file it is a health finding, because an arrangement
+# that sets RetroArch up writes this file and its absence is that setup not
+# holding. A cfg that is there and cannot be read is ``config-unreadable``
+# (``path``, ``status``), the code bare RetroArch states its own cfg with.
+# Read on the health question alone and riding exactly the answers that read
+# the file themselves, never through ``_health_from`` (issue #611).
+HEALTH_ISSUE_EMULATOR_CONFIG_MISSING = CAVEAT_EMULATOR_CONFIG_MISSING
+# Every code that says a place an answer names was not read from the settings
+# that would name it — the file is missing, could not be read or did not
+# parse, so defaults or a fallback stand in — published so a client that acts
+# only on places read from the settings branches on this tuple rather than on
+# a list of its own (issue #611). A code belongs here when it can mean exactly
+# that on some installation: ``emulator-config-missing`` and
+# ``emulator-config-unreadable`` are an emulator's own settings file;
+# ``config-unreadable`` is a bare RetroArch's cfg or RetroDECK's;
+# ``companion-config-missing`` is EmuDeck's RetroArch cfg; the three
+# ``marker-*`` codes and ``not-set-up`` are the arrangement's own settings, which
+# name its saves root and, on a bare RetroArch, are the cfg itself. Two kinds
+# stay out. ``save-root-redirected`` and ``save-root-unresolvable`` describe
+# where the emulator writes, not whether a settings file was read: the MAME
+# rule states them where an ini was read and where none was, and where ini
+# reading is on and no mame.ini was found, ``emulator-config-missing`` rides
+# beside them and carries that fact.
+# ``sandbox-path-untranslated`` is a value the settings did state, with no
+# spelling on this host: the file was read.
+PLACE_NOT_READ_CODES = (
+    *SETTINGS_FILE_NOT_READ_CODES,
+    HEALTH_ISSUE_CONFIG_UNREADABLE,
+    HEALTH_ISSUE_COMPANION_CONFIG_MISSING,
+    HEALTH_ISSUE_MARKER_MISSING,
+    HEALTH_ISSUE_MARKER_UNREADABLE,
+    HEALTH_ISSUE_MARKER_INVALID,
+    HEALTH_ISSUE_NOT_SET_UP,
+)
 
 
 def _content_tree_unwired_finding(
@@ -8089,7 +8135,22 @@ def _dolphin_savefile_placement(
             {"token": card.token, "config": ini_path},
         )
     values = _parse_sectioned_ini(result.text) if result.status == READ_OK and result.text else {}
-    stated_ini = ini_path if result.status == READ_OK else None
+    # The readings name Dolphin.ini whether or not it exists yet: it is the file
+    # a switch is edited in, and Dolphin reads one holding nothing but the
+    # edited key — the base layer loader ignores a failed open
+    # (BaseConfigLoader.cpp:157 with IniFile.cpp:249-250) and sets only the
+    # keys the file states (:160-174), so every other setting keeps its
+    # registered default (2603a).
+    stated_ini = ini_path
+    missing = (
+        (
+            _settings_missing(
+                card.token, ini_path, emulator="Dolphin", governs="where the cards and the NAND live"
+            ),
+        )
+        if result.status == READ_MISSING
+        else ()
+    )
     if system == "wii":
         return _dolphin_wii_answer(
             values,
@@ -8100,6 +8161,7 @@ def _dolphin_savefile_placement(
             card=card,
             extra_caveats=(
                 *extra_caveats,
+                *missing,
                 *_dolphin_game_settings_caveats(
                     machine,
                     token=card.token,
@@ -8137,6 +8199,7 @@ def _dolphin_savefile_placement(
         alternatives=_dolphin_alternatives(slots, values, sandbox, gc_root, cite),
         extra_caveats=(
             *extra_caveats,
+            *missing,
             *override_caveats,
             *_dolphin_game_settings_caveats(
                 machine,
@@ -8218,6 +8281,24 @@ def _standalone_settings_path(card: StandaloneSaveCard, homes: _XdgHomes) -> str
     """Where this launch opens the file the card names."""
     return _standalone_settings(card).only(
         config_home=homes.base("config"), data_home=homes.base("data"), flatpak=homes.flatpak
+    )
+
+
+def _settings_missing(token: str, config: str, *, emulator: str, governs: str) -> Caveat:
+    """The rider an answer carries where the settings file naming its place does not exist.
+
+    The emulator has not written that file yet — it was never started, or the
+    file was removed — so its compiled defaults decide *governs*, and the
+    answer is those defaults rather than a reading of the file. Every route
+    that stands on such defaults states it in these words with this data, so a
+    client tells an answer read from the settings from one that was not by the
+    code alone (issue #611).
+    """
+    return Caveat(
+        CAVEAT_EMULATOR_CONFIG_MISSING,
+        f"{emulator}'s configuration ({config}) does not exist, so the compiled defaults "
+        f"decide {governs} — the answer states those defaults, not a reading of the file",
+        {"token": token, "config": config},
     )
 
 
@@ -8306,7 +8387,7 @@ def _xemu_document(
     toml_path: str,
     *,
     lost: str,
-) -> "tuple[Mapping[str, Any], str | None] | Unresolved":
+) -> "tuple[Mapping[str, Any], str] | Unresolved":
     """xemu.toml parsed, or the refusal — no frame exists to step aside to.
 
     Shared by the save and the savestate readings (#284): both open the same
@@ -8315,23 +8396,33 @@ def _xemu_document(
     about the EEPROM, which is the save question's business alone.
     """
     result = machine.read_text(toml_path)
-    if result.status not in (READ_OK, READ_MISSING):
+    if result.status == READ_MISSING:
+        # The compiled defaults name no file: [sys.files] declares hdd_path
+        # and eeprom_path as strings with no default (config_spec.yml:362-363
+        # at v0.8.135), so without the file there is nothing either question
+        # could anchor at — the refusal of the missing file, not of an
+        # unreadable one (#611).
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_MISSING,
+            f"xemu's configuration ({toml_path}) does not exist, and its compiled defaults "
+            f"name no hard-disk image and no EEPROM — {lost}",
+            {"token": card.token, "config": toml_path},
+        )
+    if result.status != READ_OK:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"xemu's configuration ({toml_path}) exists and could not be read — {lost}",
             {"token": card.token, "config": toml_path},
         )
     try:
-        doc: Mapping[str, Any] = (
-            tomllib.loads(result.text) if result.status == READ_OK and result.text else {}
-        )
+        doc: Mapping[str, Any] = tomllib.loads(result.text) if result.text else {}
     except tomllib.TOMLDecodeError:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
             f"xemu's configuration ({toml_path}) is not parseable TOML — {lost}",
             {"token": card.token, "config": toml_path},
         )
-    return doc, (toml_path if result.status == READ_OK else None)
+    return doc, toml_path
 
 
 def _xemu_disk_pieces(
@@ -8369,9 +8460,7 @@ def _xemu_disk_pieces(
     )
 
 
-def _xemu_readings(
-    hdd: str | None, eeprom: str | None, stated_toml: str | None
-) -> tuple[OptionReading, ...]:
+def _xemu_readings(hdd: str | None, eeprom: str | None, stated_toml: str) -> tuple[OptionReading, ...]:
     return (
         _reading_with_file(
             _dolphin_reading(
@@ -8596,6 +8685,12 @@ def _cemu_savefile_placement(
                 {"token": card.token, "config": xml_path},
             )
     caveats: list[Caveat] = [*extra_caveats]
+    if result.status == READ_MISSING:
+        caveats.append(
+            _settings_missing(
+                card.token, xml_path, emulator="Cemu", governs="where the MLC and its saves live"
+            )
+        )
     if "--mlc" in command:
         caveats.append(
             Caveat(
@@ -8818,6 +8913,12 @@ def _azahar_savefile_placement(
         )
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     caveats: list[Caveat] = [*extra_caveats]
+    if result.status == READ_MISSING:
+        caveats.append(
+            _settings_missing(
+                card.token, ini_path, emulator="Azahar", governs="where the emulated SD lives"
+            )
+        )
     stated_ini = ini_path if result.status == READ_OK else None
     virtual_sd_caveat = _azahar_virtual_sd_caveat(values, card)
     if virtual_sd_caveat is not None:
@@ -8952,6 +9053,7 @@ def _duckstation_settings(
     card: "StandaloneSaveCard | StandaloneSavestateCard",
     *,
     lost: str = "which cards its slots hold and where they live is unknowable here",
+    what: str = "which cards its slots hold and where they live",
 ) -> tuple[str, dict[tuple[str, str], str], str | None, tuple[Caveat, ...], Unresolved | None]:
     """The DataRoot probe: (root, settings values, stated ini, caveats, refusal).
 
@@ -8960,10 +9062,11 @@ def _duckstation_settings(
     else ``~/.local/share/duckstation`` (qthost.cpp:562-582) — and
     ``settings.ini`` lives inside it. No file records the environment, so the
     probe reads both spellings in that order and the file that exists speaks;
-    where neither does, the ambiguity is stated and the compiled defaults
-    hang off the environment-unset side. The savestate question probes the
-    same pair for its own key, which is why the sentence a refusal carries is
-    a parameter.
+    where neither does, the compiled defaults hang off the environment-unset
+    side and the missing file there is stated — beside the ambiguity where
+    there were two sides to pick from. The savestate question probes the same
+    pair for its own key, which is why the sentences a refusal and that
+    statement carry are parameters.
     """
     read = duckstation.read_settings(
         machine,
@@ -8979,10 +9082,21 @@ def _duckstation_settings(
             {"token": card.token, "config": read.unreadable},
         )
         return read.root, {}, None, (), refusal
-    if not read.ambiguous:
+    if read.stated_path is not None:
         return read.root, dict(read.values), read.stated_path, (), None
+    # No settings.ini on any candidate: the defaults speak, off the side the
+    # environment-unset branch picks — the one candidate a pinned launch has,
+    # or the second of two, where which of them is the launch's is stated too.
+    missing = _settings_missing(
+        card.token,
+        os.path.join(read.root, duckstation.CONFIG_FILENAME),
+        emulator="DuckStation",
+        governs=what,
+    )
+    if not read.ambiguous:
+        return read.root, {}, None, (missing,), None
     ambiguity = duckstation.dataroot_caveat(card.token, "the compiled defaults below")
-    return read.root, {}, None, (ambiguity,), None
+    return read.root, {}, None, (ambiguity, missing), None
 
 
 @dataclass(frozen=True, slots=True)
@@ -9872,6 +9986,15 @@ def _pcsx2_savefile_placement(
     values = qt_ini.values(result.text) if result.status == READ_OK and result.text else {}
     stated_ini = ini_path if result.status == READ_OK else None
     caveats: list[Caveat] = [*extra_caveats]
+    if result.status == READ_MISSING:
+        caveats.append(
+            _settings_missing(
+                card.token,
+                ini_path,
+                emulator="PCSX2",
+                governs="which cards its slots hold and where they live",
+            )
+        )
     memcards_dir, dir_reading, refusal = _pcsx2_memcards_dir(
         values, data_root, sandbox=sandbox, card=card, ini_path=ini_path
     )
@@ -10013,11 +10136,17 @@ def _melonds_stem(content_name: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class _MelonConfig:
-    """What the config read established: the raw value, and its own story."""
+    """What the config read established: the raw value, its own story, and its riders.
+
+    ``caveats`` is what the answer carries about the read itself — a TOML the
+    emulator would discard, or no file at all — beside whatever the value
+    goes on to resolve to.
+    """
 
     raw: str | None
     provenance: str
     stated_file: str | None
+    caveats: tuple[Caveat, ...] = ()
 
 
 def _melonds_save_path_provenance(
@@ -10098,7 +10227,51 @@ def _melonds_config(
         raw=raw,
         provenance=_melonds_save_path_provenance(config, raw, key=key, what=what),
         stated_file=config.stated_file,
+        caveats=tuple(_melonds_read_caveats(config, homes, card, what=what)),
     )
+
+
+def _melonds_read_caveats(
+    config: melonds.MelonConfig,
+    homes: _XdgHomes,
+    card: "StandaloneSaveCard | StandaloneSavestateCard",
+    *,
+    what: str,
+) -> list[Caveat]:
+    """What the answer says about the read where no file's statement decided it.
+
+    Two of Load()'s branches end on the factory defaults. A TOML that does not
+    parse is the one the emulator catches: it resets the table to empty
+    (Config.cpp:792 at 1.1), catches the ``toml::syntax_error`` the parse
+    throws for every malformed file (:797-804; toml11's parse, parser.hpp:3509,
+    :3549, :3627, :3783) and runs on — so the defaults are the answer, and the
+    file that was not read is stated with the reason. Neither file existing is
+    the emulator never having written one, stated the way every route states a
+    settings file that is not there; the TOML is named because it is the file
+    the emulator would write. A legacy INI that spoke is a read like any other.
+    """
+    if config.source == melonds.SOURCE_TOML_INVALID:
+        assert config.stated_file is not None  # the invalid branch names the TOML it read
+        return [
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREADABLE,
+                f"melonDS's configuration ({config.stated_file}) is not parseable TOML — melonDS "
+                "catches the syntax error and runs on its factory defaults (Config.cpp:792, "
+                f":797-804 at 1.1), so the {what} directory is the default's, not a reading of "
+                "the file",
+                {"token": card.token, "config": config.stated_file, "reason": REASON_UNPARSEABLE},
+            )
+        ]
+    if config.source == melonds.SOURCE_DEFAULTS:
+        toml_path = os.path.join(
+            melonds.config_dir(homes.base("config"), homes.flatpak), melonds.CONFIG_FILENAME
+        )
+        return [
+            _settings_missing(
+                card.token, toml_path, emulator="melonDS", governs=f"where the {what} lands"
+            )
+        ]
+    return []
 
 
 @dataclass(frozen=True, slots=True)
@@ -10253,7 +10426,7 @@ def _melonds_savefile_placement(
     if root.refusal is not None:
         return root.refusal
     files, name_needs, name_caveats = _melonds_files(card, content_path)
-    caveats: list[Caveat] = [*extra_caveats, *root.caveats, *name_caveats]
+    caveats: list[Caveat] = [*extra_caveats, *config.caveats, *root.caveats, *name_caveats]
     if root.directory.startswith("<"):
         physical = None
     else:
@@ -11344,7 +11517,21 @@ def _rpcs3_savefile_placement(
                 "(cfg_vfs::get, vfs_config.cpp:14-62 at build 7c6b3dcd)"
             ),
         ),
-        extra_caveats=extra_caveats,
+        extra_caveats=(
+            *extra_caveats,
+            *(
+                (
+                    _settings_missing(
+                        card.token,
+                        vfs_path,
+                        emulator="RPCS3",
+                        governs="which drive its saves live on",
+                    ),
+                )
+                if result.status == READ_MISSING
+                else ()
+            ),
+        ),
         # The virtual memory cards are a directory beside the per-user tree,
         # not an image the answer names as a file — so they ride as a group of
         # their own with their names left unestablished, and the caveat that
@@ -11520,7 +11707,8 @@ class _Vita3kSources:
     whose stat failed takes through Boost, ``names`` the composition of the
     savedata tree, ``pref_default`` and ``pref_provenance`` where an empty
     pref-path falls back (in a refusal's words and in the granularity's),
-    ``yaml_cpp`` how far the yaml-cpp the build pins was read and which commit
+    ``config_missing`` where the preference path comes from when config.yml is
+    not there at all, ``yaml_cpp`` how far the yaml-cpp the build pins was read and which commit
     it is, and ``yaml_cpp_pin`` that commit alone.
     """
 
@@ -11530,6 +11718,7 @@ class _Vita3kSources:
     names: str
     pref_default: str
     pref_provenance: str
+    config_missing: str
     yaml_cpp: str
     yaml_cpp_pin: str
 
@@ -11541,6 +11730,7 @@ _VITA3K_3996_SOURCES = _Vita3kSources(
     names="init_savedata_app_path, io.cpp:136-143 at commit cb1f592c",
     pref_default="config.cpp:189-190",
     pref_provenance="config.cpp:189-190 at commit cb1f592c",
+    config_missing="config.cpp:229-233, :362-363 at commit cb1f592c",
     yaml_cpp="read and run at external/yaml-cpp@2f86d137",
     yaml_cpp_pin="external/yaml-cpp@2f86d137",
 )
@@ -11566,6 +11756,7 @@ _VITA3K_4103_SOURCES = _Vita3kSources(
     names="init_savedata_app_path, io.cpp:165-172 at commit e6ac4272",
     pref_default="config.cpp:283-284 at commit e6ac4272",
     pref_provenance="config.cpp:283-284 at commit e6ac4272",
+    config_missing="config.cpp:323-327, :457-458 at commit e6ac4272",
     yaml_cpp="read at external/yaml-cpp@56e3bb55",
     yaml_cpp_pin="external/yaml-cpp@56e3bb55",
 )
@@ -11590,6 +11781,9 @@ _VITA3K_UNREAD_BUILD_SOURCES = _Vita3kSources(
     ),
     pref_default="config.cpp:189-190 at commit cb1f592c, :283-284 at commit e6ac4272",
     pref_provenance="config.cpp:189-190 at commit cb1f592c, :283-284 at commit e6ac4272",
+    config_missing=(
+        "config.cpp:229-233, :362-363 at commit cb1f592c; :323-327, :457-458 at commit e6ac4272"
+    ),
     yaml_cpp="read at external/yaml-cpp@2f86d137 and @56e3bb55, the two builds' own",
     yaml_cpp_pin="external/yaml-cpp@2f86d137 and @56e3bb55",
 )
@@ -13068,7 +13262,8 @@ def _vita3k_savefile_placement(
     emulator's own default preference path (config.cpp:189-190 at cb1f592c,
     :283-284 at e6ac4272) — a location the build derives at run time rather
     than writing down, so an unset key is a refusal here rather than an
-    invented directory.
+    invented directory. A config.yml that is not there at all falls back to
+    the same default, and refuses as the missing file it is.
 
     Below it the unit is ``ux0/user/<user>/savedata``, one directory per title
     id (io.cpp:136-143 at cb1f592c, :165-172 at e6ac4272) — and
@@ -13094,7 +13289,18 @@ def _vita3k_savefile_placement(
             "its ux0 tree lives is unknowable here",
             _vita3k_refusal_data(card, config_path, build),
         )
-    read = read_scalars(result.text or "" if result.status == READ_OK else "")
+    if result.status == READ_MISSING:
+        # Without the file the emulator parses nothing and falls back to the
+        # same run-time default an empty pref-path does — a place it derives
+        # rather than writes down, so the refusal of the missing file (#611).
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_MISSING,
+            f"Vita3K's configuration ({config_path}) does not exist, and without it the "
+            "preference path is a default this build derives at run time rather than writing "
+            f"down ({sources.config_missing}) — where its ux0 tree lives is not established here",
+            _vita3k_refusal_data(card, config_path, build),
+        )
+    read = read_scalars(result.text or "")
     if read.refusal is not None:
         return Unresolved(
             UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -13448,6 +13654,15 @@ def _pcsx2_savestate_placement(
         sources=(f"standalone savestate card '{card.token}': {card.provenance}", reading),
         caveats=(
             *extra_caveats,
+            *(
+                (
+                    _settings_missing(
+                        card.token, ini_path, emulator="PCSX2", governs="where a state lands"
+                    ),
+                )
+                if result.status == READ_MISSING
+                else ()
+            ),
             *link_caveats,
             _savestate_names_caveat(card, directory, card.names_citation),
         ),
@@ -13482,7 +13697,11 @@ def _duckstation_savestate_placement(
     setting = card.directory
     assert setting is not None  # the loader pairs the key with the settings file
     data_root, values, stated_ini, root_caveats, refusal = _duckstation_settings(
-        machine, homes, card, lost="where a state lands is unknowable here"
+        machine,
+        homes,
+        card,
+        lost="where a state lands is unknowable here",
+        what="where a state lands",
     )
     if refusal is not None:
         return refusal
@@ -13627,7 +13846,7 @@ def _melonds_savestate_placement(
     if root.refusal is not None:
         return root.refusal
     files, name_needs, name_caveats = _melonds_state_files(card, content_path)
-    caveats: list[Caveat] = [*extra_caveats, *root.caveats, *name_caveats]
+    caveats: list[Caveat] = [*extra_caveats, *config.caveats, *root.caveats, *name_caveats]
     if root.directory.startswith("<"):
         physical = None
     else:
@@ -14270,6 +14489,7 @@ def _mame_savestate_placement(
     reading = anchored.reading + machine_dir.reading_suffix
     caveats: list[Caveat] = [
         *extra_caveats,
+        *_mame_ini_missing(card, shape, ini, layered, key=key),
         *anchored.caveats,
         *machine_dir.caveats,
         *_mame_standard_ini_layer(
@@ -14329,6 +14549,37 @@ def _mame_savestate_placement(
         caveats=tuple(caveats),
         physical_dir=physical,
     )
+
+
+def _mame_ini_missing(
+    card: StandaloneSavestateCard,
+    shape: SavestateLaunchIni,
+    ini: _MameGoverningIni,
+    layered: _MameLayeredIni,
+    *,
+    key: str,
+) -> list[Caveat]:
+    """The missing-settings rider, where no ini was found and nothing stated the states root.
+
+    No mame.ini found along the launch's search path leaves the compiled
+    default in force unless the driver ini states the key itself — a value
+    that file states is a reading like any other. "Found", not "exists": an
+    element this host cannot probe may hold one, and the sources line names
+    such elements. MAME searches a path rather than opening one file, so the
+    data names the file the search looks for, the spelling every MAME refusal
+    uses where no file was found.
+    """
+    if ini.stated_ini is not None or layered.stated_in(key, ini) is not None:
+        return []
+    return [
+        Caveat(
+            CAVEAT_EMULATOR_CONFIG_MISSING,
+            f"no {shape.file} was found along the launch's search path, so the compiled "
+            "default decides where a state lands — the answer states that default, not a "
+            "reading of the file",
+            {"token": card.token, "config": shape.file},
+        )
+    ]
 
 
 def _mame_launch_cwd(launch: _MameLaunch, env: Mapping[str, str]) -> str | None:
@@ -18075,7 +18326,10 @@ class _EntryCoreReader:
     core: a standalone-only judgment never opens them. One cfg snapshot and
     one probe per ``.so`` serve every entry judged inside one answer, so the
     running entry and the alternatives can never read two revisions of the
-    same file.
+    same file. *findings*, where the handle states its cfg's own read as a
+    finding, turns that one read's status into ``caveats`` — empty until the
+    file is read, so the finding rides the answer exactly when it leaned on
+    the file.
     """
 
     def __init__(
@@ -18083,13 +18337,17 @@ class _EntryCoreReader:
         machine: Machine,
         cfg_path: str,
         cfg_sandbox: "Callable[[], tuple[_Sandbox, tuple[str, ...]]]",
+        *,
+        findings: "Callable[[ReadStatus], list[Caveat]] | None" = None,
     ) -> None:
         self._machine = machine
         self._cfg_path = cfg_path
         self._cfg_sandbox = cfg_sandbox
+        self._findings = findings
         self._context: tuple[_Sandbox, str | None] | None = None
         self._infos: dict[str, CoreInfo | None] = {}
         self.sources: tuple[str, ...] = ()
+        self.caveats: tuple[Caveat, ...] = ()
 
     def __call__(self, entry: EmulatorEntry) -> CoreInfo | None:
         if entry.core_so is None:
@@ -18098,7 +18356,10 @@ class _EntryCoreReader:
             return self._infos[entry.core_so]
         if self._context is None:
             sandbox, self.sources = self._cfg_sandbox()
-            self._context = (sandbox, self._machine.read_text(self._cfg_path).text)
+            cfg = self._machine.read_text(self._cfg_path)
+            self._context = (sandbox, cfg.text)
+            if self._findings is not None:
+                self.caveats = tuple(self._findings(cfg.status))
         sandbox, global_text = self._context
         lookup = _core_path_from(sandbox, global_text, entry.core_so)
         info = self._machine.query_core(lookup.so_path) if lookup.so_path is not None else None
@@ -19135,6 +19396,38 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             UNRESOLVED_NOT_SET_UP, _not_set_up_message(path), {"path": path, "app_id": RETRODECK_APP_ID}
         )
 
+    def _cfg_path(self) -> str:
+        return os.path.join(self._home, RETRODECK_CFG_SUFFIX)
+
+    def _cfg_findings(self, status: ReadStatus) -> list[Caveat]:
+        """What one read of RetroDECK's retroarch.cfg found wrong with it — empty when it read.
+
+        The caller passes the status of the read it made anyway, so the
+        finding rides exactly the answers that leaned on the file: whatever
+        this read did not establish, RetroArch's defaults decided for them.
+        """
+        path = self._cfg_path()
+        if status == READ_OK:
+            return []
+        if status == READ_MISSING:
+            return [
+                Caveat(
+                    HEALTH_ISSUE_EMULATOR_CONFIG_MISSING,
+                    f"RetroArch's configuration {path} does not exist, so RetroArch's own "
+                    "platform defaults decide every directory it would name — the save and "
+                    "state directories among them",
+                    {"config": path},
+                )
+            ]
+        return [
+            Caveat(
+                HEALTH_ISSUE_CONFIG_UNREADABLE,
+                f"RetroArch's configuration {path} exists and cannot be read as text ({status}), "
+                "so RetroArch's own platform defaults stand in for every directory it would name",
+                {"path": path, "status": status},
+            )
+        ]
+
     def _config_path(self, config: dict[str, Any], key: str, fallback_subdir: str) -> tuple[str, str]:
         """Resolve a RetroDECK path and its provenance from a marker snapshot.
 
@@ -19245,7 +19538,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     @one_question
     def health(self) -> Health:
-        """Installation health — marker readable and parseable, roots present, catalogue loadable.
+        """Installation health — marker readable and parseable, roots and cfg present, catalogue loadable.
 
         The catalogue check lives here rather than in :meth:`_health_from`,
         and the reason is the one-read consistency model: the per-question
@@ -19255,9 +19548,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         catalogue anyway — never the others. The ROM root check lives here for
         the same reason: it reads ES-DE's settings, which most questions never
         open, while the BIOS folder is a stat on a marker value every question
-        has read already, the way the saves root is. A not-set-up installation
-        stops at its finding: nothing past the missing marker is RetroDECK's
-        yet.
+        has read already, the way the saves root is. RetroArch's own
+        ``retroarch.cfg`` is checked here for the same reason, missing or
+        unreadable: only the questions that read it carry its finding
+        (:meth:`_cfg_findings`). A not-set-up installation stops at its
+        finding: nothing past the missing marker is RetroDECK's yet.
         """
         config, marker_issues = self._read_marker()
         health = self._health_from(config, marker_issues)
@@ -19265,7 +19560,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return health
         root = self._config_path(config, "rd_home_path", "")[0]
         catalogue_invalid = self._read_catalogue(root)[3]
-        issues = health.issues
+        cfg_status = self._machine.read_text(self._cfg_path()).status
+        issues = (*health.issues, *self._cfg_findings(cfg_status))
         rom_root_finding = _rom_root_finding(self._machine, self._rom_root(), self._esde_settings_path())
         if rom_root_finding is not None:
             issues = (*issues, rom_root_finding)
@@ -19957,8 +20253,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         declaration = by_system.get(system)
         core_reader = _EntryCoreReader(
             self._machine,
-            os.path.join(self._home, RETRODECK_CFG_SUFFIX),
+            self._cfg_path(),
             self._cfg_sandbox,
+            findings=self._cfg_findings,
         )
         verdict, entry, alternatives, sources, own = _launchability_verdict(
             system=system,
@@ -19980,7 +20277,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     *core_reader.sources,
                     *sources,
                 ),
-                caveats=(*findings, *invalid, *status, *own, *anchor.caveats),
+                caveats=(*findings, *core_reader.caveats, *invalid, *status, *own, *anchor.caveats),
             ),
             version,
         )
@@ -20070,8 +20367,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         save resolvers apply to their final directory (issue #103).
         """
         health = self._health_from(config, marker_issues)
-        global_cfg_path = os.path.join(self._home, RETRODECK_CFG_SUFFIX)
-        global_text = self._machine.read_text(global_cfg_path).text
+        global_cfg_path = self._cfg_path()
+        cfg = self._machine.read_text(global_cfg_path)
+        global_text = cfg.text
         version = _marker_version(config)
         context = _flatpak_query_context(self._machine, self._home, self._APP_ID)
         sandbox = context.sandbox
@@ -20092,6 +20390,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(
                 *extra_caveats,
                 *health.issues,
+                *self._cfg_findings(cfg.status),
                 *arrangement_caveats(self.kind, observed_version=version),
             ),
             revocation=context.revocation,
@@ -20378,12 +20677,16 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             )
         sandbox, environment_sources = self._cfg_sandbox()
         deploy = self._sandbox()
+        cfg = self._machine.read_text(self._cfg_path())
         return _retroarch_firmware_context(
             sandbox=sandbox,
-            global_text=self._machine.read_text(os.path.join(self._home, RETRODECK_CFG_SUFFIX)).text,
+            global_text=cfg.text,
             cfg_label=RETROARCH_CFG,
             retroarch_config_dir=self._retroarch_config_dir(),
-            findings=self._health_from(config, marker_issues).issues,
+            findings=(
+                *self._health_from(config, marker_issues).issues,
+                *self._cfg_findings(cfg.status),
+            ),
             arrangement_version=_marker_version(config),
             extra_sources=environment_sources,
             standalone_homes=self._xdg_homes(),

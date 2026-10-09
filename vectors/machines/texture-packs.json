@@ -806,6 +806,13 @@
           },
           "caveats": [
             {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "PRIMEHACK",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
+              }
+            },
+            {
               "code": "per-game-build-layer-unread",
               "data": {
                 "token": "PRIMEHACK",
@@ -832,7 +839,7 @@
               {
                 "key": "NANDRootPath",
                 "value": null,
-                "options_file": null
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/primehack/Dolphin.ini"
               }
             ],
             "alternatives": []

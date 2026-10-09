@@ -24,6 +24,7 @@ _VECTOR_DIR = Path(__file__).resolve().parents[1] / "vectors" / "machines"
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
+RETRODECK_CFG = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg"
 GONE = "/run/media/gone/retrodeck"
 
 
@@ -36,6 +37,7 @@ def _healthy() -> atlas.RetroDeck:
     machine = FixtureMachine(
         {
             RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck"}}',
+            RETRODECK_CFG: "",
             "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
         },
         dirs=[

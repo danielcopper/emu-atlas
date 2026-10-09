@@ -339,22 +339,23 @@ if not health.ok:
 A finding is a `Caveat` like any other — stable `code`, machine-readable `data`, human `message` — so the same branching
 works on it. What each finding carries:
 
-| code                       | `data`                                         | what it says                                                                                       |
-| -------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there                                     |
-| `not-set-up`               | `path`, `app_id`                               | RetroDECK is installed and its marker is not there — start it once                                 |
-| `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)                                   |
-| `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry                                   |
-| `root-missing`             | `path`                                         | the installation's own root is not an existing directory                                           |
-| `saves-root-missing`       | `path`                                         | its saves root is not an existing directory                                                        |
-| `bios-root-missing`        | `path`                                         | its BIOS folder is not an existing directory                                                       |
-| `roms-root-missing`        | `path`                                         | the ROM root its frontend launches from is not an existing directory                               |
-| `roms-root-not-absolute`   | `value`                                        | ES-DE's `ROMDirectory` is not an absolute path, so there is no ROM root to check                   |
-| `config-unreadable`        | `path`, `status`                               | a bare RetroArch's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read |
-| `config-home-relocated`    | `path`                                         | EmuDeck: a `portable.txt` may have moved ES-DE's home, so the ROM root is undetermined             |
-| `companion-config-missing` | `path`, `status`                               | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                |
-| `catalogue-invalid`        | `path`, `problem`                              | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on                                  |
-| `content-tree-unwired`     | `family`, `hub`, `path`, `problem`[, `target`] | a texture/mods hub tree exists that no emulator-side link reaches                                  |
+| code                       | `data`                                         | what it says                                                                                                      |
+| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `marker-missing`           | `path`                                         | the config marker this arrangement is detected by is not there                                                    |
+| `not-set-up`               | `path`, `app_id`                               | RetroDECK is installed and its marker is not there — start it once                                                |
+| `marker-unreadable`        | `path`, `status`                               | it exists and its bytes could not be read (`status` is the read)                                                  |
+| `marker-invalid`           | `path`[, `key`]                                | it parsed to something unusable; `key` names the offending entry                                                  |
+| `root-missing`             | `path`                                         | the installation's own root is not an existing directory                                                          |
+| `saves-root-missing`       | `path`                                         | its saves root is not an existing directory                                                                       |
+| `bios-root-missing`        | `path`                                         | its BIOS folder is not an existing directory                                                                      |
+| `roms-root-missing`        | `path`                                         | the ROM root its frontend launches from is not an existing directory                                              |
+| `roms-root-not-absolute`   | `value`                                        | ES-DE's `ROMDirectory` is not an absolute path, so there is no ROM root to check                                  |
+| `config-unreadable`        | `path`, `status`                               | a bare RetroArch's or RetroDECK's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read |
+| `emulator-config-missing`  | `config`                                       | RetroDECK's own `retroarch.cfg` is not there, so RetroArch's defaults name its directories                        |
+| `config-home-relocated`    | `path`                                         | EmuDeck: a `portable.txt` may have moved ES-DE's home, so the ROM root is undetermined                            |
+| `companion-config-missing` | `path`, `status`                               | EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                               |
+| `catalogue-invalid`        | `path`, `problem`                              | an `es_systems.xml` ES-DE refuses its **whole** catalogue load on                                                 |
+| `content-tree-unwired`     | `family`, `hub`, `path`, `problem`[, `target`] | a texture/mods hub tree exists that no emulator-side link reaches                                                 |
 
 `catalogue-invalid` is the hardest of them (issue #100): a systems file that does not parse (`problem: "parse-error"`)
 or carries no document-level `<systemList>` (`"missing-systemlist"`) aborts ES-DE's whole load — the frontend runs with
@@ -1095,7 +1096,8 @@ all.
 | `bios-root-missing`               | health: its BIOS folder is not an existing directory                                                                       |
 | `roms-root-missing`               | health: the ROM root its frontend launches from is not an existing directory                                               |
 | `roms-root-not-absolute`          | health: ES-DE's `ROMDirectory` is not an absolute path — no ROM root to check                                              |
-| `config-unreadable`               | health: a bare RetroArch's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read                 |
+| `config-unreadable`               | health: a bare RetroArch's or RetroDECK's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read  |
+| `emulator-config-missing`         | the settings file that would name the place is not there — the place is the defaults', not a reading (see below)           |
 | `companion-config-missing`        | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                                |
 | `catalogue-invalid`               | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                                     |
 | `content-tree-unwired`            | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost                          |
@@ -1271,11 +1273,14 @@ still answers, and the `user-id` and `user-auto-connect` readings say so in thei
 answers that first statement and says nothing about the repetition. RPCS3 reads its own file the other way, applying
 every statement in turn and keeping the last it reads as a scalar, so a `vfs.yml` that states its drive, or the variable
 the drive is composed off, more than once gets this reason: which directory the emulator mounts is not something this
-reader can state. Only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's `config.yml` —
-ever state a `reason` at all. A refusal that could not open its file states none, and so does one whose file is not
-parseable in its own format (xemu's TOML, Cemu's XML): there is no vocabulary for "the parser said no" and inventing one
-would put a second reader's diagnostics into this answer. `data["config"]` names the file in every case, and a refusal
-Vita3K's save card gives carries `build` beside it where a release was read, as Vita3K's save answer below sets out.
+reader can state. The ninth is `unparseable`, and it is the one value that rides a caveat rather than a refusal: a
+`melonDS.toml` that does not parse is one melonDS itself discards — it catches the syntax error and runs on its factory
+defaults (Config.cpp:792, :797-804 at 1.1) — so the save and savestate answers stand on those defaults and say the file
+was not read. Apart from it, only the two configurations this scalar reader opens — RPCS3's `vfs.yml` and Vita3K's
+`config.yml` — ever state a `reason` at all. A refusal that could not open its file states none, and so do the refusals
+of a file not parseable in its own format (xemu's TOML, Cemu's XML), which keep the code without a reason.
+`data["config"]` names the file in every case, and a refusal Vita3K's save card gives carries `build` beside it where a
+release was read, as Vita3K's save answer below sets out.
 
 `filenames-content-conditional.files_established_for` — which class of content the declared names were established for:
 `console`, `driver-named-content` (the emulator names the file after the driver or romset it identified, not after the
@@ -1303,8 +1308,27 @@ EmuDeck's `companion-config-missing` and a bare RetroArch's `config-unreadable` 
 placements, ahead of what the query itself could not resolve; the findings with their own reads follow the one-read
 model instead — `catalogue-invalid` rides the answers whose question reads the catalogue, while `content-tree-unwired`
 and the ROM root findings (`roms-root-missing`, `roms-root-not-absolute`, and `config-unreadable` or
-`config-home-relocated` about ES-DE's settings) ride `health()` alone. Do not key on the position: on the entry route
-(`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede them. Match on the codes.
+`config-home-relocated` about ES-DE's settings) ride `health()` alone. RetroDECK's own `retroarch.cfg`, missing
+(`emulator-config-missing`, `config` alone) or unreadable (`config-unreadable`), rides exactly the answers that read
+that file: the save, savestate, screenshot, texture, mod and soft-patch answers, the firmware answers, and a
+launchability answer where judging an entry needed its core — not one that judged standalone entries alone. Do not key
+on the position: on the entry route (`EmulatorEntry.savefile_location()`) the entry's own catalogue caveats precede
+them. Match on the codes.
+
+**Was the place read from the settings?** An answer can name a place its emulator's defaults decided, because the
+settings file that would name it is missing, could not be read or did not parse. `atlas.PLACE_NOT_READ_CODES` is the set
+of codes that say so — `emulator-config-missing`, `emulator-config-unreadable`, `config-unreadable`,
+`companion-config-missing`, `marker-missing`, `marker-unreadable`, `marker-invalid` and `not-set-up` — so a client that
+acts only on places read from the settings tests an answer's caveats against that tuple rather than against a list of
+its own. A standalone emulator that was never started has no settings file yet; its answer stands on the compiled
+defaults wherever they name a place and carries `emulator-config-missing` (`token`, `config`), and refuses with an
+`Unresolved` of the same code where they name none (xemu, whose defaults name no disk image, and Vita3K, whose default
+preference path is derived at run time and written nowhere). ScummVM's `scummvm.ini` says it the same way, and so do
+libretro MAME's `mame.ini` and PUAE's `WHDLoad.prefs`, each naming the core under `core`. The libretro MAME core states
+it only with its own paths and `mame_read_config` both on: with ini reading off the core reads no ini at all, so no file
+is missing, and the answer's compiled-in trees already say where the saves go. The codes that describe the root itself
+rather than whether a file was read — a redirected or unresolvable save root, a sandbox path with no host spelling — are
+not in the tuple; the comment beside `PLACE_NOT_READ_CODES` in `atlas/installations.py` says why each stays out.
 
 `content-dir-observation` is the one to plan for if you sync files: with `savefiles_in_content_dir` the save lies next
 to the ROM, and the observation matches everything there under the ROM's name — the remaining tracks of a `.cue`, the
@@ -1349,35 +1373,38 @@ The granularity block is the same machinery the rule cards use: the readings nam
 (`SlotA = 8` is the GCI-folder device) and the alternative names the one edit to the other scheme — `SlotA = 1`, the raw
 card, where every game of a region shares one `MemoryCardA.<region>.raw` and the granularity says so. The Wii answer
 (`system="wii"`) is the NAND's `title/` tree: one unnamed directory per title, `file-names-unestablished` carrying the
-citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that exists and cannot
-be read refuses the whole question with `emulator-config-unreadable` — there is no standard frame to step aside to. A
-config that reads fine but states an absolute directory only the emulator's sandbox can spell refuses with
-`emulator-config-path-untranslatable` instead — the same fact the `sandbox-path-untranslated` caveat states where an
-answer still stands around it, said as the outcome where nothing else anchors, with the stated value in `data.path`.
-`data.path` is always the primary value; where one refusal covers several stated files (xemu's save answer, naming a
-disk image and an EEPROM), `data.paths` additionally lists every untranslatable value — the disk image first, then the
-EEPROM — whenever more than one is named. Which spellings translate follows from the launch: where atlas can place it
-inside a sandbox, that app's bind points lead to its own trees below `~/.var/app` and `/app` leads to its deployed
-files, while the sandbox-only prefixes left over are refused. Where it cannot — an AppImage, an unpacked binary, a
-native install — every spelling but `/app` is the host path it names, and `/app` alone is still refused rather than
-probed as an ordinary directory of this machine, because it names a deployed package no launch here runs (#317). The
-firmware answers follow that rule too, and they follow it per launch (#350): a standalone entry's sandbox is built from
-the same trees that entry's own launch reads, so the app whose deployed files an `/app` value resolves against is the
-app the row launches. Everything the answer takes off those trees is the row's own in the same way, down to whether the
-launch runs with a flatpak's pinned `XDG_CONFIG_HOME` (#492). Two emulators show why that has to be the row's: two rows
-can launch one emulator differently — EmuDeck's melonDS through its AppImage, which is unsandboxed, and through the
-installed flatpak, whose bases are pinned — and DuckStation is the one carded emulator whose answer reads the flag,
-picking between two DataRoot candidates by whether that variable is set. melonDS itself discards it, so neither row
-above would answer differently; the rule is written for the launch that is both at once. Where that launch runs no app
-at all — an AppImage, or the executable EmuDeck unpacks from one — an `/app` value lands nowhere and rides the
-`sandbox-path-untranslated` caveat beside an answer that still stands — the caveat, never the
-`emulator-config-path-untranslatable` outcome, because a firmware answer is the emulator's own row and always states
-one: an unreachable value withdraws what rested on it — that one file, or the directory a search would have read — and
-the row stands, with the caveat naming the value nothing was read at. Savestates are their own wiring and their own card
-family (`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it, and an emulator
-without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers (since #284 every
-save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today that refusal
-marks the rows neither family has examined).
+citation, and `physical_dir` pointing at the real tree behind the arrangement's symlink. A config that is not there at
+all — an emulator never started — is answered from its compiled defaults with `emulator-config-missing` (`token`,
+`config`) beside them, so the answer says the place is the defaults' rather than a reading. Its readings still name
+`Dolphin.ini` as their options file: that is where a switch is edited, and Dolphin reads a file holding nothing but the
+edited key. A config that exists and cannot be read refuses the whole question with `emulator-config-unreadable` — there
+is no standard frame to step aside to. A config that reads fine but states an absolute directory only the emulator's
+sandbox can spell refuses with `emulator-config-path-untranslatable` instead — the same fact the
+`sandbox-path-untranslated` caveat states where an answer still stands around it, said as the outcome where nothing else
+anchors, with the stated value in `data.path`. `data.path` is always the primary value; where one refusal covers several
+stated files (xemu's save answer, naming a disk image and an EEPROM), `data.paths` additionally lists every
+untranslatable value — the disk image first, then the EEPROM — whenever more than one is named. Which spellings
+translate follows from the launch: where atlas can place it inside a sandbox, that app's bind points lead to its own
+trees below `~/.var/app` and `/app` leads to its deployed files, while the sandbox-only prefixes left over are refused.
+Where it cannot — an AppImage, an unpacked binary, a native install — every spelling but `/app` is the host path it
+names, and `/app` alone is still refused rather than probed as an ordinary directory of this machine, because it names a
+deployed package no launch here runs (#317). The firmware answers follow that rule too, and they follow it per launch
+(#350): a standalone entry's sandbox is built from the same trees that entry's own launch reads, so the app whose
+deployed files an `/app` value resolves against is the app the row launches. Everything the answer takes off those trees
+is the row's own in the same way, down to whether the launch runs with a flatpak's pinned `XDG_CONFIG_HOME` (#492). Two
+emulators show why that has to be the row's: two rows can launch one emulator differently — EmuDeck's melonDS through
+its AppImage, which is unsandboxed, and through the installed flatpak, whose bases are pinned — and DuckStation is the
+one carded emulator whose answer reads the flag, picking between two DataRoot candidates by whether that variable is
+set. melonDS itself discards it, so neither row above would answer differently; the rule is written for the launch that
+is both at once. Where that launch runs no app at all — an AppImage, or the executable EmuDeck unpacks from one — an
+`/app` value lands nowhere and rides the `sandbox-path-untranslated` caveat beside an answer that still stands — the
+caveat, never the `emulator-config-path-untranslatable` outcome, because a firmware answer is the emulator's own row and
+always states one: an unreachable value withdraws what rested on it — that one file, or the directory a search would
+have read — and the row stands, with the caveat naming the value nothing was read at. Savestates are their own wiring
+and their own card family (`standalone_savestates.json`, #225): the same entry answers `savestate_location` through it,
+and an emulator without a savestate card keeps the `standalone-unsupported` refusal there even where its save answers
+(since #284 every save-carded emulator carries a savestate card too — for Cemu and Vita3K it is the stated no — so today
+that refusal marks the rows neither family has examined).
 
 **A GameCube card atlas cannot reach is not an empty slot.** A slot whose card path only the emulator's sandbox can
 spell still holds the card the emulator writes to — whether those writes are kept cannot be told from here — and the
@@ -1527,7 +1554,8 @@ honestly not on offer from outside.
 
 Vita3K's tree hangs off one key, `pref-path`, with saves at `ux0/user/<user>/savedata` — the same per-user shape as
 RPCS3, and an empty `pref-path` is a refusal rather than a guess, because the emulator falls back to a default it
-derives at run time and writes nowhere. The user segment reaches a stronger answer than RPCS3's, and the readings spell
+derives at run time and writes nowhere. A `config.yml` that is not there at all falls back to the same default, and
+refuses as `emulator-config-missing`. The user segment reaches a stronger answer than RPCS3's, and the readings spell
 out why. Vita3K _does_ record the user it opened, as `user-id` in that same `config.yml`, and the emulator honours the
 record when the id is among the users it listed itself and either the command line names an app to run — which is how
 both frontends start a game — or `user-auto-connect` is on; that list comes from the directories under `ux0/user` whose
@@ -1566,12 +1594,12 @@ the empty one first — writing that id back to `user-id`; with no user listed i
 `user-auto-connect` governs nothing there and is not among the readings. So which build runs is read first, from the
 release a RetroDECK deploy writes beside the binary (`components/vita3k/component_version`), the per-user caveat carries
 it as `build` wherever a release was read — and so does each refusal the Vita3K save card gives,
-`emulator-config-unreadable` and `emulator-config-path-untranslatable`, by the same rule, while a refusal given before
-the card is reached and the answers to other questions (savestates, texture packs) read no build and carry none — and
-each build answers by its own rule: `reason` is `configured-user-tree-named` for a recorded user that is listed,
-`first-listed-user-opened` where the record names no listed user (`dir` is that first user's tree), and
-`first-user-created` where nothing is listed (`dir` is the tree user `00` will write). An entry atlas could not decide
-can hold a smaller id or the recorded one, so beside such an entry the first-listed answer becomes
+`emulator-config-missing`, `emulator-config-unreadable` and `emulator-config-path-untranslatable`, by the same rule,
+while a refusal given before the card is reached and the answers to other questions (savestates, texture packs) read no
+build and carry none — and each build answers by its own rule: `reason` is `configured-user-tree-named` for a recorded
+user that is listed, `first-listed-user-opened` where the record names no listed user (`dir` is that first user's tree),
+and `first-user-created` where nothing is listed (`dir` is the tree user `00` will write). An entry atlas could not
+decide can hold a smaller id or the recorded one, so beside such an entry the first-listed answer becomes
 `listed-user-account-unestablished` — unless the record names no user and the smallest id listed is the empty one, which
 nothing sorts before. A build that is neither, or one nothing on the machine states — EmuDeck runs the AppImage it
 downloaded, whose build nothing atlas reads names — answers `emulator-build-unestablished`, with the release read as

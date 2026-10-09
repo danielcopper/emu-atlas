@@ -741,7 +741,9 @@ class TestMarkerPathValuesMustBeStrings:
     FALLBACK_DIRS = [f"{HOME}/retrodeck", f"{HOME}/retrodeck/saves", f"{HOME}/retrodeck/bios", RD_DEFAULT_ROMS]
 
     def test_non_string_path_value_makes_the_marker_invalid(self):
-        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"rd_home_path": 123}}'}, dirs=self.FALLBACK_DIRS)
+        rd = _retrodeck(
+            {RETRODECK_JSON: '{"paths": {"rd_home_path": 123}}', RETRODECK_CFG: ""}, dirs=self.FALLBACK_DIRS
+        )
         assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
 
     def test_the_offending_key_is_named(self):
@@ -770,12 +772,14 @@ class TestMarkerPathValuesMustBeStrings:
 
     def test_a_null_path_value_is_invalid(self):
         # JSON null is not "unset" here: RetroDECK writes the key or omits it.
-        rd = _retrodeck({RETRODECK_JSON: '{"paths": {"saves_path": null}}'}, dirs=self.FALLBACK_DIRS)
+        rd = _retrodeck(
+            {RETRODECK_JSON: '{"paths": {"saves_path": null}}', RETRODECK_CFG: ""}, dirs=self.FALLBACK_DIRS
+        )
         assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,)
 
     def test_a_marker_without_a_paths_section_is_not_invalid(self):
         rd = _retrodeck(
-            {RETRODECK_JSON: '{"version": "0.10.9b"}'},
+            {RETRODECK_JSON: '{"version": "0.10.9b"}', RETRODECK_CFG: ""},
             dirs=[f"{HOME}/retrodeck", f"{HOME}/retrodeck/bios", RD_DEFAULT_ROMS],
         )
         assert rd.health().codes == (atlas.HEALTH_ISSUE_SAVES_ROOT_MISSING,)
@@ -795,7 +799,9 @@ class TestMarkerPathValuesMustBeStrings:
         # own ROMDirectory — nothing reads it now, and the test below holds that
         # other half.
         for key in ("rd_home_path", "saves_path", "bios_path"):
-            rd = _retrodeck({RETRODECK_JSON: json.dumps({"paths": {key: 5}})}, dirs=self.FALLBACK_DIRS)
+            rd = _retrodeck(
+                {RETRODECK_JSON: json.dumps({"paths": {key: 5}}), RETRODECK_CFG: ""}, dirs=self.FALLBACK_DIRS
+            )
             assert rd.health().codes == (atlas.HEALTH_ISSUE_MARKER_INVALID,), key
 
     def test_a_key_atlas_does_not_read_is_none_of_its_business(self):
@@ -808,7 +814,8 @@ class TestMarkerPathValuesMustBeStrings:
                 RETRODECK_JSON: (
                     '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
                     '"saves_path": "/mnt/sd/retrodeck/saves", "videos_path": {"nested": 1}}}'
-                )
+                ),
+                RETRODECK_CFG: "",
             },
             dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
         )
@@ -824,7 +831,8 @@ class TestMarkerPathValuesMustBeStrings:
                 RETRODECK_JSON: (
                     '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", '
                     '"saves_path": "/mnt/sd/retrodeck/saves", "roms_path": 5}}'
-                )
+                ),
+                RETRODECK_CFG: "",
             },
             dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
         )
@@ -1029,7 +1037,7 @@ class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
     def test_a_marker_beside_the_deploy_changes_nothing(self):
         # Detected by the marker: the deploy adds no second handle and no finding.
         rd = self._handle(
-            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""},
+            {**self.FILES, RETRODECK_JSON: RD_JSON, RETRODECK_CFG: "", "/mnt/sd/retrodeck/saves/.keep": ""},
             dirs=[RD_BIOS, RD_DEFAULT_ROMS],
         )
         assert rd.health() == atlas.Health()
@@ -1039,7 +1047,7 @@ class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
         # The handle is live: detected by the deploy, it answers normally once
         # the first launch has written the marker.
         machine = FixtureMachine(
-            {**self.FILES, RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/saves/.keep": ""},
+            {**self.FILES, RETRODECK_JSON: RD_JSON, RETRODECK_CFG: "", "/mnt/sd/retrodeck/saves/.keep": ""},
             dirs=[RD_BIOS, RD_DEFAULT_ROMS],
         )
         rd = atlas.RetroDeck(HOME, machine, detected_by_deploy=True)
@@ -3587,9 +3595,11 @@ class TestMoreStandaloneSaves:
         assert p.granularity.readings == ()
 
     def test_xemu_without_a_toml_states_the_missing_disk(self):
+        # An absent file is missing, not unreadable (#611 D4): the defaults
+        # name no disk, so the refusal says which file is not there.
         p = self._answer("xbox")
         assert isinstance(p, atlas.Unresolved)
-        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_MISSING
 
     def test_xemu_with_a_disk_carries_the_inside_image_layout(self):
         p = self._answer(
@@ -3623,7 +3633,7 @@ class TestMoreStandaloneSaves:
             files={XEMU_CONFIG_TREE_TOML: "[sys.files]\nhdd_path = '/mnt/sd/hdd.qcow2'\n"},
         )
         assert isinstance(p, atlas.Unresolved)
-        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_UNREADABLE
+        assert p.code == atlas.UNRESOLVED_EMULATOR_CONFIG_MISSING
 
     def test_xemu_with_unparseable_toml_refuses(self):
         p = self._answer("xbox", files={XEMU_TOML_PATH: "[sys.files\nnot toml"})
@@ -4774,10 +4784,12 @@ class TestTheUserAPerUserTreeWouldOpen:
         # claim mechanical, so a refusal added to the reader cannot be added
         # unwitnessed. The two key reasons are not refusals of the reader's —
         # they say the file parsed and one key still settled nothing — and each
-        # is reached by a test of its own.
+        # is reached by a test of its own. Nor is ``unparseable``: it is the
+        # melonDS TOML's reason, a file no YAML read ever opens, and its own
+        # vectors reach it.
         covered = {*self._WHOLE_FILE_REFUSALS, "substitution-cycle"}
-        key_reasons = {atlas.REASON_KEY_UNREAD, atlas.REASON_KEY_REPEATED}
-        assert covered == set(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS) - key_reasons
+        other_reasons = {atlas.REASON_KEY_UNREAD, atlas.REASON_KEY_REPEATED, atlas.REASON_UNPARSEABLE}
+        assert covered == set(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS) - other_reasons
 
     @staticmethod
     def _user_xml(user):
@@ -9062,7 +9074,7 @@ class TestEveryAnswerStatesTheInstallationsHealth:
     invariant above covers this wiring too. That is what bounds the blanket:
     the marker, root, saves root and BIOS folder findings ride every answer
     here, while a finding with a read of its own (the catalogue, the ROM root,
-    the content trees) rides only where that read is made.
+    the content trees, RetroArch's own cfg) rides only where that read is made.
     """
 
     ESDE = (
@@ -9080,9 +9092,10 @@ class TestEveryAnswerStatesTheInstallationsHealth:
     # and rides no answer, which the comparisons below are not about.
     BROKEN = {
         RETRODECK_JSON: '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": 7}}',
+        RETRODECK_CFG: "",
         f"{RD_DEFAULT_ROMS}/systeminfo.txt": "",
     }
-    HEALTHY = {RETRODECK_JSON: RD_JSON, "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
+    HEALTHY = {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: "", "/mnt/sd/retrodeck/roms/systeminfo.txt": ""}
     HEALTHY_DIRS = ["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS]
     CORE_SO = "mgba_libretro.so"
 
@@ -9170,7 +9183,7 @@ class TestTheFolderFindingsRideWhereTheirReadsDo:
     MARKER = '{"paths": {"rd_home_path": "/mnt/sd/retrodeck", "saves_path": "/mnt/sd/retrodeck/saves"}}'
 
     def _rd(self, dirs):
-        return _retrodeck({RETRODECK_JSON: self.MARKER}, dirs=dirs)
+        return _retrodeck({RETRODECK_JSON: self.MARKER, RETRODECK_CFG: ""}, dirs=dirs)
 
     def _answer_codes(self, rd) -> dict[str, list[str]]:
         return {
@@ -9193,7 +9206,11 @@ class TestTheFolderFindingsRideWhereTheirReadsDo:
 
     def test_the_rom_root_checked_is_the_one_roms_dir_answers(self):
         rd = _retrodeck(
-            {RETRODECK_JSON: self.MARKER, ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/usb/roms/" />'},
+            {
+                RETRODECK_JSON: self.MARKER,
+                RETRODECK_CFG: "",
+                ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/usb/roms/" />',
+            },
             dirs=["/mnt/sd/retrodeck/saves", RD_BIOS, RD_DEFAULT_ROMS],
         )
         assert [dict(c.data) for c in rd.health().issues] == [{"path": rd.roms_dir()}]
@@ -11535,3 +11552,32 @@ class TestTheSandboxPathPrefixRule:
         assert _flatpak_refuses("/")
         assert _flatpak_refuses("/run")
         assert not _flatpak_refuses("/opt/emus")
+
+
+class TestThePlaceNotReadCodes:
+    """``PLACE_NOT_READ_CODES``, the published set of codes a place-not-read-from-the-settings rides on."""
+
+    def _exported_codes(self) -> set[str]:
+        families = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")
+        return {
+            value
+            for name in atlas.__all__
+            if name.startswith(families) and isinstance(value := getattr(atlas, name), str)
+        }
+
+    def test_every_member_is_a_code_atlas_exports(self):
+        assert sorted(set(atlas.PLACE_NOT_READ_CODES) - self._exported_codes()) == []
+
+    def test_no_member_is_listed_twice(self):
+        assert len(set(atlas.PLACE_NOT_READ_CODES)) == len(atlas.PLACE_NOT_READ_CODES)
+
+    def test_the_missing_settings_file_is_one_spelling_on_every_route(self):
+        # One fact, one code: the caveat, the refusal and RetroDECK's health
+        # finding are the same string, and the tuple carries it once.
+        assert (
+            atlas.CAVEAT_EMULATOR_CONFIG_MISSING
+            == atlas.UNRESOLVED_EMULATOR_CONFIG_MISSING
+            == atlas.HEALTH_ISSUE_EMULATOR_CONFIG_MISSING
+            == "emulator-config-missing"
+        )
+        assert atlas.CAVEAT_EMULATOR_CONFIG_MISSING in atlas.PLACE_NOT_READ_CODES

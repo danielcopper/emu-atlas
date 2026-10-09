@@ -158,6 +158,165 @@
       }
     },
     {
+      "name": "dolphin-without-its-ini-answers-the-default-cards-and-says-no-file-was-read",
+      "rationale": "No Dolphin.ini at all — the emulator has not been started on this install. Its compiled defaults still name a place, so the GameCube answer stands on them (SlotA defaults to a GCI folder per region below the user directory's GC tree), and emulator-config-missing says the place is the defaults' rather than a reading of the file, naming the file that is not there. The slot readings still name Dolphin.ini as their options file, because that is where the alternative's edit goes: Dolphin reads a file holding only the edited key and leaves every other setting at its registered default (BaseConfigLoader.cpp:157, :160-174 with IniFile.cpp:249-250 at 2603a).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/US",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/EU",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/JP",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA": "/mnt/sd/retrodeck/saves/gc/dolphin/US",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR": "/mnt/sd/retrodeck/saves/gc/dolphin/EU",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP": "/mnt/sd/retrodeck/saves/gc/dolphin/JP"
+        },
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/<region>/Card A",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "DOLPHIN",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+none",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderAPath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card+none",
+                "options": {
+                  "SlotA": "1"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "a-raw-memory-card-is-one-shared-file-per-region",
       "rationale": "Slot A holds the raw memory-card device (SlotA = 1), so every game of a region shares one card file — MemoryCardA.<region>.raw below the GC user directory, the compiled-in default path with no block suffix at the standard card size. The granularity says shared-file and the alternative names the one edit back to per-game files (the GCI folder).",
       "input": {
@@ -366,6 +525,103 @@
               {
                 "key": "NANDRootPath",
                 "value": "/var/data/dolphin-emu/Wii/",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-without-its-ini-answers-the-default-nand-and-says-no-file-was-read",
+      "rationale": "The Wii half of the missing Dolphin.ini: NANDRootPath is unset by definition, so the NAND is the Wii tree below the user directory, and the answer carries emulator-config-missing beside the title-tree caveat it always carries. Its NANDRootPath reading names Dolphin.ini as the file the setting would be edited in, as the GameCube readings do.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/wii/dolphin/title",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii": "/mnt/sd/retrodeck/saves/wii/dolphin"
+        },
+        "entry_savefile_query": {
+          "system": "wii"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii/title",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/wii/dolphin/title",
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii/title",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "DOLPHIN",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            },
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Dolphin.General] NANDRootPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii/title",
+                "role": "battery",
+                "citation": "NandPaths.cpp:63-71 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "nand",
+            "readings": [
+              {
+                "key": "NANDRootPath",
+                "value": null,
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
               }
             ],
@@ -591,6 +847,52 @@
       }
     },
     {
+      "name": "xemu-without-its-toml-refuses-as-a-missing-file",
+      "rationale": "No xemu.toml: [sys.files] declares the hard-disk image and the EEPROM as strings with no default (config_spec.yml:362-363 at v0.8.135), so the defaults name no file and the save question refuses — as emulator-config-missing, because the file is not there, not as emulator-config-unreadable, which is a file that exists and could not be read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-missing",
+            "data": {
+              "token": "XEMU",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "emudeck-xemu-reads-the-flatpaks-own-data-home",
       "rationale": "The arrangement that makes the base matter. EmuDeck installs xemu as the app.xemu.xemu flatpak (emuDeckXemu.sh:4-5) and links nothing: the configuration sits where the emulator puts it, below the app's own data home, and there is no config-tree twin to find it under. The save answer reads it there and states the same file the firmware answer does, so the two agree about where one file lives.",
       "input": {
@@ -765,6 +1067,96 @@
                 "key": "mlc_path",
                 "value": "/mnt/sd/retrodeck/bios/cemu",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "cemu-without-its-settings-answers-the-default-mlc-and-says-no-file-was-read",
+      "rationale": "No settings.xml: Cemu's MLC is its compiled default below its own data directory, and the save tree hangs off that. The answer states that tree and emulator-config-missing, so a client can tell it from an MLC the file named.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/wiiu/cemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/cemu/usr/save": "/mnt/sd/retrodeck/saves/wiiu/cemu"
+        },
+        "entry_savefile_query": {
+          "system": "wiiu"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/Cemu/mlc01/usr/save/<save_id>",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "save_id"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/Cemu/mlc01/usr/save/<save_id>",
+                "files": null,
+                "granularity": "per-game-directory",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "CEMU",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Cemu/settings.xml"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "CEMU",
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/Cemu/mlc01/usr/save/<save_id>",
+                "role": "battery",
+                "save_id": "the Wii U title id: <high 8 hex>/<low 8 hex>, lowercase",
+                "citation": "nn_save.cpp:133-145 at Cemu 2.6 — '/vol/storage_mlc01/usr/save/%08x/%08x/user/%08x/' and 'user/common/'"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-directory",
+            "mode": "mlc",
+            "readings": [
+              {
+                "key": "mlc_path",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": []
@@ -1059,7 +1451,7 @@
     },
     {
       "name": "azahar-defaults-place-the-sd-below-the-emulators-own-data",
-      "rationale": "No qt-config.ini at all: use_custom_storage's compiled default is false (settings.h:485), so the SD sits below the emulator's own XDG data tree (azahar-emu/sdmc) — the answer states the default and its reading says no file governed it. The unit template below is the same, because the container is the emulator's compiled spelling, not the arrangement's.",
+      "rationale": "No qt-config.ini at all: use_custom_storage's compiled default is false (settings.h:485), so the SD sits below the emulator's own XDG data tree (azahar-emu/sdmc) — the answer states the default, its reading says no file governed it, and emulator-config-missing names the file that is not there. The unit template below is the same, because the container is the emulator's compiled spelling, not the arrangement's.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1116,6 +1508,13 @@
             ]
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "AZAHAR",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/azahar-emu/qt-config.ini"
+              }
+            },
             {
               "code": "file-names-unestablished",
               "data": {
@@ -1783,7 +2182,7 @@
     },
     {
       "name": "retrodeck-duckstations-dataroot-is-the-config-side-its-sandbox-pins",
-      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot — and no degradation, because nothing is degraded.",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot — and no ambiguity stated, because nothing is ambiguous. What is stated is the missing settings.ini itself, emulator-config-missing on the config side, because the defaults decided this answer rather than a reading of the file.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1838,6 +2237,13 @@
             ]
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "DUCKSTATION",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            },
             {
               "code": "filenames-content-conditional",
               "data": {
@@ -1994,7 +2400,7 @@
     },
     {
       "name": "emudeck-duckstation-without-a-settings-ini-leaves-the-dataroot-to-the-environment",
-      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
+      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot. Beside the ambiguity, emulator-config-missing names the settings.ini on that side, the file whose absence put the defaults in force. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2058,6 +2464,13 @@
               "data": {
                 "token": "DUCKSTATION",
                 "reason": "data-root-decided-by-launch"
+              }
+            },
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "DUCKSTATION",
+                "config": "/home/deck/.local/share/duckstation/settings.ini"
               }
             },
             {
@@ -2200,6 +2613,114 @@
                 "key": "Slot2_Filename",
                 "value": "Mcd002.ps2",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-without-its-ini-answers-the-default-cards-and-says-no-file-was-read",
+      "rationale": "No PCSX2.ini: both slots hold the compiled default cards below the DataRoot's memcards directory, and emulator-config-missing names the ini that would have said otherwise.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              },
+              {
+                "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/memcards",
+                "files": [
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "PCSX2",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+file",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": null,
+                "options_file": null
+              },
+              {
+                "key": "Slot2_Filename",
+                "value": null,
+                "options_file": null
               }
             ],
             "alternatives": []
@@ -2650,6 +3171,192 @@
       }
     },
     {
+      "name": "melonds-with-neither-file-answers-beside-the-rom-and-says-no-file-was-read",
+      "rationale": "Neither melonDS.toml nor the pre-1.0 melonDS.ini exists, so Config::Load keeps its factory defaults and the save lands beside the ROM — the same place an empty SaveFilePath gives, now by default. emulator-config-missing names the TOML, the file the emulator would write; a legacy INI that speaks is a reading, which melonds-a-missing-toml-reads-the-legacy-ini keeps without the caveat.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "<content_dir>",
+          "root_kind": "content_directory",
+          "needs": [
+            "content_dir",
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<rom_stem>.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "<content_dir>",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MELONDS",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "token": "MELONDS",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
+                "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "rom-dir",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": null,
+                "options_file": null
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "melonds-a-toml-that-does-not-parse-answers-the-defaults-and-says-it-was-not-read",
+      "rationale": "A melonDS.toml that does not parse is not a refusal: Config::Load resets the table, catches the toml::syntax_error the parse throws and runs on (Config.cpp:792, :797-804 at 1.1), so the factory defaults govern and the save lands beside the ROM whatever the broken file meant to say. The answer stands on those defaults and carries emulator-config-unreadable with the reason unparseable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0\nSaveFilePath = \"/mnt/sd/retrodeck/saves/nds\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "<content_dir>",
+          "root_kind": "content_directory",
+          "needs": [
+            "content_dir",
+            "rom_stem"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "<rom_stem>.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "<content_dir>",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-unreadable",
+              "data": {
+                "token": "MELONDS",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml",
+                "reason": "unparseable"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "token": "MELONDS",
+                "files": [
+                  "<rom_stem>.sav"
+                ],
+                "rom_stem": "the loaded file's name without its last extension — for an archive, the archived file's",
+                "citation": "EmuInstance.cpp:1884, :1846-1848 at 1.1"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "rom-dir",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": null,
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "emudeck-melonds-answers-from-the-flatpaks-own-homes",
       "rationale": "EmuDeck has melonDS only as a flatpak, and melonds.sh performs no probe — it runs net.kuribo64.melonDS outright (melonds.sh:4) — so the launcher pins the flatpak variant and the answer reads the app's own XDG homes below ~/.var/app, not the host's. The card names the app id; EmuDeck grants the flatpak --filesystem=host (installEmuFP.sh:33), so a configured HOST path is the path it spells — the sandbox's own spellings still lead into the app's trees. The legacy INI EmuDeck writes is 1.1's migration source while no TOML exists.",
       "input": {
@@ -2744,6 +3451,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n/dev_hdd0/: $(EmulatorDir)dev_hdd0/\n/app_home/: \"\"\n/dev_usb***/:\n  /dev_usb000:\n    Path: $(EmulatorDir)dev_usb000/\n",
           "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/localusername": "User"
@@ -2847,6 +3555,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User",
@@ -2959,6 +3668,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
         },
@@ -3071,6 +3781,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
         },
@@ -3168,11 +3879,12 @@
     },
     {
       "name": "rpcs3-an-unset-drive-is-the-compiled-default-below-the-config-directory",
-      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use. Nothing has saved into it yet, and the caveat says so rather than presenting the compiled default user as a home found on this machine: it is the tree the emulator would create.",
+      "rationale": "An unset /dev_hdd0/ is not an unknown drive: the compiled default is $(EmulatorDir)dev_hdd0/ (vfs_config.h:13), and an empty $(EmulatorDir) means the emulator's own config directory (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd). With no vfs.yml at all the answer is therefore still a real directory — the one a fresh install would use — and emulator-config-missing states that it is the default's, not a reading of the file. Nothing has saved into it yet, and the caveat says so rather than presenting the compiled default user as a home found on this machine: it is the tree the emulator would create.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -3222,6 +3934,13 @@
             ]
           },
           "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "RPCS3",
+                "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
+              }
+            },
             {
               "code": "file-names-unestablished",
               "data": {
@@ -3273,6 +3992,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: ~\n"
         },
@@ -3374,6 +4094,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n"
         },
@@ -3475,6 +4196,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /mnt/sd/retrodeck/storage/rpcs3/\n/dev_hdd0/: ~\n"
         },
@@ -3576,6 +4298,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir):\n  path: /mnt/sd/retrodeck/storage/rpcs3/\n"
         },
@@ -3620,6 +4343,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "$(EmulatorDir): /run/user/1000/rpcs3/\n"
         },
@@ -3770,6 +4494,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User"
@@ -3877,6 +4602,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User",
@@ -3985,6 +4711,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/12345678/localusername": "User",
@@ -4097,6 +4824,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000000/localusername": "User",
@@ -4205,6 +4933,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
         },
@@ -4310,6 +5039,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User"
@@ -4420,6 +5150,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n"
         },
@@ -4528,6 +5259,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User"
@@ -4637,6 +5369,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/hdd0/\n",
           "/mnt/sd/hdd0/home/00000001/localusername": "User"
@@ -4746,6 +5479,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nlle-modules: []\n",
@@ -4846,6 +5580,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -4955,6 +5690,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n",
@@ -5065,6 +5801,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -5175,6 +5912,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 02\n",
@@ -5285,6 +6023,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n"
@@ -5388,6 +6127,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\nuser-auto-connect: true\n",
@@ -5493,6 +6233,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n"
@@ -5593,6 +6334,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
@@ -5703,6 +6445,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
@@ -5813,6 +6556,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
@@ -5918,6 +6662,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: .hidden\n",
@@ -6019,6 +6764,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: ..bak\n",
@@ -6120,6 +6866,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n",
@@ -6228,6 +6975,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -6334,6 +7082,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -6440,6 +7189,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -6540,6 +7290,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -6640,6 +7391,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
@@ -6741,6 +7493,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
@@ -6842,6 +7595,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n"
@@ -6942,6 +7696,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -7043,6 +7798,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: ~\n",
@@ -7144,6 +7900,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-id: 01\nuser-auto-connect: true\n",
@@ -7254,6 +8011,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -7355,6 +8113,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -7462,6 +8221,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -7563,6 +8323,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -7664,6 +8425,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\nuser-auto-connect: \"\"\n",
@@ -7765,6 +8527,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -7881,6 +8644,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -7987,6 +8751,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 00\n",
@@ -8093,6 +8858,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
@@ -8197,6 +8963,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: \"\"\n"
@@ -8241,6 +9008,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /app/nowhere/vita\n"
@@ -8286,6 +9054,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "user-id: 01\n"
         },
@@ -8313,6 +9082,92 @@
         "entry_savefile_location": {
           "unresolved": {
             "code": "emulator-config-unreadable",
+            "data": {
+              "token": "VITA3K",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-missing-config-yml-refuses-as-missing-naming-the-build",
+      "rationale": "No config.yml exists, as before Vita3K's first start. Without the file the emulator parses nothing and its preference path falls back to the default it derives at run time (init_config, config.cpp:323-327 and :457-458 at commit e6ac4272) — the same default an empty pref-path falls back to, written down nowhere — so the answer refuses, and with emulator-config-missing: the file is not there, which is not a file atlas could not read. The refusal still names the build it was read under: release 4103, from components/vita3k/component_version, as every refusal the save card gives does wherever a release was read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-missing",
+            "data": {
+              "token": "VITA3K",
+              "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml",
+              "build": "4103"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vita3k-a-missing-config-yml-with-no-build-read-names-none",
+      "rationale": "The deploy carries no component_version and no config.yml exists, so neither the build nor the preference path is read: the answer refuses with emulator-config-missing, and the data carries no build key, because no release was read — the refusal names a build only where one was.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psvita"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "unresolved": {
+            "code": "emulator-config-missing",
             "data": {
               "token": "VITA3K",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml"
@@ -16700,6 +17555,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/:\n  path: /mnt/sd/hdd/\n"
         },
@@ -16744,6 +17600,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n    <path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n    <platform>ps3</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml": "/dev_hdd0/: /mnt/sd/a/\n/dev_hdd0/: /mnt/sd/b/\n"
         },
@@ -16788,6 +17645,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id:\n  stored: 00\nlle-modules: []\n",
@@ -16888,6 +17746,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "3996\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "---\ninitial-setup: true\npref-path: /mnt/sd/retrodeck/storage/psvita/Vita3K/\nuser-id: 05\nlle-modules: []\n",
@@ -17000,6 +17859,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -17105,6 +17965,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n",
@@ -17210,6 +18071,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: \"\"\n",
@@ -17315,6 +18177,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -17419,6 +18282,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-auto-connect: true\n",
@@ -17523,6 +18387,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n"
@@ -17618,6 +18483,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
@@ -17712,6 +18578,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n"
@@ -17811,6 +18678,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n  stored: 01\n",
@@ -17915,6 +18783,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -18017,6 +18886,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -18119,6 +18989,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -18221,6 +19092,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n",
@@ -18324,6 +19196,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\n",
@@ -18424,6 +19297,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id:\n",
@@ -18529,6 +19403,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "4103\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 05\n"
@@ -18634,6 +19509,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/vita3k/component_version": "5000\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
@@ -18739,6 +19615,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psvita</name>\n    <path>%ROMPATH%/psvita</path>\n    <extension>.psvita .PSVITA</extension>\n    <command label=\"Vita3K (Standalone)\">%EMULATOR_VITA3K% %ROM%</command>\n    <platform>psvita</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/Vita3K/config.yml": "pref-path: /mnt/sd/vita\nuser-id: 01\n",
           "/mnt/sd/vita/ux0/user/00/user.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<user id=\"00\" name=\"deck\"/>\n",

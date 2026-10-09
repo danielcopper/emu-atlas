@@ -1633,21 +1633,58 @@ UNRESOLVED_MOD_WIRING_UNESTABLISHED = "mod-wiring-unestablished"
 # there atlas has no wiring for the emulator, here it does and the machine
 # would not let it look.
 UNRESOLVED_EMULATOR_CONFIG_UNREADABLE = "emulator-config-unreadable"
+# The settings file that would name the place does not exist — the emulator was
+# never started, or its file was removed — so its compiled defaults decide. One
+# fact, one code on both shapes, the sharing ``core-not-installed`` has: where
+# the defaults name a place the answer stands and says so with the caveat of
+# this spelling (:data:`CAVEAT_EMULATOR_CONFIG_MISSING`), and where they name
+# none the question refuses with this outcome. ``data`` names the ``token`` of
+# the emulator and the ``config`` file that is missing — the file alone where
+# no card names the emulator (RetroDECK's RetroArch), and the core under
+# ``core`` where a libretro core reads a file of its own (ScummVM's
+# scummvm.ini, MAME's mame.ini, PUAE's WHDLoad.prefs). Distinct from
+# ``emulator-config-unreadable``: there the file exists and could not be read,
+# here there is nothing to read. A standalone emulator nobody has started yet
+# is no broken installation, so for one the code rides the save and savestate
+# answers it qualifies and never a health report; the one file it is a health
+# finding about is the arrangement's own RetroArch configuration
+# (:data:`atlas.installations.HEALTH_ISSUE_EMULATOR_CONFIG_MISSING`).
+UNRESOLVED_EMULATOR_CONFIG_MISSING = "emulator-config-missing"
+CAVEAT_EMULATOR_CONFIG_MISSING = UNRESOLVED_EMULATOR_CONFIG_MISSING
 # Why the read did not settle the question, under ``data["reason"]``, where the
-# refusal has one to state. Two sources, one vocabulary: the scalar reader's own
-# refusal codes (:data:`~atlas.yaml_scalars.REFUSAL_CODES`) say which construct
-# stopped the whole file, and two more say the file parsed and the one key this
-# answer hangs on settled nothing all the same, with ``data["key"]`` naming it.
-# ``key-unread`` is a key stated as a construct the reader does not read.
-# ``key-repeated`` is a key the file states more than once, where the program
-# reading it keeps a statement this reader does not: the reader holds the first
-# statement, the way a yaml-cpp lookup answers, and RPCS3 instead applies every
-# statement in turn and keeps the last it reads as a scalar — so which of them
-# governs is not this reader's to say. A refusal that simply could not open the
-# file states no reason at all; the file is in ``data["config"]`` either way.
+# code has one to state — on a refusal, or on the caveat of the same spelling
+# where the answer still stands. Three sources, one vocabulary: the scalar
+# reader's own refusal codes (:data:`~atlas.yaml_scalars.REFUSAL_CODES`) say
+# which construct stopped the whole file; ``unparseable`` is a file the
+# emulator's own parser rejects, where the emulator then runs on its defaults
+# and the answer stands on them with the caveat (melonDS, which catches the
+# syntax error and keeps its factory settings); and two more say the file
+# parsed and the one key this answer hangs on settled nothing all the same,
+# with ``data["key"]`` naming it. ``key-unread`` is a key stated as a construct
+# the reader does not read. ``key-repeated`` is a key the file states more than
+# once, where the program reading it keeps a statement this reader does not:
+# the reader holds the first statement, the way a yaml-cpp lookup answers, and
+# RPCS3 instead applies every statement in turn and keeps the last it reads as
+# a scalar — so which of them governs is not this reader's to say. A refusal
+# that simply could not open the file states no reason at all; the file is in
+# ``data["config"]`` either way.
 REASON_KEY_UNREAD = "key-unread"
 REASON_KEY_REPEATED = "key-repeated"
-EMULATOR_CONFIG_UNREADABLE_REASONS = (*REFUSAL_CODES, REASON_KEY_UNREAD, REASON_KEY_REPEATED)
+REASON_UNPARSEABLE = "unparseable"
+EMULATOR_CONFIG_UNREADABLE_REASONS = (
+    *REFUSAL_CODES,
+    REASON_KEY_UNREAD,
+    REASON_KEY_REPEATED,
+    REASON_UNPARSEABLE,
+)
+# The two outcomes of an emulator's own settings file that leave the place an
+# answer names unread — not there, or there and not read. The installations
+# module composes the published set of such codes from this pair
+# (:data:`atlas.installations.PLACE_NOT_READ_CODES`).
+SETTINGS_FILE_NOT_READ_CODES = (
+    UNRESOLVED_EMULATOR_CONFIG_MISSING,
+    UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+)
 
 # Every file a BIOS search kept and hashed, keyed by path, beside what the
 # emulator's own table made of each one's bytes. Built by

@@ -696,18 +696,27 @@ COVERAGE_FLOOR = {
 # is the walk's own message; the comment beside an entry is where a person says
 # what would remove it.
 #
-# Empty, and measured so: every alternative the corpus publishes today names
-# switches whose file the fixture either already states a line for or is a flat
-# RetroArch cfg a line can simply be added to — including the Dolphin
-# answers, whose fixtures all state the slot line the alternative edits. Five
-# shapes would land here, one per refusal raised above: an options file whose
-# suffix names no grammar; a path the fixture records as a read failure rather
-# than as text; an emulator ini that states no line for the key, since nothing
-# in the answer says which section a new one belongs in; an alternative naming
-# an option the answer states no reading for; and a reading that names no
-# options file at all. Each is a real hole in what the published alternative
-# promises a client, so an entry added here names why and what would remove it.
-UNAPPLIABLE_BY_FIXTURE: frozenset[str] = frozenset()
+# One entry, and measured so: every other alternative the corpus publishes
+# today names switches whose file the fixture either already states a line for
+# or is a flat RetroArch cfg a line can simply be added to. Five shapes would
+# land here, one per refusal raised above: an options file whose suffix names
+# no grammar; a path the fixture records as a read failure rather than as text;
+# an emulator ini that states no line for the key, since nothing in the answer
+# says which section a new one belongs in; an alternative naming an option the
+# answer states no reading for; and a reading that names no options file at
+# all. Each is a real hole in what the published alternative promises a
+# client, so an entry added here names why and what would remove it.
+UNAPPLIABLE_BY_FIXTURE: frozenset[str] = frozenset(
+    {
+        # The third shape. With no Dolphin.ini the alternative names the file the
+        # emulator would read and the key, value and default it states are all
+        # true, but the answer states the key's section only in prose, so no
+        # fixture can write the new [Core] SlotA line. A structured section on
+        # the reading would remove this entry; that is a follow-up of its own.
+        "standalone-saves:dolphin-without-its-ini-answers-the-default-cards-and-says-no-file-was-read"
+        " | entry_savefile_location | mode 'folder+none' -> card+none [SlotA=1]",
+    }
+)
 
 
 def test_every_alternative_selects_the_mode_it_names():

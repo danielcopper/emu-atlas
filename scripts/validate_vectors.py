@@ -396,6 +396,9 @@ KNOWN_HEALTH_ISSUES = {
     "catalogue-invalid",
     "content-tree-unwired",
     "not-set-up",
+    # RetroDECK's own retroarch.cfg is not there — the standalone routes' code
+    # for a missing settings file, stated here as a finding.
+    "emulator-config-missing",
 }
 KNOWN_ROOT_KINDS = {
     "savefile_directory",
@@ -487,6 +490,9 @@ KNOWN_CAVEAT_CODES = {
     # The save route's refusal word, doubling as the firmware route's caveat
     # for the same fact — one fact, one code on both routes.
     "emulator-config-unreadable",
+    # A settings file that is not there: the caveat where the defaults name a
+    # place, the refusal of the same spelling where they name none.
+    "emulator-config-missing",
     "info-path-unresolved",
     "core-dir-unresolved",
     "firmware-root-missing",
@@ -603,6 +609,7 @@ KNOWN_UNRESOLVED_CODES = {
     "texture-wiring-unestablished",
     "mod-wiring-unestablished",
     "emulator-config-unreadable",
+    "emulator-config-missing",
     "emulator-config-path-untranslatable",
     "slot-device-uninterpreted",
     "not-set-up",

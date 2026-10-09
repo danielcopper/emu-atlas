@@ -1118,7 +1118,7 @@ class TestAClosedVocabularyIsNeverPublishedWithoutItsTuple:
 
 
 class TestATupleComposedFromAnotherStatesItsValues:
-    """``(*REFUSAL_CODES, REASON_KEY_UNREAD, REASON_KEY_REPEATED)`` is a vocabulary.
+    """``(*REFUSAL_CODES, REASON_KEY_UNREAD, REASON_KEY_REPEATED, REASON_UNPARSEABLE)`` is a vocabulary.
 
     A vocabulary, that is, and not an expression.
 
@@ -1200,12 +1200,14 @@ class TestATupleComposedFromAnotherStatesItsValues:
         assert reference.module_string_tuples(tree, {"NAME": ("a", "b")})["BOTH"] == ("x", "y")
         assert reference.module_splat_sources(tree, imported) == {}
 
-    def test_the_only_composed_tuple_the_page_publishes_resolves_whole(self) -> None:
-        # The package writes four module-level tuples with a splat in them:
+    def test_the_composed_reasons_tuple_the_page_publishes_resolves_whole(self) -> None:
+        # The package writes five module-level tuples with a splat in them:
         # `ARCHIVE_SUFFIXES` and `_BLOB_KEYS` in `atlas/machine.py` splat a
         # name of their own module, `_KNOWN_FILE_TEMPLATES` in
-        # `atlas/oddities.py` and this one splat an imported name. Only this
-        # one is a vocabulary the page publishes. `_KNOWN_FILE_TEMPLATES` stays
+        # `atlas/oddities.py`, `PLACE_NOT_READ_CODES` in
+        # `atlas/installations.py` and this one splat an imported name. This
+        # one and `PLACE_NOT_READ_CODES` are vocabularies the page publishes;
+        # this one is held here. `_KNOWN_FILE_TEMPLATES` stays
         # unresolved for a reason that has nothing to do with its splat: its
         # two plain elements are scalars imported from `atlas/placement.py`,
         # and the module-constant reading holds only names a module assigns.
@@ -1214,12 +1216,13 @@ class TestATupleComposedFromAnotherStatesItsValues:
             *yaml_scalars.REFUSAL_CODES,
             atlas.REASON_KEY_UNREAD,
             atlas.REASON_KEY_REPEATED,
+            atlas.REASON_UNPARSEABLE,
         )
         assert reference.declared_vocabularies()["EMULATOR_CONFIG_UNREADABLE_REASONS"] == values
 
     def test_both_modules_the_composed_list_is_spelled_across_declare_it(self) -> None:
         # The half that makes the sentences readable: the list is assigned in
-        # `atlas/placement.py`, and six of its eight value constants stand in
+        # `atlas/placement.py`, and six of its nine value constants stand in
         # `atlas/yaml_scalars.py`. A reading that named only the assigning
         # module would collect nothing written beside those six.
         values = tuple(atlas.EMULATOR_CONFIG_UNREADABLE_REASONS)
