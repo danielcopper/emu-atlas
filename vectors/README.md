@@ -149,6 +149,7 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `catalogue_query`       | `catalogue`                   | which emulators can launch this system                |
 | `systems_query`         | `systems`                     | which systems does the frontend declare               |
 | `rom_location_query`    | `rom_location`                | where do this system's ROMs live                      |
+| `roots_query`           | `roots`                       | where each root folder is, and what decided it        |
 | `firmware_query`        | `firmware`                    | `kind` is `core`, `system` or `inventory`             |
 | `identify_query`        | `identification`              | what is this content, by `md5` / `sha1` / `size`      |
 | `aggregate_query`       | `aggregate`                   | one question put to **every** detected installation   |
@@ -163,8 +164,9 @@ value that is not absolute, is refused: the first would state an input no answer
 refuses at the call.
 
 Every single-question family may name `installation` (a handle kind) to choose which detected installation answers;
-without it the first one does. `aggregate_query` may not — asking the aggregate to choose is the one thing it does not
-do — and names its `question` instead.
+without it the first one does. `roots_query` must name it, as `retrodeck` or `emudeck`: no other arrangement answers
+that question, so it is always asked of one by name. `aggregate_query` may not — asking the aggregate to choose is the
+one thing it does not do — and names its `question` instead.
 
 ## `expected` — the answers, canonically serialized
 

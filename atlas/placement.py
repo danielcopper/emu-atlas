@@ -1926,7 +1926,7 @@ class SavestateAbsence:
     serializer, the Ryujinx lineage never had one. ``citation`` is the
     evidence for the no (the spans and scans that establish it, contractual —
     a client repeating the claim repeats its source); ``sources`` is the
-    card's provenance prose, non-contractual like every provenance.
+    card's provenance prose, non-contractual like all provenance prose.
 
     ``caveats`` carries what qualifies the *claim*, never what qualifies a
     tree: the card's own ``unverified-version`` where no shipped build pins

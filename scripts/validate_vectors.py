@@ -61,6 +61,7 @@ INPUT_FIELDS_OPTIONAL = {
     "identify_query",
     "platform_systems_query",
     "platform_ids_query",
+    "roots_query",
 }
 # The savefile, savestate and texture-pack questions take the same three
 # arguments, because they are one question asked about three families — one
@@ -101,6 +102,16 @@ KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"
 KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
 KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
 ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
+# The roots question (issue #612) is answered by two arrangements alone and is
+# always asked of one of them by name, as its CLI form asks it. Its entries come
+# in one fixed order, and the vocabularies mirror atlas.installations'
+# INSTALLATION_ROOTS and ROOT_PROVENANCES — closed sets.
+ROOTS_QUERY_FIELDS = {"installation"}
+ROOTS_KINDS = {"retrodeck", "emudeck"}
+ROOTS_ORDER = ["installation", "roms", "bios", "saves"]
+KNOWN_ROOT_PROVENANCES = {"read", "frontend-default", "assumed"}
+ROOT_ENTRY_FIELDS = {"root", "path", "provenance", "setting", "caveats"}
+ROOT_SETTING_FIELDS = {"file", "key"}
 # The aggregate asks EVERY detected handle one question, so it names the
 # question instead of a handle. The fan-out is the same for every question it
 # mirrors, so the vocabulary is the questions that make the LABEL provable —
@@ -760,6 +771,13 @@ def _validate_systems_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "systems_query", query)
 
 
+def _validate_roots_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or set(query) != ROOTS_QUERY_FIELDS:
+        fail(f"{name}: input.roots_query must carry exactly {sorted(ROOTS_QUERY_FIELDS)}")
+    if query["installation"] not in ROOTS_KINDS:
+        fail(f"{name}: input.roots_query.installation must be one of {sorted(ROOTS_KINDS)}")
+
+
 def _validate_launchable_query(name: str, query: Any) -> None:
     # Both halves are the question's subject: a verdict without a file has
     # nothing to derive an extension from, and one without a system has no
@@ -1049,6 +1067,7 @@ _OWN_QUERY_VALIDATORS = {
     "identify_query": _validate_identify_query,
     "platform_systems_query": _validate_platform_systems_query,
     "platform_ids_query": _validate_platform_ids_query,
+    "roots_query": _validate_roots_query,
 }
 
 
@@ -3113,6 +3132,49 @@ def _validate_systems(name: str, answer: Any) -> None:
         fail(f"{name}: expected.systems states systems and {unread} without emulator-list-derived")
 
 
+def _validate_roots(name: str, answer: Any) -> None:
+    """A roots answer: the four roots in their fixed order, and the installation's findings."""
+    _require_exact(name, answer, {"roots", "caveats"}, "expected.roots")
+    roots = answer["roots"]
+    if not isinstance(roots, list) or [
+        entry.get("root") if isinstance(entry, dict) else None for entry in roots
+    ] != ROOTS_ORDER:
+        fail(f"{name}: expected.roots.roots must be one entry per root, in the order {ROOTS_ORDER}")
+    for entry in roots:
+        _validate_root_entry(name, entry)
+    _validate_caveats(name, answer["caveats"])
+
+
+def _validate_root_entry(name: str, entry: Any) -> None:
+    """One root: a path with its provenance, or neither and the caveat saying why."""
+    _require_exact(name, entry, ROOT_ENTRY_FIELDS, "each root")
+    which = entry["root"]
+    path, provenance = entry["path"], entry["provenance"]
+    if path is None:
+        if provenance is not None or not entry["caveats"]:
+            fail(f"{name}: root {which!r} without a path carries no provenance and states why")
+    else:
+        if not (isinstance(path, str) and path.startswith("/")):
+            fail(f"{name}: root {which!r} path must be absolute, got {path!r}")
+        if provenance not in KNOWN_ROOT_PROVENANCES or entry["caveats"]:
+            fail(
+                f"{name}: root {which!r} with a path carries one of {sorted(KNOWN_ROOT_PROVENANCES)} "
+                "and no caveats"
+            )
+    if entry["setting"] is not None:
+        _validate_root_setting(name, which, entry["setting"])
+    _validate_caveats(name, entry["caveats"])
+
+
+def _validate_root_setting(name: str, which: Any, setting: Any) -> None:
+    """The setting that decides a root: an absolute file and a key in it."""
+    _require_exact(name, setting, ROOT_SETTING_FIELDS, f"root {which!r} setting")
+    if not (isinstance(setting["file"], str) and setting["file"].startswith("/")):
+        fail(f"{name}: root {which!r} setting.file must be an absolute path")
+    if not (isinstance(setting["key"], str) and setting["key"]):
+        fail(f"{name}: root {which!r} setting.key must be a non-empty string")
+
+
 def _validate_aggregate_answer(name: str, answered: Any, question: str) -> None:
     """One labelled answer: the handle it came from, and that question's own form.
 
@@ -3181,6 +3243,7 @@ _EXPECTED_KEYS = {
     "identification",
     "systems_for_platform",
     "platform_ids",
+    "roots",
 }
 # Each optional expectation and the query that asks for it: a vector states
 # both or neither, because an expectation nobody asked for and a question with
@@ -3191,6 +3254,7 @@ _EXPECTATION_PAIRINGS = (
     ("systems", "systems_query"),
     ("systems_for_platform", "platform_systems_query"),
     ("platform_ids", "platform_ids_query"),
+    ("roots", "roots_query"),
     ("launchable", "launchable_query"),
     ("rom_location", "rom_location_query"),
     ("savefile_location", "savefile_query"),
@@ -3231,6 +3295,7 @@ _RESOLVER_EXPECTATIONS = {
     "identification",
     "systems_for_platform",
     "platform_ids",
+    "roots",
 }
 
 
@@ -3282,6 +3347,7 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         _BlockCheck("systems", _validate_systems),
         _BlockCheck("systems_for_platform", _validate_platform_systems),
         _BlockCheck("platform_ids", _validate_platform_ids),
+        _BlockCheck("roots", _validate_roots),
         _BlockCheck("launchable", _validate_launchable),
         _BlockCheck("savestate_location", _validate_savestate_outcome),
         _BlockCheck("screenshot_location", _validate_screenshot_outcome),

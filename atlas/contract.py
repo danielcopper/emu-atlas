@@ -17,7 +17,11 @@ data. The rule for what serializes:
   ``FirmwareRequirement.system_source`` is neither and keeps its name: it is a
   closed vocabulary naming *which rule* assigned the system (an override, the
   core's ``systemname``, a slug, or nothing), so it is data a client branches
-  on and it serializes.
+  on and it serializes. ``InstallationRoot.provenance`` is the one
+  ``provenance`` that serializes, for the same reason: it is not prose but a
+  closed vocabulary (:data:`~atlas.installations.ROOT_PROVENANCES`) saying
+  whether a root's path was read, is the frontend's default, or was assumed —
+  the word a client branches on before it writes into that folder.
 - **A distribution's ``label`` is a third thing**: it serializes, and a port
   must reproduce it, because it is packaged and versioned world knowledge
   rather than a sentence someone wrote (:mod:`atlas.distribution_labels`) — and
@@ -50,6 +54,7 @@ from .installations import (
     LaunchabilityAnswer,
     PlatformSystemsAnswer,
     RomPlacement,
+    RootsAnswer,
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
@@ -133,7 +138,7 @@ def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
 
     The granularity block is plural on purpose: ``readings`` is one entry per
     switch that went into selecting the mode (its provenance prose stays out,
-    like all provenance), and each ``alternatives`` entry names another mode
+    like all provenance prose), and each ``alternatives`` entry names another mode
     with the full option combination that selects it — a client renders
     "is the wanted option active, and in which file does it change" from the
     readings, for one switch or several alike.
@@ -811,6 +816,33 @@ def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
         "physical_dir": placement.physical_dir,
         "extensions": list(placement.extensions),
         "caveats": _caveats_contract(placement.caveats),
+    }
+
+
+def roots_contract(answer: RootsAnswer) -> dict[str, Any]:
+    """The stable form of a roots answer — each root, where it came from, and what decides it.
+
+    The four entries keep their fixed order (installation, roms, bios, saves),
+    and an entry atlas cannot state a path for stays in it: ``path`` and
+    ``provenance`` are ``null`` there and its own ``caveats`` say why.
+    ``setting`` is ``null`` only where no setting decides the root; elsewhere
+    it names the file and key whether or not the key held a value, because
+    ``provenance`` is what says which.
+    """
+    return {
+        "roots": [
+            {
+                "root": entry.root,
+                "path": entry.path,
+                "provenance": entry.provenance,
+                "setting": None
+                if entry.setting is None
+                else {"file": entry.setting.file, "key": entry.setting.key},
+                "caveats": _caveats_contract(entry.caveats),
+            }
+            for entry in answer.roots
+        ],
+        "caveats": _caveats_contract(answer.caveats),
     }
 
 

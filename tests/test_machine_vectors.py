@@ -44,6 +44,7 @@ from atlas.contract import (
     installation_contract,
     platform_systems_contract,
     rom_placement_contract,
+    roots_contract,
     system_platforms_contract,
 )
 
@@ -143,6 +144,12 @@ def _rom_location(installs, query, name):
 
 def _systems(installs, query, name):
     return systems_contract(_select(installs, query.get("installation"), name).systems())
+
+
+def _roots(installs, query, name):
+    install = _select(installs, query["installation"], name)
+    assert isinstance(install, (atlas.RetroDeck, atlas.EmuDeck)), f"{name}: {install.kind} answers no roots"
+    return roots_contract(install.roots())
 
 
 def _systems_for_platform(installs, query, name):
@@ -275,6 +282,7 @@ QUESTIONS = {
     "systems": ("systems_query", _systems),
     "systems_for_platform": ("platform_systems_query", _systems_for_platform),
     "platform_ids": ("platform_ids_query", _platform_ids),
+    "roots": ("roots_query", _roots),
     "launchable": ("launchable_query", _launchable),
     "rom_location": ("rom_location_query", _rom_location),
     "aggregate": ("aggregate_query", _aggregate),
@@ -786,6 +794,54 @@ class TestTheGrammarRefusesContradictions:
     def test_the_two_lists_are_fine_apart(self):
         vector = self._vector(inaccessible=["/mnt/card"], unlistable=["/saves"])
         validate_vectors.validate_machines_vector(vector)
+
+    @staticmethod
+    def _roots_vector(name: str = "retrodeck-roots-state-no-rom-root-for-a-relative-romdirectory"):
+        """A real roots vector, copied so a test can break one thing in it."""
+        document = json.loads((_VECTOR_DIR / "roots.json").read_text())
+        return next(v for v in document["vectors"] if v["name"] == name)
+
+    def test_the_roots_vector_these_tests_break_is_valid(self):
+        # Every refusal below is one change away from this; without it passing
+        # they would prove the copy was broken already.
+        validate_vectors.validate_machines_vector(self._roots_vector())
+
+    def test_a_roots_query_naming_no_installation_is_refused(self):
+        vector = self._roots_vector()
+        vector["input"]["roots_query"] = {}
+        with pytest.raises(validate_vectors.VectorError, match="roots_query must carry"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_roots_query_naming_a_kind_that_does_not_answer_it_is_refused(self):
+        vector = self._roots_vector()
+        vector["input"]["roots_query"] = {"installation": "bare_retroarch_flatpak"}
+        with pytest.raises(validate_vectors.VectorError, match="roots_query.installation"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_roots_out_of_their_order_are_refused(self):
+        vector = self._roots_vector()
+        roots = vector["expected"]["roots"]["roots"]
+        roots[0], roots[1] = roots[1], roots[0]
+        with pytest.raises(validate_vectors.VectorError, match="in the order"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_root_without_a_path_that_states_no_reason_is_refused(self):
+        vector = self._roots_vector()
+        vector["expected"]["roots"]["roots"][1]["caveats"] = []
+        with pytest.raises(validate_vectors.VectorError, match="without a path"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_root_with_a_path_and_no_provenance_is_refused(self):
+        vector = self._roots_vector()
+        vector["expected"]["roots"]["roots"][0]["provenance"] = None
+        with pytest.raises(validate_vectors.VectorError, match="with a path carries"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_setting_in_a_relative_file_is_refused(self):
+        vector = self._roots_vector()
+        vector["expected"]["roots"]["roots"][0]["setting"]["file"] = "retrodeck.json"
+        with pytest.raises(validate_vectors.VectorError, match="setting.file"):
+            validate_vectors.validate_machines_vector(vector)
 
     def test_a_systems_query_the_runner_cannot_read_is_refused(self):
         # Not an object is not a query: the runner asks it for a handle

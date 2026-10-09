@@ -30,6 +30,7 @@ from typing import (
     Any,
     Callable,
     Iterator,
+    Literal,
     Mapping,
     NamedTuple,
     Protocol,
@@ -16489,6 +16490,20 @@ def _malformed_marker_paths(config: Mapping[str, Any]) -> tuple[str, str] | None
     return None
 
 
+def _marker_path_value(config: Mapping[str, Any], key: str) -> str | None:
+    """The path ``retrodeck.json`` sets under ``paths.<key>`` — ``None`` where it sets none.
+
+    The one rule for whether the marker names a root: a non-empty string
+    under ``paths``. An empty string, a missing key and a missing ``paths``
+    section all leave the root to its fallback.
+    """
+    paths = config.get("paths")
+    if not isinstance(paths, dict):
+        return None
+    value: object = cast(dict[str, object], paths).get(key, "")
+    return value if isinstance(value, str) and value else None
+
+
 def _marker_version(config: Mapping[str, Any]) -> str | None:
     """The version a ``retrodeck.json`` states about itself — ``None`` for none.
 
@@ -17934,6 +17949,10 @@ class _RomRoot:
     ``portable.txt`` switch; RetroDECK's root has no relocated state, because
     flatpak pins the home its resolutions derive from (see
     :meth:`RetroDeck._rom_root`).
+
+    ``frontend_default`` says which of the two a ``directory`` is: set where
+    the settings name no value and the frontend's own default applies, so
+    :meth:`RetroDeck.roots` can state that provenance without resolving twice.
     """
 
     directory: str | None = None
@@ -17941,15 +17960,16 @@ class _RomRoot:
     relocated: tuple[str, str] | None = None
     not_absolute: str | None = None
     sources: tuple[str, ...] = ()
+    frontend_default: bool = False
 
 
-def _rom_root_finding(machine: Machine, root: _RomRoot, settings_path: str) -> Caveat | None:
-    """The health finding for one resolved ROM root — ``None`` when it is a directory.
+def _rom_root_refusal(root: _RomRoot, settings_path: str) -> Caveat | None:
+    """Why the frontend's settings name no ROM root atlas can state — ``None`` where they do.
 
-    Says why the root could not be determined where it could not, and checks
-    it the way the saves root is checked where it could. ``relocated`` answers
-    ``None`` here: that statement is the EmuDeck handle's own caveat, which the
-    handle states itself rather than have it rebuilt.
+    The two refusals both handles share, spelled once for the two questions
+    that state them: :func:`_rom_root_finding` on ``health()`` and the ROM
+    entry of ``roots()``. ``relocated`` answers ``None`` here: that statement
+    is the EmuDeck handle's own caveat, which the handle states itself.
     """
     if root.unreadable is not None:
         return Caveat(
@@ -17965,6 +17985,19 @@ def _rom_root_finding(machine: Machine, root: _RomRoot, settings_path: str) -> C
             "its own ~ expansion, so there is no ROM root to check",
             {"value": root.not_absolute},
         )
+    return None
+
+
+def _rom_root_finding(machine: Machine, root: _RomRoot, settings_path: str) -> Caveat | None:
+    """The health finding for one resolved ROM root — ``None`` when it is a directory.
+
+    Says why the root could not be determined where it could not
+    (:func:`_rom_root_refusal`), and checks it the way the saves root is
+    checked where it could.
+    """
+    refusal = _rom_root_refusal(root, settings_path)
+    if refusal is not None:
+        return refusal
     directory = root.directory
     if directory is None or machine.path_kind(directory) == KIND_DIRECTORY:
         return None
@@ -17973,6 +18006,147 @@ def _rom_root_finding(machine: Machine, root: _RomRoot, settings_path: str) -> C
         f"ROM root {directory} is not an existing directory",
         {"path": directory},
     )
+
+
+# Where a root's path came from (issue #612) — the closed vocabulary of
+# InstallationRoot.provenance. Three claims that never collapse, because a
+# consumer that writes into or removes from a root acts on the difference.
+RootProvenance = Literal["read", "frontend-default", "assumed"]
+
+PROVENANCE_READ: RootProvenance = "read"
+"""The installation's own settings name this path: the setting held a value, and the path follows from it.
+
+The path is that value, or what the arrangement derives from it — EmuDeck's
+installation root is the folder above ``romsPath``, and ES-DE expands a ``~``
+in ``ROMDirectory`` against its own home. The file is the one the
+arrangement writes the root into and its frontend or emulators follow —
+``retrodeck.json``'s ``paths``, EmuDeck's ``settings.sh``, ES-DE's
+``ROMDirectory`` — so a user who moved the folder moved this answer.
+"""
+PROVENANCE_FRONTEND_DEFAULT: RootProvenance = "frontend-default"
+"""The frontend's own setting is unset, and the path is the default the frontend falls back on.
+
+Not a guess: ES-DE resolves an empty ``ROMDirectory`` to ``<its home>/ROMs``,
+which atlas resolves the same way, so this is the folder the frontend really
+launches from. Nobody chose it, though — a library kept elsewhere has not been
+pointed at.
+"""
+PROVENANCE_ASSUMED: RootProvenance = "assumed"
+"""Nothing on the machine names this path: atlas falls back on the arrangement's usual layout.
+
+The setting is unset, or the file holding it is missing or unusable, so the
+path is where the arrangement puts this folder by default — under the root it
+was pointed at where that root was read. Nothing on this machine confirms
+it: treat it as the arrangement's default, never as a folder someone configured.
+"""
+
+ROOT_PROVENANCES = ("read", "frontend-default", "assumed")
+
+# Which of an installation's roots one entry of a roots answer is about.
+InstallationRootName = Literal["installation", "roms", "bios", "saves"]
+
+ROOT_NAME_INSTALLATION: InstallationRootName = "installation"
+"""The installation's own root — RetroDECK's home folder, EmuDeck's ``Emulation`` tree."""
+ROOT_NAME_ROMS: InstallationRootName = "roms"
+"""The ROM root the frontend substitutes for ``%ROMPATH%``, before any system's ``<path>``."""
+ROOT_NAME_BIOS: InstallationRootName = "bios"
+"""The BIOS folder the arrangement keeps firmware in."""
+ROOT_NAME_SAVES: InstallationRootName = "saves"
+"""The saves root the arrangement keeps saves under."""
+
+INSTALLATION_ROOTS = ("installation", "roms", "bios", "saves")
+
+
+@dataclass(frozen=True, slots=True)
+class RootSetting:
+    """The setting that decides one root, as the file it lives in and its key there."""
+
+    file: str
+    """The absolute path of the file the setting lives in — whether or not that file exists."""
+    key: str
+    """The setting's key in that file, spelled the way the file spells it — ``paths.saves_path``
+    for a key nested in a JSON object.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class InstallationRoot:
+    """One root of an installation: its path, where that path came from, and what decides it.
+
+    ``setting`` names the setting that decides the root wherever one exists,
+    whether or not it held a value — ``provenance`` says what it held. So an
+    ``assumed`` saves root still names the key that would move it, and only a
+    root no setting decides carries ``None`` there.
+
+    ``path`` is ``None`` where atlas cannot state the root at all, and then
+    ``provenance`` is ``None`` too and ``caveats`` says why, under the code
+    ``health()`` states for that state — or, where ``health()`` states none,
+    the code the ROM question states.
+    """
+
+    root: InstallationRootName
+    """Which root this is — ``installation``, ``roms``, ``bios`` or ``saves``."""
+    path: str | None
+    """The root's absolute path, or ``None`` where atlas cannot state one and the caveats say
+    why — never a partial path.
+    """
+    provenance: RootProvenance | None
+    """Where the path came from — ``read`` from the settings, ``frontend-default`` where the
+    frontend's own default applies, ``assumed`` from the arrangement's usual layout; ``None``
+    exactly when there is no path.
+    """
+    setting: RootSetting | None
+    """The setting that decides this root, whether or not it held a value — ``None`` only where
+    no setting decides it.
+    """
+    caveats: tuple[Caveat, ...] = ()
+    """Why there is no path, on an entry without one; empty on every entry that has a path."""
+
+    def __post_init__(self) -> None:
+        if (self.path is None) != (self.provenance is None):
+            raise ValueError(f"root {self.root!r}: a provenance travels with a path, and only with one")
+        if (self.path is None) != bool(self.caveats):
+            raise ValueError(f"root {self.root!r}: an entry without a path states why, and only such an entry")
+
+
+@dataclass(frozen=True, slots=True)
+class RootsAnswer:
+    """Where each of an installation's roots is, and whether its settings say so.
+
+    Four entries in a fixed order — installation, ROMs, BIOS, saves — so a
+    caller can index them, and a root atlas cannot state stays in the list
+    with no path rather than going missing. ``caveats`` carries the
+    installation's findings the way every other answer does; the findings
+    about the ROM root alone stay on ``health()``.
+    """
+
+    roots: tuple[InstallationRoot, ...]
+    """The installation root, ROM root, BIOS folder and saves root, in that order."""
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    """The installation's findings and the evidence statement every answer carries."""
+
+
+class _SourcedRoot(NamedTuple):
+    """One roots-answer entry and the prose saying what it was read from, for the answer's ``sources``."""
+
+    entry: InstallationRoot
+    sources: tuple[str, ...]
+
+
+def _rom_root_entry(root: _RomRoot, setting: RootSetting, refusal: Caveat | None) -> _SourcedRoot:
+    """The ROM entry of a roots answer, from the one ROM root chain both handles resolve through.
+
+    *refusal* is the reason the chain states no directory, which the caller
+    builds because only it knows which code its arrangement states for which
+    state (:func:`_rom_root_refusal`, and EmuDeck's relocation caveat); an
+    entry with neither is refused by :class:`InstallationRoot` itself.
+    """
+    if root.directory is None:
+        reasons = () if refusal is None else (refusal,)
+        return _SourcedRoot(InstallationRoot(ROOT_NAME_ROMS, None, None, setting, reasons), root.sources)
+    provenance = PROVENANCE_FRONTEND_DEFAULT if root.frontend_default else PROVENANCE_READ
+    return _SourcedRoot(InstallationRoot(ROOT_NAME_ROMS, root.directory, provenance, setting), root.sources)
 
 
 @dataclass(frozen=True, slots=True)
@@ -19440,11 +19614,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         ``paths`` hold anything else, so the check here is what makes that
         guarantee local — nothing but a path ever leaves this method.
         """
-        paths = config.get("paths")
-        if isinstance(paths, dict):
-            value: object = paths.get(key, "")
-            if isinstance(value, str) and value:
-                return value, f"retrodeck.json: paths.{key}"
+        value = _marker_path_value(config, key)
+        if value is not None:
+            return value, f"retrodeck.json: paths.{key}"
         if not fallback_subdir:
             fallback = os.path.join(self._home, "retrodeck")
         else:
@@ -19472,6 +19644,78 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         return self._config_path(self._read_marker()[0], "saves_path", "saves")[0]
 
     @one_question
+    def roots(self) -> RootsAnswer:
+        """The installation root, ROM root, BIOS folder and saves root, each with where it came from.
+
+        The same paths :meth:`root`, :meth:`roms_dir`, :meth:`bios_dir` and
+        :meth:`saves_root` answer, from one read of the marker: each states
+        whether the setting that decides it held the value (``read``), or
+        whether atlas fell back on RetroDECK's layout (``assumed``) — an unset
+        key, a marker without its ``paths``, one atlas cannot read, and a
+        RetroDECK not set up alike. A sub-root falls back under the *resolved*
+        home, so an unset ``saves_path`` is ``assumed`` beside a ``read``
+        ``rd_home_path``. The ROM root is ES-DE's ``ROMDirectory``, as
+        :meth:`roms_dir` reads it, and ``frontend-default`` where the
+        settings set none; where :meth:`roms_dir` is ``None`` the entry has no
+        path and states why with the code :meth:`health` states, ``not-set-up``
+        included.
+        """
+        config, marker_issues = self._read_marker()
+        marker = self._marker_path()
+        entries: dict[str, _SourcedRoot] = {
+            name: self._config_root(config, marker, name, key, fallback_subdir)
+            for name, key, fallback_subdir in self._MARKER_ROOTS
+        }
+        entries[ROOT_NAME_ROMS] = self._rom_entry(marker_issues)
+        findings = self._health_from(config, marker_issues).issues
+        evidence = arrangement_caveats(self.kind, observed_version=_marker_version(config))
+        ordered = tuple(entries[name] for name in INSTALLATION_ROOTS)
+        return RootsAnswer(
+            tuple(sourced.entry for sourced in ordered),
+            tuple(source for sourced in ordered for source in sourced.sources),
+            (*findings, *evidence),
+        )
+
+    # The roots the marker decides: the root's name, its key under ``paths``
+    # and the folder it falls back to under the home ("" is the home itself).
+    _MARKER_ROOTS: tuple[tuple[InstallationRootName, str, str], ...] = (
+        (ROOT_NAME_INSTALLATION, "rd_home_path", ""),
+        (ROOT_NAME_BIOS, "bios_path", "bios"),
+        (ROOT_NAME_SAVES, "saves_path", "saves"),
+    )
+
+    def _config_root(
+        self,
+        config: dict[str, Any],
+        marker: str,
+        name: InstallationRootName,
+        key: str,
+        fallback_subdir: str,
+    ) -> _SourcedRoot:
+        """One marker-decided root of :meth:`roots` — :meth:`_config_path`'s answer, with its provenance."""
+        path, source = self._config_path(config, key, fallback_subdir)
+        read = _marker_path_value(config, key) is not None
+        return _SourcedRoot(
+            InstallationRoot(
+                name,
+                path,
+                PROVENANCE_READ if read else PROVENANCE_ASSUMED,
+                RootSetting(marker, f"paths.{key}"),
+            ),
+            (source,),
+        )
+
+    def _rom_entry(self, marker_issues: tuple[Caveat, ...]) -> _SourcedRoot:
+        """The ROM entry of :meth:`roots` — :meth:`roms_dir`'s chain, with the reason where it has none."""
+        settings_path = self._esde_settings_path()
+        setting = RootSetting(settings_path, self._ROM_DIRECTORY_SETTING)
+        not_set_up = _not_set_up(marker_issues)
+        if not_set_up is not None:
+            return _SourcedRoot(InstallationRoot(ROOT_NAME_ROMS, None, None, setting, (not_set_up,)), ())
+        root = self._rom_root()
+        return _rom_root_entry(root, setting, _rom_root_refusal(root, settings_path))
+
+    @one_question
     def bios_dir(self) -> str:
         """The RetroDECK BIOS directory (``bios_path`` or the fallback)."""
         return self._config_path(self._read_marker()[0], "bios_path", "bios")[0]
@@ -19497,9 +19741,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         configured value is not an absolute path even after the frontend's own
         ``~`` expansion. A bare string cannot carry which, and raising is not
         this domain's grammar, so a caller who needs the reason asks
-        ``rom_location(system)`` and reads its caveats, or :meth:`health`,
-        which states it as a finding. A not-set-up installation refuses too:
-        the frontend has no settings of RetroDECK's making yet.
+        :meth:`roots`, whose ROM entry states it — or ``rom_location(system)``
+        and reads its caveats, or :meth:`health`, which states it as a finding.
+        A not-set-up installation refuses too: the frontend has no settings of
+        RetroDECK's making yet.
         """
         if _not_set_up(self._read_marker()[1]) is not None:
             return None
@@ -20009,7 +20254,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             return _RomRoot(unreadable=unreadable)
         sources = (self._ROM_DIRECTORY_SOURCE,)
         if configured is None:
-            return _RomRoot(directory=self._default_rom_directory(), sources=sources)
+            return _RomRoot(
+                directory=self._default_rom_directory(), sources=sources, frontend_default=True
+            )
         expanded = configured
         if "~" in configured:
             expanded = expand_home_path(configured, self._esde_config_home())
@@ -21325,6 +21572,88 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return self._setting_path(self._read_marker()[0], "savesPath", "saves")[0]
 
     @one_question
+    def roots(self) -> RootsAnswer:
+        """The installation root, ROM root, BIOS folder and saves root, each with where it came from.
+
+        The same paths :meth:`root`, :meth:`roms_dir`, :meth:`bios_dir` and
+        :meth:`saves_root` answer, from one read of ``settings.sh``: a key it
+        sets is ``read``, and one it does not — or a file atlas cannot read —
+        is ``assumed`` under ``~/Emulation``, EmuDeck's default. The
+        installation root is the parent of ``romsPath``, so its provenance and
+        its setting are ``romsPath``'s. The ROM root is ES-DE's
+        ``ROMDirectory``, as :meth:`roms_dir` reads it, and
+        ``frontend-default`` where the settings set none; where :meth:`roms_dir`
+        is ``None`` the entry has no path and states why — with the code
+        :meth:`health` states, or, on an EmuDeck without ES-DE, which no setting
+        decides, the code :meth:`rom_location` states.
+
+        The findings are followed by the two riders :meth:`rom_location`
+        carries (:meth:`_riders`), in every state this question answers in:
+        ``config-home-relocated`` where a ``portable.txt`` sits beside ES-DE,
+        because the ROM root was read from a tree the frontend may not be
+        using, and ``frontend-marker-mismatch`` where ``settings.sh``'s ES-DE
+        record disagrees with the disk. The relocation rides whether or not
+        the ROM entry has a path; where it is why the entry has none, the
+        entry states it too, as its own reason.
+        """
+        settings, marker_issues = self._read_marker()
+        companion_status = self._machine.read_text(self._companion_cfg_path()).status
+        marker = self._marker_path()
+        installation = self._settings_root(
+            settings, marker, ROOT_NAME_INSTALLATION, "romsPath", "roms", parent=True
+        )
+        bios = self._settings_root(settings, marker, ROOT_NAME_BIOS, "biosPath", "bios")
+        saves = self._settings_root(settings, marker, ROOT_NAME_SAVES, "savesPath", "saves")
+        present = self._esde_present()
+        riders = self._riders(settings, present)
+        relocation = next((c for c in riders if c.code == CAVEAT_CONFIG_HOME_RELOCATED), None)
+        findings = self._health_from(settings, marker_issues, companion_status).issues
+        evidence = arrangement_caveats(self.kind, observed_version=self._observed_backend_head())
+        ordered = (installation, self._rom_entry(present, relocation), bios, saves)
+        return RootsAnswer(
+            tuple(sourced.entry for sourced in ordered),
+            tuple(source for sourced in ordered for source in sourced.sources),
+            (*findings, *riders, *evidence),
+        )
+
+    def _settings_root(
+        self,
+        settings: dict[str, str],
+        marker: str,
+        name: InstallationRootName,
+        key: str,
+        fallback_subdir: str,
+        *,
+        parent: bool = False,
+    ) -> _SourcedRoot:
+        """One ``settings.sh``-decided root of :meth:`roots` — :meth:`_setting_path`'s answer, with its provenance.
+
+        *parent* takes the folder above the setting's path, which is how
+        :meth:`root` derives the installation root from ``romsPath``.
+        """
+        path, source = self._setting_path(settings, key, fallback_subdir)
+        if parent:
+            path = os.path.dirname(path)
+        provenance = PROVENANCE_READ if settings.get(key) else PROVENANCE_ASSUMED
+        return _SourcedRoot(InstallationRoot(name, path, provenance, RootSetting(marker, key)), (source,))
+
+    def _rom_entry(self, present: bool, relocation: Caveat | None) -> _SourcedRoot:
+        """The ROM entry of :meth:`roots` — :meth:`roms_dir`'s chain, with the reason where it has none.
+
+        *present* and *relocation* are the answer's own reads of whether ES-DE
+        is on disk and whether a ``portable.txt`` sits beside it, so the entry
+        and the riders beside it are one reading.
+        """
+        if not present:
+            return _SourcedRoot(
+                InstallationRoot(ROOT_NAME_ROMS, None, None, None, (self._catalogue_absence(),)), ()
+            )
+        settings_path = self._esde_settings_path()
+        root = self._esde_rom_root(relocated=relocation is not None)
+        refusal = relocation if root.relocated is not None else _rom_root_refusal(root, settings_path)
+        return _rom_root_entry(root, RootSetting(settings_path, self._ROM_DIRECTORY_SETTING), refusal)
+
+    @one_question
     def bios_dir(self) -> str:
         """EmuDeck's BIOS directory (``biosPath`` or the default)."""
         return self._setting_path(self._read_marker()[0], "biosPath", "bios")[0]
@@ -21355,8 +21684,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         setting alike — or the configured value is not an absolute path even
         after the frontend's own ``~`` expansion. A bare string cannot carry
         which, and raising is not this domain's grammar, so a caller who needs
-        the reason asks ``rom_location(system)`` and reads its caveats, or
-        :meth:`health`, which states it as a finding wherever ES-DE is present.
+        the reason asks :meth:`roots`, whose ROM entry states it — or
+        ``rom_location(system)`` and reads its caveats, or :meth:`health`, which
+        states it as a finding wherever ES-DE is present.
         """
         if not self._esde_present():
             return None
@@ -21812,7 +22142,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if configured is None:
             if relocated:
                 return _RomRoot(relocated=portable, sources=sources)
-            return _RomRoot(directory=os.path.join(self._home, "ROMs"), sources=sources)
+            return _RomRoot(
+                directory=os.path.join(self._home, "ROMs"), sources=sources, frontend_default=True
+            )
         expanded = configured
         if "~" in configured:
             if relocated:

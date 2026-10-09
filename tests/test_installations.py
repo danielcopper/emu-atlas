@@ -6,6 +6,7 @@ import json
 import sys
 import types
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
@@ -17,6 +18,7 @@ from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPr
 from atlas.machine import GLOB_INCOMPLETE, SYMLINK_HOPS, FixtureMachine, GlobResult
 from atlas.oddities import SaveGroup, SaveMode
 from tests.answers import placed, state_placed
+from tests.test_machine_vectors import fixture_machine
 
 HOME = "/home/deck"
 RETRODECK_JSON = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json"
@@ -8596,6 +8598,28 @@ class TestOneReadPerSourcePerQuery:
         assert machine.reads
         assert machine.repeats() == {}
 
+    def test_roots_reads_each_source_once(self):
+        # Four roots off two files: the marker serves three of them and the
+        # health findings beside them, ES-DE's settings the fourth.
+        machine = self._query(lambda rd: rd.roots())
+        assert machine.repeats() == {}
+        assert RETRODECK_JSON in machine.reads
+        assert ESDE_SETTINGS in machine.reads
+
+    def test_an_emudeck_roots_query_reads_each_source_once(self):
+        es_settings = f"{HOME}/ES-DE/settings/es_settings.xml"
+        machine = _CountingMachine(
+            {
+                EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: "",
+                es_settings: '<?xml version="1.0"?>\n<string name="ROMDirectory" value="/r" />\n',
+            }
+        )
+        atlas.EmuDeck(HOME, machine).roots()
+        assert machine.repeats() == {}
+        assert EMUDECK_SETTINGS in machine.reads
+        assert es_settings in machine.reads
+
     def test_the_counter_would_see_a_repeat(self):
         # The guard above proves nothing unless a second read is visible.
         machine = self._query(lambda rd: (rd.root(), rd.saves_root()))
@@ -11581,3 +11605,63 @@ class TestThePlaceNotReadCodes:
             == "emulator-config-missing"
         )
         assert atlas.CAVEAT_EMULATOR_CONFIG_MISSING in atlas.PLACE_NOT_READ_CODES
+
+
+class TestRoots:
+    """The roots question (issue #612): the four paths, where each came from, and what decides it."""
+
+    @staticmethod
+    def _roots_vectors():
+        path = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "roots.json"
+        return json.loads(path.read_text())["vectors"]
+
+    def test_every_entry_answers_the_path_its_own_question_answers(self):
+        # No existing answer changes, and roots() states the same four paths:
+        # one chain per root, so the two can never disagree.
+        vectors = self._roots_vectors()
+        assert vectors
+        for vector in vectors:
+            inp = vector["input"]
+            handle = next(
+                i
+                for i in atlas.detect(inp["home"], fixture_machine(inp))
+                if i.kind == inp["roots_query"]["installation"]
+            )
+            assert isinstance(handle, (atlas.RetroDeck, atlas.EmuDeck))
+            paths = [entry.path for entry in handle.roots().roots]
+            assert paths == [handle.root(), handle.roms_dir(), handle.bios_dir(), handle.saves_root()], vector["name"]
+
+    def test_the_roots_come_in_the_published_order(self):
+        machine = FixtureMachine({RETRODECK_JSON: RD_JSON})
+        answer = atlas.RetroDeck(HOME, machine).roots()
+        assert tuple(entry.root for entry in answer.roots) == atlas.INSTALLATION_ROOTS
+
+    def test_the_published_tuples_hold_the_value_constants_in_order(self):
+        assert atlas.ROOT_PROVENANCES == (
+            atlas.PROVENANCE_READ,
+            atlas.PROVENANCE_FRONTEND_DEFAULT,
+            atlas.PROVENANCE_ASSUMED,
+        )
+        assert atlas.INSTALLATION_ROOTS == (
+            atlas.ROOT_NAME_INSTALLATION,
+            atlas.ROOT_NAME_ROMS,
+            atlas.ROOT_NAME_BIOS,
+            atlas.ROOT_NAME_SAVES,
+        )
+
+    def test_a_provenance_without_a_path_is_refused(self):
+        with pytest.raises(ValueError, match="provenance travels with a path"):
+            atlas.InstallationRoot(atlas.ROOT_NAME_ROMS, None, atlas.PROVENANCE_READ, None)
+
+    def test_a_path_without_a_provenance_is_refused(self):
+        with pytest.raises(ValueError, match="provenance travels with a path"):
+            atlas.InstallationRoot(atlas.ROOT_NAME_ROMS, "/roms", None, None)
+
+    def test_an_entry_without_a_path_must_say_why(self):
+        with pytest.raises(ValueError, match="states why"):
+            atlas.InstallationRoot(atlas.ROOT_NAME_ROMS, None, None, None)
+
+    def test_an_entry_with_a_path_carries_no_reason(self):
+        reason = atlas.Caveat(atlas.HEALTH_ISSUE_ROMS_ROOT_NOT_ABSOLUTE, "relative", {"value": "roms"})
+        with pytest.raises(ValueError, match="states why"):
+            atlas.InstallationRoot(atlas.ROOT_NAME_ROMS, "/roms", atlas.PROVENANCE_READ, None, (reason,))
