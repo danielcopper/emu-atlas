@@ -85,10 +85,12 @@ classDiagram
     class RetroDeck {
         +roms_dir() str|None
         +saves_root() str
+        +roots() RootsAnswer
         +gamelist_selections(system)
     }
     class EmuDeck {
         +roms_dir() str|None
+        +roots() RootsAnswer
     }
     class BareRetroArchFlatpak
     class BareRetroArchNative

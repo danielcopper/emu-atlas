@@ -432,6 +432,58 @@ atlas.health_contract(inst.health())
 `ok` is the summary field, the same role `requirements_met` plays on a firmware answer. Inside `installation_contract()`
 health is a _field_ rather than an answer, so it carries the `issues` list alone — empty means ok there.
 
+### Where each root folder came from — `roots()`
+
+`root()`, `roms_dir()`, `bios_dir()` and `saves_root()` answer a path whether or not anything on the machine named it:
+an unset key falls back on the arrangement's usual layout, and health stays empty (issue #612). Before you write into a
+folder or remove from one, ask `roots()` on the RetroDECK or EmuDeck handle — it answers the same four paths and says
+for each where it came from:
+
+```python
+atlas.roots_contract(inst.roots())
+# {'roots': [
+#    {'root': 'installation', 'path': '/run/media/deck/Emulation/retrodeck', 'provenance': 'read',
+#     'setting': {'file': '.../retrodeck/retrodeck.json', 'key': 'paths.rd_home_path'}, 'caveats': []},
+#    {'root': 'roms', 'path': '/run/media/deck/Emulation/retrodeck/roms', 'provenance': 'read',
+#     'setting': {'file': '.../ES-DE/settings/es_settings.xml', 'key': 'ROMDirectory'}, 'caveats': []},
+#    {'root': 'bios', ...},
+#    {'root': 'saves', 'path': '/run/media/deck/Emulation/retrodeck/saves', 'provenance': 'assumed',
+#     'setting': {'file': '.../retrodeck/retrodeck.json', 'key': 'paths.saves_path'}, 'caveats': []}],
+#  'caveats': []}
+```
+
+The four entries always come in that order — `installation`, `roms`, `bios`, `saves` (`INSTALLATION_ROOTS`) — and
+`provenance` is one of three words (`ROOT_PROVENANCES`):
+
+- `read` — the setting that decides the root held the value: RetroDECK's `retrodeck.json` `paths`, EmuDeck's
+  `settings.sh`, ES-DE's `ROMDirectory`. EmuDeck's installation root is the parent of `romsPath`, so it is `romsPath`'s.
+- `frontend-default` — ES-DE's `ROMDirectory` is unset, or its settings file does not exist, and the frontend's own
+  default `<its home>/ROMs` applies. That is the folder the frontend really launches from; nobody chose it.
+- `assumed` — nothing named the path, and atlas fell back on the arrangement's layout: an unset key, a marker without a
+  `paths` section, a marker or `settings.sh` atlas cannot read, an invalid `paths` value, a RetroDECK not set up. A
+  RetroDECK sub-root falls back under the home it resolved, so an unset `saves_path` is `assumed` beside a `read`
+  `rd_home_path`.
+
+`setting` names the setting that decides the root, as `file` and `key`, whether or not it held a value — on an `assumed`
+saves root it is the key that would move it, and on a RetroDECK not set up it is the `retrodeck.json` setup will write.
+It is `null` only where no setting decides the root: the ROM root of an EmuDeck without ES-DE.
+
+A root atlas cannot state stays in the list with `path` and `provenance` `null` and the reason in its own `caveats`,
+under the code `health()` states for that state: `not-set-up`, `config-unreadable` for ES-DE settings that cannot be
+read, `roms-root-not-absolute`, and on EmuDeck `config-home-relocated`. An EmuDeck without ES-DE has no health finding
+for its ROM root, so its entry states `emulator-catalogue-unestablished`, the code `rom_location()` states. The answer's
+own `caveats` are the installation's findings, as on every answer — `marker-invalid` there, with `key` naming a `paths`
+value, is why every marker root is `assumed`, and with `key: "version"` it leaves them `read`. The findings about the
+ROM root alone, `roms-root-missing` among them, stay on `health()`. On EmuDeck the answer also carries the two riders
+`rom_location()` carries: `config-home-relocated` where a `portable.txt` sits beside ES-DE — a `read` ROM root then came
+from a file the frontend may not be using — and `frontend-marker-mismatch` where `settings.sh` records ES-DE differently
+from what is on disk. The relocation rides whether or not the ROM entry has a path; where it is why the entry has none,
+the entry states it as well, as its own reason.
+
+`roots()` is not on the `Installation` protocol and the aggregate does not ask it: a bare RetroArch's only root is the
+folder its cfg lives in. On the command line it is `emu-atlas roots --installation retrodeck` (or `emudeck`); any other
+kind is a usage error.
+
 ## Choosing is optional — ask every installation
 
 On a machine with two arrangements, "where does this save live?" has two true answers. `every_installation` puts one
@@ -2696,7 +2748,12 @@ value the frontend substitutes for `%ROMPATH%`, with no `<path>` applied. The pe
 plus the system name and not reliably so — the catalogue declares the `<path>`, and a custom system may declare anything
 — which is why they are two questions and only `rom_location` answers the second. `roms_dir()` returns `None` where the
 resolution refuses, for those of the reasons below that belong to the root — on EmuDeck that includes an arrangement
-running no ES-DE atlas can find; it cannot carry which, so ask `rom_location(system)` when you need that.
+running no ES-DE atlas can find; it cannot carry which, so ask `rom_location(system)` or
+[`roots()`](#where-each-root-folder-came-from--roots) when you need that.
+
+A system's directory carries no provenance of its own: it is the ROM root plus the `<path>` the catalogue declares, so
+the ROM root's provenance in `roots()` is its provenance — a `dir` under a `frontend-default` root is under a folder
+nobody configured.
 
 **Do not recompute either of these from a table of your own.** The directory is the catalogue's `<path>` with ES-DE's
 `%ROMPATH%` substituted from the setting ES-DE substitutes it from, so it follows a user who moved their library; a map

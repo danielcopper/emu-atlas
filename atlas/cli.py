@@ -10,7 +10,9 @@ Two answer forms, both vector-pinned. Without ``--installation`` the question
 is put to every detected installation and the answer is the labelled list
 (:func:`~atlas.contract.installation_answers_contract`); with
 ``--installation <kind>`` the first handle of that kind answers alone, in the
-question's bare contract shape.
+question's bare contract shape. ``roots`` has the second form only: RetroDECK
+and EmuDeck answer it and nothing else does, so it is never put to every
+installation and its ``--installation`` is required.
 
 The exit code separates answering from asking: 0 is an answer — an
 ``unresolved`` payload and an empty list are answers — and 2 is a question
@@ -38,6 +40,7 @@ from .contract import (
     mod_answer_contract,
     platform_systems_contract,
     rom_placement_contract,
+    roots_contract,
     savefile_answer_contract,
     savestate_answer_contract,
     screenshot_answer_contract,
@@ -49,7 +52,7 @@ from .contract import (
 from .platforms import KNOWN_PLATFORM_VOCABULARIES
 from .detect import detect
 from .every_installation import EveryInstallation
-from .installations import Installation
+from .installations import EmuDeck, Installation, RetroDeck
 from .machine import Machine
 from .placement import checked_cwd
 
@@ -134,6 +137,11 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
     ),
 }
 
+
+# The roots question (issue #612) is asked of one handle and only of the kinds
+# that answer it: it is not on the Installation protocol, so the aggregate does
+# not mirror it, and --installation is how it is put.
+_ROOTS_KINDS = (RetroDeck.kind, EmuDeck.kind)
 
 # Help texts shared by every subcommand that takes the same input.
 _SYSTEM_ID_HELP = "system id, e.g. gba"
@@ -221,6 +229,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser(
         "systems", parents=[common, selecting], help="what the frontend catalogue declares"
+    )
+
+    roots = commands.add_parser(
+        "roots",
+        parents=[common],
+        help="where each root folder is, and whether its settings say so",
+    )
+    roots.add_argument(
+        "--installation",
+        required=True,
+        choices=_ROOTS_KINDS,
+        help="the installation that answers; only these kinds answer this question",
     )
 
     for_platform = commands.add_parser(
@@ -317,6 +337,18 @@ def run(argv: Sequence[str], *, home: str | None = None, machine: Machine | None
 
     if args.command == "detect":
         payload: object = [installation_contract(i) for i in installations]
+    elif args.command == "roots":
+        handle = next(
+            (
+                i
+                for i in installations
+                if isinstance(i, (RetroDeck, EmuDeck)) and i.kind == args.installation
+            ),
+            None,
+        )
+        if handle is None:
+            return _not_detected(args.installation)
+        payload = roots_contract(handle.roots())
     else:
         ask, serialize = _QUESTIONS[args.command]
         if args.installation is None:
@@ -326,16 +358,20 @@ def run(argv: Sequence[str], *, home: str | None = None, machine: Machine | None
         else:
             chosen = next((i for i in installations if i.kind == args.installation), None)
             if chosen is None:
-                print(
-                    f"no detected installation of kind '{args.installation}'"
-                    f" — `emu-atlas detect` lists what this machine has",
-                    file=sys.stderr,
-                )
-                return 2
+                return _not_detected(args.installation)
             payload = serialize(ask(chosen, args))
 
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
+
+
+def _not_detected(kind: str) -> int:
+    """Say on stderr that no handle of *kind* was detected, and answer the exit code of a question not put."""
+    print(
+        f"no detected installation of kind '{kind}' — `emu-atlas detect` lists what this machine has",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def main() -> int:

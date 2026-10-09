@@ -32,6 +32,7 @@ _QUERY_KEY = {
     "systems": "systems_query",
     "systems_for_platform": "platform_systems_query",
     "platform_ids": "platform_ids_query",
+    "roots": "roots_query",
     "launchable": "launchable_query",
     "rom_location": "rom_location_query",
     "aggregate": "aggregate_query",
@@ -95,6 +96,8 @@ def _question_argv(question: str, query) -> list[str]:
         return ["systems-for-platform", query["vocabulary"], query["value"]]
     if question == "platform_ids":
         return ["platform-ids", query["system"]]
+    if question == "roots":
+        return ["roots"]
     # "catalogue" is the expected block's name for the question, "emulators_for"
     # the aggregate query's — one spelling answers both.
     if question in ("emulators_for", "catalogue"):
@@ -178,6 +181,31 @@ class TestTheExitCodeSeparatesAnsweringFromAsking:
         assert exit_code == 2
         assert captured.out == ""
         assert "retrodeck" in captured.err
+
+    def test_roots_is_asked_of_a_named_installation_only(self):
+        # Not on the protocol, so never put to every installation: without a
+        # selector there is no question to answer.
+        machine = FixtureMachine({})
+        with pytest.raises(SystemExit) as excinfo:
+            run(["roots"], home="/home/deck", machine=machine)
+        assert excinfo.value.code == 2
+
+    def test_roots_of_a_kind_that_does_not_answer_it_is_a_usage_error(self, capsys):
+        argv = ["roots", "--installation", "bare_retroarch_flatpak"]
+        machine = FixtureMachine({})
+        with pytest.raises(SystemExit) as excinfo:
+            run(argv, home="/home/deck", machine=machine)
+        assert excinfo.value.code == 2
+        assert "bare_retroarch_flatpak" in capsys.readouterr().err
+
+    def test_roots_of_a_kind_this_machine_does_not_have_cannot_be_asked(self, capsys):
+        exit_code = run(
+            ["roots", "--installation", "emudeck"], home="/home/deck", machine=FixtureMachine({})
+        )
+        captured = capsys.readouterr()
+        assert exit_code == 2
+        assert captured.out == ""
+        assert "emudeck" in captured.err
 
     def test_an_unknown_question_is_a_usage_error(self):
         machine = FixtureMachine({})
