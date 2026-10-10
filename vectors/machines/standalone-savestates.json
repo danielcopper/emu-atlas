@@ -2144,7 +2144,7 @@
     },
     {
       "name": "mame-no-inipath-means-the-compiled-search-path-below-the-startdir",
-      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The SHIPPED builds' compiled search path is $HOME/.mame;/app/share/mame/ini — the Flathub build define, byte-proven in the shipped binary; upstream's #ifndef fallback $HOME/.mame;.;ini is unreachable here — and on this machine both elements come up empty: no ~/.mame/mame.ini exists, and RetroDECK's deploy carries no /app/share/mame at all (the component relocates the Flathub tree where the compiled address never looks). So the compiled state_directory default 'sta' governs (stated as emulator-config-missing, naming the mame.ini the search looked for) — a relative path, resolved against the working directory the command pins — and the states land below ~/.mame/sta, NOT below the arrangement's states tree. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
+      "rationale": "Several catalogue commands pass no -inipath and set %STARTDIR%=~/.mame instead. The SHIPPED builds' compiled search path is $HOME/.mame;/app/share/mame/ini — the Flathub build define, byte-proven in the shipped binary; upstream's #ifndef fallback $HOME/.mame;.;ini is unreachable here — and on this machine both elements come up empty: no ~/.mame/mame.ini exists, and RetroDECK's deploy carries no /app/share/mame at all (the component relocates the Flathub tree where the compiled address never looks). So the compiled state_directory default 'sta' governs (stated as emulator-config-missing, naming the mame.ini the search looked for) — a relative path, resolved against the working directory the command pins — and the states land below .mame/sta in the frontend's home, NOT below the arrangement's states tree: ES-DE expands the ~ in %STARTDIR% against its --home, which RetroDECK's launcher sets to the app's config home (FileData.cpp:1164 at v3.4.1), while the ~/.mame on the search path is MAME's own $HOME, the host one. Read, not assumed: the wiring RetroDECK writes into its own mame.ini never reaches these launches.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2174,7 +2174,7 @@
           }
         ],
         "entry_savestate_location": {
-          "dir": "/home/deck/.mame/sta/apple2gs",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/.mame/sta/apple2gs",
           "root_kind": "emulator_directory",
           "needs": [],
           "fallback_dir": null,
@@ -2276,7 +2276,7 @@
           }
         ],
         "entry_savestate_location": {
-          "dir": "/home/deck/.mame/sta/apple2gs",
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/.mame/sta/apple2gs",
           "root_kind": "emulator_directory",
           "needs": [],
           "fallback_dir": null,
@@ -4666,6 +4666,242 @@
             "groups": []
           },
           "caveats": [
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "token": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-mames-startdir-expands-against-the-host-home",
+      "rationale": "EmuDeck's launcher starts ES-DE with no --home (es-de.sh:5), so the ~ in %STARTDIR%=~/.mame expands against the user's own home (FileData.cpp:1164 at v3.4.1) — the folder MAME's own $HOME names too, where on RetroDECK the frontend's home is the app's config home. No mame.ini sits on the search path, neither ~/.mame/mame.ini nor one in the deployed tree, so the compiled relative 'sta' governs (emulator-config-missing) and the states land below ~/.mame/sta, one subdirectory per machine.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/mame/states",
+          "/home/deck/Applications",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs",
+          "/home/deck/.local/share/flatpak/app/org.mamedev.MAME/current/active/files"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "/home/deck/.mame/sta/jaguar",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
+            {
+              "code": "savestate-support-machine-dependent",
+              "data": {
+                "token": "MAME",
+                "citation": "gamedrv.h:76, machine.cpp:927-928 at mame0287"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-portable-txt-leaves-mames-startdir-unnamed",
+      "rationale": "A portable.txt beside the ES-DE AppImage may move the home ES-DE expands every ~ against (main.cpp:149-192 at v3.4.1), so %STARTDIR%=~/.mame names a folder this reading cannot place — the rule the ROM root follows, where a home-derived value stops resolving while a portable.txt sits there. The launch still changes into that folder whatever its launcher's own is, so the cwd the caller gives does not stand in for it: the compiled relative 'sta' hangs off the <cwd> hole with save-dir-launch-dependent, and config-home-relocated states why, on this question too, which carries no content path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64</extension>\n    <command label=\"MAME (Standalone)\">%STARTDIR%=~/.mame %EMULATOR_MAME% -rompath %GAMEDIR%\\;%ROMPATH%/atarijaguar jaguar -cart %ROM%</command>\n    <platform>atarijaguar</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/portable.txt": "../ES-DE-portable\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/mame/states",
+          "/home/deck/Applications",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs",
+          "/home/deck/.local/share/flatpak/app/org.mamedev.MAME/current/active/files"
+        ],
+        "entry_savestate_query": {
+          "system": "atarijaguar",
+          "cwd": "/home/deck/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": [
+              {
+                "code": "config-home-relocated",
+                "data": {
+                  "path": "/home/deck/Applications/portable.txt"
+                }
+              }
+            ]
+          }
+        ],
+        "entry_savestate_location": {
+          "dir": "<cwd>/sta/jaguar",
+          "root_kind": "working_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "auto.sta",
+              "quick.sta",
+              "0.sta",
+              "1.sta",
+              "2.sta",
+              "3.sta",
+              "4.sta",
+              "5.sta",
+              "6.sta",
+              "7.sta",
+              "8.sta",
+              "9.sta",
+              "a.sta",
+              "b.sta",
+              "c.sta",
+              "d.sta",
+              "e.sta",
+              "f.sta",
+              "g.sta",
+              "h.sta",
+              "i.sta",
+              "j.sta",
+              "k.sta",
+              "l.sta",
+              "m.sta",
+              "n.sta",
+              "o.sta",
+              "p.sta",
+              "q.sta",
+              "r.sta",
+              "s.sta",
+              "t.sta",
+              "u.sta",
+              "v.sta",
+              "w.sta",
+              "x.sta",
+              "y.sta",
+              "z.sta"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "config-home-relocated",
+              "data": {
+                "path": "/home/deck/Applications/portable.txt"
+              }
+            },
+            {
+              "code": "emulator-config-missing",
+              "data": {
+                "token": "MAME",
+                "config": "mame.ini"
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "token": "MAME",
+                "path": "sta"
+              }
+            },
             {
               "code": "savestate-support-machine-dependent",
               "data": {

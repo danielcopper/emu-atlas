@@ -969,3 +969,44 @@ class TestTheQuestion:
             run(["launch-command", "--system", "gba", "--content", "roms/Game.gba"], home=inp["home"], machine=machine)
         assert stopped.value.code == 2
         assert "must be an absolute path" in capsys.readouterr().err
+
+
+def _mame_startdir_vectors():
+    """The launch-command vectors whose answer runs a MAME command from a working folder."""
+    document = json.loads((Path(__file__).resolve().parents[1] / "vectors/machines/launch-command.json").read_text())
+    return [
+        vector
+        for vector in document["vectors"]
+        if (answer := vector["expected"].get("launch_command")) is not None
+        and answer["command"] is not None
+        and answer["command"]["working_folder"] is not None
+        and answer["entry"]["emulator"] == "MAME"
+    ]
+
+
+class TestTheWorkingFolderIsTheStatesStartFolder:
+    """The folder the command runs in and the one MAME's states answer opens a relative root from are one (#607).
+
+    Both are the frontend's ``%STARTDIR%`` with its ``~`` expanded against the
+    frontend's home; held on the same machines, so the two readings cannot
+    drift apart again.
+    """
+
+    def test_there_are_machines_to_hold_it_on(self):
+        assert _mame_startdir_vectors()
+
+    @pytest.mark.parametrize("vector", _mame_startdir_vectors(), ids=lambda vector: vector["name"])
+    def test_the_states_open_below_the_working_folder(self, vector):
+        inp = vector["input"]
+        query = inp["launch_command_query"]
+        install = atlas.detect(inp["home"], fixture_machine(inp))[0]
+        answer = install.launch_command(query["system"], query["content_path"], label=query.get("label"))
+        assert answer.command is not None
+        assert answer.command.working_folder is not None
+        assert answer.entry is not None
+        folder = answer.command.working_folder.host_path
+        placement = answer.entry.savestate_location(content_path=query["content_path"])
+        assert isinstance(placement, atlas.SavestatePlacement)
+        # No mame.ini on these machines: the compiled relative 'sta' governs,
+        # below the folder the launch changes into.
+        assert placement.dir == f"{folder}/sta/{placement.dir.rsplit('/', 1)[1]}"

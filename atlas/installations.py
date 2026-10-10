@@ -13717,6 +13717,7 @@ def _fixed_savestate_tree_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -13763,6 +13764,7 @@ def _pcsx2_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -13858,6 +13860,7 @@ def _duckstation_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -13997,6 +14000,7 @@ def _melonds_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14060,6 +14064,7 @@ def _xemu_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14568,6 +14573,7 @@ def _mame_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14583,9 +14589,12 @@ def _mame_savestate_placement(
     own grammar and priority rules
     (:func:`_mame_ini_values`). A relative ``state_directory`` — the compiled
     ``sta`` default when no ini exists — resolves against the working
-    directory, which is the command's ``%STARTDIR%`` where it states one, the
-    caller's *cwd* where it does not, and an open hole where neither does
-    (the same order the ini search path's relative elements resolve in).
+    directory, which is the command's ``%STARTDIR%`` where it states one —
+    its ``~`` expanded against the frontend's home, *frontend_home*
+    (:func:`_mame_start_folder`) — the caller's *cwd* where it does not, and
+    an open hole where neither does, or where the folder the command states
+    cannot be named (the same order the ini search path's relative elements
+    resolve in).
     Below the root sits one subdirectory per machine (``statename``, default
     ``%g`` = the running system's short name, machine.cpp:474-547, :576),
     which the command's positional system word fills — or the content's own
@@ -14631,10 +14640,10 @@ def _mame_savestate_placement(
     assert shape is not None  # the loader pairs the shape with this resolver
     launch = _mame_launch_reading(command)
     env = _mame_env(homes, sandbox)
-    launch_cwd = _mame_launch_cwd(launch, env)
+    start = _mame_start_folder(launch, frontend_home, cwd)
     ini = _mame_governing_ini(
         machine, token=card.token, file=shape.file, launch=launch, env=env,
-        sandbox=sandbox, cwd=launch_cwd if launch_cwd is not None else cwd,
+        sandbox=sandbox, cwd=start.launch if start.launch is not None else start.given,
     )
     if isinstance(ini, Unresolved):
         return ini
@@ -14654,8 +14663,8 @@ def _mame_savestate_placement(
     if isinstance(value, Unresolved):
         return value
     anchored = _mame_root_anchor(
-        card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=launch_cwd,
-        given_cwd=cwd, launch=launch, stated_ini=layered.stated_in(key, ini),
+        card, shape, value[0], value[1], key=key, sandbox=sandbox, cwd=start.launch,
+        given_cwd=start.given, launch=launch, stated_ini=layered.stated_in(key, ini),
     )
     if isinstance(anchored, Unresolved):
         return anchored
@@ -14668,6 +14677,7 @@ def _mame_savestate_placement(
     reading = anchored.reading + machine_dir.reading_suffix
     caveats: list[Caveat] = [
         *extra_caveats,
+        *(caveat for caveat in start.caveats if caveat not in extra_caveats),
         *_mame_ini_missing(card, shape, ini, layered, key=key),
         *anchored.caveats,
         *machine_dir.caveats,
@@ -14761,14 +14771,48 @@ def _mame_ini_missing(
     ]
 
 
-def _mame_launch_cwd(launch: _MameLaunch, env: Mapping[str, str]) -> str | None:
-    """The working directory the launch pins — ``%STARTDIR%``, resolved, or nothing."""
-    if launch.startdir is None:
-        return None
-    cwd, _ = _mame_subst_env(launch.startdir, env)
-    if cwd is not None and not os.path.isabs(cwd):
-        return None
-    return cwd
+@dataclass(frozen=True, slots=True)
+class _MameStartFolder:
+    """The working directories a relative path can open from, and why neither is there.
+
+    ``launch`` is the one the launch pins (``%STARTDIR%``), ``given`` the
+    caller's, and ``caveats`` says why the launch pins a folder this reading
+    cannot name — the one state in which both are ``None`` though a caller
+    gave a folder.
+    """
+
+    launch: str | None
+    given: str | None
+    caveats: tuple[Caveat, ...] = ()
+
+
+def _mame_start_folder(
+    launch: _MameLaunch, frontend_home: str | Caveat, given_cwd: str | None
+) -> _MameStartFolder:
+    """The folder the frontend changes into before it runs MAME — ``%STARTDIR%`` as ES-DE expands it.
+
+    ES-DE replaces every ``~`` in the command with its own home
+    (``FileData.cpp:1164`` @ v3.4.1, :func:`atlas.esde.expand_home_path`) —
+    the ``--home`` its launcher passed, not the emulator's ``$HOME`` — and its
+    shell's ``cd`` reads the rest literally, because ``getEscapedPath``
+    backslashes a ``$``: the folder :mod:`atlas.launch_command` states as the
+    working folder, with no environment expansion of MAME's own. Where that
+    home is not established (*frontend_home* is the caveat saying why), a
+    ``~`` leaves the folder the launch pins unnamed — and the caller's
+    working directory does not stand in for it, because the launch changes
+    into its own folder whatever its launcher's is. A value that is still no
+    absolute path pins nothing this reading takes as a folder.
+    """
+    startdir = launch.startdir
+    if startdir is None:
+        return _MameStartFolder(None, given_cwd)
+    if isinstance(frontend_home, Caveat):
+        if "~" in startdir:
+            return _MameStartFolder(None, None, (frontend_home,))
+        expanded = startdir
+    else:
+        expanded = expand_home_path(startdir, frontend_home)
+    return _MameStartFolder(expanded if os.path.isabs(expanded) else None, given_cwd)
 
 
 @dataclass(frozen=True, slots=True)
@@ -15063,7 +15107,9 @@ def _mame_root_anchor(
             STATE_ROOT_EMULATOR_DIRECTORY,
             reading
             + f" — a relative value resolves against the working directory the launch "
-            f"states (%STARTDIR%={launch.startdir})",
+            f"states (%STARTDIR%={launch.startdir}"
+            + ("" if launch.startdir == cwd else f", which the frontend opens as {cwd}")
+            + ")",
         )
     if given_cwd is not None:
         return _MameStateRoot(
@@ -15253,6 +15299,7 @@ def _standalone_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
+    frontend_home: str | Caveat,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | SavestateAbsence | Unresolved:
@@ -15261,7 +15308,10 @@ def _standalone_savestate_placement(
     The launch command, content path and working folder ride for the same
     reasons they ride the save dispatch: a launch's own flags could outrank
     configuration, melonDS fills its state names from the content's own stem,
-    and a relative states path opens from the launch's own directory. An
+    and a relative states path opens from the launch's own directory. The
+    frontend's home rides because that directory can be the frontend's to
+    state: ES-DE expands the ``~`` in a ``%STARTDIR%`` against it — or, where
+    the home is not established, *frontend_home* is the caveat saying why. An
     absence card never reaches this dispatch: the routes answer it before
     homes are built, because the stated no needs none of what this dispatch
     carries and DOES need the arrangement caveats only a route can supply —
@@ -15288,6 +15338,7 @@ def _standalone_savestate_placement(
         system=system,
         command=command,
         extra_caveats=extra_caveats,
+        frontend_home=frontend_home,
         content_path=content_path,
         cwd=cwd,
     )
@@ -21604,6 +21655,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     *health.issues,
                     *arrangement_caveats(self.kind, observed_version=_marker_version(config)),
                 ),
+                frontend_home=self._esde_config_home(),
                 content_path=content_path,
                 cwd=cwd,
             )
@@ -22248,6 +22300,18 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             "not be the ones the frontend is using",
             {"path": path},
         )
+
+    def _esde_home(self) -> str | Caveat:
+        """What this ES-DE expands a ``~`` in a launch command against — or the caveat saying why not.
+
+        ``getHomePath()`` answers ``$HOME`` here, since the launcher passes no
+        ``--home`` (``es-de.sh:5``); a ``portable.txt`` beside the AppImage may
+        move it (:meth:`_relocation_caveat`), and then the home is not
+        established — the same rule :meth:`_esde_rom_root` applies to every
+        home-derived value.
+        """
+        relocation = self._relocation_caveat()
+        return self._home if relocation is None else relocation
 
     def _frontend_marker_caveat(self, settings: dict[str, str], present: bool) -> Caveat | None:
         """The cross-check: ``settings.sh``'s ES-DE record against the disk — ``None`` in agreement.
@@ -23493,6 +23557,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *marker_issues,
                 *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
             ),
+            frontend_home=self._esde_home(),
             content_path=content_path,
             cwd=cwd,
         )
