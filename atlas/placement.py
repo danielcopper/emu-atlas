@@ -62,7 +62,14 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Iterable, Literal, Mapping, Sequence, TypeAlias, TypeVar
 
-from .find_rules import CAVEAT_FIND_RULES_UNREADABLE, FIND_RULES_LAYERS
+from .find_rules import (
+    CAVEAT_FIND_RULES_UNREADABLE,
+    CAVEAT_LAUNCH_COMMAND_BEYOND_LIMITS,
+    CAVEAT_LAUNCH_COMMAND_SHELL_SYNTAX,
+    FIND_RULES_LAYERS,
+    LAUNCH_COMMAND_LIMITS,
+    SHELL_CONSTRUCTS,
+)
 from .machine import CORE_UNANSWERED_STATUSES
 from .retroarch_cfg import CFG_LAYER_KINDS, RetroArchCfg
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
@@ -1858,6 +1865,10 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # verdict hangs on, or the custom one ES-DE skips beside it.
         (CAVEAT_FIND_RULES_UNREADABLE, "layer"): FIND_RULES_LAYERS,
         (CAVEAT_INVALID_SAVE_DIRECTORY, "layer"): CFG_LAYER_KINDS,
+        # Which reading of a launch command made it more than plain words.
+        (CAVEAT_LAUNCH_COMMAND_SHELL_SYNTAX, "construct"): SHELL_CONSTRUCTS,
+        # Which bound atlas puts on taking one command apart was reached.
+        (CAVEAT_LAUNCH_COMMAND_BEYOND_LIMITS, "limit"): LAUNCH_COMMAND_LIMITS,
         # The world-knowledge mark carries two keys and only one of them is
         # closed: the evidence level, as the contract spells it rather than in
         # the bracket notation the research pages use. The system it is about

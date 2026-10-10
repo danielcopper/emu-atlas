@@ -36,6 +36,7 @@ from .contract import (
     identification_contract,
     installation_answers_contract,
     installation_contract,
+    launch_command_contract,
     launchable_contract,
     mod_answer_contract,
     platform_systems_contract,
@@ -117,6 +118,10 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
         lambda target, args: target.launchable(args.system, args.content),
         launchable_contract,
     ),
+    "launch-command": (
+        lambda target, args: target.launch_command(args.system, args.content, label=args.label),
+        launch_command_contract,
+    ),
     "firmware-for-core": (
         lambda target, args: target.firmware_for_core(args.core, verify=args.verify, cwd=args.cwd),
         firmware_contract,
@@ -154,6 +159,13 @@ def _cwd_argument(value: str) -> str:
         checked_cwd(value)
     except ValueError as error:
         raise argparse.ArgumentTypeError(str(error)) from None
+    return value
+
+
+def _absolute_argument(value: str) -> str:
+    """A path the question requires absolute — a relative one is a usage error (exit 2), as the library raises."""
+    if not os.path.isabs(value):
+        raise argparse.ArgumentTypeError(f"must be an absolute path, got {value!r}")
     return value
 
 
@@ -284,6 +296,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     launch.add_argument("system", help="system id, e.g. dreamcast")
     launch.add_argument("content", help="path of the content file")
+
+    command = commands.add_parser(
+        "launch-command",
+        parents=[common, selecting],
+        help="the command the frontend would run for this file, taken apart",
+    )
+    command.add_argument("--system", required=True, help=_SYSTEM_ID_HELP)
+    command.add_argument(
+        "--content", required=True, type=_absolute_argument, help="absolute path of the content file"
+    )
+    command.add_argument("--label", help="the catalogue entry's label; default: the frontend's own choice")
 
     for_core = commands.add_parser(
         "firmware-for-core",

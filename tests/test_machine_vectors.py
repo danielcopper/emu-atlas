@@ -38,6 +38,7 @@ from atlas.contract import (
     soft_patch_answer_contract,
     systems_contract,
     launchable_contract,
+    launch_command_contract,
     firmware_contract,
     identification_contract,
     installation_answers_contract,
@@ -169,6 +170,13 @@ def _launchable(installs, query, name):
     return launchable_contract(install.launchable(query["system"], query["content_path"]))
 
 
+def _launch_command(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return launch_command_contract(
+        install.launch_command(query["system"], query["content_path"], label=query.get("label"))
+    )
+
+
 def _savefile_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savefile_answer_contract(
@@ -284,6 +292,7 @@ QUESTIONS = {
     "platform_ids": ("platform_ids_query", _platform_ids),
     "roots": ("roots_query", _roots),
     "launchable": ("launchable_query", _launchable),
+    "launch_command": ("launch_command_query", _launch_command),
     "rom_location": ("rom_location_query", _rom_location),
     "aggregate": ("aggregate_query", _aggregate),
     "savefile_location": ("savefile_query", _savefile_location),
@@ -881,6 +890,48 @@ class TestTheGrammarRefusesContradictions:
         vector = self._roots_vector()
         vector["expected"]["roots"]["roots"][0]["setting"]["file"] = "retrodeck.json"
         with pytest.raises(validate_vectors.VectorError, match="setting.file"):
+            validate_vectors.validate_machines_vector(vector)
+
+    @staticmethod
+    def _command_vector(name: str = "launch-command-a-libretro-entry-runs-retroarch-with-its-core-and-the-file"):
+        """A real launch-command vector, copied so a test can break one thing in it."""
+        document = json.loads((_VECTOR_DIR / "launch-command.json").read_text())
+        return next(v for v in document["vectors"] if v["name"] == name)
+
+    def test_the_launch_command_vectors_these_tests_break_are_valid(self):
+        validate_vectors.validate_machines_vector(self._command_vector())
+        validate_vectors.validate_machines_vector(
+            self._command_vector("launch-command-an-entry-that-is-not-startable-has-no-command")
+        )
+
+    def test_a_relative_content_path_in_a_launch_command_query_is_refused(self):
+        vector = self._command_vector()
+        vector["input"]["launch_command_query"]["content_path"] = "roms/gba/Game.gba"
+        with pytest.raises(validate_vectors.VectorError, match="content_path must be absolute"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_command_without_its_entry_is_refused(self):
+        vector = self._command_vector()
+        vector["expected"]["launch_command"]["entry"] = None
+        with pytest.raises(validate_vectors.VectorError, match="beside a startable entry alone"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_no_command_and_no_reason_is_refused(self):
+        vector = self._command_vector()
+        vector["expected"]["launch_command"]["command"] = None
+        with pytest.raises(validate_vectors.VectorError, match="without a command states why"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_flatpak_program_with_a_path_is_refused(self):
+        vector = self._command_vector()
+        vector["expected"]["launch_command"]["command"]["program"]["path"] = "/x"
+        with pytest.raises(validate_vectors.VectorError, match="flatpak program carries"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_an_injection_outcome_outside_the_vocabulary_is_refused(self):
+        vector = self._command_vector("launch-command-inject-absent-injects-nothing")
+        vector["expected"]["launch_command"]["command"]["injections"][0]["outcome"] = "missing"
+        with pytest.raises(validate_vectors.VectorError, match="injection's outcome"):
             validate_vectors.validate_machines_vector(vector)
 
     def test_a_systems_query_the_runner_cannot_read_is_refused(self):

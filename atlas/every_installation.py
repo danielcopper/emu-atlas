@@ -41,6 +41,7 @@ Three consequences worth stating, because each is a decision:
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Callable, Generic, Sequence, TypeVar
 
@@ -51,6 +52,7 @@ from .installations import (
     Health,
     Installation,
     LaunchabilityAnswer,
+    LaunchCommandAnswer,
     PlatformSystemsAnswer,
     RomPlacement,
     SystemPlatformsAnswer,
@@ -271,6 +273,18 @@ class EveryInstallation:
     ) -> tuple[InstallationAnswer[LaunchabilityAnswer], ...]:
         """Whether each installation launches this file as *system* content, and why not."""
         return self._ask(lambda installation: installation.launchable(system, content_path))
+
+    def launch_command(
+        self, system: str, content_path: str, *, label: str | None = None
+    ) -> tuple[InstallationAnswer[LaunchCommandAnswer], ...]:
+        """The command each installation's frontend would run for this file, taken apart, or why not.
+
+        *content_path* must be absolute, as each installation takes it, and is
+        checked here, so a relative one raises even with no installation to ask.
+        """
+        if not os.path.isabs(content_path):
+            raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
+        return self._ask(lambda installation: installation.launch_command(system, content_path, label=label))
 
     def firmware_for_core(
         self, core_so: str, *, verify: bool = False, cwd: str | None = None

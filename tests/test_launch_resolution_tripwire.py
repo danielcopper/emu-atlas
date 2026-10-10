@@ -7,8 +7,11 @@ RetroDECK's own ``run_game.sh`` would run. All three are facts of one deployed
 build, so where RetroDECK is deployed this holds each against it:
 
 1. ``components/es-de/component_version`` names the pinned fork tag. A new
-   build may carry a different ``findEmulator``; the message names the function
-   to diff before the pin moves.
+   build may carry a different ``findEmulator`` or ``launchGame``; the message
+   names the functions to diff before the pin moves. The launch command
+   question (#573) reads the same file at answer time and refuses a build other
+   than the pin (``frontend-build-unpinned``), so the pin this test holds is
+   the one the answer checks.
 2. Every line :data:`atlas.installations.RetroDeck.LAUNCH_CITATIONS` cites still
    holds the text it cites: ``component_launcher.sh:10`` passes
    ``--home "${XDG_CONFIG_HOME}"``, ``component_functions.sh:7`` names the find
@@ -34,7 +37,7 @@ import pytest
 from atlas.installations import RetroDeck
 
 FILES = Path("/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files")
-COMPONENT_VERSION = "retrodeck/components/es-de/component_version"
+COMPONENT_VERSION = RetroDeck.ESDE_COMPONENT_VERSION
 
 
 def build_drift(version: str | None) -> list[str]:
@@ -43,8 +46,9 @@ def build_drift(version: str | None) -> list[str]:
         return []
     return [
         f"{COMPONENT_VERSION} names {version!r}, not the pinned {RetroDeck.ESDE_FORK_BUILD!r}: diff "
-        "FileData::findEmulator (and launchGame's %CORE_ handling) of the new tag against ES-DE "
-        "v3.4.1, then move RetroDeck.ESDE_FORK_BUILD"
+        "FileData::findEmulator and FileData::launchGame, getEscapedPath and the other FileSystemUtil "
+        "helpers launchGame calls, and Platform::launchGameUnix of the new tag against ES-DE v3.4.1, "
+        "then move RetroDeck.ESDE_FORK_BUILD"
     ]
 
 

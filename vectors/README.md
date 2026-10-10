@@ -149,6 +149,7 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `catalogue_query`       | `catalogue`                   | which emulators can launch this system                |
 | `systems_query`         | `systems`                     | which systems does the frontend declare               |
 | `rom_location_query`    | `rom_location`                | where do this system's ROMs live                      |
+| `launch_command_query`  | `launch_command`              | the command the frontend would run for this file      |
 | `roots_query`           | `roots`                       | where each root folder is, and what decided it        |
 | `firmware_query`        | `firmware`                    | `kind` is `core`, `system` or `inventory`             |
 | `identify_query`        | `identification`              | what is this content, by `md5` / `sha1` / `size`      |
@@ -156,6 +157,9 @@ Each expectation is paired with the input key that asks it. Several may appear i
 
 `soft_patch_query` is the one family whose `content_path` is required rather than optional: the content is that
 question's subject — the patch files are named after it — so a vector asking it without one asks about no file at all.
+
+`launch_command_query` carries `system` and an absolute `content_path`, as the question requires, and may name the
+catalogue entry by its `label`; without one the frontend's own choice answers.
 
 `cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
 on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `firmware_query`, and an

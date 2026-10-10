@@ -2902,6 +2902,90 @@ the claims, so the verdict stands with `archive-contents-unread` (what is inside
 matched case-insensitively — the gate is the loader, not ES-DE's case-exact scan), and an emulator without a card earns
 `entry-format-unestablished` — never "refuses", because an entry nobody read is not an entry known to refuse the file.
 
+## What would the frontend run? — `launch_command`
+
+A client that starts the emulator itself, instead of handing the file to the frontend, needs the command the frontend
+would run for it — resolved and taken apart, not the raw `es_systems.xml` string a catalogue entry carries (issue #573):
+
+```python
+answer = inst.launch_command("gc", "/roms/gc/Game.iso")            # the frontend's own choice of entry
+answer = inst.launch_command("adam", "/roms/adam/Game.dsk", label="MAME [Tape] (Standalone)")
+answer.entry                       # the catalogue entry, with its launch answer
+answer.command.program             # LaunchProgram(variant='flatpak', app_id='net.retrodeck.retrodeck',
+                                   #               command='/app/retrodeck/components/dolphin/component_launcher.sh')
+answer.command.arguments           # ('-b', '-e', '/roms/gc/Game.iso')
+answer.command.environment         # (EnvironmentVariable(name='QT_QPA_PLATFORM', value='xcb'),)
+answer.command.working_folder      # WorkingFolder(frontend_path=..., host_path=..., created_if_missing=True) or None
+answer.command.injections          # (Injection(file='/roms/xbox/Game.esprefix', outcome='absent'),) …
+```
+
+`label` names the entry: labels are unique per system and are what ES-DE stores for a per-game choice. Without it the
+entry is the one `emulators_for` puts first for this file, per-game override first. `content_path` is the path as the
+frontend sees it and must be absolute (a relative one raises `ValueError`). The question does not judge whether the
+frontend takes the file at all — `launchable` answers that.
+
+**How it is built.** The command is assembled the way ES-DE's `FileData::launchGame` assembles it (v3.4.1, which
+RetroDECK's fork carries unchanged on Linux), with the program and core the entry's own launch lookup found, and then
+read the way the frontend's shell reads it. So:
+
+- `program` is tagged by `variant`: `flatpak` with the `app_id` and the `command` inside it — every RetroDECK program,
+  since the frontend runs inside its sandbox and so does everything it starts; `appimage` or `native` with a `path`. The
+  keys a variant does not use are `null`.
+- `arguments` are in the frontend's spelling, every placeholder resolved: `%ROM%`, `%ROMRAW%`, `%BASENAME%`,
+  `%FILENAME%`, `%ROMPATH%` (the ROM root), `%GAMEDIR%`, `%GAMEDIRRAW%`, `%ESPATH%`, `%EMUDIR%`, and `~`, which is
+  ES-DE's `--home` — for RetroDECK the app's config directory, not the user's home.
+- A leading `env NAME=value …` becomes `environment`, in its order, and the program is the word after it.
+- `%STARTDIR%` becomes `working_folder`, in the frontend's spelling and the host's; ES-DE creates the folder where it is
+  missing. `host_path` is `null` where atlas cannot place the folder, and `launch-path-unestablished` names it.
+- Each `%INJECT%` reads its file beside the content the way ES-DE does — lines joined with nothing between them, at most
+  4096 bytes — splices the text in, and states the file with what came of it: `injected`, `absent`, `empty` or
+  `oversized`.
+- A directory ES-DE takes as a file is launched through the file of its own name inside it, where there is one.
+
+**What is refused.** `command` is `null` exactly where the answer refuses, and one caveat says why: the entry's own
+launch reason where it is not `startable`, or `launch-command-label-unknown`, `frontend-build-unpinned` (the deployed
+frontend is not the build atlas's reading of `launchGame` is pinned to; `version` names the build it states, absent
+where none can be read), `launch-command-shell-syntax` (the shell would read more than plain words — `construct` says
+which: a pipe, a `;`, `&&`, a `$` or backtick, a redirection, a glob, a brace, a NUL an injected file carries, …),
+`launch-command-env-option`, `launch-command-desktop-file` (`%ENABLESHORTCUTS%` with a `.desktop` file, whose `Exec`
+line ES-DE runs instead), `launch-command-entry-invalid` (a `%STARTDIR%` or `%INJECT%` entry ES-DE itself refuses),
+`launch-command-inject-unreadable` or `launch-command-inject-loop` for an `%INJECT%` file atlas cannot read or one that
+injects itself again, `launch-command-rom-root-unestablished` (the command uses `%ROMPATH%` and the ROM root is not
+established — the answer's other caveats say why), `launch-command-no-program` (the command reads as no words at all),
+`launch-command-beyond-limits` (taking the command apart goes beyond a bound atlas keeps — `limit` names it:
+`command-length` 16384 characters, `substitutions` 256, `rescans` 64 passes of one replacement, `injections` 16
+`%INJECT%` entries, `inject-file-size` an injection file over 1 MiB, which is never read; ES-DE itself bounds only the
+4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). EmuDeck's entries are not taken
+apart yet, and a bare RetroArch has no frontend catalogue at all; both answer through the entry's
+`launch-resolution-unsupported` and the catalogue's own caveats.
+
+**Two notes beside an answered command.** `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve
+and leaves in the argument as written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself).
+`launch-command-argument-broken` names a placeholder whose value ES-DE's own substitution does not carry through the
+shell — `getEscapedPath` leaves `|`, backticks, tabs and line breaks alone and turns a `\` into a `/`, and `%ROMRAW%` is
+not escaped at all — and the argument then carries the value the placeholder stands for, which the frontend itself would
+not pass.
+
+**A second shell.** An escaped path inside quotes keeps ES-DE's backslashes, because they are there for the shell the
+argument is handed to: `bash -c "%ROM%"` passes `My\ Game.sh`, and the second shell reads it as `My Game.sh`. That
+reading is checked too. Where the text the first shell yields would not read as exactly one plain word equal to the path
+— a `|`, a `$` or `"` ES-DE escaped for the first shell only, a line break, a backtick — the whole command is refused
+with `launch-command-second-shell-unsafe`, naming the placeholder: re-quoting it would be a command ES-DE never builds,
+and passing it on would run what the file name spells. Where a shell is evident — the command string after `-c` when the
+program is `sh`, `bash` or `dash`, or what `%EMULATOR_OS-SHELL%` found, found by walking the shell's options as it does
+(`-ec`, `-c -e X`, `-c -- X`, `-o posix -c`; an option the walk cannot read makes every word a command string) — that
+string is read again as the second shell reads it, the values together with the command's own text around them, and
+every value in it must come out literal, in one word and unchanged, with no expansion, operator, reserved word or
+assignment formed with it — a word right after `;`, `&&`, `|`, `(`, `)` or a word that opens a command list (`then`,
+`do`, `else`, `!`, `time`, `{` …) counts as a command again, and bash outside POSIX mode (`bash` without `--posix`, or
+switched back by `+o posix` or a `set +o posix` in the string) also expands a `~` after the `=` or a `:` of any
+assignment-shaped word — quoted or not, escaped or raw: unquoted, the first shell takes ES-DE's backslashes off, so
+`sh -c %ROM%` with `a;b.sh` would hand the second shell two commands, and `sh -c './%BASENAME%_run'` with a basename
+ending in `$` would expand `$_run`. A raw value inside quotes anywhere else (`%ROMRAW%`, `%GAMEDIRRAW%`) carries no sign
+of a second shell — the MAME core reads quotes of its own in the command line a libretro argument hands it — so it keeps
+the first shell's reading alone, and a wrapper that evaluates its argument in a shell of its own is a case atlas does
+not see.
+
 ## Firmware
 
 Four questions, verification strictly opt-in. The first three share one answer shape (`FirmwareAnswer`);
