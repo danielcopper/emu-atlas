@@ -2064,8 +2064,8 @@
       }
     },
     {
-      "name": "emudeck-roots-state-no-rom-root-for-a-relocated-unset-romdirectory",
-      "rationale": "A portable.txt beside the AppImage may move ES-DE's home, and ROMDirectory is unset, so the default derives from a home atlas cannot pin: the ROM entry has no path and states config-home-relocated, the code health states, as its own reason — and the same caveat rides the answer, as it rides every answer that reads ES-DE's files.",
+      "name": "emudeck-roots-resolve-an-unset-romdirectory-beside-a-portable-txt",
+      "rationale": "A portable.txt sits beside the AppImage and ROMDirectory is unset. The file moves nothing — an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in — so the frontend's default resolves against the user's home: the ROM entry is ~/ROMs with provenance frontend-default, and no caveat rides the answer. That directory is not on this machine, which health states as roms-root-missing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2096,9 +2096,9 @@
             "root": "/run/media/deck/SD/Emulation",
             "health": [
               {
-                "code": "config-home-relocated",
+                "code": "roms-root-missing",
                 "data": {
-                  "path": "/home/deck/Applications/portable.txt"
+                  "path": "/home/deck/ROMs"
                 }
               }
             ]
@@ -2118,20 +2118,13 @@
             },
             {
               "root": "roms",
-              "path": null,
-              "provenance": null,
+              "path": "/home/deck/ROMs",
+              "provenance": "frontend-default",
               "setting": {
                 "file": "/home/deck/ES-DE/settings/es_settings.xml",
                 "key": "ROMDirectory"
               },
-              "caveats": [
-                {
-                  "code": "config-home-relocated",
-                  "data": {
-                    "path": "/home/deck/Applications/portable.txt"
-                  }
-                }
-              ]
+              "caveats": []
             },
             {
               "root": "bios",
@@ -2154,20 +2147,13 @@
               "caveats": []
             }
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },
     {
       "name": "emudeck-roots-read-an-absolute-romdirectory-beside-a-portable-txt",
-      "rationale": "A portable.txt is there but ROMDirectory is absolute: no home-derived step is involved, so the value is read, as roms_dir() and health() answer it — and config-home-relocated rides the answer, because the file it was read from may not be the one the frontend uses.",
+      "rationale": "A portable.txt is there and ROMDirectory is absolute: the value is read, as roms_dir() and health() answer it, and nothing rides the answer about the file, because an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2242,14 +2228,7 @@
               "caveats": []
             }
           ],
-          "caveats": [
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
-            }
-          ]
+          "caveats": []
         }
       }
     },

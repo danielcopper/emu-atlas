@@ -4784,8 +4784,8 @@
       }
     },
     {
-      "name": "emudeck-a-portable-txt-leaves-mames-startdir-unnamed",
-      "rationale": "A portable.txt beside the ES-DE AppImage may move the home ES-DE expands every ~ against (main.cpp:149-192 at v3.4.1), so %STARTDIR%=~/.mame names a folder this reading cannot place — the rule the ROM root follows, where a home-derived value stops resolving while a portable.txt sits there. The launch still changes into that folder whatever its launcher's own is, so the cwd the caller gives does not stand in for it: the compiled relative 'sta' hangs off the <cwd> hole with save-dir-launch-dependent, and config-home-relocated states why, on this question too, which carries no content path.",
+      "name": "emudeck-a-portable-txt-leaves-mames-startdir-in-the-users-home",
+      "rationale": "A portable.txt beside the ES-DE AppImage does not move the home ES-DE expands every ~ against, because an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in. So %STARTDIR%=~/.mame expands against the user's own home (FileData.cpp:1164), exactly as on the machine without the file: no mame.ini sits on the search path, the compiled relative 'sta' governs (emulator-config-missing) and the states land below ~/.mame/sta. The cwd the caller gives changes nothing — the launch changes into its own start folder whatever its launcher's is.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4818,22 +4818,13 @@
               "bare_retroarch_flatpak"
             ],
             "root": "/home/deck/Emulation",
-            "health": [
-              {
-                "code": "config-home-relocated",
-                "data": {
-                  "path": "/home/deck/Applications/portable.txt"
-                }
-              }
-            ]
+            "health": []
           }
         ],
         "entry_savestate_location": {
-          "dir": "<cwd>/sta/jaguar",
-          "root_kind": "working_directory",
-          "needs": [
-            "cwd"
-          ],
+          "dir": "/home/deck/.mame/sta/jaguar",
+          "root_kind": "emulator_directory",
+          "needs": [],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
@@ -4883,23 +4874,10 @@
           },
           "caveats": [
             {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
-            },
-            {
               "code": "emulator-config-missing",
               "data": {
                 "token": "MAME",
                 "config": "mame.ini"
-              }
-            },
-            {
-              "code": "save-dir-launch-dependent",
-              "data": {
-                "token": "MAME",
-                "path": "sta"
               }
             },
             {

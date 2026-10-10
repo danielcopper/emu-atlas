@@ -154,10 +154,9 @@ data, never free text alone and never silence.
   frontend itself substitutes it from, resolved the way the frontend resolves it, including its own home-relative
   default where that setting is genuinely unset. A `dir` reached through symlinks reports its `physical_dir`. Where
   nothing was resolved the answer says which kind of nothing: no catalogue, an unread one, a sealed one whose readable
-  layers declare no such system, a system declared without a path, a setting that is not an absolute path, a settings
-  file that exists and could not be read, or a relocated config home (a Flatpak override on RetroDECK, a `portable.txt`
-  next to the AppImage on EmuDeck). The extensions are the declaration verbatim, both cases where the file lists both
-  and mistakes included, because which of them to act on is the frontend's business.
+  layers declare no such system, a system declared without a path, a setting that is not an absolute path, or a settings
+  file that exists and could not be read. The extensions are the declaration verbatim, both cases where the file lists
+  both and mistakes included, because which of them to act on is the frontend's business.
 - **Firmware** — four calls over one live read: `firmware_for_core(core_so)`, `firmware_for_system(system)`,
   `firmware_inventory()`, `identify_firmware(md5=...)`. Every installed core's declarations come from
   `libretro_info_path` (sandbox paths translated to the Flatpak deployment, limited to cores whose `.so` is actually

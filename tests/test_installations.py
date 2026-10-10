@@ -2946,20 +2946,24 @@ class TestMameEdgeBranches:
         assert any(f.endswith("source/vectrex.ini") for f in layer.data["files"])
 
 
-class TestMameStartFolderUnderAMovedHome:
-    """EmuDeck with a portable.txt: the start folder is unnamed, and why is stated once (#607)."""
+class TestMameStartFolderBesideAPortableTxt:
+    """EmuDeck with a portable.txt beside ES-DE's AppImage: the start folder's ``~`` is the user's home (#630)."""
 
     CATALOGUE = "/home/deck/ES-DE/custom_systems/es_systems.xml"
+    PORTABLE = "/home/deck/Applications/portable.txt"
 
     @classmethod
-    def _entry(cls, startdir=None):
+    def _entry(cls, startdir=None, *, portable=True):
         path = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "standalone-savestates.json"
         vector = next(
             v
             for v in json.loads(path.read_text())["vectors"]
-            if v["name"] == "emudeck-a-portable-txt-leaves-mames-startdir-unnamed"
+            if v["name"] == "emudeck-a-portable-txt-leaves-mames-startdir-in-the-users-home"
         )
         inp = vector["input"]
+        assert cls.PORTABLE in inp["files"]
+        if not portable:
+            del inp["files"][cls.PORTABLE]
         if startdir is not None:
             catalogue = inp["files"][cls.CATALOGUE]
             assert "%STARTDIR%=~/.mame " in catalogue
@@ -2967,22 +2971,30 @@ class TestMameStartFolderUnderAMovedHome:
         emudeck = atlas.detect(inp["home"], fixture_machine(inp))[0]
         return emudeck.emulators_for(inp["entry_savestate_query"]["system"]).entries[0]
 
-    def test_an_absolute_startdir_needs_no_home_and_stays_established(self):
+    def test_the_tilde_expands_against_the_users_home(self):
+        p = self._entry().savestate_location(content_path="/home/deck/ROMs/atarijaguar/Game.j64")
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/home/deck/.mame/sta/jaguar"
+        assert p.root_kind == "emulator_directory"
+
+    def test_an_absolute_startdir_needs_no_home(self):
         # Only a ~ is the frontend's home to expand: a start folder spelled
-        # absolute names the same folder wherever a portable.txt moved it.
+        # absolute names that folder as written.
         p = self._entry(startdir="/home/deck/mame-run").savestate_location()
         assert isinstance(p, atlas.SavestatePlacement)
         assert p.dir == "/home/deck/mame-run/sta/jaguar"
         assert p.root_kind == "emulator_directory"
-        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in [c.code for c in p.caveats]
 
-    def test_a_content_path_does_not_state_the_relocation_twice(self):
-        # The per-game check states the relocation for a content path already;
-        # the start folder's reason is the same caveat and rides once.
-        p = self._entry().savestate_location(content_path="/home/deck/ROMs/atarijaguar/Game.j64")
-        assert isinstance(p, atlas.SavestatePlacement)
-        assert p.dir == "<cwd>/sta/jaguar"
-        assert [c.code for c in p.caveats].count(atlas.CAVEAT_CONFIG_HOME_RELOCATED) == 1
+    def test_the_file_changes_no_answer(self):
+        # Content path or none, ~ or absolute: the answer is the one the same
+        # machine gives without the file, because ES-DE never reads it there.
+        from atlas.contract import savestate_answer_contract
+
+        for startdir in (None, "/home/deck/mame-run"):
+            for content_path in (None, "/home/deck/ROMs/atarijaguar/Game.j64"):
+                with_file = self._entry(startdir).savestate_location(content_path=content_path)
+                without = self._entry(startdir, portable=False).savestate_location(content_path=content_path)
+                assert savestate_answer_contract(with_file) == savestate_answer_contract(without)
 
 
 class TestMameSecondIniParse:
@@ -7422,13 +7434,6 @@ class TestEmuDeckEsdeCatalogue:
         assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(with_esde.emulators_for("gb"))
         assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in self._codes(without.emulators_for("gb"))
 
-    def test_no_es_de_means_no_relocation_statement(self):
-        # A stray portable.txt on a machine with no ES-DE stays silent: with
-        # no ES-DE on this disk there is nothing it could have moved, so the
-        # absence refusal never reads it.
-        without = self._emudeck({f"{HOME}/Applications/portable.txt": ""})
-        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in self._codes(without.emulators_for("gb"))
-
     def test_a_marker_value_that_is_neither_true_nor_false_stays_silent(self):
         # The value case, not only the absent key: jq emits `null` for a
         # missing installFrontends key (jsonToBashVars.sh:71), so
@@ -7525,16 +7530,17 @@ class TestEmuDeckEsdeCatalogue:
     def test_the_firmware_route_reads_the_broken_shadow_as_unreadable(self):
         # The bundled layer on disk that cannot be read is the unreadable
         # catalogue on the firmware route too — never sealed, never the
-        # machine-shaped unavailable — and the riders join that statement.
+        # machine-shaped unavailable — and the marker cross-check joins that
+        # statement.
         ed = self._emudeck(
             {
+                EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
                 f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": {"status": "unreadable"},
-                f"{HOME}/Applications/portable.txt": "",
             }
         )
         codes = self._codes(ed.firmware_for_system("gb"))
         status = codes.index(atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE)
-        assert codes[status + 1] == atlas.CAVEAT_CONFIG_HOME_RELOCATED
+        assert codes[status + 1] == atlas.CAVEAT_FRONTEND_MARKER_MISMATCH
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
 
@@ -7562,64 +7568,62 @@ class TestEmuDeckEsdeCatalogue:
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
         assert atlas.CAVEAT_NO_FIRMWARE_DECLARATION not in codes
 
-    def test_the_inventory_carries_the_riders_in_the_order_they_are_pinned(self):
-        # The per-system route's rider order, on the answer about no single
-        # system: the catalogue's own status leads, then the relocation
-        # suspicion, then the marker cross-check. One builder states them for
-        # both routes, so a reordering there has to fail here too.
+    def test_the_inventory_carries_the_cross_check_in_the_order_it_is_pinned(self):
+        # The per-system route's order, on the answer about no single system:
+        # the catalogue's own status leads, then the marker cross-check. One
+        # builder states it for both routes, so a reordering there has to
+        # fail here too.
         ed = self._emudeck(
             {
                 EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
-                f"{HOME}/Applications/portable.txt": "",
             }
         )
         codes = self._codes(ed.firmware_inventory())
         sealed = codes.index(atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED)
-        assert codes[sealed + 1] == atlas.CAVEAT_CONFIG_HOME_RELOCATED
-        assert codes[sealed + 2] == atlas.CAVEAT_FRONTEND_MARKER_MISMATCH
+        assert codes[sealed + 1] == atlas.CAVEAT_FRONTEND_MARKER_MISMATCH
 
     def test_the_firmware_route_reads_the_readable_shadow_as_the_whole_catalogue(self):
         # A readable resource shadow IS the bundled layer, on disk: nothing is
         # sealed away, and a system it does not declare is genuinely not the
         # frontend's — with no catalogue-status statement to sit behind, the
-        # riders LEAD the resolver's own caveats instead of following one.
+        # cross-check LEADS the resolver's own caveats instead of following one.
         ed = self._emudeck(
             {
+                EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
                 f"{HOME}/ES-DE/resources/systems/linux/es_systems.xml": self.OVERLAY,
-                f"{HOME}/Applications/portable.txt": "",
             }
         )
         codes = self._codes(ed.firmware_for_system("gb"))
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
-        assert codes.index(atlas.CAVEAT_CONFIG_HOME_RELOCATED) + 1 == codes.index(
+        assert codes.index(atlas.CAVEAT_FRONTEND_MARKER_MISMATCH) + 1 == codes.index(
             atlas.CAVEAT_SYSTEM_UNKNOWN
         )
 
     def test_an_own_spelling_firmware_answer_is_not_catalogue_informed(self):
         # A word no build declares is answered from the cores on every
         # arrangement — the catalogue is never consulted, so neither its
-        # sealed statement nor the riders have anything to qualify.
+        # sealed statement nor the cross-check has anything to qualify.
         ed = self._emudeck(
             {
+                EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
-                f"{HOME}/Applications/portable.txt": "",
             }
         )
         codes = self._codes(ed.firmware_for_system("ti83"))
         assert atlas.CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
-        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in codes
+        assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in codes
 
     def test_a_cleared_system_directory_refuses_before_the_catalogue(self):
         # root None: the resolver refused before consulting the catalogue, so
-        # the answer carries neither the sealed statement nor the riders —
-        # the same empty answer the route gave before the catalogue wiring.
+        # the answer carries neither the sealed statement nor the cross-check
+        # — the same empty answer the route gave before the catalogue wiring.
         ed = self._emudeck(
             {
+                EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
                 STANDALONE_CFG: 'system_directory = ""\n',
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
-                f"{HOME}/Applications/portable.txt": "",
             }
         )
         answer = ed.firmware_for_system("atarijaguar")
@@ -7627,7 +7631,7 @@ class TestEmuDeckEsdeCatalogue:
         codes = self._codes(answer)
         assert atlas.CAVEAT_SYSTEM_DIRECTORY_CLEARED in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
-        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in codes
+        assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in codes
 
     def test_roms_dir_answers_the_root_es_de_substitutes(self):
         # The root, not a system's directory — no <path> is applied to it.
@@ -7675,21 +7679,19 @@ class TestEmuDeckEsdeCatalogue:
         )
         assert ed.roms_dir() is None
 
-    def test_roms_dir_refuses_the_default_under_a_portable_txt(self):
-        # portable.txt may move the very home the <home>/ROMs default derives
-        # from, so the default branch stops resolving...
+    def test_roms_dir_resolves_the_default_beside_a_portable_txt(self):
+        # An AppImage ES-DE never reads a portable.txt beside the image, so
+        # the <home>/ROMs default derives from the user's home all the same...
         ed = self._emudeck(
             {
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
                 f"{HOME}/Applications/portable.txt": "",
             }
         )
-        assert ed.roms_dir() is None
+        assert ed.roms_dir() == f"{HOME}/ROMs"
 
-    def test_roms_dir_still_answers_a_configured_root_under_a_portable_txt(self):
-        # ...while a configured absolute value is still answered — the
-        # relocation suspicion rides rom_location's caveats, which a bare
-        # string cannot carry.
+    def test_roms_dir_answers_a_configured_root_beside_a_portable_txt(self):
+        # ...and a configured absolute value is answered as it is without one.
         ed = self._emudeck(
             {
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
@@ -7721,10 +7723,9 @@ class TestEmuDeckEsdeCatalogue:
         )
         assert ed.roms_dir() == f"{HOME}/Emulation/roms"
 
-    def test_roms_dir_refuses_a_tilde_setting_under_a_portable_txt(self):
-        # portable.txt moves the very home the ~ would expand against — the
-        # same reason the unset default stops resolving, on the configured
-        # branch that shares its derivation.
+    def test_roms_dir_expands_a_tilde_setting_beside_a_portable_txt(self):
+        # The ~ expands against the same home the unset default derives from,
+        # which the file beside the AppImage does not move.
         ed = self._emudeck(
             {
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
@@ -7734,7 +7735,7 @@ class TestEmuDeckEsdeCatalogue:
                 ),
             }
         )
-        assert ed.roms_dir() is None
+        assert ed.roms_dir() == f"{HOME}/Emulation/roms"
 
     def test_roms_dir_does_not_need_the_catalogue(self):
         # A broken resource shadow refuses every catalogue-shaped answer, but
@@ -9288,45 +9289,88 @@ class TestTheFolderFindingsRideWhereTheirReadsDo:
         assert [dict(c.data) for c in rd.health().issues] == [{"path": rd.roms_dir()}]
 
 
-class TestEmuDecksRelocatedRomRootIsStatedOnce:
-    """A ``portable.txt`` that leaves the ROM root undetermined is health's finding under the answers' code."""
+class TestAPortableTxtBesideEsdesAppImageIsIgnored:
+    """A ``portable.txt`` beside EmuDeck's ES-DE AppImage changes no answer at all (#630).
 
+    ES-DE looks for the file in ``getExePath()`` (main.cpp:148-149 at
+    v3.4.1), the directory of the canonical ``/proc/self/exe``
+    (FileSystemUtil.cpp:383-404) — inside the AppImage's own mount, never the
+    folder the image file sits in. So the home every ``~`` resolves against
+    is the user's whether or not the file is there, and every answer, sources
+    and all, is the one the machine without it gives.
+    """
+
+    PORTABLE = f"{HOME}/Applications/portable.txt"
+    SETTINGS = f"{HOME}/ES-DE/settings/es_settings.xml"
+    CONTENT = f"{HOME}/ROMs/gba/Game.gba"
     FILES = {
         EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n',
         STANDALONE_CFG: "",
-        f"{HOME}/Applications/portable.txt": "",
         f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
             '<?xml version="1.0"?><systemList><system><name>gba</name><path>%ROMPATH%/gba</path>'
             '<extension>.gba</extension><command label="mGBA">%EMULATOR_RETROARCH% -L '
             "%CORE_RETROARCH%/mgba_libretro.so %ROM%</command></system></systemList>"
         ),
+        CONTENT: "",
     }
     DIRS = [f"{HOME}/Emulation/saves", f"{HOME}/Emulation/bios"]
+    # ROMDirectory unset, ~-relative and absolute: the two home-derived
+    # spellings the file was once taken to unsettle, and the one it never did.
+    ROM_DIRECTORIES = (
+        None,
+        '<string name="ROMDirectory" value="~/ROMs" />',
+        '<string name="ROMDirectory" value="/mnt/usb/roms" />',
+    )
 
-    def _ed(self, files=None):
-        return atlas.EmuDeck(HOME, FixtureMachine({**self.FILES, **(files or {})}, dirs=self.DIRS))
+    def _ed(self, settings, *, portable):
+        files = {**self.FILES}
+        if settings is not None:
+            files[self.SETTINGS] = settings
+        if portable:
+            files[self.PORTABLE] = ""
+        return atlas.EmuDeck(HOME, FixtureMachine(files, dirs=self.DIRS))
 
-    def test_health_states_the_relocation_the_answers_state(self):
-        ed = self._ed()
-        finding = ed.health().issues
-        carried = [c for c in ed.systems().caveats if c.code == atlas.CAVEAT_CONFIG_HOME_RELOCATED]
-        assert [(c.code, c.message, dict(c.data)) for c in finding] == [
-            (c.code, c.message, dict(c.data)) for c in carried
-        ]
-        assert atlas.HEALTH_ISSUE_CONFIG_HOME_RELOCATED == atlas.CAVEAT_CONFIG_HOME_RELOCATED
+    def _answers(self, ed):
+        """Contract serializations plus sources — entry objects hold their handle, so raw equality cannot compare two handles' answers."""
+        from atlas.contract import (
+            catalogue_contract,
+            firmware_contract,
+            health_contract,
+            rom_placement_contract,
+            roots_contract,
+            savefile_answer_contract,
+            systems_contract,
+        )
 
-    def test_no_answer_states_it_twice(self):
-        ed = self._ed()
-        assert [c.code for c in ed.systems().caveats].count(atlas.CAVEAT_CONFIG_HOME_RELOCATED) == 1
+        entry = ed.emulators_for("gba").entries[0]
+        answers = {
+            "roots": (roots_contract(ed.roots()), ed.roots().sources),
+            "health": (health_contract(ed.health()), ()),
+            "roms_dir": (ed.roms_dir(), ()),
+            "systems": (systems_contract(ed.systems()), ed.systems().sources),
+            "rom_location": (rom_placement_contract(ed.rom_location("gba")), ed.rom_location("gba").sources),
+            "emulators_for": (catalogue_contract(ed.emulators_for("gba")), ed.emulators_for("gba").sources),
+            "emulators_for_content": (
+                catalogue_contract(ed.emulators_for("gba", content_path=self.CONTENT)),
+                ed.emulators_for("gba", content_path=self.CONTENT).sources,
+            ),
+            "entry_savefile_location": (
+                savefile_answer_contract(entry.savefile_location(content_path=self.CONTENT)),
+                (),
+            ),
+            "firmware_for_system": (firmware_contract(ed.firmware_for_system("gba")), ()),
+            "firmware_inventory": (firmware_contract(ed.firmware_inventory()), ()),
+        }
+        return answers
 
-    def test_an_absolute_setting_is_still_checked_beside_a_portable_txt(self):
-        # Only the home-derived spellings stop resolving: an absolute
-        # ROMDirectory is the root in force, and a missing one is stated.
-        settings = '<string name="ROMDirectory" value="/mnt/usb/roms" />'
-        ed = self._ed({f"{HOME}/ES-DE/settings/es_settings.xml": settings})
-        assert [(c.code, dict(c.data)) for c in ed.health().issues] == [
-            (atlas.HEALTH_ISSUE_ROMS_ROOT_MISSING, {"path": "/mnt/usb/roms"})
-        ]
+    def test_the_file_changes_no_answer(self):
+        for settings in self.ROM_DIRECTORIES:
+            assert self._answers(self._ed(settings, portable=True)) == self._answers(
+                self._ed(settings, portable=False)
+            ), settings
+
+    def test_the_unset_default_resolves_against_the_users_home(self):
+        assert self._ed(None, portable=True).roms_dir() == f"{HOME}/ROMs"
 
 
 class TestAFlatpakOverrideCannotMoveTheConfigHome:
@@ -9442,11 +9486,6 @@ class TestAFlatpakOverrideCannotMoveTheConfigHome:
         # flatpak_context_apply_env_appid) — inert the same way.
         unset = "[Context]\nunset-environment=XDG_CONFIG_HOME;\n"
         assert self._answers(self._rd({self.OVERRIDE: unset})) == self._answers(self._rd())
-
-    def test_no_answer_carries_the_relocation_code(self):
-        rd = self._relocated({ESDE_SETTINGS: self.UNSET_SETTINGS})
-        for question, answer in self._questions(rd).items():
-            assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in [c.code for c in answer.caveats], question
 
     def test_the_unset_default_resolves_under_an_override(self):
         # ROMDirectory unset used to be the refusal branch: the default

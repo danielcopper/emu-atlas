@@ -12937,8 +12937,8 @@
       }
     },
     {
-      "name": "emudeck-esde-portable-txt-makes-the-tree-suspect",
-      "rationale": "A portable.txt next to the AppImage may relocate ES-DE's application data directory (ES-DE v3.4.1 main.cpp:149-192 — ES-DE validates the target and ignores the file when it points nowhere, so presence alone states a suspicion); EmuDeck writes none, a user can. Every answer read from ~/ES-DE then carries config-home-relocated — the files atlas read may not be the ones in force — and the home-derived ROMDirectory default (~/ROMs, FileData.cpp:283-284) is refused rather than resolved, because the home it derives from is exactly what the portable.txt may have moved. The enumeration itself is still stated: what the on-disk tree declares is a fact, and the caveat carries the doubt.",
+      "name": "emudeck-esde-ignores-a-portable-txt-beside-the-appimage",
+      "rationale": "A portable.txt next to the AppImage moves nothing: an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in. With an empty one beside the 3.4.1 AppImage, --version prints no \"Found portable.txt\" line, though the check runs before --version is handled (main.cpp:148-154 against :398). So nothing about the file is stated, and the home-derived ROMDirectory default resolves against the user's home (~/ROMs, FileData.cpp:283-284), exactly as on the machine without the file — a directory this machine does not have, which health states as roms-root-missing. The enumeration is what the on-disk tree declares, with the sealed statement for the layer inside the AppImage.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12977,9 +12977,9 @@
             "root": "/home/deck/Emulation",
             "health": [
               {
-                "code": "config-home-relocated",
+                "code": "roms-root-missing",
                 "data": {
-                  "path": "/home/deck/Applications/portable.txt"
+                  "path": "/home/deck/ROMs"
                 }
               }
             ]
@@ -12993,17 +12993,11 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {}
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
             }
           ]
         },
         "rom_location": {
-          "dir": null,
+          "dir": "/home/deck/ROMs/atarijaguar",
           "physical_dir": null,
           "extensions": [
             ".j64",
@@ -13019,20 +13013,14 @@
               "data": {
                 "system": "atarijaguar"
               }
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
             }
           ]
         }
       }
     },
     {
-      "name": "emudeck-entry-route-carries-the-relocated-config-home-with-it",
-      "rationale": "The same portable.txt machine, asked through a catalogue entry: config-home-relocated is not only the arrangement-level statement about what atlas read, it rides the entry route's placements too. The entry re-reads the ES-DE side per query, so the doubt about which files are in force reaches the placement the entry hands out — on both save families, and only where content is named, because that is what makes the entry route ask the ES-DE question at all. The direct question on the same machine is the contrast, and the reason this vector asks it too: same content, same core, the same placement and the same two core caveats, and neither the sealed catalogue nor the relocation — the direct route reads no ES-DE, so it carries neither. No per-game statement rides along: on a relocated tree the home-derived ROMDirectory default is refused (FileData.cpp:283-284), so the per-game check has no anchor to resolve this game's path against.",
+      "name": "emudeck-entry-route-beside-a-portable-txt-states-no-relocation",
+      "rationale": "The same portable.txt machine, asked through a catalogue entry: the file states nothing on the entry route's placements either, because an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in. The entry re-reads the ES-DE side per query, so the sealed statement rides the placement the entry hands out — on both save families, and only where content is named, because that is what makes the entry route ask the ES-DE question at all. The direct question on the same machine is the contrast, and the reason this vector asks it too: same content, same core, the same placement and the same two core caveats, and no sealed statement — the direct route reads no ES-DE. No per-game statement rides along: the gamelist selects an emulator for the system only, never for this game.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13085,9 +13073,9 @@
             "root": "/home/deck/Emulation",
             "health": [
               {
-                "code": "config-home-relocated",
+                "code": "roms-root-missing",
                 "data": {
-                  "path": "/home/deck/Applications/portable.txt"
+                  "path": "/home/deck/ROMs"
                 }
               }
             ]
@@ -13125,12 +13113,6 @@
               "data": {
                 "system": "atarijaguar"
               }
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
             }
           ],
           "granularity": null
@@ -13164,12 +13146,6 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "atarijaguar"
-              }
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
               }
             }
           ]
