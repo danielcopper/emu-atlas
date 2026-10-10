@@ -90,8 +90,21 @@ RetroDECK — whose ES-DE lives in its Flatpak as plain files — never reaches 
 stdlib's `compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
 
 On an older interpreter the codec has to come from the host, and a host that vendors the backport under its own parent
-package imports it as `_vendor.backports.zstd` — neither name the probe tries. Hand the module over instead, before the
-first atlas call:
+package imports it as `_vendor.backports.zstd` — neither name the probe tries. As shipped, `backports.zstd` 1.7.0 does
+not import under another parent at all: its `__init__.py` and `_zstdfile.py` import their own package by its absolute
+name (`import backports.zstd._zstd as _zstd`, `from backports.zstd import _streams`), so a literal copy under `_vendor`
+fails with `ModuleNotFoundError: No module named 'backports'`. The host makes those self-imports relative first
+(`from . import _zstd as _zstd`, `from . import _streams`).
+
+How far that edit reaches, measured against the 1.7.0 wheel under CPython 3.11: importing the package for `decompress`
+runs five absolute self-imports, three in `__init__.py` and two in `_zstdfile.py`, and each one is needed — leaving any
+one absolute fails the import. The whole wheel holds 31 such lines in 13 files; the other 26 run only when their feature
+is used (the lazy `register_shutil` import in `__init__.py` and `_shutil` itself, the CFFI fallback in `_zstd.py` and
+`_cffi/`, `tarfile`, `zipfile`), and a host that makes all 31 relative has the whole package. Those numbers are 1.7.0's,
+so a later wheel is counted again before it is vendored — atlas ships no copy of the backport, and nothing in its own
+tests notices when they move.
+
+Then the host hands the module over, before the first atlas call:
 
 ```python
 import importlib
@@ -100,24 +113,13 @@ import atlas
 atlas.register_zstd_provider(importlib.import_module("_vendor.backports.zstd"))
 ```
 
-Every zstd AppImage read in the process then goes through that object. It is duck-typed on `decompress(bytes) -> bytes`,
-so atlas imports nothing and gains no dependency, and anything else, `None` apart, is refused with `TypeError` at the
-registration, where the caller can still see what it handed over. There is one slot: the last registration wins, and
-`atlas.register_zstd_provider(None)` clears it. `atlas.zstd_provider()` says which provider zstd images go through here
-and by which route — or `None` where no provider resolves at all. Otherwise the result is an `atlas.ZstdProvider`:
-`name` is the registered object's own name, or the name the probe imported it under, and `registered` says which of the
-two it was.
-
-Aliasing the vendored module under the probed name works too, and needs no atlas call:
-
-```python
-import importlib, sys
-sys.modules["backports.zstd"] = importlib.import_module("_vendor.backports.zstd")
-```
-
-The probe finds it because `atlas/squashfs.py` goes through the import machinery (`importlib.import_module`), and the
-import machinery consults `sys.modules` before it searches anywhere. Either way the copy stays literal; nothing in it is
-patched. A registration outranks both names, so a host that does both gets the object it registered.
+Every zstd AppImage read in the process then goes through that object, ahead of both names the probe tries. It is
+duck-typed on `decompress(bytes) -> bytes`, so atlas imports nothing and gains no dependency, and anything else, `None`
+apart, is refused with `TypeError` at the registration, where the caller can still see what it handed over. There is one
+slot: the last registration wins, and `atlas.register_zstd_provider(None)` clears it. `atlas.zstd_provider()` says which
+provider zstd images go through here and by which route — or `None` where no provider resolves at all. Otherwise the
+result is an `atlas.ZstdProvider`: `name` is the registered object's own name, or the name the probe imported it under,
+and `registered` says which of the two it was.
 
 The first consumer has measured the runtime side of this on its own bundle and published what it found
 ([danielcopper/romm-tender#1660](https://github.com/danielcopper/romm-tender/issues/1660#issuecomment-5481535804)) —

@@ -149,7 +149,8 @@ class TestTheCodecGate:
 
     def test_the_backport_serves_where_the_stdlib_module_is_absent(self, monkeypatch):
         # backports.zstd is the same code under another name — aliasing the real
-        # module to that name is exactly the state a host that vendors it creates.
+        # module to that name stands in for an interpreter that has the backport
+        # installed under its own name.
         if not _HAS_STDLIB_ZSTD:
             pytest.skip("proving the fallback needs the real stdlib codec to alias")
         real = importlib.import_module("compression.zstd")
