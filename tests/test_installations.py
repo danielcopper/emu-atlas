@@ -2871,10 +2871,19 @@ class TestMameEdgeBranches:
     def test_an_explicitly_empty_value_is_kept_not_defaulted(self):
         # MAME keeps a present-empty option (options.cpp:1041 via :262-278):
         # the searchpath is "" and the states land at <cwd>/<machine>, with
-        # no 'sta' segment — the compiled default does NOT come back.
+        # no 'sta' segment — the compiled default does NOT come back. The cwd
+        # is %STARTDIR%=~/.mame under the frontend's --home.
         p = self._entry('state_directory ""\n').savestate_location()
         assert isinstance(p, atlas.SavestatePlacement)
-        assert p.dir == f"{HOME}/.mame/vectrex"
+        assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/config/.mame/vectrex"
+
+    def test_a_variable_in_the_startdir_is_a_literal_folder_name(self):
+        # ES-DE expands only the ~ and getEscapedPath backslashes a $ before
+        # the shell's cd reads it — MAME's own environment expansion never
+        # sees the folder, however well the sandbox pins the variable.
+        p = self._entry('state_directory ""\n', startdir="%STARTDIR%=/mnt/sd/$XDG_CONFIG_HOME ").savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/mnt/sd/$XDG_CONFIG_HOME/vectrex"
 
     def test_an_empty_statename_reverts_to_the_machine_default(self):
         # get_statename assigns "%g" for a null OR empty option
@@ -2935,6 +2944,45 @@ class TestMameEdgeBranches:
         assert isinstance(p, atlas.SavestatePlacement)
         layer = next(c for c in p.caveats if c.code == atlas.CAVEAT_PER_GAME_LAYER_UNREAD)
         assert any(f.endswith("source/vectrex.ini") for f in layer.data["files"])
+
+
+class TestMameStartFolderUnderAMovedHome:
+    """EmuDeck with a portable.txt: the start folder is unnamed, and why is stated once (#607)."""
+
+    CATALOGUE = "/home/deck/ES-DE/custom_systems/es_systems.xml"
+
+    @classmethod
+    def _entry(cls, startdir=None):
+        path = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "standalone-savestates.json"
+        vector = next(
+            v
+            for v in json.loads(path.read_text())["vectors"]
+            if v["name"] == "emudeck-a-portable-txt-leaves-mames-startdir-unnamed"
+        )
+        inp = vector["input"]
+        if startdir is not None:
+            catalogue = inp["files"][cls.CATALOGUE]
+            assert "%STARTDIR%=~/.mame " in catalogue
+            inp["files"][cls.CATALOGUE] = catalogue.replace("%STARTDIR%=~/.mame ", f"%STARTDIR%={startdir} ")
+        emudeck = atlas.detect(inp["home"], fixture_machine(inp))[0]
+        return emudeck.emulators_for(inp["entry_savestate_query"]["system"]).entries[0]
+
+    def test_an_absolute_startdir_needs_no_home_and_stays_established(self):
+        # Only a ~ is the frontend's home to expand: a start folder spelled
+        # absolute names the same folder wherever a portable.txt moved it.
+        p = self._entry(startdir="/home/deck/mame-run").savestate_location()
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "/home/deck/mame-run/sta/jaguar"
+        assert p.root_kind == "emulator_directory"
+        assert atlas.CAVEAT_CONFIG_HOME_RELOCATED not in [c.code for c in p.caveats]
+
+    def test_a_content_path_does_not_state_the_relocation_twice(self):
+        # The per-game check states the relocation for a content path already;
+        # the start folder's reason is the same caveat and rides once.
+        p = self._entry().savestate_location(content_path="/home/deck/ROMs/atarijaguar/Game.j64")
+        assert isinstance(p, atlas.SavestatePlacement)
+        assert p.dir == "<cwd>/sta/jaguar"
+        assert [c.code for c in p.caveats].count(atlas.CAVEAT_CONFIG_HOME_RELOCATED) == 1
 
 
 class TestMameSecondIniParse:

@@ -237,20 +237,22 @@ Rules that hold for every answer:
   longer stated, and the place read like any other — a dead link or a missing `.sav` says what it says at an absolute
   path. That covers DeSmuME 2015's saves; xemu's relative hard-disk image (its saves and its snapshots), EEPROM, boot
   ROM and flash ROM; melonDS's relative save and state paths; MAME's states where the command states no `%STARTDIR%`
-  (one it states outranks yours), a relative `-inipath` searched below the folder included; the MAME core handed its own
-  paths (`mame_mame_paths_enable`), whose relative save trees become `save-root-redirected` below the folder; and
-  Dolphin's GBA cartridge save beside a relative cartridge path. One answer that depends on the folder does not take it
-  yet: PUAE asks whether an archive member's bare name is a directory, which resolves against RetroArch's working
-  directory, and atlas assumes no directory of that name is there; #597 covers it. A value that is not an absolute path,
-  the empty string included, raises `ValueError` at the call; a question whose answer does not depend on the folder
-  ignores it and answers byte for byte as without it, so a launcher may pass it on every such question. And `region` is
-  the hole a region-keyed standalone answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the
-  disc's own region field, which atlas does not read out of content — a caller with metadata (a library server knows its
-  games' regions) fills it and narrows the `<region>` template to one tree, while the groups list every tree either way.
-  Every hole is filled from the content or the launch — a value the configs state is never one, because you could not
-  supply it either; atlas resolves those itself or states a caveat. Holes are not confined to the directory: a declared
-  file set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
-  non-empty. And a declared **emptiness** is a third thing, distinct from both: a placement with
+  (one it states outranks yours, and where a `portable.txt` beside EmuDeck's ES-DE may have moved the home its `~`
+  expands against, the `<cwd>` template stays open whatever you hand in, `config-home-relocated` beside it — the launch
+  runs in that unplaced folder, not in yours), a relative `-inipath` searched below the folder included; the MAME core
+  handed its own paths (`mame_mame_paths_enable`), whose relative save trees become `save-root-redirected` below the
+  folder; and Dolphin's GBA cartridge save beside a relative cartridge path. One answer that depends on the folder does
+  not take it yet: PUAE asks whether an archive member's bare name is a directory, which resolves against RetroArch's
+  working directory, and atlas assumes no directory of that name is there; #597 covers it. A value that is not an
+  absolute path, the empty string included, raises `ValueError` at the call; a question whose answer does not depend on
+  the folder ignores it and answers byte for byte as without it, so a launcher may pass it on every such question. And
+  `region` is the hole a region-keyed standalone answer keeps: which of Dolphin's per-region GameCube trees a game saves
+  into is the disc's own region field, which atlas does not read out of content — a caller with metadata (a library
+  server knows its games' regions) fills it and narrows the `<region>` template to one tree, while the groups list every
+  tree either way. Every hole is filled from the content or the launch — a value the configs state is never one, because
+  you could not supply it either; atlas resolves those itself or states a caveat. Holes are not confined to the
+  directory: a declared file set can be a template too. An unknown is something atlas refuses to state — it never
+  guesses to keep a field non-empty. And a declared **emptiness** is a third thing, distinct from both: a placement with
   `file_set.state == "declared"` and no files says no separate save file exists. When the `save-inside-content` caveat
   rides beside it (quasi88 writing straight into the loaded disk image, hatari writing a floppy back into its own file
   at eject), the loaded content file itself takes the writes — atlas will not hand you the ROM under a second name, so
@@ -1869,11 +1871,14 @@ named. MAME's states root is `state_directory` out of whichever `mame.ini` the l
 compiled `$HOME/.mame;/app/share/mame/ini` search path (the Flathub build define, byte-proven in the shipped binary —
 not upstream's `#ifndef` fallback; the `/app` element resolves against the running deploy — RetroDECK's carries no
 `share/mame` at all, while on EmuDeck the deploy is MAME's own `org.mamedev.MAME` flatpak, which ships a `mame.ini`
-there) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under `~/.mame/sta`, not
-under the arrangement's tree), with one subdirectory per machine below it — the command's positional system word, or the
-ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`, each `<slot>.sta`.
-Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver is flagged
-`MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a warning.
+there) — read, not assumed: the RetroDECK commands that pass no `-inipath` land their states under `.mame/sta` in the
+frontend's home, not under the arrangement's tree — the relative `sta` opens from the command's `%STARTDIR%=~/.mame`,
+whose `~` ES-DE expands against its own `--home` (`FileData.cpp:1164` at v3.4.1), RetroDECK's app config home
+`~/.var/app/net.retrodeck.retrodeck/config`, the folder `launch_command` states as `working_folder`; EmuDeck's ES-DE has
+no `--home`, so there it is `~/.mame`), with one subdirectory per machine below it — the command's positional system
+word, or the ROM's own stem on the `%BASENAME%` arcade rows — and the declared slots `auto`/`quick`/`0-9`/`a-z`, each
+`<slot>.sta`. Every MAME answer carries `savestate-support-machine-dependent`: whether the launched system's driver is
+flagged `MACHINE_SUPPORTS_SAVE` is compiled into the binary, and an unflagged one still writes the file with a warning.
 
 #### MAME's per-system ini layer is read, not announced
 
