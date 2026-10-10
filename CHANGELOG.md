@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.23.0](https://github.com/danielcopper/emu-atlas/compare/v0.22.0...v0.23.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **emudeck:** ignore a portable.txt beside the es-de appimage ([#632](https://github.com/danielcopper/emu-atlas/issues/632))
+* **saves:** expand mame's start folder against the frontend's home ([#629](https://github.com/danielcopper/emu-atlas/issues/629))
+* **launch:** take the command the frontend would run apart ([#628](https://github.com/danielcopper/emu-atlas/issues/628))
+* **saves:** key dolphin's wii save by its title id ([#625](https://github.com/danielcopper/emu-atlas/issues/625))
+* **saves:** state when a save place was not read from the settings ([#619](https://github.com/danielcopper/emu-atlas/issues/619))
+* **saves:** answer vita3k build 4103's user selection ([#617](https://github.com/danielcopper/emu-atlas/issues/617))
+* **data:** re-pin the RetroDECK citations to 0.10.10b ([#608](https://github.com/danielcopper/emu-atlas/issues/608))
+* **health:** report a missing ROM root and a missing BIOS folder ([#601](https://github.com/danielcopper/emu-atlas/issues/601))
+
+### Features
+
+* **health:** report a missing ROM root and a missing BIOS folder ([#601](https://github.com/danielcopper/emu-atlas/issues/601)) ([6277466](https://github.com/danielcopper/emu-atlas/commit/6277466cb970f95af3ce52088c92e89ab89d23e2)), closes [#599](https://github.com/danielcopper/emu-atlas/issues/599)
+* **launch:** take the command the frontend would run apart ([#628](https://github.com/danielcopper/emu-atlas/issues/628)) ([57772c9](https://github.com/danielcopper/emu-atlas/commit/57772c9b195a3ca613b56c9493eae0895a9663bb))
+* **roots:** state where each root folder came from ([#620](https://github.com/danielcopper/emu-atlas/issues/620)) ([133d84b](https://github.com/danielcopper/emu-atlas/commit/133d84b293c95b538dce37485e4c333a86c3b2b1)), closes [#612](https://github.com/danielcopper/emu-atlas/issues/612)
+* **saves:** answer a working-folder place with the folder given ([#598](https://github.com/danielcopper/emu-atlas/issues/598)) ([0043205](https://github.com/danielcopper/emu-atlas/commit/0043205112bc34f15d265765c4838896261033f7)), closes [#581](https://github.com/danielcopper/emu-atlas/issues/581)
+* **saves:** key dolphin's wii save by its title id ([#625](https://github.com/danielcopper/emu-atlas/issues/625)) ([1e85bfc](https://github.com/danielcopper/emu-atlas/commit/1e85bfcd577ec16e268631037c63ede95b595814)), closes [#614](https://github.com/danielcopper/emu-atlas/issues/614)
+* **saves:** state when a save place was not read from the settings ([#619](https://github.com/danielcopper/emu-atlas/issues/619)) ([4235e90](https://github.com/danielcopper/emu-atlas/commit/4235e9081349d54a16cbf713b7743522deafd041)), closes [#611](https://github.com/danielcopper/emu-atlas/issues/611)
+
+
+### Bug Fixes
+
+* **data:** re-pin the RetroDECK citations to 0.10.10b ([#608](https://github.com/danielcopper/emu-atlas/issues/608)) ([4bb9e76](https://github.com/danielcopper/emu-atlas/commit/4bb9e7633bc312479c30f723b16d8a27e4598a10))
+* **emudeck:** ignore a portable.txt beside the es-de appimage ([#632](https://github.com/danielcopper/emu-atlas/issues/632)) ([590fed6](https://github.com/danielcopper/emu-atlas/commit/590fed63f96152679dfec34b3e1be0b5044b3a93)), closes [#630](https://github.com/danielcopper/emu-atlas/issues/630)
+* **firmware:** follow a firmware file linked out of the root ([#596](https://github.com/danielcopper/emu-atlas/issues/596)) ([9f3669e](https://github.com/danielcopper/emu-atlas/commit/9f3669e0d4a4cc8b48080b66de09fda598fb3201)), closes [#578](https://github.com/danielcopper/emu-atlas/issues/578)
+* **saves:** answer vita3k build 4103's user selection ([#617](https://github.com/danielcopper/emu-atlas/issues/617)) ([bd70cd8](https://github.com/danielcopper/emu-atlas/commit/bd70cd8285d457c2b6f58d4edf86a079f3346bd1)), closes [#603](https://github.com/danielcopper/emu-atlas/issues/603)
+* **saves:** expand mame's start folder against the frontend's home ([#629](https://github.com/danielcopper/emu-atlas/issues/629)) ([bc9e8de](https://github.com/danielcopper/emu-atlas/commit/bc9e8de5f480191070738b9b859ecfb7eb7811e7)), closes [#607](https://github.com/danielcopper/emu-atlas/issues/607)
+
 ## [0.22.0](https://github.com/danielcopper/emu-atlas/compare/v0.21.0...v0.22.0) (2026-10-06)
 
 
