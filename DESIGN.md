@@ -224,10 +224,10 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   inert and the tree atlas reads is the tree in force. What an override can still move is the sandbox's `HOME`, whose
   one consequence among atlas's reads is the `~`-expansion base of `retroarch.cfg` values — followed when the effective
   value is a literal path, refused by the ordinary value-shape machinery when it is not. `rom_location` refuses where
-  the settings file exists and cannot be read (`frontend-settings-unreadable`); `config-home-relocated` remains
-  EmuDeck's statement, for the on-disk `portable.txt` switch that really may move ES-DE's tree. Missing and unreadable
-  are the same empty mapping and opposite facts, which is exactly the collapse the seam's explicit outcomes exist to
-  prevent.
+  the settings file exists and cannot be read (`frontend-settings-unreadable`). A `portable.txt` beside EmuDeck's ES-DE
+  does not move its tree either: its ES-DE is an AppImage, which never reads one beside the image (same research
+  document, EmuDeck's ES-DE section). Missing and unreadable are the same empty mapping and opposite facts, which is
+  exactly the collapse the seam's explicit outcomes exist to prevent.
 
 ## The machine seam
 

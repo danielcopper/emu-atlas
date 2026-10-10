@@ -629,9 +629,11 @@ launch, `helperFunctions.sh:1046-1048`).
 
 **[V]** **Config home.** Plain `~/ES-DE`: the launcher runs the AppImage with no `--home` and no `ESDE_APPDATA_DIR`
 (`tools/launchers/es-de/es-de.sh:5`), and upstream resolution is `ESDE_APPDATA_DIR` env → else `<home>/ES-DE`
-(`FileSystemUtil.cpp:259-285`). A `portable.txt` in the executable directory **may** relocate the home
-(`main.cpp:149-192`): ES-DE validates the resolved target and keeps the default when it is missing or a regular file
-(`:174-192`), so presence alone does not establish the relocation; EmuDeck writes none. Contrast RetroDECK:
+(`FileSystemUtil.cpp:259-285`). A `portable.txt` beside the AppImage file does not relocate the home: ES-DE looks for it
+in `getExePath()` (`main.cpp:148-149`), the directory of the canonical `/proc/self/exe` (`FileSystemUtil.cpp:383-404`),
+which for an AppImage lies inside the image's own mount — only the binary's name is taken from `$APPIMAGE` (`:406-410`).
+Observed against the 3.4.1 AppImage: with an empty `portable.txt` beside it, `--version` prints no "Found portable.txt"
+line, though the check runs before `--version` is handled (`main.cpp:148-154` against `:398`). Contrast RetroDECK:
 `--home "${XDG_CONFIG_HOME}"` puts the appdata under the Flatpak config tree.
 
 **[V]** **The bundled catalogue is sealed.** "If you're using the AppImage release of ES-DE then the bundled
@@ -764,8 +766,8 @@ for atlas: RetroDECK's launcher always passes `--home`, and the EmuDeck handle e
 established for the machine — atlas never models an ES-DE process without one, so no answer rests on the CWD fallback.
 So a `~`-carrying `ROMDirectory` is not an unresolvable value: it resolves against the same per-arrangement home the
 empty-setting default derives from. On RetroDECK that home cannot be moved at all — the `--home` is the pinned
-`XDG_CONFIG_HOME` (the env-composition subsection below) — while on EmuDeck a `portable.txt` may move it, and stops
-default and expansion alike there. What stays unresolvable is what ES-DE resolves against bases atlas has not
+`XDG_CONFIG_HOME` (the env-composition subsection below) — and on EmuDeck it is the user's own, which a `portable.txt`
+beside the AppImage does not move (§13b). What stays unresolvable is what ES-DE resolves against bases atlas has not
 established: relative values (the process's working directory) and `%ESPATH%` (the binary directory,
 `FileData.cpp:300-302`).
 
@@ -898,8 +900,8 @@ doubt the pinned source refutes, and retired. The override files remain read by 
 affect: the cfg-reading ones (save, savestate, firmware), which compose the applicable files per the merge order above
 and take the effective `HOME` as the `~`-expansion base — followed when it is a literal absolute path, and otherwise
 handed to the ordinary value-shape machinery (RetroArch's directory test refuses a non-absolute expansion; the sandbox
-translation states a `/var/...` one). `config-home-relocated` lives on solely as EmuDeck's `portable.txt` statement
-(§13b), an on-disk switch that really may move ES-DE's tree.
+translation states a `/var/...` one). `config-home-relocated` lived on as EmuDeck's `portable.txt` statement until it
+was found that an AppImage ES-DE never reads that file beside the image (§13b), and was removed.
 
 **Consequence for every ROM-directory answer, not just the ROM question.** The dependency being one-way settles which
 source each of them reads: `roms_path` is RetroDECK's _input_ to the sed and nothing reads it back, so from atlas's view

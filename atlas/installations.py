@@ -425,10 +425,8 @@ HEALTH_ISSUE_ROMS_ROOT_MISSING = "roms-root-missing"
 # ES-DE's ``ROMDirectory`` is not an absolute path even after the frontend's
 # own ``~`` expansion, so there is no ROM root to check; ``data.value`` is the
 # setting as the file spells it, because that text is what a user edits. The
-# other ways the root stays undetermined keep their own codes: settings that
-# exist and cannot be read are ``config-unreadable``, and an EmuDeck
-# ``portable.txt`` that may have moved the frontend's home is
-# ``config-home-relocated``.
+# other way the root stays undetermined keeps its own code: settings that
+# exist and cannot be read are ``config-unreadable``.
 HEALTH_ISSUE_ROMS_ROOT_NOT_ABSOLUTE = "roms-root-not-absolute"
 # A systems catalogue file ES-DE refuses its whole load on: one that does not
 # parse, or one carrying no document-level <systemList>. Not a statement about
@@ -13717,7 +13715,7 @@ def _fixed_savestate_tree_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -13764,7 +13762,7 @@ def _pcsx2_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -13860,7 +13858,7 @@ def _duckstation_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14000,7 +13998,7 @@ def _melonds_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14064,7 +14062,7 @@ def _xemu_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14573,7 +14571,7 @@ def _mame_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | Unresolved:
@@ -14592,9 +14590,8 @@ def _mame_savestate_placement(
     directory, which is the command's ``%STARTDIR%`` where it states one —
     its ``~`` expanded against the frontend's home, *frontend_home*
     (:func:`_mame_start_folder`) — the caller's *cwd* where it does not, and
-    an open hole where neither does, or where the folder the command states
-    cannot be named (the same order the ini search path's relative elements
-    resolve in).
+    an open hole where neither does (the same order the ini search path's
+    relative elements resolve in).
     Below the root sits one subdirectory per machine (``statename``, default
     ``%g`` = the running system's short name, machine.cpp:474-547, :576),
     which the command's positional system word fills — or the content's own
@@ -14677,7 +14674,6 @@ def _mame_savestate_placement(
     reading = anchored.reading + machine_dir.reading_suffix
     caveats: list[Caveat] = [
         *extra_caveats,
-        *(caveat for caveat in start.caveats if caveat not in extra_caveats),
         *_mame_ini_missing(card, shape, ini, layered, key=key),
         *anchored.caveats,
         *machine_dir.caveats,
@@ -14773,21 +14769,18 @@ def _mame_ini_missing(
 
 @dataclass(frozen=True, slots=True)
 class _MameStartFolder:
-    """The working directories a relative path can open from, and why neither is there.
+    """The working directories a relative path can open from.
 
     ``launch`` is the one the launch pins (``%STARTDIR%``), ``given`` the
-    caller's, and ``caveats`` says why the launch pins a folder this reading
-    cannot name — the one state in which both are ``None`` though a caller
-    gave a folder.
+    caller's.
     """
 
     launch: str | None
     given: str | None
-    caveats: tuple[Caveat, ...] = ()
 
 
 def _mame_start_folder(
-    launch: _MameLaunch, frontend_home: str | Caveat, given_cwd: str | None
+    launch: _MameLaunch, frontend_home: str, given_cwd: str | None
 ) -> _MameStartFolder:
     """The folder the frontend changes into before it runs MAME — ``%STARTDIR%`` as ES-DE expands it.
 
@@ -14796,22 +14789,14 @@ def _mame_start_folder(
     the ``--home`` its launcher passed, not the emulator's ``$HOME`` — and its
     shell's ``cd`` reads the rest literally, because ``getEscapedPath``
     backslashes a ``$``: the folder :mod:`atlas.launch_command` states as the
-    working folder, with no environment expansion of MAME's own. Where that
-    home is not established (*frontend_home* is the caveat saying why), a
-    ``~`` leaves the folder the launch pins unnamed — and the caller's
-    working directory does not stand in for it, because the launch changes
-    into its own folder whatever its launcher's is. A value that is still no
-    absolute path pins nothing this reading takes as a folder.
+    working folder, with no environment expansion of MAME's own. A value
+    that is still no absolute path pins nothing this reading takes as a
+    folder.
     """
     startdir = launch.startdir
     if startdir is None:
         return _MameStartFolder(None, given_cwd)
-    if isinstance(frontend_home, Caveat):
-        if "~" in startdir:
-            return _MameStartFolder(None, None, (frontend_home,))
-        expanded = startdir
-    else:
-        expanded = expand_home_path(startdir, frontend_home)
+    expanded = expand_home_path(startdir, frontend_home)
     return _MameStartFolder(expanded if os.path.isabs(expanded) else None, given_cwd)
 
 
@@ -15299,7 +15284,7 @@ def _standalone_savestate_placement(
     system: str,
     command: str,
     extra_caveats: tuple[Caveat, ...],
-    frontend_home: str | Caveat,
+    frontend_home: str,
     content_path: str | None = None,
     cwd: str | None = None,
 ) -> SavestatePlacement | SavestateAbsence | Unresolved:
@@ -15310,8 +15295,7 @@ def _standalone_savestate_placement(
     configuration, melonDS fills its state names from the content's own stem,
     and a relative states path opens from the launch's own directory. The
     frontend's home rides because that directory can be the frontend's to
-    state: ES-DE expands the ``~`` in a ``%STARTDIR%`` against it — or, where
-    the home is not established, *frontend_home* is the caveat saying why. An
+    state: ES-DE expands the ``~`` in a ``%STARTDIR%`` against it. An
     absence card never reaches this dispatch: the routes answer it before
     homes are built, because the stated no needs none of what this dispatch
     carries and DOES need the arrangement caveats only a route can supply —
@@ -17740,21 +17724,6 @@ CAVEAT_ROM_PATH_UNDECLARED = "rom-path-undeclared"
 CAVEAT_ROM_PATH_UNRESOLVED = "rom-path-unresolved"
 CAVEAT_FRONTEND_SETTINGS_UNREADABLE = "frontend-settings-unreadable"
 
-# ES-DE's on-disk relocation switch: a portable.txt beside an EmuDeck-managed
-# AppImage may move the tree every ~/ES-DE read comes from, and the EmuDeck
-# handle's rider states that suspicion under this code. A Flatpak override
-# cannot earn it: flatpak force-pins the XDG_*_HOME variables to the per-app
-# directories AFTER applying every override and --env (flatpak 1.16.6,
-# flatpak-context.c:3158-3187 applied via flatpak-run.c:3574, against the
-# override env applied at :3352, both with overwrite; flatpak-run(1) documents
-# the pin, and flatpak/flatpak#4529 — the request to make these overridable —
-# was closed as not planned), so the config home a RetroDECK answer reads from
-# is exactly the one in force, override files or no.
-CAVEAT_CONFIG_HOME_RELOCATED = "config-home-relocated"
-# The same fact as an EmuDeck health finding, where it leaves the ROM root
-# undetermined — one fact, one code on every route.
-HEALTH_ISSUE_CONFIG_HOME_RELOCATED = CAVEAT_CONFIG_HOME_RELOCATED
-
 # Why the settings could not be read, where the read itself succeeded and the
 # parse did not. Alongside the seam's own read statuses in the caveat's data,
 # because to a client they answer the same question — and it is not one of
@@ -18190,18 +18159,18 @@ def _firmware_catalogues(
 class _RomRoot:
     """What ES-DE substitutes for ``%ROMPATH%``, or which way it could not be established.
 
-    ``directory`` is set exactly when the three refusal fields are not: an
+    ``directory`` is set exactly when the two refusal fields are not: an
     absolute root the frontend would really use, whether that is the configured
     value or ES-DE's own default for a file that sets nothing.
 
     The refusals stay apart rather than collapsing into one "no root", because
     each becomes a different caveat code — and they carry only what those
-    messages need, not the messages themselves: two of the three name the
-    system's declared ``<path>``, which the root does not know and has no
-    business knowing. ``relocated`` is EmuDeck's alone — the on-disk
-    ``portable.txt`` switch; RetroDECK's root has no relocated state, because
-    flatpak pins the home its resolutions derive from (see
-    :meth:`RetroDeck._rom_root`).
+    messages need, not the messages themselves: the not-absolute refusal's
+    message names the system's declared ``<path>``, which the root does not
+    know and has no business knowing. Neither handle has a relocated state:
+    flatpak pins the home RetroDECK's resolutions derive from (see
+    :meth:`RetroDeck._rom_root`), and EmuDeck's AppImage ES-DE never reads a
+    ``portable.txt`` beside the image (see :meth:`EmuDeck._esde_appdata_dir`).
 
     ``frontend_default`` says which of the two a ``directory`` is: set where
     the settings name no value and the frontend's own default applies, so
@@ -18210,7 +18179,6 @@ class _RomRoot:
 
     directory: str | None = None
     unreadable: str | None = None
-    relocated: tuple[str, str] | None = None
     not_absolute: str | None = None
     sources: tuple[str, ...] = ()
     frontend_default: bool = False
@@ -18221,8 +18189,7 @@ def _rom_root_refusal(root: _RomRoot, settings_path: str) -> Caveat | None:
 
     The two refusals both handles share, spelled once for the two questions
     that state them: :func:`_rom_root_finding` on ``health()`` and the ROM
-    entry of ``roots()``. ``relocated`` answers ``None`` here: that statement
-    is the EmuDeck handle's own caveat, which the handle states itself.
+    entry of ``roots()``.
     """
     if root.unreadable is not None:
         return Caveat(
@@ -18387,15 +18354,15 @@ class _SourcedRoot(NamedTuple):
     sources: tuple[str, ...]
 
 
-def _rom_root_entry(root: _RomRoot, setting: RootSetting, refusal: Caveat | None) -> _SourcedRoot:
+def _rom_root_entry(root: _RomRoot, setting: RootSetting) -> _SourcedRoot:
     """The ROM entry of a roots answer, from the one ROM root chain both handles resolve through.
 
-    *refusal* is the reason the chain states no directory, which the caller
-    builds because only it knows which code its arrangement states for which
-    state (:func:`_rom_root_refusal`, and EmuDeck's relocation caveat); an
+    Where the chain states no directory, the entry's reason is
+    :func:`_rom_root_refusal`'s, over the settings file *setting* names; an
     entry with neither is refused by :class:`InstallationRoot` itself.
     """
     if root.directory is None:
+        refusal = _rom_root_refusal(root, setting.file)
         reasons = () if refusal is None else (refusal,)
         return _SourcedRoot(InstallationRoot(ROOT_NAME_ROMS, None, None, setting, reasons), root.sources)
     provenance = PROVENANCE_FRONTEND_DEFAULT if root.frontend_default else PROVENANCE_READ
@@ -18439,9 +18406,9 @@ class RomPlacement:
     ``None`` it is — an arrangement with no catalogue, one whose catalogue atlas
     has not located, one whose catalogue could not be read, one whose readable
     layers declare nothing while the rest is sealed away, a system the
-    catalogue declares no path for, a setting that is not a path, settings
-    nobody could read, or a relocated config home — is a caveat, exactly as an
-    empty :class:`CatalogueAnswer` is.
+    catalogue declares no path for, a setting that is not a path, or settings
+    nobody could read — is a caveat, exactly as an empty
+    :class:`CatalogueAnswer` is.
 
     ``extensions`` is the frontend's declaration, not a filter atlas applies:
     the tokens are verbatim, both cases are listed where the file lists both,
@@ -20070,8 +20037,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         not_set_up = _not_set_up(marker_issues)
         if not_set_up is not None:
             return _SourcedRoot(InstallationRoot(ROOT_NAME_ROMS, None, None, setting, (not_set_up,)), ())
-        root = self._rom_root()
-        return _rom_root_entry(root, setting, _rom_root_refusal(root, settings_path))
+        return _rom_root_entry(self._rom_root(), setting)
 
     @one_question
     def bios_dir(self) -> str:
@@ -21874,18 +21840,16 @@ class _EsdeSnapshot:
     answer order. ``refusal`` ``None`` means the layers were read:
     ``by_system`` holds the enumeration, ``complete`` whether it is the whole
     catalogue in force (the shadow stood in for the bundled layer, or the
-    custom layer excluded it — ``exclusive`` says which), ``relocated``
-    whether a ``portable.txt`` casts doubt on the reads, and ``tail`` the
+    custom layer excluded it — ``exclusive`` says which), and ``tail`` the
     caveats every enumerating answer states after its findings (the
-    catalogue-status statement — exclusive or sealed — then relocation, then
-    the marker cross-check: the pinned order).
+    catalogue-status statement — exclusive or sealed — then the marker
+    cross-check: the pinned order).
     """
 
     findings: tuple[Caveat, ...]
     refusal: tuple[Caveat, ...] | None
     by_system: Mapping[str, SystemDeclaration]
     complete: bool
-    relocated: bool
     tail: tuple[Caveat, ...]
     exclusive: bool = False
     # The companion cfg's text, from the same single read whose status decided
@@ -22030,14 +21994,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         :meth:`health` states, or, on an EmuDeck without ES-DE, which no setting
         decides, the code :meth:`rom_location` states.
 
-        The findings are followed by the two riders :meth:`rom_location`
-        carries (:meth:`_riders`), in every state this question answers in:
-        ``config-home-relocated`` where a ``portable.txt`` sits beside ES-DE,
-        because the ROM root was read from a tree the frontend may not be
-        using, and ``frontend-marker-mismatch`` where ``settings.sh``'s ES-DE
-        record disagrees with the disk. The relocation rides whether or not
-        the ROM entry has a path; where it is why the entry has none, the
-        entry states it too, as its own reason.
+        The findings are followed by the cross-check :meth:`rom_location`
+        carries (:meth:`_frontend_marker_mismatch`), in every state this
+        question answers in: ``frontend-marker-mismatch`` where
+        ``settings.sh``'s ES-DE record disagrees with the disk.
         """
         settings, marker_issues = self._read_marker()
         companion_status = self._machine.read_text(self._companion_cfg_path()).status
@@ -22048,15 +22008,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         bios = self._settings_root(settings, marker, ROOT_NAME_BIOS, "biosPath", "bios")
         saves = self._settings_root(settings, marker, ROOT_NAME_SAVES, "savesPath", "saves")
         present = self._esde_present()
-        riders = self._riders(settings, present)
-        relocation = next((c for c in riders if c.code == CAVEAT_CONFIG_HOME_RELOCATED), None)
+        mismatch = self._frontend_marker_mismatch(settings, present)
         findings = self._health_from(settings, marker_issues, companion_status).issues
         evidence = arrangement_caveats(self.kind, observed_version=self._observed_backend_head())
-        ordered = (installation, self._rom_entry(present, relocation), bios, saves)
+        ordered = (installation, self._rom_entry(present), bios, saves)
         return RootsAnswer(
             tuple(sourced.entry for sourced in ordered),
             tuple(source for sourced in ordered for source in sourced.sources),
-            (*findings, *riders, *evidence),
+            (*findings, *mismatch, *evidence),
         )
 
     def _settings_root(
@@ -22080,21 +22039,18 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         provenance = PROVENANCE_READ if settings.get(key) else PROVENANCE_ASSUMED
         return _SourcedRoot(InstallationRoot(name, path, provenance, RootSetting(marker, key)), (source,))
 
-    def _rom_entry(self, present: bool, relocation: Caveat | None) -> _SourcedRoot:
+    def _rom_entry(self, present: bool) -> _SourcedRoot:
         """The ROM entry of :meth:`roots` — :meth:`roms_dir`'s chain, with the reason where it has none.
 
-        *present* and *relocation* are the answer's own reads of whether ES-DE
-        is on disk and whether a ``portable.txt`` sits beside it, so the entry
-        and the riders beside it are one reading.
+        *present* is the answer's own read of whether ES-DE is on disk, so the
+        entry and the cross-check beside it are one reading.
         """
         if not present:
             return _SourcedRoot(
                 InstallationRoot(ROOT_NAME_ROMS, None, None, None, (self._catalogue_absence(),)), ()
             )
-        settings_path = self._esde_settings_path()
-        root = self._esde_rom_root(relocated=relocation is not None)
-        refusal = relocation if root.relocated is not None else _rom_root_refusal(root, settings_path)
-        return _rom_root_entry(root, RootSetting(settings_path, self._ROM_DIRECTORY_SETTING), refusal)
+        setting = RootSetting(self._esde_settings_path(), self._ROM_DIRECTORY_SETTING)
+        return _rom_root_entry(self._esde_rom_root(), setting)
 
     @one_question
     def bios_dir(self) -> str:
@@ -22122,18 +22078,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         :meth:`rom_location` states — for the reasons that belong to the root:
         no ES-DE is on this disk at all (so there is no frontend whose
         substitution this could be), ES-DE's settings exist and could not be
-        read, a ``portable.txt`` may have moved the tree the frontend's own
-        home-derived answers come from — the unset default and a ``~`` in the
-        setting alike — or the configured value is not an absolute path even
-        after the frontend's own ``~`` expansion. A bare string cannot carry
-        which, and raising is not this domain's grammar, so a caller who needs
-        the reason asks :meth:`roots`, whose ROM entry states it — or
+        read, or the configured value is not an absolute path even after the
+        frontend's own ``~`` expansion. A bare string cannot carry which, and
+        raising is not this domain's grammar, so a caller who needs the reason
+        asks :meth:`roots`, whose ROM entry states it — or
         ``rom_location(system)`` and reads its caveats, or :meth:`health`, which
         states it as a finding wherever ES-DE is present.
         """
         if not self._esde_present():
             return None
-        return self._esde_rom_root(relocated=self._relocation_caveat() is not None).directory
+        return self._esde_rom_root().directory
 
     def _companion_cfg_path(self) -> str:
         return os.path.join(self._home, STANDALONE_FLATPAK_CFG_SUFFIX)
@@ -22203,19 +22157,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         return Health(issues)
 
     def _rom_root_finding(self) -> Caveat | None:
-        """The ROM root's health finding — ``None`` without ES-DE or with a root that is there.
-
-        A ``portable.txt`` that leaves the root undetermined is stated as the
-        relocation caveat the answers carry, under its own code: health says
-        why the root could not be checked, and the fact has one spelling.
-        """
+        """The ROM root's health finding — ``None`` without ES-DE or with a root that is there."""
         if not self._esde_present():
             return None
-        relocation = self._relocation_caveat()
-        root = self._esde_rom_root(relocated=relocation is not None)
-        if root.relocated is not None:
-            return relocation
-        return _rom_root_finding(self._machine, root, self._esde_settings_path())
+        return _rom_root_finding(self._machine, self._esde_rom_root(), self._esde_settings_path())
 
     # ── EmuDeck's ES-DE ─────────────────────────────────────────────────
     # Every path below is EmuDeck's shipped wiring, read from the installer at
@@ -22228,7 +22173,6 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     # the Linux build loads (SystemData.cpp:1349-1351 @ v3.4.1), at the prefix
     # the AppImage packs it under — verified against the deployed image.
     _ESDE_APPIMAGE_CATALOGUE_ENTRY = "usr/share/es-de/resources/systems/linux/es_systems.xml"
-    _ESDE_PORTABLE_SUFFIX = os.path.join("Applications", "portable.txt")
     _ESDE_APPDATA_DIRNAME = "ES-DE"
     _ESDE_SHADOW_SUFFIX = os.path.join("resources", "systems", "linux", _ES_SYSTEMS_XML)
     _ESDE_OVERLAY_SUFFIX = os.path.join("custom_systems", _ES_SYSTEMS_XML)
@@ -22250,10 +22194,20 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         EmuDeck's launcher runs the AppImage with no ``--home`` and no
         ``ESDE_APPDATA_DIR`` (``tools/launchers/es-de/es-de.sh:5``), so the
         upstream resolution lands on ``<home>/ES-DE`` (ES-DE v3.4.1
-        ``FileSystemUtil.cpp:259-285``). A user-set ``ESDE_APPDATA_DIR`` in the
-        launch environment would move it and is written nowhere on disk — that
-        residual is documented, not probed; the on-disk relocation
-        (``portable.txt``) is (:meth:`_relocation_caveat`).
+        ``FileSystemUtil.cpp:259-285``), and ``<home>`` is the user's own: the
+        home every ``~`` this ES-DE expands resolves against. A
+        ``portable.txt`` beside the AppImage file does not move it, because
+        ES-DE looks for one in ``getExePath()`` (``main.cpp:148-149``), the
+        directory of the canonical ``/proc/self/exe``
+        (``FileSystemUtil.cpp:383-404``) — inside the image's own mount, not
+        the folder the AppImage file sits in; only the binary's name comes
+        from ``$APPIMAGE`` (``:406-410``). Observed against the 3.4.1
+        AppImage: with an empty ``portable.txt`` beside it, ``--version``
+        prints no "Found portable.txt" line, though the check runs before
+        ``--version`` is handled (``main.cpp:148-154`` against ``:398``). A
+        user-set ``ESDE_APPDATA_DIR`` in the launch environment would move
+        the directory and is written nowhere on disk — that residual is
+        documented, not probed.
         """
         return os.path.join(self._home, self._ESDE_APPDATA_DIRNAME)
 
@@ -22268,97 +22222,45 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         "$ESDE_toolPath" ]``); the ``~/ES-DE`` tree covers an AppImage moved
         or renamed out from under a configuration that still runs. Disk
         decides — ``settings.sh``'s own record is a cross-check
-        (:meth:`_frontend_marker_caveat`), never the decision.
+        (:meth:`_frontend_marker_mismatch`), never the decision.
         """
         if self._machine.path_kind(self._esde_appimage_path()) != KIND_MISSING:
             return True
         return self._machine.path_kind(self._esde_appdata_dir()) == KIND_DIRECTORY
 
-    def _relocation_caveat(self) -> Caveat | None:
-        """The ``portable.txt`` statement, when one sits next to the AppImage — else ``None``.
-
-        ES-DE reads ``portable.txt`` from its executable directory and moves
-        its home by it — but only after validating the target: a path that
-        does not exist or is a regular file is rejected and the default home
-        stays (ES-DE v3.4.1 ``main.cpp:149-192``; the validation block is
-        ``:174-192``). EmuDeck writes none; a user can. Atlas stats only the
-        file's presence, so the honest claim is *may*: when one is there,
-        every ``~/ES-DE`` read this handle makes may be reading files the
-        frontend is not using — the answers still state what the on-disk tree
-        says, and this caveat states the suspicion, never silently. Reading
-        the file and validating its target the way ES-DE does is a possible
-        refinement; presence alone is what is stated today.
-        """
-        path = os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX)
-        if self._machine.path_kind(path) == KIND_MISSING:
-            return None
-        return Caveat(
-            CAVEAT_CONFIG_HOME_RELOCATED,
-            f"a portable.txt sits next to the ES-DE AppImage at {path}, which may relocate "
-            "ES-DE's application data directory away from ~/ES-DE (ES-DE ignores it when its "
-            "target is missing or a file) — the on-disk files this answer was read from may "
-            "not be the ones the frontend is using",
-            {"path": path},
-        )
-
-    def _esde_home(self) -> str | Caveat:
-        """What this ES-DE expands a ``~`` in a launch command against — or the caveat saying why not.
-
-        ``getHomePath()`` answers ``$HOME`` here, since the launcher passes no
-        ``--home`` (``es-de.sh:5``); a ``portable.txt`` beside the AppImage may
-        move it (:meth:`_relocation_caveat`), and then the home is not
-        established — the same rule :meth:`_esde_rom_root` applies to every
-        home-derived value.
-        """
-        relocation = self._relocation_caveat()
-        return self._home if relocation is None else relocation
-
-    def _frontend_marker_caveat(self, settings: dict[str, str], present: bool) -> Caveat | None:
-        """The cross-check: ``settings.sh``'s ES-DE record against the disk — ``None`` in agreement.
+    def _frontend_marker_mismatch(self, settings: dict[str, str], present: bool) -> list[Caveat]:
+        """The cross-check: ``settings.sh``'s ES-DE record against the disk — empty in agreement.
 
         ``doInstallESDE`` records the installer's choice
         (``jsonToBashVars.sh:71``); the disk records what is actually here.
         The disk decides the answer either way — this caveat exists so a stale
         record is stated rather than discovered. A marker that writes neither
         ``true`` nor ``false`` states nothing, and no disagreement can be
-        manufactured from silence.
+        manufactured from silence. One builder, consumed by
+        :meth:`_esde_snapshot`'s tail, by :meth:`roots`, by
+        :meth:`firmware_for_system` and by :meth:`firmware_inventory`, so the
+        routes cannot state it apart.
         """
         stated = settings.get(self._FRONTEND_MARKER_KEY)
         if stated not in ("true", "false"):
-            return None
+            return []
         if (stated == "true") == present:
-            return None
+            return []
         observed = "present" if present else "absent"
         consequence = (
             "the answer is read from the ES-DE on disk"
             if present
             else "no ES-DE answers here"
         )
-        return Caveat(
-            CAVEAT_FRONTEND_MARKER_MISMATCH,
-            f"settings.sh states {self._FRONTEND_MARKER_KEY}={stated} while ES-DE is {observed} "
-            f"on disk — the marker's record is stale or the frontend changed hands; {consequence}, "
-            "because the disk is what runs",
-            {"key": self._FRONTEND_MARKER_KEY, "stated": stated, "observed": observed},
-        )
-
-    def _riders(self, settings: dict[str, str], present: bool) -> tuple[Caveat, ...]:
-        """The statements that ride beside the catalogue status, in the pinned order.
-
-        The relocation suspicion first, then the marker cross-check — one
-        builder, consumed by :meth:`_esde_snapshot`'s tail, by
-        :meth:`firmware_for_system` and by :meth:`firmware_inventory`, so the
-        three can never spell the order apart. The relocation read happens
-        only while an ES-DE is present: with none on disk there is nothing a
-        ``portable.txt`` could move out from under.
-        """
-        cross_check = self._frontend_marker_caveat(settings, present)
-        mismatch = () if cross_check is None else (cross_check,)
-        if not present:
-            return mismatch
-        portable = self._relocation_caveat()
-        relocation = () if portable is None else (portable,)
-        return (*relocation, *mismatch)
+        return [
+            Caveat(
+                CAVEAT_FRONTEND_MARKER_MISMATCH,
+                f"settings.sh states {self._FRONTEND_MARKER_KEY}={stated} while ES-DE is {observed} "
+                f"on disk — the marker's record is stale or the frontend changed hands; {consequence}, "
+                "because the disk is what runs",
+                {"key": self._FRONTEND_MARKER_KEY, "stated": stated, "observed": observed},
+            )
+        ]
 
     def _catalogue_sealed_caveat(self, system: str | None = None) -> Caveat:
         # Reading the sealed layer itself (extracting the AppImage's squashfs)
@@ -22572,38 +22474,29 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None, _SETTINGS_UNPARSEABLE
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
 
-    def _esde_rom_root(self, *, relocated: bool) -> _RomRoot:
+    def _esde_rom_root(self) -> _RomRoot:
         """What this ES-DE substitutes for ``%ROMPATH%`` — or which way it could not be established.
 
         The unset default is ``~/ROMs``: ES-DE falls back on ``<home>/ROMs``
         (``FileData.cpp::getROMDirectory()``, ES-DE v3.4.1, ``:271-305``, the
         empty-setting branch at ``:283-284``), and this ES-DE's home is the
-        user's own — the launcher passes no ``--home`` (``es-de.sh:5``). A
-        configured value carrying ``~`` expands against that same home, as
-        text (:func:`atlas.esde.expand_home_path`; the call is
-        ``FileData.cpp:289``). Both derivations are exactly what a
-        ``portable.txt`` may move, so with one present both home-derived
-        branches stop resolving (*relocated*) — a configured absolute value
-        is still answered, with the answer-level relocation caveat riding.
-        The absoluteness check runs on the *expanded* value; the raw one is
-        what a refusal names, because the setting's own text is what a user
-        edits.
+        user's own (:meth:`_esde_appdata_dir` says why). A configured value
+        carrying ``~`` expands against that same home, as text
+        (:func:`atlas.esde.expand_home_path`; the call is
+        ``FileData.cpp:289``). The absoluteness check runs on the *expanded*
+        value; the raw one is what a refusal names, because the setting's own
+        text is what a user edits.
         """
         configured, unreadable = self._rom_directory()
         if unreadable is not None:
             return _RomRoot(unreadable=unreadable)
         sources = (self._ROM_DIRECTORY_SOURCE,)
-        portable = (os.path.join(self._home, self._ESDE_PORTABLE_SUFFIX), "portable.txt")
         if configured is None:
-            if relocated:
-                return _RomRoot(relocated=portable, sources=sources)
             return _RomRoot(
                 directory=os.path.join(self._home, "ROMs"), sources=sources, frontend_default=True
             )
         expanded = configured
         if "~" in configured:
-            if relocated:
-                return _RomRoot(relocated=portable, sources=sources)
             expanded = expand_home_path(configured, self._home)
         if not expanded.startswith("/"):
             return _RomRoot(not_absolute=configured, sources=sources)
@@ -22615,7 +22508,6 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         system: str,
         *,
         complete: bool,
-        relocated: bool,
     ) -> _RomDirectory:
         """Where this ES-DE puts *system*'s ROMs — the root with the declared ``<path>`` applied.
 
@@ -22625,9 +22517,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         for the bundled layer, or the custom layer excluded it) — in the
         sealed state the declaration may sit in the layer nobody could read,
         and the caller's answer-level sealed caveat is that statement, so this
-        branch adds nothing on top of it. The relocated branch is silent here
-        for the same reason: the answer-level ``config-home-relocated`` caveat
-        is the stated reason.
+        branch adds nothing on top of it.
         """
         declaration = by_system.get(system)
         if declaration is None or declaration.rom_path is None:
@@ -22635,13 +22525,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
             return _RomDirectory()
         declared = declaration.rom_path
-        root = self._esde_rom_root(relocated=relocated)
+        root = self._esde_rom_root()
         if root.unreadable is not None:
             return _RomDirectory(
                 caveats=_settings_unreadable_caveat(system, self._esde_settings_path(), root.unreadable)
             )
-        if root.relocated is not None:
-            return _RomDirectory(sources=root.sources)
         if root.not_absolute is not None:
             return _RomDirectory(
                 sources=root.sources,
@@ -22667,38 +22555,34 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         M4). The caveat order every catalogue-shaped answer states is pinned
         here and only here: health findings lead (they qualify the
         installation), then the catalogue-status statement (exclusive,
-        sealed, unreadable, or the unestablished refusal), then the riding statements
-        in :meth:`_riders`'s one order (the relocation suspicion, then the
-        marker cross-check), then whatever the per-question resolution has to
-        say — and the evidence caveat the template method appends closes the
-        list.
+        sealed, unreadable, or the unestablished refusal), then the marker
+        cross-check (:meth:`_frontend_marker_mismatch`), then whatever the
+        per-question resolution has to say — and the evidence caveat the
+        template method appends closes the list.
         """
         settings, marker_issues = self._read_marker()
         companion = self._machine.read_text(self._companion_cfg_path())
         findings = self._health_from(settings, marker_issues, companion.status).issues
         present = self._esde_present()
-        riders = self._riders(settings, present)
+        mismatch = self._frontend_marker_mismatch(settings, present)
         if not present:
             return _EsdeSnapshot(
                 findings,
-                (*findings, self._catalogue_absence(), *riders),
+                (*findings, self._catalogue_absence(), *mismatch),
                 {},
-                False,
                 False,
                 (),
                 companion_text=companion.text,
             )
-        relocated = any(caveat.code == CAVEAT_CONFIG_HOME_RELOCATED for caveat in riders)
         by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
             self._read_esde_catalogue()
         )
         if shadow_broken:
             return _EsdeSnapshot(
                 findings,
-                (*findings, *_catalogue_unread_caveat(system), *riders),
+                (*findings, *_catalogue_unread_caveat(system), *mismatch),
                 {},
                 False,
-                relocated,
                 (),
                 companion_text=companion.text,
             )
@@ -22713,8 +22597,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             None,
             by_system,
             complete,
-            relocated,
-            (*status, *riders),
+            (*status, *mismatch),
             exclusive,
             companion_text=companion.text,
         )
@@ -22859,9 +22742,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 version,
             )
         anchor = (
-            self._esde_system_dir(
-                snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
-            )
+            self._esde_system_dir(snapshot.by_system, system, complete=snapshot.complete)
             if content_path is not None
             else _NO_ANCHOR_NEEDED
         )
@@ -22923,9 +22804,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 ),
                 version,
             )
-        anchor = self._esde_system_dir(
-            snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
-        )
+        anchor = self._esde_system_dir(snapshot.by_system, system, complete=snapshot.complete)
         entries = _entries_from(
             self,
             _declared_entries(snapshot.by_system, system),
@@ -22980,9 +22859,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if snapshot.refusal is not None:
             return RomPlacement(caveats=snapshot.refusal), version
         declaration = snapshot.by_system.get(system)
-        resolved = self._esde_system_dir(
-            snapshot.by_system, system, complete=snapshot.complete, relocated=snapshot.relocated
-        )
+        resolved = self._esde_system_dir(snapshot.by_system, system, complete=snapshot.complete)
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,
             sources=(
@@ -23027,22 +22904,18 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         if not self._esde_present():
             return (self._catalogue_absence(),)
-        portable = self._relocation_caveat()
-        relocation = () if portable is None else (portable,)
         by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
             self._read_esde_catalogue()
         )
         if shadow_broken:
-            return (*_catalogue_unread_caveat(spec.system), *relocation)
+            return _catalogue_unread_caveat(spec.system)
         if exclusive:
             status: tuple[Caveat, ...] = self._catalogue_exclusive(spec.system)
         else:
             status = () if complete else (self._catalogue_sealed_caveat(spec.system),)
         if catalogue_invalid is not None:
             status = (catalogue_invalid, *status)
-        anchor = self._esde_system_dir(
-            by_system, spec.system, complete=complete, relocated=bool(relocation)
-        )
+        anchor = self._esde_system_dir(by_system, spec.system, complete=complete)
         override_label = (
             None
             if anchor.directory is None
@@ -23051,8 +22924,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         )
         if override_label is None or override_label == spec.label:
-            return (*status, *relocation, *anchor.caveats)
-        return (*status, *relocation, *anchor.caveats, _per_game_override_caveat(override_label, spec))
+            return (*status, *anchor.caveats)
+        return (*status, *anchor.caveats, _per_game_override_caveat(override_label, spec))
 
     @one_question
     def entry_savefile_location(
@@ -23557,7 +23430,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 *marker_issues,
                 *arrangement_caveats(self.kind, observed_version=self._observed_backend_head()),
             ),
-            frontend_home=self._esde_home(),
+            frontend_home=self._home,
             content_path=content_path,
             cwd=cwd,
         )
@@ -23964,10 +23837,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         unchanged: the derived enumeration, stated as derived. A broken
         resource shadow is the unreadable catalogue, exactly as RetroDECK's
         unreadable bundled layer is. And on every catalogue-informed answer
-        the relocation suspicion and the marker cross-check ride adjacent to
-        the catalogue-status statement, in the same order every catalogue
-        answer pins (sealed, relocation, mismatch). ``cwd`` is taken as the
-        shared firmware questions take it.
+        the marker cross-check rides adjacent to the catalogue-status
+        statement, in the same order every catalogue answer pins (sealed,
+        then mismatch). ``cwd`` is taken as the shared firmware questions take
+        it.
         """
         checked_cwd(cwd)
         settings, marker_issues = self._read_marker()
@@ -23981,7 +23854,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # same empty answer either way, so the ES-DE sources are not read
             # for an answer that would discard them.
             return _resolve_for_system(self._machine, context, system=system, verify=verify)
-        riders = self._riders(settings, present)
+        mismatch = self._frontend_marker_mismatch(settings, present)
         by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
             self._read_esde_catalogue()
         )
@@ -24000,14 +23873,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         answer = _resolve_for_system(
             self._machine, context, system=system, catalogue=catalogue, verify=verify
         )
-        # The catalogue-status statements and the riders ride only answers the
-        # catalogue informed: an own spelling is answered from the cores on
-        # every arrangement, so the resolver never looks at the catalogue for
-        # it.
+        # The catalogue-status statements and the cross-check ride only answers
+        # the catalogue informed: an own spelling is answered from the cores
+        # on every arrangement, so the resolver never looks at the catalogue
+        # for it.
         inserted = (
             *(() if catalogue_invalid is None else (catalogue_invalid,)),
             *(self._catalogue_exclusive(system) if exclusive else ()),
-            *riders,
+            *mismatch,
         )
         if not inserted or system in SYSTEMS_WITHOUT_CATALOGUE_ID:
             return answer
@@ -24041,9 +23914,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         reached, and ``emulator-catalogue-sealed`` says so. Beside it ride the
         same further statements :meth:`firmware_for_system` rides, in the same
         order: a layer ES-DE refuses wholesale, an exclusive custom layer, and
-        the two that qualify which ES-DE was read at all — the relocation
-        suspicion and the marker cross-check. ``cwd`` is taken as the shared
-        firmware questions take it.
+        the marker cross-check, which qualifies which ES-DE was read at all.
+        ``cwd`` is taken as the shared firmware questions take it.
         """
         checked_cwd(cwd)
         settings, marker_issues = self._read_marker()
@@ -24055,7 +23927,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         findings = (
             *(() if invalid is None else (invalid,)),
             *(self._catalogue_exclusive() if exclusive else ()),
-            *self._riders(settings, True),
+            *self._frontend_marker_mismatch(settings, True),
         )
         if shadow_broken:
             catalogue = InventoryCatalogue(read=False, findings=findings)

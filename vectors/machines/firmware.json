@@ -14882,8 +14882,8 @@
       }
     },
     {
-      "name": "emudeck-firmware-relocation-and-marker-riders-join-the-sealed-statement",
-      "rationale": "The riding statements on a catalogue-informed firmware answer: a portable.txt beside the AppImage casts doubt on every ~/ES-DE read (config-home-relocated), and settings.sh's doInstallESDE=false disagrees with the ES-DE on disk (frontend-marker-mismatch) — both ride adjacent to the sealed statement, in the order every catalogue answer pins, because the firmware enumeration now rests on the same reads those caveats qualify.",
+      "name": "emudeck-firmware-the-marker-cross-check-joins-the-sealed-statement",
+      "rationale": "The riding statement on a catalogue-informed firmware answer: settings.sh's doInstallESDE=false disagrees with the ES-DE on disk (frontend-marker-mismatch), and it rides adjacent to the sealed statement, in the order every catalogue answer pins, because the firmware enumeration rests on the same reads it qualifies. The portable.txt beside the AppImage states nothing: an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in. The unset ROMDirectory resolves to ~/ROMs, which this machine does not have, so health states roms-root-missing.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -14922,9 +14922,9 @@
             "root": "/home/deck/Emulation",
             "health": [
               {
-                "code": "config-home-relocated",
+                "code": "roms-root-missing",
                 "data": {
-                  "path": "/home/deck/Applications/portable.txt"
+                  "path": "/home/deck/ROMs"
                 }
               }
             ]
@@ -15017,12 +15017,6 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "gb"
-              }
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
               }
             },
             {
@@ -23500,8 +23494,8 @@
       }
     },
     {
-      "name": "emudeck-firmware-inventory-the-riders-join-the-sealed-statement",
-      "rationale": "The per-system route's riding statements, on the answer that is about no single system. A portable.txt beside the AppImage casts doubt on every ~/ES-DE read (config-home-relocated) and settings.sh's doInstallESDE=false disagrees with the ES-DE on disk (frontend-marker-mismatch); both ride adjacent to the sealed statement in the order every catalogue answer pins, because the standalone half of this enumeration rests on the very reads those caveats qualify. The sealed layer reached no carded emulator here, so nothing about the machine is established from its absence either.",
+      "name": "emudeck-firmware-inventory-the-marker-cross-check-joins-the-sealed-statement",
+      "rationale": "The per-system route's riding statement, on the answer that is about no single system. settings.sh's doInstallESDE=false disagrees with the ES-DE on disk (frontend-marker-mismatch); it rides adjacent to the sealed statement in the order every catalogue answer pins, because the standalone half of this enumeration rests on the very reads it qualifies. The portable.txt beside the AppImage states nothing: an AppImage ES-DE looks for portable.txt in getExePath() (main.cpp:148-149 at v3.4.1), the directory of the canonical /proc/self/exe (FileSystemUtil.cpp:383-404) — inside the image's own mount, never the folder the image file sits in. The sealed layer reached no carded emulator here, so nothing about the machine is established from its absence either.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -23540,9 +23534,9 @@
             "root": "/home/deck/Emulation",
             "health": [
               {
-                "code": "config-home-relocated",
+                "code": "roms-root-missing",
                 "data": {
-                  "path": "/home/deck/Applications/portable.txt"
+                  "path": "/home/deck/ROMs"
                 }
               }
             ]
@@ -23614,12 +23608,6 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {}
-            },
-            {
-              "code": "config-home-relocated",
-              "data": {
-                "path": "/home/deck/Applications/portable.txt"
-              }
             },
             {
               "code": "frontend-marker-mismatch",
