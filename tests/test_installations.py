@@ -8423,6 +8423,9 @@ class _CountingMachine:
     def read_appimage_text(self, path, inner_path):
         return self._inner.read_appimage_text(path, inner_path)
 
+    def read_appimage_stamp(self, path, inner_path, pattern):
+        return self._inner.read_appimage_stamp(path, inner_path, pattern)
+
     def read_ps2_bios_header(self, path):
         return self._inner.read_ps2_bios_header(path)
 
@@ -11494,7 +11497,7 @@ class TestARowNamingACoreFileOfAnotherHost:
                 atlas.KIND_RETROARCH_FOREIGN_CORE,
                 [atlas.CAVEAT_CORE_FILE_FOREIGN, atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED],
             ),
-            ("Azahar (Standalone)", atlas.KIND_STANDALONE, [atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]),
+            ("Azahar (Standalone)", atlas.KIND_STANDALONE, [atlas.CAVEAT_FIND_RULES_UNREADABLE]),
         ]
 
     def test_all_four_placement_routes_refuse_without_reaching_a_card(self, monkeypatch):

@@ -12,7 +12,8 @@ ES-DE resolves a launch command in two steps before it starts anything
    - ``systempath`` searches the directories of the process's ``PATH`` in
      order for ``<dir>/<entry>`` (``getPathToBinary``,
      ``es-core/src/utils/FileSystemUtil.cpp:353-370`` — the non-Flatpak
-     branch; the RetroDECK build is not ``FLATPAK_BUILD``).
+     branch; the RetroDECK build is not ``FLATPAK_BUILD``, and neither is the
+     AppImage EmuDeck deploys, which is unforked ES-DE v3.4.1 itself).
    - ``staticpath`` splits a replacement command off at ``|``, expands ``~``
      against ES-DE's own home (:func:`atlas.esde.expand_home_path`), then
      ``%ESPATH%`` and ``%ROMPATH%``; a ``*`` takes the first match a directory
@@ -30,11 +31,16 @@ ES-DE resolves a launch command in two steps before it starts anything
 
 What this module never does is touch the machine. Every probe goes through a
 :class:`LaunchView`, which is the frontend's own view of the filesystem — for
-RetroDECK the inside of its sandbox — and which answers *could not tell* where
-that view cannot be established. A probe that cannot tell stops the walk,
+RetroDECK the inside of its sandbox, for EmuDeck the host's own — and which
+answers *could not tell* where that view cannot be established. A probe that cannot tell stops the walk,
 because the entry after it might be the one ES-DE would take: the verdict is
 then ``unestablished`` with the path that stopped it, never a guessed hit or
 miss.
+
+Where the view's ``PATH`` is assumed rather than read — a frontend on the host
+takes it from whatever started it — every answer whose search went through it
+says so (``launch-path-assumed``), and a caller can hang its own note on a
+token's answers (EmuDeck's ``find-rules-rewritten-at-start``).
 
 The cost is ``stat``, ``lstat`` and directory listings here, over find rules
 the caller hands in already parsed: no core is probed, nothing is hashed.
@@ -44,6 +50,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from collections.abc import Mapping
 from typing import Literal, Protocol
 
 from .esde import expand_home_path
@@ -56,6 +63,7 @@ from .find_rules import (
     CAVEAT_EMULATOR_NOT_FOUND,
     CAVEAT_EMULATOR_RULES_MISSING,
     CAVEAT_FIND_RULES_UNREADABLE,
+    CAVEAT_LAUNCH_PATH_ASSUMED,
     CAVEAT_LAUNCH_PATH_UNESTABLISHED,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
     CAVEAT_RUN_GAME_DIFFERS,
@@ -556,11 +564,26 @@ class LaunchLookup:
     name it: a system's libretro rows all launch RetroArch, and its search is
     made once and shared (as is run_game.sh's reading of it). Built per answer
     and discarded with it, so a second answer reads the machine again.
+
+    *path_assumed* says the view's ``search_path`` is assumed rather than
+    read: every answer whose search went through it then carries
+    ``launch-path-assumed`` beside its verdict. *token_notes* are notes the
+    caller holds about one emulator token's rules, each riding beside every
+    answer for a command naming that token.
     """
 
-    def __init__(self, rules: LayeredFindRules, view: LaunchView) -> None:
+    def __init__(
+        self,
+        rules: LayeredFindRules,
+        view: LaunchView,
+        *,
+        path_assumed: bool = False,
+        token_notes: Mapping[str, Caveat] | None = None,
+    ) -> None:
         self._rules = rules
         self._view = view
+        self._path_assumed = path_assumed
+        self._token_notes: Mapping[str, Caveat] = token_notes or {}
         self._found: dict[str, Found | LaunchResolution] = {}
         self._notes: dict[str, Caveat | None] = {}
 
@@ -610,7 +633,12 @@ class LaunchLookup:
         ``emulator_token`` then names the pre-command (``WINE``), not the
         emulator the entry launches.
         """
-        return _with_custom_note(self._resolve(command, loads_core=loads_core), self._rules)
+        answer = self._resolve(command, loads_core=loads_core)
+        notes = self._command_notes(command)
+        custom = _custom_note(self._rules)
+        if custom is not None:
+            notes.append(custom)
+        return _with_notes(answer, notes)
 
     def command_parts(self, command: str, *, loads_core: bool) -> CommandParts | None:
         """What ES-DE substitutes into *command* — ``None`` where :meth:`resolve` answers anything but startable.
@@ -623,6 +651,35 @@ class LaunchLookup:
 
     def _resolve(self, command: str, *, loads_core: bool) -> LaunchResolution:
         return self._evaluate(command, loads_core=loads_core)[0]
+
+    def _command_notes(self, command: str) -> list[Caveat]:
+        """The notes the caller asked for beside *command*'s answer: the assumed ``PATH``, then the token's."""
+        notes: list[Caveat] = []
+        token = _token(command, _EMULATOR_OPENER)
+        if token is None:
+            return notes
+        if self._path_assumed and any(self._through_path(name) for name in self._searched(command, token)):
+            notes.append(_path_assumed(self._view.search_path))
+        token_note = self._token_notes.get(token)
+        if token_note is not None:
+            notes.append(token_note)
+        return notes
+
+    def _searched(self, command: str, token: str) -> list[str]:
+        """The tokens :meth:`_evaluate` searched for *command*, in its order: a refused pre-command stops it there."""
+        if _EMUPATH in command:
+            return []
+        precommand = _token(command, _PRECOMMAND_OPENER)
+        if precommand is None:
+            return [token]
+        if isinstance(self._find(precommand), LaunchResolution):
+            return [precommand]
+        return [precommand, token]
+
+    def _through_path(self, token: str) -> bool:
+        """Whether *token*'s search ran over ``search_path``: it has ``systempath`` entries, which are tried first."""
+        rules = _emulator_rules(token, self._rules)
+        return isinstance(rules, EmulatorRules) and bool(rules.system_paths)
 
     def _evaluate(self, command: str, *, loads_core: bool) -> tuple[LaunchResolution, CommandParts | None]:
         token = _token(command, _EMULATOR_OPENER)
@@ -693,17 +750,32 @@ def _find_core(
     )
 
 
-def _with_custom_note(answer: LaunchResolution, rules: LayeredFindRules) -> LaunchResolution:
-    """*answer* with the skipped custom layer stated beside it, where one was skipped."""
+def _custom_note(rules: LayeredFindRules) -> Caveat | None:
+    """The skipped custom layer, stated beside the answer where one was skipped — ``None`` where none was."""
     if rules.custom_unreadable is None:
-        return answer
-    note = Caveat(
+        return None
+    return Caveat(
         CAVEAT_FIND_RULES_UNREADABLE,
         f"the custom find rules at {rules.custom_unreadable} exist and could not be read or parsed — "
         "ES-DE skips such a file and reads the bundled one, and so does this answer",
         {"layer": LAYER_CUSTOM},
     )
-    return LaunchResolution(answer.availability, answer.launcher, answer.core_path, (*answer.caveats, note))
+
+
+def _path_assumed(search_path: tuple[str, ...]) -> Caveat:
+    return Caveat(
+        CAVEAT_LAUNCH_PATH_ASSUMED,
+        "the systempath rules were searched over an assumed PATH — the frontend process's own is written "
+        "nowhere on disk, so a frontend started with another PATH may find another program, or none",
+        {"search_path": search_path},
+    )
+
+
+def _with_notes(answer: LaunchResolution, notes: list[Caveat]) -> LaunchResolution:
+    """*answer* with *notes* stated after its own caveats."""
+    if not notes:
+        return answer
+    return LaunchResolution(answer.availability, answer.launcher, answer.core_path, (*answer.caveats, *notes))
 
 
 # run_game.sh's own token pattern (``libexec/run_game.sh:232``): only these

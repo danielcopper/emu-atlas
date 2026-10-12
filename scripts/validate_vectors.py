@@ -39,6 +39,7 @@ INPUT_FIELDS_OPTIONAL = {
     "inaccessible",
     "unlistable",
     "appimages",
+    "appimage_stamps",
     "ps2_bios_headers",
     "archives",
     "whdload_slaves",
@@ -468,6 +469,8 @@ KNOWN_CAVEAT_CODES = {
     "launch-resolution-unsupported",
     "launch-path-unestablished",
     "run-game-differs",
+    "launch-path-assumed",
+    "find-rules-rewritten-at-start",
     "launch-command-shell-syntax",
     "launch-command-env-option",
     "launch-command-desktop-file",
@@ -1159,6 +1162,7 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_paths(name, inp)
     _validate_input_cores(name, inp.get("cores", {}))
     _validate_input_appimages(name, inp.get("appimages", {}))
+    _validate_input_appimage_stamps(name, inp.get("appimage_stamps", {}), inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
     _validate_input_archives(name, inp.get("archives", {}), inp["files"])
     _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp)
@@ -1209,6 +1213,41 @@ def _validate_appimage_entry(name: str, path: str, inner: Any, value: Any) -> No
         fail(
             f"{name}: appimage {path!r} entry {inner!r} must be text or "
             f"{{'status': one of {sorted(APPIMAGE_ENTRY_STATES)}}}"
+        )
+
+
+# The stamp-read modeling vocabulary — mirrored from FixtureMachine
+# (atlas/machine.py): the two states the search reaches over bytes it read,
+# short of the stamp itself. A stamp describes an AppImage entry's bytes, so
+# it names an entry an image declared with entries carries, and not one
+# declared unreadable; a declared entry with no stamp answers "no-stamp" at
+# the seam, which keeps a vector that forgot the key from passing a build off
+# as stamped.
+APPIMAGE_STAMP_STATES = {"no-stamp", "ambiguous"}
+
+
+def _validate_input_appimage_stamps(name: str, stamps: Any, appimages: Any) -> None:
+    if not isinstance(stamps, dict):
+        fail(f"{name}: input.appimage_stamps must be an object")
+    for path, entries in stamps.items():
+        image = appimages.get(path)
+        if not isinstance(image, dict):
+            fail(f"{name}: appimage stamp {path!r} must name an appimage declared with entries")
+        if not isinstance(entries, dict):
+            fail(f"{name}: appimage stamp {path!r} must map entries to a stamp or a state")
+        for inner, stamp in entries.items():
+            _validate_appimage_stamp(name, path, image, inner, stamp)
+
+
+def _validate_appimage_stamp(name: str, path: str, image: dict[str, Any], inner: Any, stamp: Any) -> None:
+    if inner not in image:
+        fail(f"{name}: appimage stamp {path!r} entry {inner!r} must name an entry the appimage declares")
+    if isinstance(image[inner], dict) and image[inner].get("status") == "unreadable":
+        fail(f"{name}: appimage stamp {path!r} entry {inner!r} sits on an unreadable entry, which no search reads")
+    if not isinstance(stamp, str) or not stamp:
+        fail(
+            f"{name}: appimage stamp {path!r} entry {inner!r} must be the stamp or one of "
+            f"{sorted(APPIMAGE_STAMP_STATES)}"
         )
 
 

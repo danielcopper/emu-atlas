@@ -99,6 +99,13 @@ CAVEAT_LAUNCH_PATH_UNESTABLISHED = "launch-path-unestablished"
 # A note beside ``startable``: RetroDECK's own direct start would run
 # something else, or nothing.
 CAVEAT_RUN_GAME_DIFFERS = "run-game-differs"
+# Two notes beside any verdict of a frontend on the host (EmuDeck's): the
+# ``PATH`` the ``systempath`` search ran over is assumed rather than read,
+# because the frontend process's own is written nowhere on disk; and the
+# frontend's launcher rewrites the custom rule the answer read at its next
+# start, so the disk the answer reads is not the file that start leaves.
+CAVEAT_LAUNCH_PATH_ASSUMED = "launch-path-assumed"
+CAVEAT_FIND_RULES_REWRITTEN_AT_START = "find-rules-rewritten-at-start"
 
 # Why a launch command is not taken apart (#573), each a refusal of the whole
 # command: shell syntax beyond plain words, a value a second shell would not

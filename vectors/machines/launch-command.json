@@ -3549,7 +3549,7 @@
     },
     {
       "name": "launch-command-an-emudeck-entry-is-not-taken-apart-yet",
-      "rationale": "EmuDeck's entries are not evaluated yet: the chosen entry carries launch-resolution-unsupported and the answer has no command.",
+      "rationale": "The chosen entry's lookup cannot tell what ES-DE would run — the AppImage's bundled find rules are unread here, so the entry is unestablished with find-rules-unreadable — and an entry that is not startable has no command to take apart.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3600,9 +3600,9 @@
             "core_path": null,
             "caveats": [
               {
-                "code": "launch-resolution-unsupported",
+                "code": "find-rules-unreadable",
                 "data": {
-                  "installation": "emudeck"
+                  "layer": "bundled"
                 }
               }
             ]
@@ -3693,6 +3693,110 @@
               "code": "arrangement-unverified",
               "data": {
                 "kind": "bare_retroarch_flatpak"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-startable-entry-is-not-taken-apart-yet",
+      "rationale": "EmuDeck's entries now carry the frontend's lookup, and this one is startable: RetroArch's Flatpak export is found through the assumed PATH and the core in its corepath directory. Taking EmuDeck's command apart is a later step, so the answer names the entry and no command, with launch-resolution-unsupported naming the installation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "psx",
+          "content_path": "/home/deck/ROMs/psx/game.iso"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "psx",
+            "label": "SwanStation",
+            "kind": "libretro",
+            "core_so": "swanstation_libretro.so",
+            "emulator": "swanstation_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "systempath",
+              "entry": "org.libretro.RetroArch"
+            },
+            "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ]
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            },
+            {
+              "code": "launch-resolution-unsupported",
+              "data": {
+                "installation": "emudeck"
               }
             }
           ]

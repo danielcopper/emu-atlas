@@ -578,6 +578,26 @@ INPUT_PS2_BIOS_HEADER_CASES = [
          "serial must be at most 15 characters", id="header-serial-length"),
 ]
 
+AN_IMAGE = "/Applications/ES-DE.AppImage"
+A_BINARY = "usr/bin/es-de"
+
+INPUT_APPIMAGE_STAMP_CASES = [
+    case(_with(_vector(), appimage_stamps=[]), "input.appimage_stamps must be an object", id="stamps-not-object"),
+    case(_with(_vector(), appimage_stamps={AN_IMAGE: {A_BINARY: "3.4.1"}}),
+         "must name an appimage declared with entries", id="stamp-on-undeclared-image"),
+    case(_with(_vector(), appimages={AN_IMAGE: "capability-missing"}, appimage_stamps={AN_IMAGE: {A_BINARY: "1"}}),
+         "must name an appimage declared with entries", id="stamp-on-whole-image-state"),
+    case(_with(_vector(), appimages={AN_IMAGE: {A_BINARY: "text"}}, appimage_stamps={AN_IMAGE: "3.4.1"}),
+         "must map entries to a stamp or a state", id="stamps-not-a-map"),
+    case(_with(_vector(), appimages={AN_IMAGE: {"other": "text"}}, appimage_stamps={AN_IMAGE: {A_BINARY: "3.4.1"}}),
+         "must name an entry the appimage declares", id="stamp-on-undeclared-entry"),
+    case(_with(_vector(), appimages={AN_IMAGE: {A_BINARY: {"status": "unreadable"}}},
+               appimage_stamps={AN_IMAGE: {A_BINARY: "3.4.1"}}),
+         "sits on an unreadable entry", id="stamp-on-unreadable-entry"),
+    case(_with(_vector(), appimages={AN_IMAGE: {A_BINARY: "text"}}, appimage_stamps={AN_IMAGE: {A_BINARY: ""}}),
+         "must be the stamp or one of", id="stamp-empty"),
+]
+
 INPUT_CORE_CASES = [
     case(_with(_vector(), cores=[]), "input.cores must be an object", id="cores-not-object"),
     case(_with(_vector(), cores={"/a.so": {}}), "or an object with a string library_name",
@@ -1512,6 +1532,7 @@ ALL_CASES = [
     *INPUT_FILE_CASES,
     *INPUT_PATH_CASES,
     *INPUT_PS2_BIOS_HEADER_CASES,
+    *INPUT_APPIMAGE_STAMP_CASES,
     *INPUT_CORE_CASES,
     *QUERY_CASES,
     *FIRMWARE_QUERY_CASES,

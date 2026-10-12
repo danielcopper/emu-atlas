@@ -81,13 +81,16 @@ missing from the copy is skipped, not flagged.
 
 ### The zstd codec under a host's own packaging
 
-One read is capability-gated: EmuDeck deploys ES-DE as an AppImage, the frontend's bundled `es_systems.xml` is sealed
-inside that image, and atlas opens the image itself wherever the runtime has the image's zstd codec —
-[the catalogue section](#which-emulator-would-launch-this-the-catalogue) says what changes when it does. That read is
-the codec's only consumer: the resolver asks for AppImage contents in exactly one place (EmuDeck's embedded-catalogue
-read, `atlas/installations.py`), gzip images decompress everywhere through the stdlib, and a consumer asking only
-RetroDECK — whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the
-stdlib's `compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
+Two reads an answer makes are capability-gated, both into one image: EmuDeck deploys ES-DE as an AppImage, the
+frontend's bundled `es_systems.xml` and `es_find_rules.xml` are sealed inside it, and atlas opens the image itself
+wherever the runtime has the image's zstd codec —
+[the catalogue section](#which-emulator-would-launch-this-the-catalogue) and
+[the launch answer](#does-it-start-and-with-what--availability-launcher-core_path) say what changes when it does. The
+build the image's binary states is read through the same codec too, but by the launch tripwire alone: no answer states
+it. Those reads are the codec's only consumers: the resolver asks for AppImage contents of EmuDeck's ES-DE alone
+(`atlas/installations.py`), gzip images decompress everywhere through the stdlib, and a consumer asking only RetroDECK —
+whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the stdlib's
+`compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
 
 On an older interpreter the codec has to come from the host, and a host that vendors the backport under its own parent
 package imports it as `_vendor.backports.zstd` — neither name the probe tries. As shipped, `backports.zstd` 1.7.0 does
@@ -2667,15 +2670,15 @@ Every value other than `startable` comes with **exactly one** reason caveat on t
 the catalogue's own first and the launch answer's last. Read any value you do not know as `unestablished`: a later
 release adds words (`needs-setup` is the next one), and that reading stays correct.
 
-| reason code                     | verdict         | `data`                                                               | what to do                                                                                                                                                                                                                                                                                           |
-| ------------------------------- | --------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order) | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                           |
-| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)    | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                     |
-| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                     | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                           |
-| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                     | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                  |
-| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                   | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                         |
-| `launch-path-unestablished`     | `unestablished` | `path`                                                               | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                |
-| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape           | not evaluated in this release: EmuDeck, bare RetroArch and derived entries (`installation`); and (`{}`) a command with no `%EMULATOR_X%` token, one using `%EMUPATH%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host |
+| reason code                     | verdict         | `data`                                                               | what to do                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------- | --------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order) | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                                                                          |
+| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)    | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                                                                    |
+| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                     | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                                                                          |
+| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                     | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                                                                 |
+| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                   | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                                                                        |
+| `launch-path-unestablished`     | `unestablished` | `path`                                                               | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                                                               |
+| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape           | not evaluated in this release: bare RetroArch and derived entries (`installation`); and (`{}`) a command with no `%EMULATOR_X%` token (EmuDeck's `/bin/bash` launcher-script rows among them), one using `%EMUPATH%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host |
 
 Two keys name what the frontend looked for, each in the spelling the command carries: `emulator_token` is the `X` of
 `%EMULATOR_X%` (the name `es_find_rules.xml` keys its `<emulator>` by, `RYUBING`), and `core_token` the `X` of
@@ -2684,10 +2687,19 @@ and where it is the pre-command that is missing, `emulator_token` names the pre-
 emulator. Neither key is a card's `token` — the frontend's word, not atlas's — so join them to nothing but the find
 rules and the command.
 
-Two caveats are **notes**, never reasons:
+Four caveats are **notes**, never reasons:
 
 - `find-rules-unreadable` with `layer: custom`, beside any verdict — the user's `custom_systems/es_find_rules.xml`
   exists and does not parse. ES-DE skips such a file and reads the bundled one, and so does the verdict beside it.
+- `launch-path-assumed`, beside any verdict of an entry whose search went through the `PATH` — every entry whose
+  emulator has `systempath` rules, since those are tried first: a hit there, a `staticpath` hit after them, a miss of
+  every rule, a missing core after a hit. `search_path` lists the directories searched, in order. A frontend on the host
+  takes its `PATH` from whatever started it, which no file on the machine states, so atlas searched one it assumed; a
+  frontend started with another `PATH` may find another program, or none. EmuDeck's entries carry it.
+- `find-rules-rewritten-at-start`, beside any verdict — EmuDeck's launcher rewrites the custom find rules before every
+  ES-DE start, and the next start would write `entry` as the rule for `emulator_token` (`DOLPHIN`, `CEMU`, `RYUJINX`),
+  which the file does not carry yet. The verdict is the file as it stands on disk; the note says what the next start
+  makes of it.
 - `run-game-differs`, beside `startable` only — RetroDECK's own direct start, `run_game.sh`, would run something else
   (`run_game_path`), or nothing (`""`). It reads only the shipped rules, never expands `~` and takes no `|` entry. The
   verdict stays ES-DE's; the note is for a client that starts games through `run_game.sh` today.
@@ -2709,6 +2721,18 @@ A path is valid only where `app_id` says: where `replacement_command` is `null`,
 the user's — so an AppImage in the user's own `~/Applications` is not one RetroDECK's frontend finds. For a libretro
 entry the launcher is RetroArch, the runner, and **`core_path`** names the core file `launchGame`'s core lookup finds in
 the `corepath` directories, in the same spelling (`/var/config/retroarch/cores/<core>.so` for RetroDECK).
+
+**On EmuDeck** the frontend is upstream ES-DE as an AppImage, running on the host: `app_id` is `null` and `path` is the
+host's own, and `~` is the user's home, because EmuDeck starts ES-DE with no `--home`. Its find rules come in three
+layers — the custom `~/ES-DE/custom_systems/es_find_rules.xml`, the bundled file inside the AppImage, and
+`~/ES-DE/resources/systems/linux/es_find_rules.xml`, which replaces the bundled file where it exists. Reading the
+AppImage needs a zstd provider (see "The zstd codec under a host's own packaging" above); without one only the names the
+custom file defines are answered, and every other entry is `unestablished` with `find-rules-unreadable` naming the
+bundled layer. The `systempath` rules are searched over the `PATH` EmuDeck's launcher hands ES-DE as atlas assembles it
+from the scripts that build it (`atlas/data/frontend_path.json`), which is what `launch-path-assumed` says. A rule under
+`%ESPATH%` points inside the AppImage's own mount, which atlas does not open, so it answers `launch-path-unestablished`
+with the path as the rule writes it. EmuDeck's launcher-script rows (`/bin/bash …/launchers/<name>.sh`) carry no
+emulator token and stay `launch-resolution-unsupported`.
 
 From the vectors (`launch.json`), a component found, then an emulator that is not there (other fields elided):
 
@@ -2942,9 +2966,9 @@ established — the answer's other caveats say why), `launch-command-no-program`
 `launch-command-beyond-limits` (taking the command apart goes beyond a bound atlas keeps — `limit` names it:
 `command-length` 16384 characters, `substitutions` 256, `rescans` 64 passes of one replacement, `injections` 16
 `%INJECT%` entries, `inject-file-size` an injection file over 1 MiB, which is never read; ES-DE itself bounds only the
-4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). EmuDeck's entries are not taken
-apart yet, and a bare RetroArch has no frontend catalogue at all; both answer through the entry's
-`launch-resolution-unsupported` and the catalogue's own caveats.
+4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). EmuDeck's commands are not taken
+apart yet: a startable EmuDeck entry answers with no command and `launch-resolution-unsupported` naming the
+installation. A bare RetroArch has no frontend catalogue at all and answers through the catalogue's own caveats.
 
 **Two notes beside an answered command.** `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve
 and leaves in the argument as written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself).

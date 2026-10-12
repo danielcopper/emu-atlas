@@ -3482,8 +3482,8 @@
       }
     },
     {
-      "name": "launch-an-emudeck-entry-is-not-evaluated-yet",
-      "rationale": "EmuDeck's frontend runs on the host with its own home and a find-rules layer sealed in the AppImage; this release evaluates no lookup for it, so each entry answers unestablished with launch-resolution-unsupported naming the installation.",
+      "name": "launch-an-emudeck-entry-without-the-bundled-rules-is-unestablished",
+      "rationale": "EmuDeck's ES-DE runs on the host and its bundled find rules are inside the AppImage, which this machine models only as a file: the image's read answers no text, so the bundled layer is unread. Virtual Jaguar runs through RETROARCH, which no custom find rules define, so what ES-DE would look for is unknown — unestablished with find-rules-unreadable naming the bundled layer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3534,9 +3534,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -3547,6 +3547,973 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "atarijaguar"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-entry-finds-the-flatpak-on-the-assumed-path",
+      "rationale": "EmuDeck's ES-DE runs on the host, so its lookup is the host's own: RetroArch's systempath entry org.libretro.RetroArch is found in /var/lib/flatpak/exports/bin, a directory of the PATH atlas assumes for the frontend's process (atlas/data/frontend_path.json — the frontend's own PATH is written nowhere on disk). The entry is startable, its launcher is the host path with no app id, the core is the first corepath directory holding swanstation_libretro.so with ~ expanded against the user's home, and launch-path-assumed names the directories searched. The bundled rules are read out of the AppImage, the first vectors to model that read; the build stamp beside them is declared too.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "psx",
+              "label": "SwanStation",
+              "kind": "libretro",
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "systempath",
+                "entry": "org.libretro.RetroArch"
+              },
+              "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+              "caveats": [
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-entry-found-under-the-home-still-searched-the-assumed-path",
+      "rationale": "PCSX2's systempath entries miss on every directory of the assumed PATH, and its staticpath entry ~/Applications/pcsx2*.AppImage then finds the AppImage, ~ expanded against the user's home (no --home on EmuDeck) and the wildcard taking the first sorted match. The verdict is a staticpath hit, and it still rides launch-path-assumed: the systempath entries were tried first, over a PATH atlas assumed, and another PATH could have found something there. The system's other row is a launcher-script command with no %EMULATOR_…% token, which this evaluation does not take apart yet: launch-resolution-unsupported with no installation, a fact of that row.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ps2</name><path>%ROMPATH%/ps2</path><extension>.iso</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batchmode %ROM%</command>\n    <command label=\"PCSX2 (Script)\">/bin/bash /home/deck/Emulation/tools/launchers/pcsx2-qt.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/pcsx2-Qt.AppImage": "",
+          "/home/deck/Applications/pcsx2-v2.AppImage": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ps2",
+              "label": "PCSX2 (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "PCSX2",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Applications/pcsx2-Qt.AppImage",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "staticpath",
+                "entry": "~/Applications/pcsx2*.AppImage"
+              },
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "system": "ps2",
+              "label": "PCSX2 (Script)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "pcsx2-qt",
+              "declared_index": 1,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-resolution-unsupported",
+                  "data": {}
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "ps2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-entry-whose-rules-find-nothing-is-not-installed",
+      "rationale": "None of xemu's rules finds a file on the host — neither its systempath entries over the assumed PATH nor its staticpath entry under the home — so ES-DE would refuse the launch: not-installed with emulator-not-found naming every entry searched, and launch-path-assumed beside it, because the miss is a miss on the PATH atlas assumed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "xbox",
+              "label": "xemu (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "emulator-not-found",
+                  "data": {
+                    "emulator_token": "XEMU",
+                    "searched": [
+                      "xemu",
+                      "app.xemu.xemu",
+                      "~/Applications/xemu*.AppImage"
+                    ]
+                  }
+                },
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-entry-the-custom-rules-define-is-found-without-the-path",
+      "rationale": "EmuDeck's custom find rules (~/ES-DE/custom_systems/es_find_rules.xml) replace the bundled definition of a name whole. Its XEMU is one staticpath entry, EmuDeck's launcher script, and it is there: startable, the launcher the script's host path. No systempath rule was consulted, so no launch-path-assumed rides. The system's second row names an emulator the custom file defines with a staticpath entry that finds nothing: not-installed with emulator-not-found, and again no PATH note, because the PATH never came into it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n    <command label=\"Other (Standalone)\">%EMULATOR_OTHER-XBOX% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"XEMU\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/xemu-emu.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"OTHER-XBOX\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/other.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Emulation/tools/launchers/xemu-emu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "xbox",
+              "label": "xemu (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Emulation/tools/launchers/xemu-emu.sh",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "staticpath",
+                "entry": "/home/deck/Emulation/tools/launchers/xemu-emu.sh"
+              },
+              "core_path": null,
+              "caveats": []
+            },
+            {
+              "system": "xbox",
+              "label": "Other (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "OTHER-XBOX",
+              "declared_index": 1,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "emulator-not-found",
+                  "data": {
+                    "emulator_token": "OTHER-XBOX",
+                    "searched": [
+                      "/home/deck/Emulation/tools/launchers/other.sh"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-without-the-image-codec-answers-only-the-custom-rules",
+      "rationale": "Opening the AppImage's bundled find rules needs a zstd provider, and this runtime has none (capability-missing). The custom layer is on disk and wins whole for every name it defines, so its XEMU is answered as ever; every other name is defined by the layer atlas could not read, and what ES-DE would look for is unknown — find-rules-unreadable with layer bundled, as the sealed catalogue states the same about the image's es_systems.xml.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n    <command label=\"RetroArch\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/xemu_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"XEMU\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/xemu-emu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Emulation/tools/launchers/xemu-emu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": "capability-missing"
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "xbox",
+              "label": "xemu (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Emulation/tools/launchers/xemu-emu.sh",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "staticpath",
+                "entry": "/home/deck/Emulation/tools/launchers/xemu-emu.sh"
+              },
+              "core_path": null,
+              "caveats": []
+            },
+            {
+              "system": "xbox",
+              "label": "RetroArch",
+              "kind": "libretro",
+              "core_so": "xemu_libretro.so",
+              "emulator": "xemu_libretro.so",
+              "declared_index": 1,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "find-rules-unreadable",
+                  "data": {
+                    "layer": "bundled"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-resource-override-replaces-the-bundled-rules",
+      "rationale": "A file at ~/ES-DE/resources/systems/linux/es_find_rules.xml overrides the resource ES-DE would otherwise load out of the AppImage (ResourceManager.cpp:34-37 @ v3.4.1), so it is the bundled layer: its RETROARCH, one staticpath entry, decides, and the image's rules — which would find the Flatpak export through the PATH — are not read. No systempath rule is consulted, so no launch-path-assumed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+          "/home/deck/Applications/RetroArch.AppImage": "",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "psx",
+              "label": "SwanStation",
+              "kind": "libretro",
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Applications/RetroArch.AppImage",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "staticpath",
+                "entry": "~/Applications/RetroArch.AppImage"
+              },
+              "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-espath-rule-is-unestablished",
+      "rationale": "%ESPATH% is the directory of the ES-DE binary, and on an AppImage that is inside the image's own mount (getExePath, FileSystemUtil.cpp:383-404 @ v3.4.1), which the host view does not open. A rule entry under it is a path atlas cannot see the way the frontend does, and the entries after it might decide: launch-path-unestablished, with the path in ES-DE's own spelling.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox</name><path>%ROMPATH%/xbox</path><extension>.iso</extension>\n    <command label=\"xemu (Standalone)\">%EMULATOR_XEMU% -dvd_path %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"XEMU\">\n        <rule type=\"staticpath\">\n            <entry>%ESPATH%/emulators/xemu</entry>\n            <entry>/home/deck/Emulation/tools/launchers/xemu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "xbox",
+              "label": "xemu (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "XEMU",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "%ESPATH%/emulators/xemu"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-custom-rule-that-already-carries-the-launcher-is-not-rewritten",
+      "rationale": "EmuDeck's launcher rewrites the custom find rules before every ES-DE start (esde_launch_fixes, emuDeckESDE.sh:569-575 at 863ab69): every DOLPHIN entry becomes <toolsPath>/launchers/dolphin-emu.sh unless the file already carries that entry. This one does, so the next start leaves it as it is: the answer is the script, startable, and no find-rules-rewritten-at-start rides.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/dolphin-emu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Emulation/tools/launchers/dolphin-emu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "gc",
+              "label": "Dolphin (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "DOLPHIN",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "staticpath",
+                "entry": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-custom-rule-the-next-start-rewrites-says-so",
+      "rationale": "The custom find rules exist and carry no <toolsPath>/launchers/dolphin-emu.sh entry, so EmuDeck's next ES-DE start adds a DOLPHIN block naming that script (emuDeckESDE.sh:531-541 at 863ab69, toolsPath read from settings.sh). The answer stays the file as it stands on disk — DOLPHIN is the bundled layer's here, found as the Flatpak export through the assumed PATH — and find-rules-rewritten-at-start says what the next start makes of the rule, with the entry it would write.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"XEMU\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/xemu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "gc",
+              "label": "Dolphin (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "DOLPHIN",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "systempath",
+                "entry": "org.DolphinEmu.dolphin-emu"
+              },
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                },
+                {
+                  "code": "find-rules-rewritten-at-start",
+                  "data": {
+                    "emulator_token": "DOLPHIN",
+                    "entry": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-without-custom-rules-nothing-is-rewritten",
+      "rationale": "The rewrite EmuDeck's launcher runs before ES-DE starts touches the custom find rules only where that file exists (the -f test, emuDeckESDE.sh:532 at 863ab69). Here it does not, so nothing is rewritten and no find-rules-rewritten-at-start rides: DOLPHIN is the bundled layer's, found through the assumed PATH.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "gc",
+              "label": "Dolphin (Standalone)",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "DOLPHIN",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "systempath",
+                "entry": "org.DolphinEmu.dolphin-emu"
+              },
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
               }
             }
           ]

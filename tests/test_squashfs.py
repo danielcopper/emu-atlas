@@ -18,6 +18,7 @@ interpreter rather than only on one that ships zstd.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import types
 from pathlib import Path
@@ -26,8 +27,10 @@ import pytest
 
 from atlas import squashfs
 from atlas.machine import (
+    APPIMAGE_AMBIGUOUS,
     APPIMAGE_CAPABILITY_MISSING,
     APPIMAGE_ENTRY_MISSING,
+    APPIMAGE_NO_STAMP,
     APPIMAGE_NOT_APPIMAGE,
     READ_INVALID_TEXT,
     READ_MISSING,
@@ -339,4 +342,44 @@ class TestTheSeamMapsEveryOutcome:
         if _HAS_ZSTD:
             pytest.skip("this interpreter has the codec — the gate cannot fire")
         result = RealMachine().read_appimage_text(ZSTD_IMAGE, CATALOGUE_ENTRY)
+        assert result.status == APPIMAGE_CAPABILITY_MISSING
+
+
+class TestTheStampReadMapsEveryOutcome:
+    """RealMachine.read_appimage_stamp — the entry read's words, then the search's own two."""
+
+    NAME = re.compile(rb"<name>([a-z]+)</name>")
+
+    def test_a_pattern_that_matches_once_is_the_stamp(self):
+        result = RealMachine().read_appimage_stamp(GZIP_IMAGE, CATALOGUE_ENTRY, self.NAME)
+        assert (result.status, result.stamp) == (READ_OK, "gba")
+
+    def test_a_binary_entry_is_searched_as_bytes(self):
+        result = RealMachine().read_appimage_stamp(GZIP_IMAGE, "not-text.bin", re.compile(rb"\x00\x01([a-z]+)"))
+        assert (result.status, result.stamp) == (READ_OK, "binary")
+
+    def test_no_match_is_no_stamp(self):
+        result = RealMachine().read_appimage_stamp(GZIP_IMAGE, CATALOGUE_ENTRY, re.compile(rb"<ver>(.+)</ver>"))
+        assert (result.status, result.stamp) == (APPIMAGE_NO_STAMP, None)
+
+    def test_more_than_one_match_is_ambiguous(self):
+        result = RealMachine().read_appimage_stamp(GZIP_IMAGE, CATALOGUE_ENTRY, re.compile(rb"(gba)"))
+        assert (result.status, result.stamp) == (APPIMAGE_AMBIGUOUS, None)
+
+    def test_a_match_that_is_not_ascii_is_no_stamp(self):
+        result = RealMachine().read_appimage_stamp(GZIP_IMAGE, "not-text.bin", re.compile(rb"(\xff\xfe)"))
+        assert result.status == APPIMAGE_NO_STAMP
+
+    def test_the_entry_read_s_failures_keep_their_words(self, tmp_path):
+        impostor = tmp_path / "impostor.AppImage"
+        impostor.write_bytes(b"\x7fELF but truncated")
+        machine = RealMachine()
+        assert machine.read_appimage_stamp("/nowhere/none.AppImage", CATALOGUE_ENTRY, self.NAME).status == READ_MISSING
+        assert machine.read_appimage_stamp(GZIP_IMAGE, "nope/nope", self.NAME).status == APPIMAGE_ENTRY_MISSING
+        assert machine.read_appimage_stamp(str(impostor), CATALOGUE_ENTRY, self.NAME).status == APPIMAGE_NOT_APPIMAGE
+
+    def test_the_zstd_image_without_codec_is_capability_missing(self):
+        if _HAS_ZSTD:
+            pytest.skip("this interpreter has the codec — the gate cannot fire")
+        result = RealMachine().read_appimage_stamp(ZSTD_IMAGE, CATALOGUE_ENTRY, self.NAME)
         assert result.status == APPIMAGE_CAPABILITY_MISSING

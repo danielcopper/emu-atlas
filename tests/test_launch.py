@@ -434,3 +434,82 @@ class TestTheAnswerTypesRefuseWhatTheyCannotMean:
         launcher = atlas.Launcher("/x", None, None, "staticpath", "/x")
         with pytest.raises(ValueError, match="exactly where the verdict is startable"):
             LaunchResolution(atlas.AVAILABILITY_NOT_INSTALLED, launcher)
+
+
+class TestTheCallersNotesRideBesideTheVerdict:
+    """``launch-path-assumed`` wherever the search went through the assumed PATH, and a token's own note (#84)."""
+
+    PCSX2 = {"PCSX2": EmulatorRules(("pcsx2-qt",), ("~/Applications/pcsx2*.AppImage",))}
+    SCRIPT = "/home/deck/Emulation/tools/launchers/xemu.sh"
+    XEMU = {"XEMU": EmulatorRules((), (SCRIPT,))}
+    PS2 = "%EMULATOR_PCSX2% %ROM%"
+    XBOX = "%EMULATOR_XEMU% %ROM%"
+
+    @staticmethod
+    def assumed(rules: LayeredFindRules, view: View, command: str, *, loads_core: bool = False):
+        return LaunchLookup(rules, view, path_assumed=True).resolve(command, loads_core=loads_core)
+
+    def test_a_systempath_hit_carries_the_path_it_searched(self):
+        view = View(files={"/usr/bin/pcsx2-qt"})
+        answer = self.assumed(layered(self.PCSX2), view, self.PS2)
+        assert answer.availability == atlas.AVAILABILITY_STARTABLE
+        assert [(c.code, c.data) for c in answer.caveats] == [
+            (atlas.CAVEAT_LAUNCH_PATH_ASSUMED, {"search_path": ("/app/bin", "/usr/bin")})
+        ]
+
+    def test_a_staticpath_hit_after_systempath_misses_carries_it_too(self):
+        appimage = f"{HOME}/Applications/pcsx2.AppImage"
+        view = View(files={appimage}, dirs={f"{HOME}/Applications": ("pcsx2.AppImage",)})
+        answer = self.assumed(layered(self.PCSX2), view, self.PS2)
+        assert answer.launcher is not None
+        assert answer.launcher.rule == "staticpath"
+        assert codes(answer) == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_a_miss_of_every_rule_carries_it_beside_the_reason(self):
+        answer = self.assumed(layered(self.PCSX2), View(), self.PS2)
+        assert codes(answer) == [atlas.CAVEAT_EMULATOR_NOT_FOUND, atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_a_missing_core_after_a_systempath_hit_carries_it(self):
+        retroarch = {"RETROARCH": EmulatorRules(("retroarch",), ())}
+        view = View(files={"/usr/bin/retroarch"})
+        command = "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/a_libretro.so %ROM%"
+        answer = self.assumed(layered(retroarch, {"RETROARCH": ("/cores",)}), view, command, loads_core=True)
+        assert codes(answer) == [atlas.CAVEAT_CORE_NOT_INSTALLED, atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_a_search_with_no_systempath_rule_carries_none(self):
+        hit = self.assumed(layered(self.XEMU), View(files={self.SCRIPT}), self.XBOX)
+        miss = self.assumed(layered(self.XEMU), View(), self.XBOX)
+        assert codes(hit) == []
+        assert codes(miss) == [atlas.CAVEAT_EMULATOR_NOT_FOUND]
+
+    def test_no_search_made_carries_none(self):
+        unread = self.assumed(layered(self.PCSX2, bundled_read=False), View(), self.PS2)
+        tokenless = self.assumed(layered(self.PCSX2), View(), "/bin/bash /x.sh %ROM%")
+        assert codes(unread) == [atlas.CAVEAT_FIND_RULES_UNREADABLE]
+        assert codes(tokenless) == [atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]
+
+    def test_a_refused_precommand_is_the_only_search_counted(self):
+        wine = {"WINE": EmulatorRules((), ("/opt/wine",))}
+        command = "%PRECOMMAND_WINE% %EMULATOR_PCSX2% %ROM%"
+        answer = self.assumed(layered({**self.PCSX2, **wine}), View(), command)
+        assert codes(answer) == [atlas.CAVEAT_EMULATOR_NOT_FOUND]
+        assert answer.caveats[0].data["emulator_token"] == "WINE"
+
+    def test_a_path_that_is_read_carries_none(self):
+        answer = resolve(layered(self.PCSX2), View(files={"/usr/bin/pcsx2-qt"}), self.PS2)
+        assert codes(answer) == []
+
+    def test_a_token_note_rides_beside_every_verdict_for_that_token_only(self):
+        note = atlas.Caveat(atlas.CAVEAT_FIND_RULES_REWRITTEN_AT_START, "", {"emulator_token": "XEMU", "entry": "/x"})
+        rules = layered({**self.XEMU, **self.PCSX2})
+        lookup = LaunchLookup(rules, View(), path_assumed=True, token_notes={"XEMU": note})
+        assert codes(lookup.resolve(self.XBOX, loads_core=False)) == [
+            atlas.CAVEAT_EMULATOR_NOT_FOUND,
+            atlas.CAVEAT_FIND_RULES_REWRITTEN_AT_START,
+        ]
+        assert note not in lookup.resolve(self.PS2, loads_core=False).caveats
+
+    def test_the_notes_come_before_a_skipped_custom_layer(self):
+        rules = layered(self.PCSX2, custom_unreadable="/custom.xml")
+        answer = self.assumed(rules, View(files={"/usr/bin/pcsx2-qt"}), self.PS2)
+        assert codes(answer) == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED, atlas.CAVEAT_FIND_RULES_UNREADABLE]
