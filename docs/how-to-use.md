@@ -2660,25 +2660,27 @@ entry.launcher       # what ES-DE would run for the emulator token, and where �
 entry.core_path      # the core file ES-DE's core lookup finds, on a startable libretro entry — None otherwise
 ```
 
-| `availability`  | what it means                                                                                 | its reason caveat                          |
-| --------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `startable`     | the launcher is found, and for a libretro entry its core too                                  | none                                       |
-| `not-installed` | rules exist and nothing they name is there, or the core is missing                            | `emulator-not-found`, `core-not-installed` |
-| `unestablished` | atlas cannot tell — no rules, an unread rules file, a path it cannot see, an unevaluated case | one of the five below                      |
+| `availability`  | what it means                                                                                                                                                                | its reason caveat                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `startable`     | the launcher is found, and for a libretro entry its core too                                                                                                                 | none                                                                                       |
+| `not-installed` | rules exist and nothing they name is there, the program a command without an emulator token names is found nowhere or its launcher script is missing, or the core is missing | `emulator-not-found`, `program-not-found`, `launcher-script-missing`, `core-not-installed` |
+| `unestablished` | atlas cannot tell — no rules, an unread rules file, a path it cannot see, an unevaluated case                                                                                | one of the five below                                                                      |
 
 Every value other than `startable` comes with **exactly one** reason caveat on the entry, and the entry's caveats list
 the catalogue's own first and the launch answer's last. Read any value you do not know as `unestablished`: a later
 release adds words (`needs-setup` is the next one), and that reading stays correct.
 
-| reason code                     | verdict         | `data`                                                               | what to do                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------- | --------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order) | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                                                                          |
-| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)    | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                                                                    |
-| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                     | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                                                                          |
-| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                     | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                                                                 |
-| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                   | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                                                                        |
-| `launch-path-unestablished`     | `unestablished` | `path`                                                               | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                                                               |
-| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape           | not evaluated in this release: bare RetroArch and derived entries (`installation`); and (`{}`) a command with no `%EMULATOR_X%` token (EmuDeck's `/bin/bash` launcher-script rows among them), one using `%EMUPATH%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host |
+| reason code                     | verdict         | `data`                                                                                                  | what to do                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order)                                    | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                                                  |
+| `program-not-found`             | `not-installed` | `program` (the command's first word as written), `searched` (the directories it was tried in, in order) | a command without an emulator token names a program the frontend finds neither as a file nor on its `PATH`; `PLACEHOLDER`, the catalogues' word for a system with no Linux emulator, answers this way, and `program` is how a client recognises it                                                                          |
+| `launcher-script-missing`       | `not-installed` | `path` (the script as the command writes it)                                                            | an EmuDeck `/bin/bash <script>` row whose script is not there — no file, a dead link or a directory; bash is found, the launch fails at the script                                                                                                                                                                          |
+| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)                                       | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                                            |
+| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                                                        | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                                                  |
+| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                                                        | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                                         |
+| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                                                      | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                                                |
+| `launch-path-unestablished`     | `unestablished` | `path`                                                                                                  | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                                       |
+| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape                                              | not evaluated in this release: bare RetroArch and derived entries (`installation`); and (`{}`) a command using `%EMUPATH%`, one with no `%EMULATOR_X%` token that carries a `%PRECOMMAND_X%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host |
 
 Two keys name what the frontend looked for, each in the spelling the command carries: `emulator_token` is the `X` of
 `%EMULATOR_X%` (the name `es_find_rules.xml` keys its `<emulator>` by, `RYUBING`), and `core_token` the `X` of
@@ -2687,32 +2689,41 @@ and where it is the pre-command that is missing, `emulator_token` names the pre-
 emulator. Neither key is a card's `token` — the frontend's word, not atlas's — so join them to nothing but the find
 rules and the command.
 
-Four caveats are **notes**, never reasons:
+Five caveats are **notes**, never reasons:
 
 - `find-rules-unreadable` with `layer: custom`, beside any verdict — the user's `custom_systems/es_find_rules.xml`
   exists and does not parse. ES-DE skips such a file and reads the bundled one, and so does the verdict beside it.
-- `launch-path-assumed`, beside any verdict of an entry whose search went through the `PATH` — every entry whose
-  emulator has `systempath` rules, since those are tried first: a hit there, a `staticpath` hit after them, a miss of
-  every rule, a missing core after a hit. `search_path` lists the directories searched, in order. A frontend on the host
-  takes its `PATH` from whatever started it, which no file on the machine states, so atlas searched one it assumed; a
-  frontend started with another `PATH` may find another program, or none. EmuDeck's entries carry it.
+- `launch-path-assumed`, beside any verdict of an entry whose search went through the `PATH` or the working directory
+  atlas assumes for the frontend. Through the `PATH`: every entry whose emulator has `systempath` rules, since those are
+  tried first — a hit there, a `staticpath` hit after them, a miss of every rule, a missing core after a hit — and every
+  command without an emulator token whose first word was not found as a file and was then searched on the `PATH`.
+  Through the working directory: every command without an emulator token whose first word has no leading `/`, found
+  there or not. A search that stopped before it reached either carries none. `search_path` lists the `PATH` directories
+  in order, and `working_directory` the directory assumed. A frontend on the host takes both from whatever started it,
+  which no file on the machine states, so atlas searched ones it assumed; a frontend started with others may find
+  another program, or none. EmuDeck's entries carry it.
 - `find-rules-rewritten-at-start`, beside any verdict — EmuDeck's launcher rewrites the custom find rules before every
   ES-DE start, and the next start would write `entry` as the rule for `emulator_token` (`DOLPHIN`, `CEMU`, `RYUJINX`),
   which the file does not carry yet. The verdict is the file as it stands on disk; the note says what the next start
   makes of it.
+- `command-rewritten-at-start`, beside any verdict of an EmuDeck launcher-script row — the custom `es_systems.xml`
+  carries EmuDeck's template path `/run/media/mmcblk0p1/Emulation`, and EmuDeck's launcher replaces it with the
+  `emulationPath` setting across that file before every ES-DE start. `path` is the script as the file names it and
+  `rewritten` the path the next start writes; the verdict is the file as it stands.
 - `run-game-differs`, beside `startable` only — RetroDECK's own direct start, `run_game.sh`, would run something else
   (`run_game_path`), or nothing (`""`). It reads only the shipped rules, never expands `~` and takes no `|` entry. The
   verdict stays ES-DE's; the note is for a client that starts games through `run_game.sh` today.
 
-**`launcher`** carries what ES-DE would substitute for the `%EMULATOR_X%` token, in the frontend's own spelling:
+**`launcher`** carries what ES-DE would substitute for the `%EMULATOR_X%` token — or, for a command without one, the
+program its first word names — in the frontend's own spelling:
 
 | key                   | carries                                                                                                                                                           |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `path`                | the file the rule found — for RetroDECK a path **inside its sandbox**, such as `/app/retrodeck/components/…`; what ES-DE runs unless `replacement_command` is set |
 | `replacement_command` | for a rule entry with a `\|`, the command after it as written, which ES-DE runs instead; otherwise `null`                                                         |
 | `app_id`              | the sandbox `path` is valid in — `net.retrodeck.retrodeck`; `null` for a frontend on the host                                                                     |
-| `rule`                | `systempath` (found on the frontend's `PATH`) or `staticpath` (a path) — `atlas.LAUNCH_RULES`                                                                     |
-| `entry`               | the rule entry that matched, as written, before `~`, `%ESPATH%` or a wildcard was expanded                                                                        |
+| `rule`                | `systempath` (found on the frontend's `PATH`), `staticpath` (a path), or `command` (no rule: the command's own first word) — `atlas.LAUNCH_RULES`                 |
+| `entry`               | the rule entry that matched, as written, before `~`, `%ESPATH%` or a wildcard was expanded; for `command`, the command's first word as written                    |
 
 A path is valid only where `app_id` says: where `replacement_command` is `null`, a RetroDECK launcher starts with
 `flatpak run --command=<path> <app_id>`, never from the host; where it is set, that command is what ES-DE runs and
@@ -2729,10 +2740,23 @@ layers — the custom `~/ES-DE/custom_systems/es_find_rules.xml`, the bundled fi
 AppImage needs a zstd provider (see "The zstd codec under a host's own packaging" above); without one only the names the
 custom file defines are answered, and every other entry is `unestablished` with `find-rules-unreadable` naming the
 bundled layer. The `systempath` rules are searched over the `PATH` EmuDeck's launcher hands ES-DE as atlas assembles it
-from the scripts that build it (`atlas/data/frontend_path.json`), which is what `launch-path-assumed` says. A rule under
-`%ESPATH%` points inside the AppImage's own mount, which atlas does not open, so it answers `launch-path-unestablished`
-with the path as the rule writes it. EmuDeck's launcher-script rows (`/bin/bash …/launchers/<name>.sh`) carry no
-emulator token and stay `launch-resolution-unsupported`.
+from the scripts that build it (`atlas/data/frontend_path.json`), which is what `launch-path-assumed` says, beside the
+working directory below. A rule under `%ESPATH%` points inside the AppImage's own mount, which atlas does not open, so
+it answers `launch-path-unestablished` with the path as the rule writes it.
+
+**A command without an emulator token** goes through ES-DE's second method on both frontends: its first word — up to a
+space, or between quotes — is the program, tested as a file and otherwise searched on the frontend's `PATH`
+(`FileData.cpp:2595-2649` at v3.4.1). A hit is `startable` with `rule: command`; a miss everywhere is
+`program-not-found`. A word without a leading `/` is tested in the frontend's working directory first. EmuDeck's
+launcher starts ES-DE from its backend checkout, `~/.config/EmuDeck/backend`, so atlas assumes that directory the way it
+assumes the `PATH`, lists it first in `searched`, and states `launch-path-assumed` wherever it was tried. RetroDECK's
+working directory is whatever Steam or the desktop started the Flatpak in, written nowhere, so there such a word answers
+`launch-path-unestablished` — RetroDECK's deployed catalogue holds no command without a token in force (its
+`PLACEHOLDER` systems are commented out). EmuDeck's own catalogue writes its launcher-script rows as
+`/bin/bash <script> …`: where the second method finds `/bin/bash`, the launch turns on bash opening the script, so the
+row is checked for a regular file at the script's path, links followed — `launcher-script-missing` where there is none,
+`launch-path-unestablished` where atlas cannot tell or the word is not one path to the shell (a quote, a `$`, a glob or
+an operator in it).
 
 From the vectors (`launch.json`), a component found, then an emulator that is not there (other fields elided):
 
@@ -2952,6 +2976,8 @@ read the way the frontend's shell reads it. So:
   4096 bytes — splices the text in, and states the file with what came of it: `injected`, `absent`, `empty` or
   `oversized`.
 - A directory ES-DE takes as a file is launched through the file of its own name inside it, where there is one.
+- A command without an emulator token runs as the catalogue writes it, its first word the program ES-DE found; a
+  wildcard in that word becomes the file it matched, wherever the word stands in the command.
 
 **What is refused.** `command` is `null` exactly where the answer refuses, and one caveat says why: the entry's own
 launch reason where it is not `startable`, or `launch-command-label-unknown`, `frontend-build-unpinned` (the deployed

@@ -43,6 +43,7 @@ class View:
     home: str = HOME
     search_path: tuple[str, ...] = ("/app/bin", "/usr/bin")
     es_path: str = "/app/retrodeck/components/es-de/bin"
+    working_directory: str | None = None
     asked: list[str] = field(default_factory=list)
 
     def rom_directory(self) -> str | None:
@@ -55,6 +56,9 @@ class View:
         return PROBE_HIT if path in self.files or path in self.links else PROBE_MISS
 
     def executable(self, path: str) -> Probe:
+        return self.regular_file(path)
+
+    def regular_file(self, path: str) -> Probe:
         if path in self.unknown:
             return PROBE_UNKNOWN
         return PROBE_HIT if path in self.files else PROBE_MISS
@@ -258,12 +262,22 @@ class TestEveryOtherVerdictCarriesExactlyOneReason:
         ]
         assert codes(missing) == [atlas.CAVEAT_EMULATOR_NOT_FOUND, atlas.CAVEAT_FIND_RULES_UNREADABLE]
 
-    def test_a_command_without_an_emulator_token_is_not_evaluated(self):
-        for command in ("/usr/bin/foo %ROM%", "%EMULATOR_% %ROM%", "%EMULATOR_X -b"):
+    def test_a_command_without_an_emulator_token_takes_the_second_method(self):
+        """No token ES-DE reads — none written, an empty name, no closing ``%`` (``FileData.cpp:2313-2328``) — so
+        the first word is the program: searched on PATH where it is a path, and a relative one this view has no
+        working directory for is not established.
+        """
+        expected = {
+            "/usr/bin/foo %ROM%": (
+                atlas.CAVEAT_PROGRAM_NOT_FOUND,
+                {"program": "/usr/bin/foo", "searched": ("/app/bin", "/usr/bin")},
+            ),
+            "%EMULATOR_% %ROM%": (atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "%EMULATOR_%"}),
+            "%EMULATOR_X -b": (atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "%EMULATOR_X"}),
+        }
+        for command, reason in expected.items():
             answer = resolve(layered(DOLPHIN), View(), command)
-            assert [(c.code, dict(c.data)) for c in answer.caveats] == [
-                (atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED, {})
-            ], command
+            assert [(c.code, dict(c.data)) for c in answer.caveats] == [reason], command
 
     def test_a_command_with_emupath_is_not_evaluated(self):
         answer = resolve(layered(DOLPHIN), View(files={LAUNCHER}), "%EMULATOR_DOLPHIN% %EMUPATH%/x %ROM%")
@@ -484,9 +498,7 @@ class TestTheCallersNotesRideBesideTheVerdict:
 
     def test_no_search_made_carries_none(self):
         unread = self.assumed(layered(self.PCSX2, bundled_read=False), View(), self.PS2)
-        tokenless = self.assumed(layered(self.PCSX2), View(), "/bin/bash /x.sh %ROM%")
         assert codes(unread) == [atlas.CAVEAT_FIND_RULES_UNREADABLE]
-        assert codes(tokenless) == [atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]
 
     def test_a_refused_precommand_is_the_only_search_counted(self):
         wine = {"WINE": EmulatorRules((), ("/opt/wine",))}
@@ -513,3 +525,188 @@ class TestTheCallersNotesRideBesideTheVerdict:
         rules = layered(self.PCSX2, custom_unreadable="/custom.xml")
         answer = self.assumed(rules, View(files={"/usr/bin/pcsx2-qt"}), self.PS2)
         assert codes(answer) == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED, atlas.CAVEAT_FIND_RULES_UNREADABLE]
+
+
+SCRIPT_WORD = "/opt/emu/run.sh"
+WORKING = "/work"
+PATH_DIRS = ("/app/bin", "/usr/bin")
+TOOL = "tool %ROM%"
+
+
+def second(view: View, command: str, *, loads_core: bool = False, assumed: bool = False, rules=None):
+    lookup = LaunchLookup(rules or layered(DOLPHIN), view, path_assumed=assumed)
+    return lookup.resolve(command, loads_core=loads_core), lookup.command_parts(command, loads_core=loads_core)
+
+
+def reasons(answer) -> list[tuple[str, dict[str, object]]]:
+    return [(c.code, dict(c.data)) for c in answer.caveats]
+
+
+class TestTheSecondMethodFindsTheFirstWord:
+    """A command without an emulator token: its first word as a file, then on PATH (``FileData.cpp:2595-2649``)."""
+
+    def test_a_word_that_names_a_file_is_found_as_it_stands(self):
+        view = View(files={SCRIPT_WORD})
+        answer, parts = second(view, f"{SCRIPT_WORD} -f %ROM%")
+        assert answer.availability == atlas.AVAILABILITY_STARTABLE
+        assert answer.launcher == atlas.Launcher(SCRIPT_WORD, None, APP, atlas.RULE_COMMAND, SCRIPT_WORD)
+        assert (answer.core_path, answer.caveats) == (None, ())
+        assert view.asked == [SCRIPT_WORD]
+        assert parts is not None
+        assert (parts.emulator.substituted, parts.emulator.replaced) == (SCRIPT_WORD, None)
+
+    def test_a_miss_is_joined_to_every_path_directory_in_order(self):
+        view = View(files={"/usr/bin//opt/emu/run.sh"})
+        answer, parts = second(view, f"{SCRIPT_WORD} %ROM%")
+        assert answer.launcher == atlas.Launcher("/usr/bin/opt/emu/run.sh", None, APP, atlas.RULE_COMMAND, SCRIPT_WORD)
+        assert view.asked == [SCRIPT_WORD, "/app/bin//opt/emu/run.sh", "/usr/bin//opt/emu/run.sh"]
+        assert parts is not None
+        assert parts.emulator.substituted == "/usr/bin//opt/emu/run.sh"
+
+    def test_nothing_anywhere_is_not_installed_with_the_word_and_the_directories(self):
+        answer, parts = second(View(), f"{SCRIPT_WORD} %ROM%")
+        assert answer.availability == atlas.AVAILABILITY_NOT_INSTALLED
+        assert reasons(answer) == [(atlas.CAVEAT_PROGRAM_NOT_FOUND, {"program": SCRIPT_WORD, "searched": PATH_DIRS})]
+        assert parts is None
+
+    def test_a_relative_word_is_tried_in_the_working_directory_first(self):
+        found, _ = second(View(files={f"{WORKING}/tool"}, working_directory=WORKING), TOOL)
+        missing, _ = second(View(working_directory=WORKING), "PLACEHOLDER %ROM%")
+        assert found.launcher == atlas.Launcher(f"{WORKING}/tool", None, APP, atlas.RULE_COMMAND, "tool")
+        assert reasons(missing) == [
+            (atlas.CAVEAT_PROGRAM_NOT_FOUND, {"program": "PLACEHOLDER", "searched": (WORKING, *PATH_DIRS)})
+        ]
+
+    def test_a_relative_word_without_a_working_directory_cannot_be_told(self):
+        view = View(files={"/usr/bin/tool"})
+        answer, _ = second(view, TOOL)
+        assert reasons(answer) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "tool"})]
+        assert view.asked == []
+
+    def test_a_probe_that_cannot_tell_stops_the_search(self):
+        at_file, _ = second(View(unknown={SCRIPT_WORD}), f"{SCRIPT_WORD} %ROM%")
+        on_path, _ = second(View(unknown={"/app/bin//opt/emu/run.sh"}), f"{SCRIPT_WORD} %ROM%")
+        assert reasons(at_file) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": SCRIPT_WORD})]
+        assert reasons(on_path) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "/app/bin//opt/emu/run.sh"})]
+
+    def test_a_quoted_word_runs_to_the_closing_quote(self):
+        spaced = "/opt/my emu/run"
+        answer, parts = second(View(files={spaced, "/opt/x %ROM%"}), f'"{spaced}" %ROM%')
+        unclosed, _ = second(View(files={"/opt/x %ROM%"}), '"/opt/x %ROM%')
+        assert answer.launcher is not None
+        assert (answer.launcher.path, answer.launcher.entry) == (spaced, spaced)
+        assert parts is not None
+        assert parts.emulator.substituted == "/opt/my\\ emu/run"
+        assert unclosed.availability == atlas.AVAILABILITY_STARTABLE
+
+    def test_a_wildcard_word_takes_the_first_sorted_match_and_says_what_it_replaced(self):
+        pattern = "/opt/emu/app-*.AppImage"
+        view = View(files={"/opt/emu/app-1.AppImage"}, dirs={"/opt/emu": ("app-2.AppImage", "app-1.AppImage")})
+        answer, parts = second(view, f"{pattern} %ROM%")
+        unlisted, _ = second(View(unknown={"/opt/emu"}), f"{pattern} %ROM%")
+        assert answer.launcher == atlas.Launcher("/opt/emu/app-1.AppImage", None, APP, atlas.RULE_COMMAND, pattern)
+        assert parts is not None
+        assert parts.emulator.replaced == (pattern, "/opt/emu/app-1.AppImage")
+        assert reasons(unlisted) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "/opt/emu"})]
+
+    def test_a_relative_wildcard_is_listed_in_the_working_directory(self):
+        """``getMatchingFiles`` lists a relative parent where the process runs (``FileSystemUtil.cpp:62-155``)."""
+        sub = f"{WORKING}/sub"
+        view = View(files={f"{sub}/tool-1"}, dirs={sub: ("tool-2", "tool-1")}, working_directory=WORKING)
+        answer, parts = second(view, "sub/tool-* %ROM%", assumed=True)
+        locked, _ = second(View(unknown={sub}, working_directory=WORKING), "sub/tool-* %ROM%", assumed=True)
+        assert answer.launcher == atlas.Launcher(f"{sub}/tool-1", None, APP, atlas.RULE_COMMAND, "sub/tool-*")
+        assert codes(answer) == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+        assert parts is not None
+        assert parts.emulator.replaced == ("sub/tool-*", "sub/tool-1")
+        assert reasons(locked)[0] == (atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": sub})
+        assert codes(locked)[1:] == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_a_relative_wildcard_without_a_working_directory_stops_at_the_word(self):
+        answer, _ = second(View(dirs={"sub": ("tool-1",)}), "sub/tool-* %ROM%")
+        assert reasons(answer) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "sub/tool-*"})]
+
+    def test_espath_is_expanded_and_the_entry_keeps_it(self):
+        found, _ = second(View(files={"/es/tool"}, es_path="/es", working_directory=WORKING), "%ESPATH%/tool %ROM%")
+        unopened = View(es_path="%ESPATH%", unknown={"%ESPATH%/tool"}, working_directory=WORKING)
+        inside, _ = second(unopened, "%ESPATH%/tool %ROM%")
+        assert found.launcher == atlas.Launcher("/es/tool", None, APP, atlas.RULE_COMMAND, "%ESPATH%/tool")
+        assert reasons(inside) == [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": "%ESPATH%/tool"})]
+        assert unopened.asked == ["%ESPATH%/tool"]
+
+    def test_tilde_and_the_flags_es_de_removes_first_are_read_as_it_reads_them(self):
+        home_tool = f"{HOME}/bin/tool"
+        tilde, _ = second(View(files={home_tool}), "~/bin/tool %ROM%")
+        flagged, _ = second(View(files={SCRIPT_WORD}), f"%RUNINBACKGROUND% %ENABLESHORTCUTS% {SCRIPT_WORD} %ROM%")
+        assert tilde.launcher == atlas.Launcher(home_tool, None, APP, atlas.RULE_COMMAND, "~/bin/tool")
+        assert flagged.launcher == atlas.Launcher(SCRIPT_WORD, None, APP, atlas.RULE_COMMAND, SCRIPT_WORD)
+
+    def test_the_core_it_names_is_found_as_after_a_token(self):
+        rules = layered(DOLPHIN, {"RETROARCH": ("/cores",)})
+        command = f"{SCRIPT_WORD} -L %CORE_RETROARCH%/a_libretro.so %ROM%"
+        found, parts = second(View(files={SCRIPT_WORD, "/cores/a_libretro.so"}), command, loads_core=True, rules=rules)
+        missing, _ = second(View(files={SCRIPT_WORD}), command, loads_core=True, rules=rules)
+        by_path, _ = second(View(files={SCRIPT_WORD}), f"{SCRIPT_WORD} -L /cores/a_libretro.so %ROM%", loads_core=True)
+        assert (found.availability, found.core_path) == (atlas.AVAILABILITY_STARTABLE, "/cores/a_libretro.so")
+        assert parts is not None
+        assert parts.core == "/cores/a_libretro.so"
+        assert codes(missing) == [atlas.CAVEAT_CORE_NOT_INSTALLED]
+        assert codes(by_path) == [atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]
+
+    def test_a_precommand_or_emupath_beside_it_is_not_followed(self):
+        view = View(files={SCRIPT_WORD}, working_directory=WORKING)
+        precommand, _ = second(view, f"%PRECOMMAND_WINE% {SCRIPT_WORD} %ROM%", assumed=True)
+        emupath, _ = second(View(files={SCRIPT_WORD}), f"{SCRIPT_WORD} %EMUPATH%/x %ROM%", assumed=True)
+        assert reasons(precommand) == [(atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED, {})]
+        assert reasons(emupath) == [(atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED, {})]
+
+    def test_run_game_runs_such_a_command_as_it_stands(self):
+        rules = layered(DOLPHIN, shipped=FindRules(emulators=DOLPHIN, cores={}))
+        answer, _ = second(View(files={SCRIPT_WORD}), f"{SCRIPT_WORD} %ROM%", rules=rules)
+        assert answer.caveats == ()
+
+    def test_one_command_is_searched_once(self):
+        view = View()
+        lookup = LaunchLookup(layered(DOLPHIN), view, path_assumed=True)
+        for _ in range(3):
+            lookup.resolve(f"{SCRIPT_WORD} %ROM%", loads_core=False)
+        assert view.asked == [SCRIPT_WORD, "/app/bin//opt/emu/run.sh", "/usr/bin//opt/emu/run.sh"]
+
+
+class TestTheSecondMethodCarriesTheAssumedPath:
+    """``launch-path-assumed`` where the second method's search went through the assumed PATH (D9, D18 of #84)."""
+
+    def test_a_word_found_as_a_file_carries_none(self):
+        answer, _ = second(View(files={SCRIPT_WORD}, working_directory=WORKING), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        assert codes(answer) == []
+
+    def test_a_word_tried_in_the_working_directory_carries_it_found_or_not(self):
+        """D9 (changed 2026-10-13): the working directory is assumed too, so trying a word there is reason enough."""
+        assumed = {"search_path": PATH_DIRS, "working_directory": WORKING}
+        found, _ = second(View(files={f"{WORKING}/tool"}, working_directory=WORKING), TOOL, assumed=True)
+        stopped, _ = second(View(unknown={f"{WORKING}/tool"}, working_directory=WORKING), TOOL, assumed=True)
+        assert reasons(found) == [(atlas.CAVEAT_LAUNCH_PATH_ASSUMED, assumed)]
+        assert reasons(stopped) == [
+            (atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": f"{WORKING}/tool"}),
+            (atlas.CAVEAT_LAUNCH_PATH_ASSUMED, assumed),
+        ]
+
+    def test_a_view_without_a_working_directory_states_the_path_alone(self):
+        answer, _ = second(View(), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        assert reasons(answer)[1] == (atlas.CAVEAT_LAUNCH_PATH_ASSUMED, {"search_path": PATH_DIRS})
+
+    def test_a_path_search_carries_it_hit_miss_or_stopped(self):
+        hit, _ = second(View(files={"/usr/bin//opt/emu/run.sh"}), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        miss, _ = second(View(), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        stopped, _ = second(View(unknown={"/usr/bin//opt/emu/run.sh"}), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        assert codes(hit) == [atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+        assert codes(miss) == [atlas.CAVEAT_PROGRAM_NOT_FOUND, atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+        assert codes(stopped) == [atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_a_path_that_is_read_carries_none(self):
+        miss, _ = second(View(), f"{SCRIPT_WORD} %ROM%")
+        assert codes(miss) == [atlas.CAVEAT_PROGRAM_NOT_FOUND]
+
+    def test_a_search_that_stopped_before_the_path_carries_none(self):
+        answer, _ = second(View(unknown={SCRIPT_WORD}), f"{SCRIPT_WORD} %ROM%", assumed=True)
+        assert codes(answer) == [atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED]

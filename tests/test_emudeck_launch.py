@@ -13,13 +13,15 @@ import re
 import shutil
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 import atlas
 from atlas.installations import _HostLaunchView  # pyright: ignore[reportPrivateUsage] - the view the handle builds
-from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN
-from atlas.machine import FixtureMachine, RealMachine
+from atlas.esde import EmulatorSpec
+from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN, LaunchResolution
+from atlas.machine import FixtureFileSpec, FixtureMachine, RealMachine
 
 HOME = "/home/deck"
 APPIMAGE = f"{HOME}/Applications/ES-DE.AppImage"
@@ -221,3 +223,175 @@ class TestTheNextStartsRewriteIsStated:
     def test_an_unset_tools_path_is_emudeck_s_default(self):
         made = notes(rules(), settings={})
         assert made["DOLPHIN"]["entry"] == f"{HOME}/Emulation/tools/launchers/dolphin-emu.sh"
+
+
+SYSTEMS = f"{HOME}/ES-DE/custom_systems/es_systems.xml"
+BASH = "/bin/bash"
+LITERAL = "/run/media/mmcblk0p1/Emulation"
+SCRIPT = f"{TOOLS}/launchers/bigpemu.sh"
+
+
+def catalogue(*commands: str) -> str:
+    rows = "".join(f'    <command label="row{index}">{command}</command>\n' for index, command in enumerate(commands))
+    return (
+        '<?xml version="1.0"?>\n<systemList>\n  <system><name>x</name><path>%ROMPATH%/x</path>'
+        f"<extension>.iso</extension>\n{rows}  </system>\n</systemList>\n"
+    )
+
+
+def entries(
+    *commands: str,
+    settings: str = "doInstallESDE=true\n",
+    files: Mapping[str, FixtureFileSpec] | None = None,
+    bash: bool = True,
+    **machine: Any,
+) -> list[atlas.EmulatorEntry]:
+    present: dict[str, FixtureFileSpec] = {SETTINGS: settings, SYSTEMS: catalogue(*commands)}
+    if bash:
+        present[BASH] = ""
+    present.update(files or {})
+    handle = atlas.EmuDeck(HOME, FixtureMachine(present, **machine))
+    return list(handle.emulators_for("x").entries)
+
+
+def launch(entry: atlas.EmulatorEntry) -> tuple[str, list[tuple[str, dict[str, object]]]]:
+    return entry.availability, [(c.code, dict(c.data)) for c in entry.caveats]
+
+
+class TestTheLauncherScriptIsWhatTheStartTurnsOn:
+    """D11-D14 of #84: ``/bin/bash <script>`` — ES-DE finds bash, and bash opens the script."""
+
+    def test_a_present_script_leaves_bash_startable_without_a_path_note(self):
+        [entry] = entries(f"{BASH} {SCRIPT} %ROM%", files={SCRIPT: "#!/bin/bash\n"})
+        assert launch(entry) == (atlas.AVAILABILITY_STARTABLE, [])
+        assert entry.launcher == atlas.Launcher(BASH, None, None, atlas.RULE_COMMAND, BASH)
+
+    def test_no_file_a_dead_link_or_a_directory_is_a_missing_script(self):
+        dead = f"{TOOLS}/launchers/dead.sh"
+        folder = f"{TOOLS}/launchers/folder.sh"
+        rows = [f"{BASH} {path} %ROM%" for path in (SCRIPT, dead, folder)]
+        answers = entries(*rows, symlinks={dead: "/nowhere"}, dirs=[folder])
+        assert [launch(entry) for entry in answers] == [
+            (atlas.AVAILABILITY_NOT_INSTALLED, [(atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING, {"path": path})])
+            for path in (SCRIPT, dead, folder)
+        ]
+        assert [entry.launcher for entry in answers] == [None] * 3
+
+    def test_a_link_to_a_file_is_present(self):
+        linked = f"{TOOLS}/launchers/linked.sh"
+        [entry] = entries(f"{BASH} {linked} %ROM%", files={SCRIPT: ""}, symlinks={linked: SCRIPT})
+        assert entry.availability == atlas.AVAILABILITY_STARTABLE
+
+    def test_a_script_atlas_cannot_read_as_a_path_is_not_established(self):
+        words = (SCRIPT, "%ROM%", "run.sh", f"'{SCRIPT}'", f"{HOME}/$GAME.sh", f"{HOME}/%BASENAME%.sh")
+        answers = entries(*(f"{BASH} {word} %ROM%" for word in words), inaccessible=[f"{TOOLS}/launchers"])
+        assert [launch(entry)[1] for entry in answers] == [
+            [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": word})] for word in words
+        ]
+
+    def test_a_glob_or_an_operator_in_the_script_word_is_not_established(self):
+        words = (f"{TOOLS}/launchers/big*.sh", f"{TOOLS}/launchers/bigpemu.sh;true")
+        answers = entries(*(f"{BASH} {word} %ROM%" for word in words), files={SCRIPT: ""})
+        assert [launch(entry)[1] for entry in answers] == [
+            [(atlas.CAVEAT_LAUNCH_PATH_UNESTABLISHED, {"path": word})] for word in words
+        ]
+
+    def test_the_script_is_read_after_the_flags_es_de_removes_first(self):
+        [entry] = entries(f"%RUNINBACKGROUND% {BASH} /missing.sh %ROM%")
+        assert launch(entry) == (
+            atlas.AVAILABILITY_NOT_INSTALLED,
+            [(atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING, {"path": "/missing.sh"})],
+        )
+
+    def test_a_token_in_the_script_s_place_is_the_find_rules_answer(self):
+        launcher = f"{TOOLS}/launchers/dolphin-emu.sh"
+        custom = rules(block("DOLPHIN", launcher))
+        [entry] = entries(f"{BASH} %EMULATOR_DOLPHIN% %ROM%", files={CUSTOM: custom, launcher: ""})
+        assert launch(entry) == (atlas.AVAILABILITY_STARTABLE, [])
+        assert entry.launcher is not None
+        assert (entry.launcher.rule, entry.launcher.path) == ("staticpath", launcher)
+
+    def test_tilde_in_the_script_is_es_de_s_home(self):
+        [entry] = entries(f"{BASH} ~/run.sh %ROM%", files={f"{HOME}/run.sh": ""})
+        assert entry.availability == atlas.AVAILABILITY_STARTABLE
+
+    def test_bash_not_found_is_the_answer_and_the_script_is_not_asked(self):
+        [entry] = entries(f"{BASH} {SCRIPT} %ROM%", bash=False)
+        availability, caveats = launch(entry)
+        assert availability == atlas.AVAILABILITY_NOT_INSTALLED
+        assert [code for code, _ in caveats] == [atlas.CAVEAT_PROGRAM_NOT_FOUND, atlas.CAVEAT_LAUNCH_PATH_ASSUMED]
+
+    def test_another_first_word_gets_the_second_method_alone(self):
+        [entry] = entries(f"/usr/bin/bash {SCRIPT} %ROM%", files={"/usr/bin/bash": ""})
+        assert entry.availability == atlas.AVAILABILITY_STARTABLE
+
+
+class TestTheCommandTheStartRewritesIsStated:
+    """D13 of #84: ``ESDE_ensureSystemsPath``, emuDeckESDE.sh:555-560 at 863ab69."""
+
+    ROW = f"{BASH} {LITERAL}/tools/launchers/bigpemu.sh %ROM%"
+
+    def test_the_literal_and_another_emulation_path_is_the_note_beside_the_verdict(self):
+        [entry] = entries(self.ROW, settings=f'emulationPath="{HOME}/Emulation"\ndoInstallESDE=true\n')
+        script = f"{LITERAL}/tools/launchers/bigpemu.sh"
+        assert launch(entry) == (
+            atlas.AVAILABILITY_NOT_INSTALLED,
+            [
+                (atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING, {"path": script}),
+                (atlas.CAVEAT_COMMAND_REWRITTEN_AT_START, {"path": script, "rewritten": SCRIPT}),
+            ],
+        )
+
+    def test_an_emulation_path_equal_to_the_literal_is_no_rewrite(self):
+        [entry] = entries(self.ROW, settings=f'emulationPath="{LITERAL}"\ndoInstallESDE=true\n')
+        assert [code for code, _ in launch(entry)[1]] == [atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING]
+
+    def test_a_command_without_the_literal_is_no_rewrite(self):
+        [entry] = entries(f"{BASH} {SCRIPT} %ROM%", settings='emulationPath="/x"\ndoInstallESDE=true\n')
+        assert [code for code, _ in launch(entry)[1]] == [atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING]
+
+    def test_an_unset_emulation_path_is_emudeck_s_default(self):
+        [entry] = entries(self.ROW)
+        assert entry.caveats[-1].data["rewritten"] == SCRIPT
+
+    def test_a_row_from_another_layer_is_never_rewritten(self):
+        handle = atlas.EmuDeck(HOME, FixtureMachine({SETTINGS: ""}))
+        spec = EmulatorSpec("x", "row", "standalone", None, self.ROW, "es_systems.xml (AppImage-embedded)")
+        note = handle._systems_path_note(spec, LITERAL, {})  # pyright: ignore[reportPrivateUsage] - the rule under test
+        assert note is None
+
+
+class TestTheNotesKeepTheirOrder:
+    def test_a_note_goes_before_a_skipped_custom_layer(self):
+        from atlas.installations import _with_note_before_custom  # pyright: ignore[reportPrivateUsage]
+
+        reason = atlas.Caveat(atlas.CAVEAT_LAUNCHER_SCRIPT_MISSING, "", {"path": "/x"})
+        assumed = atlas.Caveat(atlas.CAVEAT_LAUNCH_PATH_ASSUMED, "", {"search_path": ()})
+        custom = atlas.Caveat(atlas.CAVEAT_FIND_RULES_UNREADABLE, "", {"layer": atlas.LAYER_CUSTOM})
+        note = atlas.Caveat(atlas.CAVEAT_COMMAND_REWRITTEN_AT_START, "", {"path": "/x", "rewritten": "/y"})
+        answer = LaunchResolution(atlas.AVAILABILITY_NOT_INSTALLED, caveats=(reason, assumed, custom))
+        assert _with_note_before_custom(answer, note).caveats == (reason, assumed, note, custom)
+        alone = LaunchResolution(atlas.AVAILABILITY_NOT_INSTALLED, caveats=(reason,))
+        assert _with_note_before_custom(alone, note).caveats == (reason, note)
+
+
+class TestTheHostViewOpensWhatBashOpens:
+    """D12 of #84: a regular file once links are followed; no mode bits."""
+
+    def test_a_file_and_a_link_to_one_are_present(self):
+        host = view(FixtureMachine({"/opt/a.sh": ""}, symlinks={"/opt/b.sh": "/opt/a.sh"}))
+        assert [host.regular_file(p) for p in ("/opt/a.sh", "/opt/b.sh")] == [PROBE_HIT] * 2
+
+    def test_a_dead_link_a_directory_and_nothing_are_missing(self):
+        host = view(FixtureMachine({"/opt/a.sh": ""}, symlinks={"/opt/dead.sh": "/nowhere"}, dirs=["/opt/dir"]))
+        assert [host.regular_file(p) for p in ("/opt/dead.sh", "/opt/dir", "/opt/none.sh")] == [PROBE_MISS] * 3
+
+    def test_what_cannot_be_stat_ed_relative_or_inside_the_image_cannot_be_told(self):
+        host = view(FixtureMachine({}, inaccessible=["/mnt/card"]))
+        paths = ("/mnt/card/a.sh", "a.sh", "%ESPATH%/a.sh")
+        assert [host.regular_file(p) for p in paths] == [PROBE_UNKNOWN] * 3
+
+    def test_emudeck_s_frontend_runs_in_the_backend_directory(self):
+        handle = atlas.EmuDeck(HOME, FixtureMachine({SETTINGS: ""}))
+        _, host = handle._lookup(handle._esde_snapshot("x"))  # pyright: ignore[reportPrivateUsage] - the view it builds
+        assert host.working_directory == f"{HOME}/.config/EmuDeck/backend"

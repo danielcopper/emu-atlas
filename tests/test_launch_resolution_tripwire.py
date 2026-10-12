@@ -32,8 +32,11 @@ this holds the pair the same way:
    release. Opening the image needs a zstd provider; without one the read
    cannot be made and the test says so rather than passing.
 4. Every line :data:`atlas.installations.EmuDeck.LAUNCH_CITATIONS` cites still
-   holds its text in the backend checkout: the launcher and the ``PATH`` it
-   hands ES-DE, and the rewrite of the custom find rules.
+   holds its text in the backend checkout: the launcher, the ``PATH`` and the
+   working directory it hands ES-DE, the rewrite of the custom find rules and
+   of the custom catalogue's template path, and the ``emulationPath`` default.
+   The image's ``AppRun`` is a link to ``usr/bin/es-de``, so nothing between
+   the launcher and ES-DE moves that working directory.
 
 The existing component-script tripwire (``tests/test_deployed_citations.py``)
 reads the citations the packaged *data* makes; these are the code's, which no
@@ -53,7 +56,7 @@ import pytest
 
 from atlas.installations import EmuDeck, RetroDeck
 from atlas.machine import RealMachine
-from atlas.squashfs import zstd_provider
+from atlas.squashfs import read_appimage_link, zstd_provider
 
 FILES = Path("/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files")
 COMPONENT_VERSION = RetroDeck.ESDE_COMPONENT_VERSION
@@ -157,6 +160,23 @@ def _read_backend(file: str) -> list[str] | None:
     return path.read_text(encoding="utf-8").splitlines() if path.is_file() else None
 
 
+# D18's premise: nothing between EmuDeck's launcher and ES-DE changes the
+# working directory, because the AppImage's entry point is the es-de binary
+# itself — AppRun a link to it inside the image.
+_EMUDECK_ENTRY_POINT = EmuDeck.ESDE_BINARY_ENTRY
+
+
+def entry_point_drift(target: str | None) -> list[str]:
+    """What to re-verify when the AppImage's AppRun is not a link to the es-de binary."""
+    if target == _EMUDECK_ENTRY_POINT:
+        return []
+    return [
+        f"AppRun in ES-DE.AppImage is {'no link' if target is None else f'a link to {target!r}'}, not one to "
+        f"{_EMUDECK_ENTRY_POINT!r}: read what the new entry point does before ES-DE starts, and whether it changes "
+        "the working directory atlas assumes (frontend_path.json, working_directory)"
+    ]
+
+
 def _emudeck_build_drift(version: str | None) -> list[str]:
     where = f"{EmuDeck.ESDE_BINARY_ENTRY} in ES-DE.AppImage"
     return build_drift(version, EmuDeck.ESDE_APPIMAGE_BUILD, where, _EMUDECK_REDIFF)
@@ -174,6 +194,14 @@ class TestEmuDecksFrontendIsTheOneTheLookupMirrors:
         build = handle._deployed_esde_build()  # pyright: ignore[reportPrivateUsage] - the read the build gate makes
         assert _emudeck_build_drift(build) == []
 
+    def test_the_appimage_starts_the_es_de_binary_itself(self):
+        if zstd_provider() is None:
+            pytest.skip(
+                "no zstd provider in this runtime (compression.zstd, backports.zstd or a registered one) — "
+                "the AppImage's entries cannot be read"
+            )
+        assert entry_point_drift(read_appimage_link(str(EMUDECK_IMAGE), "AppRun")) == []
+
     def test_every_cited_backend_line_still_holds_its_text(self):
         files = {file for file, _, _ in EmuDeck.LAUNCH_CITATIONS}
         read = {file: _read_backend(file) for file in files}
@@ -187,6 +215,11 @@ class TestEmuDecksRulesFireWithoutADeploy:
         assert _emudeck_build_drift(EmuDeck.ESDE_APPIMAGE_BUILD) == []
         assert len(_emudeck_build_drift("3.5.0")) == 1
         assert len(_emudeck_build_drift(None)) == 1
+
+    def test_another_entry_point_is_drift(self):
+        assert entry_point_drift(EmuDeck.ESDE_BINARY_ENTRY) == []
+        assert len(entry_point_drift("AppRun.wrapped")) == 1
+        assert len(entry_point_drift(None)) == 1
 
     def test_a_moved_backend_line_is_drift(self):
         held = {file: [""] * 1200 for file, _, _ in EmuDeck.LAUNCH_CITATIONS}

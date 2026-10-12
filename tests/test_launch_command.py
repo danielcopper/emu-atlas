@@ -16,7 +16,7 @@ import pytest
 
 import atlas
 from atlas.cli import run
-from atlas.find_rules import RULE_STATICPATH, RULE_SYSTEMPATH
+from atlas.find_rules import RULE_COMMAND, RULE_STATICPATH, RULE_SYSTEMPATH
 from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN, CommandParts, Found, Launcher, Probe, escaped_path
 from atlas.launch_command import (
     COMMAND_LENGTH_LIMIT,
@@ -62,6 +62,7 @@ class View:
     home: str = HOME
     search_path: tuple[str, ...] = ("/app/bin", "/usr/bin")
     es_path: str = "/app/retrodeck/components/es-de/bin"
+    working_directory: str | None = None
 
     def rom_directory(self) -> str | None:
         return ROMS + "/"
@@ -72,6 +73,9 @@ class View:
         return PROBE_HIT if path in self.files else PROBE_MISS
 
     def executable(self, path: str) -> Probe:
+        return self.found(path)
+
+    def regular_file(self, path: str) -> Probe:
         return self.found(path)
 
     def listing(self, directory: str) -> tuple[str, ...] | None:
@@ -1010,3 +1014,48 @@ class TestTheWorkingFolderIsTheStatesStartFolder:
         # No mame.ini on these machines: the compiled relative 'sta' governs,
         # below the folder the launch changes into.
         assert placement.dir == f"{folder}/sta/{placement.dir.rsplit('/', 1)[1]}"
+
+
+RUN = "/opt/emu/run"
+
+
+def program(path: str = RUN, replaced: tuple[str, str] | None = None) -> Found:
+    """A second-method hit: the first word found as a file (``FileData.cpp:2634-2636``)."""
+    entry = path if replaced is None else replaced[0]
+    return Found(Launcher(path, None, APP, RULE_COMMAND, entry), escaped_path(path), replaced)
+
+
+class TestTheSecondMethodsCommand:
+    """A command without an emulator token: no token is replaced, only ES-DE's own two edits (``:2598``, ``:2613``)."""
+
+    def test_the_first_word_stays_and_espath_is_expanded(self):
+        answer = apart(f"{RUN} %ESPATH%/data %ROM%", found=program(), core=None)
+        assert answer.command is not None
+        assert answer.command.program == LaunchProgram("flatpak", app_id=APP, command=RUN)
+        assert answer.command.arguments == ("/app/retrodeck/components/es-de/bin/data", GAME)
+        assert answer.caveats == ()
+
+    def test_a_wildcard_word_is_replaced_with_its_match_wherever_it_stands(self):
+        found = program("/opt/emu/app-1", ("/opt/emu/app-*", "/opt/emu/app-1"))
+        answer = apart("/opt/emu/app-* --self /opt/emu/app-* %ROM%", found=found, core=None)
+        assert answer.command is not None
+        assert answer.command.program.command == "/opt/emu/app-1"
+        assert answer.command.arguments == ("--self", "/opt/emu/app-1", GAME)
+
+    def test_a_wildcard_word_under_espath_is_matched_once_espath_is_expanded(self):
+        es_path = View().es_path
+        found = program(f"{es_path}/app-1", (f"{es_path}/app-*", f"{es_path}/app-1"))
+        answer = apart("%ESPATH%/app-* %ROM%", found=found, core=None)
+        assert answer.command is not None
+        assert answer.command.program.command == f"{es_path}/app-1"
+
+    def test_an_unread_token_is_left_as_written(self):
+        answer = apart(f"{RUN} %EMULATOR_% %ROM%", found=program(), core=None)
+        assert answer.command is not None
+        assert answer.command.arguments == ("%EMULATOR_%", GAME)
+
+    def test_emudir_is_the_directory_of_what_it_found(self):
+        answer = apart(f"{RUN} %STARTDIR%=%EMUDIR% %ROM%", found=program(), core=None)
+        assert answer.command is not None
+        assert answer.command.working_folder is not None
+        assert answer.command.working_folder.frontend_path == "/opt/emu"

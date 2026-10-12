@@ -120,8 +120,16 @@ from .firmware import (
 )
 from .find_rules import NO_FIND_RULES, FindRules, merge_find_rules, parse_find_rules
 from .find_rules import (
+    AVAILABILITY_NOT_INSTALLED,
     AVAILABILITY_STARTABLE,
+    AVAILABILITY_UNESTABLISHED,
+    CAVEAT_COMMAND_REWRITTEN_AT_START,
     CAVEAT_FIND_RULES_REWRITTEN_AT_START,
+    CAVEAT_FIND_RULES_UNREADABLE,
+    CAVEAT_LAUNCH_PATH_UNESTABLISHED,
+    CAVEAT_LAUNCHER_SCRIPT_MISSING,
+    LAYER_CUSTOM,
+    RULE_COMMAND,
     CAVEAT_FRONTEND_BUILD_UNPINNED,
     CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
@@ -138,10 +146,12 @@ from .launch import (
     LayeredFindRules,
     Probe,
     command_unsupported,
+    program_word,
     unsupported,
+    word_after_program,
 )
 from .launch_command import TOO_LARGE, CommandInputs, LaunchCommand, TooLarge, take_apart
-from .frontend_path import frontend_search_path
+from .frontend_path import frontend_search_path, frontend_working_directory
 from .launch_formats import lookup_install_first, lookup_standalone_launch
 from .firmware import firmware_for_core as _resolve_for_core
 from .firmware import firmware_for_system as _resolve_for_system
@@ -1501,8 +1511,24 @@ class _SandboxLaunchView:
             return PROBE_HIT
         return self._regular(host)
 
+    @property
+    def working_directory(self) -> None:
+        """Written nowhere: the frontend runs in whatever directory Steam or the desktop started the Flatpak in, so a
+        relative path cannot be told here.
+        """
+        return None
+
     def executable(self, path: str) -> Probe:
         """``[ -x ]`` read as "a file once every link is followed" — the seam reads no mode bits."""
+        return self.regular_file(path)
+
+    def regular_file(self, path: str) -> Probe:
+        """A file at the sandbox's *path* once every link is followed in the sandbox.
+
+        A relative path cannot be told.
+        """
+        if not path.startswith("/"):
+            return PROBE_UNKNOWN
         host = self._resolve(path, follow_last=True)
         if host is None:
             return PROBE_UNKNOWN
@@ -1617,9 +1643,15 @@ class _HostLaunchView:
     ``isRegularFile`` do (``FileSystemUtil.cpp:1018-1071`` @ v3.4.1, the
     non-Flatpak branches being the only ones) — and a link at the path itself
     is a hit wherever it leads, a dead one included, as ``isSymlink`` makes it. ``search_path`` is the
-    ``PATH`` the caller assumed for the frontend's process, and ``es_path`` is
-    :data:`_ESPATH_UNOPENED`. A relative path is tested against ES-DE's
-    working directory, which atlas cannot know, so it cannot be told either.
+    ``PATH`` the caller assumed for the frontend's process, ``working_directory``
+    the directory it assumed the process runs in (``None`` where it assumed
+    none), and ``es_path`` is :data:`_ESPATH_UNOPENED`. A relative path handed
+    to a probe cannot be told: the lookup joins a relative first word to the
+    working directory itself.
+
+    ``regular_file`` is what opening a path finds, links followed to the end:
+    a file is a hit, a dead link, a directory or nothing a miss
+    (``path_kind`` follows links on both machines).
 
     ``executable`` answers run_game.sh's test, which no frontend on the host
     has: the lookup asks it only where the arrangement ships one
@@ -1631,6 +1663,7 @@ class _HostLaunchView:
     home: str
     search_path: tuple[str, ...]
     rom_root: Callable[[], str | None]
+    working_directory: str | None = None
     es_path: str = _ESPATH_UNOPENED
     app_id: None = None
 
@@ -1665,6 +1698,15 @@ class _HostLaunchView:
     def executable(self, path: str) -> Probe:
         del path
         return PROBE_MISS
+
+    def regular_file(self, path: str) -> Probe:
+        """A file at the host's *path* once every link is followed — no mode bits, no read."""
+        if self._unknowable(path):
+            return PROBE_UNKNOWN
+        kind = self.machine.path_kind(path)
+        if kind == KIND_INACCESSIBLE:
+            return PROBE_UNKNOWN
+        return PROBE_HIT if kind == KIND_FILE else PROBE_MISS
 
 
 # One file of the override chain as it is read: where it came from and its
@@ -17821,6 +17863,10 @@ _ES_SYSTEMS_XML = "es_systems.xml"
 # The find rules' file name, spelled once for the same reason: both handles
 # probe its custom layer and its resource-override shadow.
 _ES_FIND_RULES_XML = "es_find_rules.xml"
+# The provenance a catalogue entry from the custom_systems overlay carries:
+# both handles parse that layer under it, and EmuDeck's launch answer reads it
+# back to tell the file its launcher rewrites.
+_CUSTOM_OVERLAY_PROVENANCE = "es_systems.xml (custom_systems overlay)"
 
 
 def _catalogue_unread_caveat(system: str | None = None) -> tuple[Caveat, ...]:
@@ -18140,6 +18186,78 @@ def _launch_for(
         return held[0][0].resolve(spec.command, loads_core=spec.kind == KIND_LIBRETRO)
 
     return launch_for
+
+
+# EmuDeck's launcher-script rows: ``/bin/bash`` and the script it runs as
+# its second word (D11 of #84). What a script word must not hold for atlas
+# to test it as the path bash opens: a token ES-DE would substitute first, the
+# shell's quoting and expansion, its globs, and the operators that end or
+# redirect the word — each turns the word into another one, or into none, in
+# the ``/bin/sh -c`` ES-DE hands the command to (``PlatformUtil.cpp:162-191``).
+_LAUNCHER_SHELL = "/bin/bash"
+_SCRIPT_UNREADABLE = ("%", '"', "'", "\\", "$", "`", "*", "?", "[", "{", ";", "&", "|", "<", ">", "(", ")")
+
+
+def _launcher_script(command: str) -> str | None:
+    """The script a ``/bin/bash <script> …`` command runs — ``None`` where the first word is not ``/bin/bash`` or no
+    second word follows it.
+
+    Both words are read the way the second method reads the command
+    (:func:`atlas.launch.program_word`, :func:`atlas.launch.word_after_program`):
+    the flags ES-DE removes first are gone, nothing is expanded.
+    """
+    if program_word(command) != _LAUNCHER_SHELL:
+        return None
+    return word_after_program(command)
+
+
+def _script_verdict(answer: LaunchResolution, script: str, view: _HostLaunchView) -> LaunchResolution:
+    """*answer* once bash's open of *script* is checked — the second method found ``/bin/bash``, so the launch
+    turns on the script.
+
+    The script is present where a regular file stands at its path once links
+    are followed (:meth:`_HostLaunchView.regular_file`), ``~`` read as ES-DE
+    reads it in the command (``FileData.cpp:1164``). A dead link, a directory
+    or nothing is ``launcher-script-missing``; a path atlas cannot stat, or a
+    word it cannot read as a path, is ``launch-path-unestablished``. The path
+    is stated as the command spells it, and the notes the lookup stated stay.
+    """
+    if any(mark in script for mark in _SCRIPT_UNREADABLE):
+        probe = PROBE_UNKNOWN
+    else:
+        probe = view.regular_file(expand_home_path(script, view.home))
+    if probe == PROBE_HIT:
+        return answer
+    if probe == PROBE_MISS:
+        reason = Caveat(
+            CAVEAT_LAUNCHER_SCRIPT_MISSING,
+            f"ES-DE finds /bin/bash, and no file stands at {script}, the launcher script bash is handed — the "
+            "launch fails there",
+            {"path": script},
+        )
+        return LaunchResolution(AVAILABILITY_NOT_INSTALLED, caveats=(reason, *answer.caveats))
+    reason = Caveat(
+        CAVEAT_LAUNCH_PATH_UNESTABLISHED,
+        f"ES-DE finds /bin/bash, and atlas cannot tell what bash finds at {script}, the launcher script it is "
+        "handed, so no verdict is stated",
+        {"path": script},
+    )
+    return LaunchResolution(AVAILABILITY_UNESTABLISHED, caveats=(reason, *answer.caveats))
+
+
+def _with_note_before_custom(answer: LaunchResolution, note: Caveat) -> LaunchResolution:
+    """*answer* with *note* among its notes: after the reason and the assumed PATH, before a skipped custom layer."""
+    caveats = list(answer.caveats)
+    position = next(
+        (
+            index
+            for index, caveat in enumerate(caveats)
+            if caveat.code == CAVEAT_FIND_RULES_UNREADABLE and caveat.data.get("layer") == LAYER_CUSTOM
+        ),
+        len(caveats),
+    )
+    caveats.insert(position, note)
+    return LaunchResolution(answer.availability, answer.launcher, answer.core_path, tuple(caveats))
 
 
 class _RulesFile(NamedTuple):
@@ -20498,7 +20616,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         overlay_path = self._overlay_path(root)
         custom_text = self._machine.read_text(overlay_path).text
         if custom_text is not None:
-            custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
+            custom = parse_es_systems(custom_text, provenance=_CUSTOM_OVERLAY_PROVENANCE)
         if custom.invalid is not None:
             return empty, True, False, _catalogue_invalid_finding(overlay_path, custom.invalid), no_disabled
         if custom.load_exclusive:
@@ -22041,8 +22159,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ``INSTALL.md`` v3.4.1:1470) where the runtime can open the image — see
     :meth:`_read_esde_catalogue`. Each entry's launch answer is ES-DE's own
     lookup run on the host, over the find rules laid out the same way and the
-    ``PATH`` EmuDeck's launcher hands the frontend — see :meth:`_lookup`;
-    taking an EmuDeck command apart is not evaluated yet.
+    ``PATH`` EmuDeck's launcher hands the frontend — see :meth:`_lookup` —
+    and a launcher-script row (``/bin/bash <script> …``) is checked for its
+    script too (:meth:`_launch_for`); taking an EmuDeck command apart is not
+    evaluated yet.
     """
 
     kind = "emudeck"
@@ -22536,7 +22656,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         overlay_path = os.path.join(appdata, self._ESDE_OVERLAY_SUFFIX)
         custom_text = self._machine.read_text(overlay_path).text
         if custom_text is not None:
-            custom = parse_es_systems(custom_text, provenance="es_systems.xml (custom_systems overlay)")
+            custom = parse_es_systems(custom_text, provenance=_CUSTOM_OVERLAY_PROVENANCE)
         if custom.invalid is not None:
             return {}, True, False, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
@@ -22625,9 +22745,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     # The lines of the backend checkout (~/.config/EmuDeck/backend at
     # dragoonDorise/EmuDeck@863ab69) the launch lookup's reading rests on, as
     # (file under the checkout, line, text the line holds): the launcher that
-    # starts ES-DE and the PATH it hands it, and the rewrite of the custom find
-    # rules its start runs first. tests/test_launch_resolution_tripwire.py
-    # holds each against the checkout.
+    # starts ES-DE and the PATH and working directory it hands it, the rewrite
+    # of the custom find rules and of the custom catalogue's template path its
+    # start runs first, and the emulationPath default its settings writer
+    # sets. tests/test_launch_resolution_tripwire.py holds each against the
+    # checkout.
     _EMUDECK_ESDE_SH = "functions/ToolScripts/emuDeckESDE.sh"
     _ESDE_LAUNCHER_SH = "tools/launchers/es-de/es-de.sh"
     _HELPER_FUNCTIONS_SH = "functions/helperFunctions.sh"
@@ -22649,12 +22771,26 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         (_EMUDECK_ESDE_SH, 545, 'local launcher="${toolsPath}/launchers/cemu.sh"'),
         (_EMUDECK_ESDE_SH, 546, 'grep -q "<entry>${launcher}</entry>" "$es_rulesFile" && return 0'),
         (_EMUDECK_ESDE_SH, 569, "esde_launch_fixes(){"),
+        (_EMUDECK_ESDE_SH, 18, 'es_systemsFile="$ESDE_newConfigDirectory/custom_systems/es_systems.xml"'),
+        (_EMUDECK_ESDE_SH, 555, "ESDE_ensureSystemsPath(){"),
+        (_EMUDECK_ESDE_SH, 556, '[ -f "$es_systemsFile" ] || return 0'),
+        (_EMUDECK_ESDE_SH, 557, "grep -q '/run/media/mmcblk0p1/Emulation' \"$es_systemsFile\" || return 0"),
+        (_EMUDECK_ESDE_SH, 558, '[ "$emulationPath" = "/run/media/mmcblk0p1/Emulation" ] && return 0'),
+        (_EMUDECK_ESDE_SH, 559, 'sed -i "s|/run/media/mmcblk0p1/Emulation|${emulationPath}|g" "$es_systemsFile"'),
+        (_EMUDECK_ESDE_SH, 573, "ESDE_ensureSystemsPath"),
+        (_HELPER_FUNCTIONS_SH, 336, 'defaultSettingsList+=("emulationPath=$HOME/Emulation")'),
+        (_HELPER_FUNCTIONS_SH, 1046, "cd $emudeckBackend"),
     )
     # What that rewrite makes of each rule it touches (emuDeckESDE.sh:524-553
     # at 863ab69), as (token, launcher under toolsPath, the text whose
     # presence in the file stops it): DOLPHIN's and CEMU's entries all become
     # their launcher script unless the file already carries that entry, and a
     # RYUJINX block naming its script is added where the file names none.
+    # The path EmuDeck's custom es_systems.xml template writes its launcher
+    # scripts under (configs/emulationstation/custom_systems/es_systems.xml at
+    # 863ab69), which the launcher's start replaces with emulationPath
+    # (emuDeckESDE.sh:555-560) — EmuDeck's literal, not any machine's.
+    _SYSTEMS_PATH_LITERAL = "/run/media/mmcblk0p1/Emulation"
     _START_REWRITES: tuple[tuple[str, str, str | None], ...] = (
         ("DOLPHIN", "launchers/dolphin-emu.sh", None),
         ("CEMU", "launchers/cemu.sh", None),
@@ -22662,8 +22798,32 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     )
 
     def _launch_for(self, snapshot: _EsdeSnapshot) -> Callable[[EmulatorSpec], LaunchResolution]:
-        """Each entry's launch answer, the find rules and the host read once — and only once an entry asks."""
-        return _launch_for(lambda: self._lookup(snapshot))
+        """Each entry's launch answer, the find rules and the host read once — and only once an entry asks.
+
+        A launcher-script row (``/bin/bash <script> …``, the shape EmuDeck's
+        own custom catalogue writes) is ES-DE's answer first: the second
+        method finds ``/bin/bash`` or not. Where it does — a startable answer
+        whose launcher the second method found — the launch turns on bash
+        opening the script, so that answer is checked against the script
+        (:func:`_script_verdict`); every other answer stands, a command whose
+        ``%EMULATOR_X%`` token stands where the script would among them. The note
+        on a command the next start rewrites rides beside any verdict
+        (:meth:`_systems_path_note`).
+        """
+        held: list[tuple[LaunchLookup, _HostLaunchView]] = []
+        resolve = _launch_for(lambda: self._lookup(snapshot), held)
+
+        def launch_for(spec: EmulatorSpec) -> LaunchResolution:
+            answer = resolve(spec)
+            script = _launcher_script(spec.command)
+            if script is None:
+                return answer
+            if answer.launcher is not None and answer.launcher.rule == RULE_COMMAND:
+                answer = _script_verdict(answer, script, held[0][1])
+            note = self._systems_path_note(spec, script, snapshot.settings)
+            return answer if note is None else _with_note_before_custom(answer, note)
+
+        return launch_for
 
     def _lookup(self, snapshot: _EsdeSnapshot) -> tuple[LaunchLookup, _HostLaunchView]:
         """ES-DE's lookup on the host: the three layers, the assumed PATH, and what the next start rewrites.
@@ -22690,6 +22850,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             home=self._home,
             search_path=frontend_search_path(self.kind, self._home),
             rom_root=self._launch_rom_directory,
+            working_directory=frontend_working_directory(self.kind, self._home),
         )
         notes = self._start_rewrite_notes(custom.text, snapshot.settings)
         return LaunchLookup(rules, view, path_assumed=True, token_notes=notes), view
@@ -22736,6 +22897,38 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 {"emulator_token": token, "entry": entry},
             )
         return notes
+
+    def _systems_path_note(self, spec: EmulatorSpec, script: str, settings: Mapping[str, str]) -> Caveat | None:
+        """``command-rewritten-at-start`` where the launcher's next start rewrites this row's command, else ``None``.
+
+        ``ESDE_ensureSystemsPath`` (emuDeckESDE.sh:555-560 at 863ab69, run
+        from ``esde_launch_fixes`` at :573) replaces
+        :data:`_SYSTEMS_PATH_LITERAL` with ``emulationPath`` across the custom
+        ``es_systems.xml`` (:18) where that file holds it and the two differ.
+        So the note stands on a row from that file whose command holds the
+        literal, with the script path as read and as that replacement writes
+        it; a row from another layer is never rewritten. An unset
+        ``emulationPath`` is EmuDeck's default, which its settings writer puts
+        in ``settings.sh`` for a missing key (helperFunctions.sh:336); a
+        launcher that sourced a ``settings.sh`` without the key would replace
+        the literal with nothing, which this does not state. ``sed`` would also
+        read a ``&`` or ``\\`` in ``emulationPath`` as its own syntax, and a
+        ``|`` would break the expression; such a value is taken as written.
+        The answer stays the disk's.
+        """
+        if spec.provenance != _CUSTOM_OVERLAY_PROVENANCE or self._SYSTEMS_PATH_LITERAL not in spec.command:
+            return None
+        emulation = settings.get("emulationPath") or os.path.join(self._home, "Emulation")
+        if emulation == self._SYSTEMS_PATH_LITERAL:
+            return None
+        rewritten = script.replace(self._SYSTEMS_PATH_LITERAL, emulation)
+        return Caveat(
+            CAVEAT_COMMAND_REWRITTEN_AT_START,
+            f"EmuDeck's launcher rewrites {self._SYSTEMS_PATH_LITERAL} to {emulation} across the custom "
+            f"es_systems.xml at every ES-DE start, so the next one runs {rewritten} where the file names {script} — "
+            "this answer is the file as it stands on disk",
+            {"path": script, "rewritten": rewritten},
+        )
 
     def _deployed_esde_build(self) -> str | None:
         """The ES-DE build the AppImage states, ``None`` where it states none this read can take.

@@ -1188,7 +1188,7 @@ recorded lowercase and matched case-insensitively (the gate is the emulator's lo
 out of a zip. An emulator absent from the block is one whose loader nobody has read: the answer states
 `entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out.
 
-## `frontend_path.json` — the `PATH` a frontend on the host searches
+## `frontend_path.json` — the `PATH` a frontend on the host searches, and the directory it runs in
 
 Read by `atlas.frontend_path`, behind each catalogue entry's launch answer on an arrangement whose ES-DE runs on the
 host (issue #84 part 3; EmuDeck today). ES-DE searches a `systempath` find rule over the directories of its own
@@ -1197,9 +1197,16 @@ states. So the list is assembled from the scripts that build it and packaged her
 directory in the order the `PATH` holds it, spelled as the `PATH` spells it (a leading `~/` is the user's home, expanded
 at answer time), each with the citation of the line that puts it there — the arrangement's own launcher first, then the
 distribution's shipped profile scripts with the package version they come from. Every answer whose search went through
-the list says so with the note `launch-path-assumed`, which carries the directories searched. A directory a profile
-script appends only where it exists is listed unconditionally: a directory that is not there finds nothing, so the
-answer is the same.
+the list says so with the note `launch-path-assumed`, which carries the directories searched and the working directory
+below. A directory a profile script appends only where it exists is listed unconditionally: a directory that is not
+there finds nothing, so the answer is the same.
+
+An entry may also state `working_directory`, one directory in the same shape: where the frontend's process runs, which
+ES-DE tests a first word without a leading `/` against before it searches the `PATH` — a command without an emulator
+token, such as `PLACEHOLDER %ROM%`, names its program that way. ES-DE never changes that directory itself, so it is the
+one the arrangement's launcher leaves it in (EmuDeck's changes into its backend checkout first). An answer that tried a
+word there carries `launch-path-assumed` too. A frontend whose entry states none has no working directory atlas can
+state, and such a word answers `launch-path-unestablished`.
 
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 

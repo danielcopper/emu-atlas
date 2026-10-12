@@ -12579,7 +12579,8 @@
           },
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
           "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
-          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/bin/bash": ""
         },
         "dirs": [
           "/home/deck/Emulation/saves",
@@ -12653,13 +12654,15 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "availability": "unestablished",
+              "availability": "not-installed",
               "launcher": null,
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
-                  "data": {}
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/home/deck/Emulation/tools/launchers/bigpemu.sh"
+                  }
                 }
               ]
             }
@@ -12789,7 +12792,8 @@
           },
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
           "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
-          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/bin/bash": ""
         },
         "dirs": [
           "/home/deck/Emulation/saves",
@@ -12845,13 +12849,15 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "availability": "unestablished",
+              "availability": "not-installed",
               "launcher": null,
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
-                  "data": {}
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/home/deck/Emulation/tools/launchers/bigpemu.sh"
+                  }
                 }
               ]
             }
@@ -13818,7 +13824,8 @@
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
           "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
           "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
-          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/bin/bash": ""
         },
         "dirs": [
           "/home/deck/Emulation/saves",
@@ -13888,13 +13895,15 @@
               "emulator": "bigpemu",
               "declared_index": 0,
               "selection": null,
-              "availability": "unestablished",
+              "availability": "not-installed",
               "launcher": null,
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
-                  "data": {}
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/home/deck/Emulation/tools/launchers/bigpemu.sh"
+                  }
                 }
               ]
             }
@@ -15892,8 +15901,10 @@
             "core_path": null,
             "caveats": [
               {
-                "code": "launch-resolution-unsupported",
-                "data": {}
+                "code": "launch-path-unestablished",
+                "data": {
+                  "path": "retroarch"
+                }
               }
             ]
           },
@@ -15969,8 +15980,10 @@
             "core_path": null,
             "caveats": [
               {
-                "code": "launch-resolution-unsupported",
-                "data": {}
+                "code": "launch-path-unestablished",
+                "data": {
+                  "path": "retroarch"
+                }
               }
             ]
           },
@@ -16332,8 +16345,10 @@
             "core_path": null,
             "caveats": [
               {
-                "code": "launch-resolution-unsupported",
-                "data": {}
+                "code": "launch-path-unestablished",
+                "data": {
+                  "path": "retroarch"
+                }
               }
             ]
           },
@@ -16411,8 +16426,10 @@
             "core_path": null,
             "caveats": [
               {
-                "code": "launch-resolution-unsupported",
-                "data": {}
+                "code": "launch-path-unestablished",
+                "data": {
+                  "path": "retroarch"
+                }
               }
             ]
           },
