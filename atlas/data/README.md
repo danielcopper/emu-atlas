@@ -1188,6 +1188,19 @@ recorded lowercase and matched case-insensitively (the gate is the emulator's lo
 out of a zip. An emulator absent from the block is one whose loader nobody has read: the answer states
 `entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out.
 
+## `frontend_path.json` — the `PATH` a frontend on the host searches
+
+Read by `atlas.frontend_path`, behind each catalogue entry's launch answer on an arrangement whose ES-DE runs on the
+host (issue #84 part 3; EmuDeck today). ES-DE searches a `systempath` find rule over the directories of its own
+process's `PATH`, and a frontend on the host takes that `PATH` from whatever started it, which no file on the machine
+states. So the list is assembled from the scripts that build it and packaged here, keyed by the installation kind: each
+directory in the order the `PATH` holds it, spelled as the `PATH` spells it (a leading `~/` is the user's home, expanded
+at answer time), each with the citation of the line that puts it there — the arrangement's own launcher first, then the
+distribution's shipped profile scripts with the package version they come from. Every answer whose search went through
+the list says so with the note `launch-path-assumed`, which carries the directories searched. A directory a profile
+script appends only where it exists is listed unconditionally: a directory that is not there finds nothing, so the
+answer is the same.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

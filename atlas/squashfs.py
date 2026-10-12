@@ -3,9 +3,10 @@
 An AppImage (type 2) is an ELF runtime with a squashfs 4.0 image appended;
 the image begins where the ELF's section headers end (offset ``e_shoff +
 e_shentsize * e_shnum``), which is how the runtime itself locates it. This
-module reads exactly one entry out of that image by path — enough to open the
-catalogue a frontend ships sealed inside its AppImage (issue #65) — and
-nothing more: no listing API, no extraction tree, no write path.
+module reads exactly one entry out of that image by path — enough to open
+what a frontend ships sealed inside its AppImage: its catalogue (issue #65),
+its find rules and the binary that states its build (#84) — and nothing more:
+no listing API, no extraction tree, no write path.
 
 The format facts below are squashfs 4.0 as mksquashfs writes it and the
 kernel reads it (little endian throughout):

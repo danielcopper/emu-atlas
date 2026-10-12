@@ -12,11 +12,13 @@ import glob as glob_module
 import hashlib
 import os
 import random
+import re
 import shutil
 import struct
 import subprocess
 import sys
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
 from types import FunctionType, SimpleNamespace
 
@@ -2380,3 +2382,61 @@ class TestAMemberIsOpenedByTheNameItsContainerWrote:
         answer = RealMachine().read_whdload_slave(path)
 
         assert (answer.status, answer.custom) == (WHDLOAD_NO_SLAVE, None)
+
+
+class TestFixtureStampReads:
+    """The modeled stamp read: the declaration in, the outcomes RealMachine reports out, the pattern unapplied."""
+
+    IMAGE = "/home/deck/Applications/ES-DE.AppImage"
+    BINARY = "usr/bin/es-de"
+    PATTERN = re.compile(rb"(.)")
+    STAMPED = {IMAGE: {BINARY: "3.4.1"}}
+
+    def read(self, appimages: Mapping[str, Mapping[str, object] | str], stamps=None, inner: str = BINARY):
+        machine = FixtureMachine({}, appimages=appimages, appimage_stamps=stamps)
+        result = machine.read_appimage_stamp(self.IMAGE, inner, self.PATTERN)
+        return result.status, result.stamp
+
+    def test_a_declared_stamp_is_the_read(self):
+        image = {self.IMAGE: {self.BINARY: {"status": "invalid-text"}}}
+        assert self.read(image, {self.IMAGE: {self.BINARY: "3.4.1"}}) == ("ok", "3.4.1")
+
+    @pytest.mark.parametrize("state", ["no-stamp", "ambiguous"])
+    def test_a_declared_state_is_the_read(self, state: str):
+        image = {self.IMAGE: {self.BINARY: {"status": "invalid-text"}}}
+        assert self.read(image, {self.IMAGE: {self.BINARY: state}}) == (state, None)
+
+    def test_a_declared_entry_with_no_stamp_answers_no_stamp(self):
+        assert self.read({self.IMAGE: {self.BINARY: {"status": "invalid-text"}}}) == ("no-stamp", None)
+
+    def test_the_image_and_the_entry_answer_as_the_text_read_does(self):
+        assert self.read({}) == ("missing", None)
+        assert self.read({self.IMAGE: "capability-missing"}) == ("capability-missing", None)
+        assert self.read({self.IMAGE: {"other": "text"}}) == ("entry-missing", None)
+        assert self.read({self.IMAGE: {self.BINARY: {"status": "unreadable"}}}) == ("unreadable", None)
+
+    def test_a_stamp_beside_no_image_with_entries_is_refused(self):
+        with pytest.raises(ValueError, match="no image with entries"):
+            FixtureMachine({}, appimages={self.IMAGE: "capability-missing"}, appimage_stamps=self.STAMPED)
+        with pytest.raises(ValueError, match="no image with entries"):
+            FixtureMachine({}, appimage_stamps=self.STAMPED)
+
+    def test_a_stamp_on_an_entry_the_image_does_not_declare_is_refused(self):
+        with pytest.raises(ValueError, match="declares no such entry"):
+            FixtureMachine({}, appimages={self.IMAGE: {"other": "text"}}, appimage_stamps=self.STAMPED)
+
+    def test_a_stamp_on_an_unreadable_entry_is_refused(self):
+        image = {self.IMAGE: {self.BINARY: {"status": "unreadable"}}}
+        with pytest.raises(ValueError, match="states no stamp"):
+            FixtureMachine({}, appimages=image, appimage_stamps=self.STAMPED)
+
+    def test_an_empty_or_non_string_stamp_is_refused(self):
+        image = {self.IMAGE: {self.BINARY: {"status": "invalid-text"}}}
+        for stamp in ("", 341):
+            with pytest.raises(ValueError, match="expected the stamp"):
+                FixtureMachine({}, appimages=image, appimage_stamps={self.IMAGE: {self.BINARY: stamp}})
+
+    def test_stamps_that_are_no_object_of_entries_are_refused(self):
+        image = {self.IMAGE: {self.BINARY: {"status": "invalid-text"}}}
+        with pytest.raises(ValueError, match="expected an object of entries"):
+            FixtureMachine({}, appimages=image, appimage_stamps={self.IMAGE: "3.4.1"})

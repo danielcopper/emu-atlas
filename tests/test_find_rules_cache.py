@@ -1,7 +1,8 @@
-"""The parse of ES-DE's find rules a RetroDECK handle keeps between questions (#84).
+"""The parse of ES-DE's find rules a RetroDECK or EmuDeck handle keeps between questions (#84).
 
-The handle keeps one thing: each find-rules file's parse, under the stat stamp
-(``st_mtime_ns``, ``st_size``) the file was read at. These run on a real machine
+The handle keeps each find-rules file's parse, under the stat stamp
+(``st_mtime_ns``, ``st_size``) the file was read at — for EmuDeck's bundled
+layer, the stamp of the AppImage that holds it. These run on a real machine
 over a temporary tree, because a stamp is the real filesystem's to give — a
 fixture machine's files cannot change underneath a handle and it stamps nothing.
 Parses are counted at the one function that makes them.
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -174,3 +176,39 @@ class TestALayerThatComesOrGoesChangesTheAnswer:
         assert [c.code for c in entry.caveats] == [atlas.CAVEAT_FIND_RULES_UNREADABLE]
         tree.write(tree.shipped, held)
         assert launcher(handle) == COMPONENT
+
+
+class TestEmuDecksImageLayerIsKeptUnderTheImagesStamp:
+    """EmuDeck's bundled layer lives inside the AppImage: parsed once per image, again once the image is replaced."""
+
+    @pytest.fixture
+    def handle(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[atlas.EmuDeck, Path]:
+        home = tmp_path / "home"
+        image = home / "Applications" / "ES-DE.AppImage"
+        image.parent.mkdir(parents=True)
+        shutil.copyfile(Path(__file__).parent / "data" / "esde-like.gzip.appimage", image)
+        Tree.write(home / "ES-DE" / "custom_systems" / "es_systems.xml", SYSTEMS)
+        # The fixture image carries a catalogue and no find rules: its one text
+        # entry stands in for the rules file, which is all the count needs.
+        entry = "usr/share/es-de/resources/systems/linux/es_systems.xml"
+        monkeypatch.setattr(atlas.EmuDeck, "_ESDE_APPIMAGE_FIND_RULES_ENTRY", entry)
+        return atlas.EmuDeck(str(home), RealMachine()), image
+
+    @staticmethod
+    def availability(handle: atlas.EmuDeck) -> str:
+        (entry,) = handle.emulators_for("gc").entries
+        return entry.availability
+
+    def test_a_second_answer_parses_nothing(self, handle, parses: list[str]):
+        emudeck, _ = handle
+        self.availability(emudeck)
+        self.availability(emudeck)
+        assert len(parses) == 1
+
+    def test_a_replaced_image_is_parsed_again(self, handle, parses: list[str]):
+        emudeck, image = handle
+        self.availability(emudeck)
+        before = image.stat()
+        os.utime(image, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000))
+        self.availability(emudeck)
+        assert len(parses) == 2

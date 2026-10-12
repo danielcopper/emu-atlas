@@ -3620,9 +3620,7 @@
               },
               {
                 "code": "launch-resolution-unsupported",
-                "data": {
-                  "installation": "emudeck"
-                }
+                "data": {}
               }
             ]
           },
@@ -11106,9 +11104,7 @@
                 },
                 {
                   "code": "launch-resolution-unsupported",
-                  "data": {
-                    "installation": "emudeck"
-                  }
+                  "data": {}
                 }
               ]
             },
@@ -11125,9 +11121,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -12642,9 +12638,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -12663,9 +12659,7 @@
               "caveats": [
                 {
                   "code": "launch-resolution-unsupported",
-                  "data": {
-                    "installation": "emudeck"
-                  }
+                  "data": {}
                 }
               ]
             }
@@ -12836,9 +12830,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -12857,9 +12851,7 @@
               "caveats": [
                 {
                   "code": "launch-resolution-unsupported",
-                  "data": {
-                    "installation": "emudeck"
-                  }
+                  "data": {}
                 }
               ]
             }
@@ -13252,9 +13244,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -13881,9 +13873,9 @@
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
+                  "code": "find-rules-unreadable",
                   "data": {
-                    "installation": "emudeck"
+                    "layer": "bundled"
                   }
                 }
               ]
@@ -13902,9 +13894,7 @@
               "caveats": [
                 {
                   "code": "launch-resolution-unsupported",
-                  "data": {
-                    "installation": "emudeck"
-                  }
+                  "data": {}
                 }
               ]
             }

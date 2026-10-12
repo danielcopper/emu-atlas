@@ -144,6 +144,7 @@ from atlas.machine import (
     KIND_INACCESSIBLE,
     KIND_MISSING,
     AppImageReadResult,
+    AppImageStampResult,
     CoreInfo,
     CoreReading,
     FixtureFileSpec,
@@ -5561,6 +5562,10 @@ class _CountingMachine:
     def read_appimage_text(self, path: str, inner_path: str) -> AppImageReadResult:
         self._count("read_appimage_text")
         return self._inner.read_appimage_text(path, inner_path)
+
+    def read_appimage_stamp(self, path: str, inner_path: str, pattern: re.Pattern[bytes]) -> AppImageStampResult:
+        self._count("read_appimage_stamp")
+        return self._inner.read_appimage_stamp(path, inner_path, pattern)
 
     def read_ps2_bios_header(self, path: str) -> Ps2BiosHeaderResult:
         self._count("read_ps2_bios_header")

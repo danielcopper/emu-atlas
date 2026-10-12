@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import tomllib
 from glob import escape as _glob_escape
@@ -35,6 +36,7 @@ from typing import (
     NamedTuple,
     Protocol,
     Sequence,
+    TypeVar,
     cast,
     runtime_checkable,
 )
@@ -119,6 +121,7 @@ from .firmware import (
 from .find_rules import NO_FIND_RULES, FindRules, merge_find_rules, parse_find_rules
 from .find_rules import (
     AVAILABILITY_STARTABLE,
+    CAVEAT_FIND_RULES_REWRITTEN_AT_START,
     CAVEAT_FRONTEND_BUILD_UNPINNED,
     CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
@@ -131,12 +134,14 @@ from .launch import (
     Launcher,
     LaunchResolution,
     LaunchLookup,
+    LaunchView,
     LayeredFindRules,
     Probe,
     command_unsupported,
     unsupported,
 )
 from .launch_command import TOO_LARGE, CommandInputs, LaunchCommand, TooLarge, take_apart
+from .frontend_path import frontend_search_path
 from .launch_formats import lookup_install_first, lookup_standalone_launch
 from .firmware import firmware_for_core as _resolve_for_core
 from .firmware import firmware_for_system as _resolve_for_system
@@ -158,6 +163,7 @@ from .machine import (
     READ_OK,
     SYMLINK_HOPS,
     WHDLOAD_MISSING,
+    AppImageStampResult,
     ArchiveListResult,
     CoreInfo,
     CoreOption,
@@ -1570,18 +1576,95 @@ class _SandboxLaunchView:
             return None
         if isinstance(host, _Hidden):
             return ()
-        kind = self.machine.path_kind(host)
-        if kind == KIND_INACCESSIBLE:
+        return _host_listing(self.machine, host)
+
+
+def _host_listing(machine: Machine, host: str) -> tuple[str, ...] | None:
+    """Every name in the host's *host* directory, hidden ones included — empty where it is no directory, ``None``
+    where it cannot be listed.
+    """
+    kind = machine.path_kind(host)
+    if kind == KIND_INACCESSIBLE:
+        return None
+    if kind != KIND_DIRECTORY:
+        return ()
+    names: list[str] = []
+    for pattern in ("*", ".*"):
+        result = machine.glob(os.path.join(_glob_escape(host), pattern))
+        if result.status != GLOB_COMPLETE:
             return None
-        if kind != KIND_DIRECTORY:
-            return ()
-        names: list[str] = []
-        for pattern in ("*", ".*"):
-            result = self.machine.glob(os.path.join(_glob_escape(host), pattern))
-            if result.status != GLOB_COMPLETE:
-                return None
-            names.extend(os.path.basename(match) for match in result.matches)
-        return tuple(names)
+        names.extend(os.path.basename(match) for match in result.matches)
+    return tuple(names)
+
+
+# ``%ESPATH%`` on a frontend run from an AppImage: ES-DE's ``getExePath()`` is
+# the directory of the canonical ``/proc/self/exe`` (``FileSystemUtil.cpp:383-404``
+# @ v3.4.1), which is inside the image's own mount — a tree the host view does
+# not open. The view keeps the placeholder as its ``es_path``, so a rule entry
+# under it stays spelled the way ES-DE's rules spell it, and answers every
+# probe there as one it cannot tell.
+_ESPATH_UNOPENED = "%ESPATH%"
+
+
+@dataclass(frozen=True, slots=True)
+class _HostLaunchView:
+    """A frontend on the host's view of the filesystem: the host's own, read as it stands.
+
+    Implements :class:`atlas.launch.LaunchView` for an ES-DE that runs
+    unsandboxed (``app_id`` ``None``): every path is the host's, so the links
+    on the way are the kernel's to follow — :meth:`atlas.machine.Machine.readlink`
+    and ``path_kind`` already walk them, as ES-DE's own ``isSymlink`` and
+    ``isRegularFile`` do (``FileSystemUtil.cpp:1018-1071`` @ v3.4.1, the
+    non-Flatpak branches being the only ones) — and a link at the path itself
+    is a hit wherever it leads, a dead one included, as ``isSymlink`` makes it. ``search_path`` is the
+    ``PATH`` the caller assumed for the frontend's process, and ``es_path`` is
+    :data:`_ESPATH_UNOPENED`. A relative path is tested against ES-DE's
+    working directory, which atlas cannot know, so it cannot be told either.
+
+    ``executable`` answers run_game.sh's test, which no frontend on the host
+    has: the lookup asks it only where the arrangement ships one
+    (:attr:`atlas.launch.LayeredFindRules.shipped`), so here it is a miss
+    that is never reached.
+    """
+
+    machine: Machine
+    home: str
+    search_path: tuple[str, ...]
+    rom_root: Callable[[], str | None]
+    es_path: str = _ESPATH_UNOPENED
+    app_id: None = None
+
+    def rom_directory(self) -> str | None:
+        return self.rom_root()
+
+    @staticmethod
+    def _unknowable(path: str) -> bool:
+        return not path.startswith("/") or _ESPATH_UNOPENED in path
+
+    def found(self, path: str) -> Probe:
+        """ES-DE's ``isRegularFile || isSymlink`` on the host's *path* — any symlink, a dead one included."""
+        if not path:
+            return PROBE_MISS
+        if self._unknowable(path):
+            return PROBE_UNKNOWN
+        if self.machine.readlink(path) is not None:
+            return PROBE_HIT
+        kind = self.machine.path_kind(path)
+        if kind == KIND_INACCESSIBLE:
+            return PROBE_UNKNOWN
+        return PROBE_HIT if kind == KIND_FILE else PROBE_MISS
+
+    def listing(self, directory: str) -> tuple[str, ...] | None:
+        """The names in the host's *directory*, hidden ones included — the lookup sorts them as ``getDirContent``
+        does (:func:`atlas.launch._matching_files`).
+        """
+        if self._unknowable(directory):
+            return None
+        return _host_listing(self.machine, directory)
+
+    def executable(self, path: str) -> Probe:
+        del path
+        return PROBE_MISS
 
 
 # One file of the override chain as it is read: where it came from and its
@@ -17735,6 +17818,9 @@ _SETTINGS_UNPARSEABLE = "unparseable"
 # layer, the custom_systems overlay and the resource-override shadow alike,
 # and the three probes below must never drift apart on it.
 _ES_SYSTEMS_XML = "es_systems.xml"
+# The find rules' file name, spelled once for the same reason: both handles
+# probe its custom layer and its resource-override shadow.
+_ES_FIND_RULES_XML = "es_find_rules.xml"
 
 
 def _catalogue_unread_caveat(system: str | None = None) -> tuple[Caveat, ...]:
@@ -18022,12 +18108,6 @@ def _entries_from(
     )
 
 
-# Why an EmuDeck entry's launch is not evaluated yet: its frontend runs on the
-# host with no --home and its find rules' bundled layer is sealed in the
-# AppImage, a lookup of its own (#84, a later part).
-_EMUDECK_LAUNCH_LATER = "EmuDeck's frontend lookup is not evaluated yet"
-
-
 def _launch_unsupported(kind: str, reason: str) -> Callable[[EmulatorSpec], LaunchResolution]:
     """``launch_for`` for entries whose launch is not evaluated: one answer, built once, for every entry."""
     answer = unsupported(kind, reason)
@@ -18037,6 +18117,136 @@ def _launch_unsupported(kind: str, reason: str) -> Callable[[EmulatorSpec], Laun
         return answer
 
     return launch_for
+
+
+_ViewT = TypeVar("_ViewT", bound=LaunchView)
+
+
+def _launch_for(
+    build: Callable[[], tuple[LaunchLookup, _ViewT]], lookups: list[tuple[LaunchLookup, _ViewT]] | None = None
+) -> Callable[[EmulatorSpec], LaunchResolution]:
+    """Each entry's launch answer, the lookup *build* makes built once — and only once an entry asks.
+
+    *lookups* is where the one lookup and its view are kept, for a caller
+    that asks them again after the entries are built.
+    """
+    held: list[tuple[LaunchLookup, _ViewT]] = [] if lookups is None else lookups
+
+    def launch_for(spec: EmulatorSpec) -> LaunchResolution:
+        if spec.kind == KIND_RETROARCH_FOREIGN_CORE:
+            return command_unsupported("the entry hands RetroArch a core file this host cannot load")
+        if not held:
+            held.append(build())
+        return held[0][0].resolve(spec.command, loads_core=spec.kind == KIND_LIBRETRO)
+
+    return launch_for
+
+
+class _RulesFile(NamedTuple):
+    """One find-rules file as read: its status, its parse (``None`` where unread or unparsed) and its text."""
+
+    status: ReadStatus
+    rules: FindRules | None
+    text: str | None
+
+
+class _FindRulesFiles:
+    """The find-rules parses one handle keeps between questions, and the layers ES-DE composes out of them.
+
+    Each parse is kept under the stat identity of the file it came from
+    (path, ``st_mtime_ns``, ``st_size``, ``st_ino``, ``st_dev`` —
+    :meth:`atlas.machine.RealMachine.file_stamp`) and reused only while the
+    file still carries it: every lookup stats the file, a changed or replaced
+    one — a Flatpak update, whose files all carry mtime 0, swaps the inode; an
+    AppImage replaced by a newer download — is read and parsed again, and one
+    that is gone, or cannot be stat'ed, is read the ordinary way, so it
+    answers missing or unreadable rather than what it held. A machine that
+    cannot stamp — a fixture's files do not change underneath a handle —
+    reads and parses every time.
+    """
+
+    def __init__(self, machine: Machine) -> None:
+        self._machine = machine
+        self._held: dict[tuple[str, str | None], tuple[FileStamp, _RulesFile]] = {}
+
+    def _stamp(self, path: str) -> FileStamp | None:
+        machine = self._machine
+        return machine.file_stamp(path) if isinstance(machine, StampingMachine) else None
+
+    def _kept(self, key: tuple[str, str | None], stamp: FileStamp | None) -> _RulesFile | None:
+        held = self._held.get(key)
+        return held[1] if stamp is not None and held is not None and held[0] == stamp else None
+
+    def _keep(self, key: tuple[str, str | None], stamp: FileStamp | None, read: _RulesFile) -> _RulesFile:
+        if stamp is not None and read.status == READ_OK:
+            self._held[key] = (stamp, read)
+        else:
+            self._held.pop(key, None)
+        return read
+
+    def read(self, path: str) -> _RulesFile:
+        """One find-rules file on disk."""
+        key = (path, None)
+        stamp = self._stamp(path)
+        kept = self._kept(key, stamp)
+        if kept is not None:
+            return kept
+        result = self._machine.read_text(path)
+        if result.text is None:
+            return self._keep(key, stamp, _RulesFile(result.status, None, None))
+        return self._keep(key, stamp, _RulesFile(READ_OK, parse_find_rules(result.text), result.text))
+
+    def in_appimage(self, appimage: str, inner_path: str) -> FindRules | None:
+        """One find-rules file inside an AppImage, kept under the image's own stamp — ``None`` short of a parse."""
+        key = (appimage, inner_path)
+        stamp = self._stamp(appimage)
+        kept = self._kept(key, stamp)
+        if kept is not None:
+            return kept.rules
+        result = self._machine.read_appimage_text(appimage, inner_path)
+        if result.text is None:
+            self._held.pop(key, None)
+            return None
+        return self._keep(key, stamp, _RulesFile(READ_OK, parse_find_rules(result.text), None)).rules
+
+    def layered(
+        self,
+        custom: _RulesFile,
+        custom_path: str,
+        shadow_path: str,
+        bundled: Callable[[], FindRules | None],
+        shipped: FindRules | None = None,
+    ) -> LayeredFindRules:
+        """Both layers as ES-DE loads them: *custom* over the bundled layer, which the shadow replaces where one is.
+
+        The custom file is taken where it exists, and one that exists and
+        cannot be read or parsed is skipped the way ES-DE skips it
+        (SystemData.cpp:97-110 @ v3.4.1). The bundled layer is the resource
+        override at *shadow_path* where one exists (``exists()`` follows links
+        and answers false on an error, ResourceManager.cpp:34-37,
+        FileSystemUtil.cpp:970-984) and what *bundled* reads otherwise, which
+        is then not read at all. *shipped* is the file the arrangement's own
+        direct start reads, where it has one.
+        """
+        rules = NO_FIND_RULES
+        custom_unreadable: str | None = None
+        if custom.status != READ_MISSING:
+            if custom.rules is None:
+                custom_unreadable = custom_path
+            else:
+                rules = custom.rules
+        if self._machine.path_kind(shadow_path) in (KIND_FILE, KIND_DIRECTORY):
+            layer = self.read(shadow_path).rules
+        else:
+            layer = bundled()
+        return LayeredFindRules(
+            merge_find_rules((rules, layer or NO_FIND_RULES)),
+            frozenset(rules.emulators),
+            frozenset(rules.cores),
+            layer is not None,
+            custom_unreadable,
+            shipped,
+        )
 
 
 def _own_caveats(spec: EmulatorSpec) -> tuple[Caveat, ...]:
@@ -19645,8 +19855,10 @@ class _CatalogueQueries:
         or a command atlas does not take apart — shell syntax beyond plain
         words, an ``env`` option, a ``.desktop`` file, an entry ES-DE itself
         refuses, an ``%INJECT%`` file it cannot read or one that injects
-        itself. RetroDECK takes its commands apart; EmuDeck's entries are not
-        evaluated yet, and a bare RetroArch has no frontend catalogue at all.
+        itself. RetroDECK takes its commands apart; EmuDeck's entries carry the
+        frontend's lookup and its commands are not taken apart yet
+        (``launch-resolution-unsupported`` naming the installation), and a bare
+        RetroArch has no frontend catalogue at all.
         """
         if not os.path.isabs(content_path):
             raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
@@ -19800,7 +20012,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     keeps is the parse of ES-DE's find rules, and only under the stat identity
     the file was read at: an answer that evaluates its entries' launch stats
     each find-rules file it consults, and a changed one is read again
-    (:meth:`_parsed_find_rules`).
+    (:class:`_FindRulesFiles`).
     """
 
     kind = "retrodeck"
@@ -19814,8 +20026,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # as not set up (not-set-up), not as one that went away.
         self._detected_by_deploy = detected_by_deploy
         # The one parse this handle keeps between questions: each find-rules
-        # file's, under the stat stamp it was read at (_parsed_find_rules).
-        self._find_rules_parsed: dict[str, tuple[FileStamp, FindRules | None]] = {}
+        # file's, under the stat stamp it was read at.
+        self._find_rules_files = _FindRulesFiles(machine)
 
     def _marker_path(self) -> str:
         return os.path.join(self._home, RETRODECK_JSON_SUFFIX)
@@ -20352,8 +20564,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     # the custom layer (SystemData.cpp:46-51) and the per-file resource
     # override that shadows the shipped file (getResourcePath,
     # ResourceManager.cpp:34-37).
-    _FIND_RULES_CUSTOM_SUFFIX = os.path.join("ES-DE", "custom_systems", "es_find_rules.xml")
-    _FIND_RULES_SHADOW_SUFFIX = os.path.join("ES-DE", "resources", "systems", "linux", "es_find_rules.xml")
+    _FIND_RULES_CUSTOM_SUFFIX = os.path.join("ES-DE", "custom_systems", _ES_FIND_RULES_XML)
+    _FIND_RULES_SHADOW_SUFFIX = os.path.join("ES-DE", "resources", "systems", "linux", _ES_FIND_RULES_XML)
     # %ESPATH%: the directory of the binary component_launcher.sh:10 execs.
     _ESDE_BINARY_DIR = "/app/retrodeck/components/es-de/bin"
     # The ES-DE build the launch lookup mirrors: RetroDECK's fork at this tag,
@@ -20397,64 +20609,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _find_rules(self) -> LayeredFindRules:
         """Both find-rules layers as ES-DE loads them, each file stat'ed (and read where it changed) once.
 
-        The custom file is taken where it exists, and one that exists and
-        cannot be read or parsed is skipped the way ES-DE skips it
-        (SystemData.cpp:97-110). The bundled layer is the resource override
-        where one exists (``exists()`` follows links and answers false on an
-        error, ResourceManager.cpp:34-37, FileSystemUtil.cpp:970-984) and the
-        shipped file otherwise. The shipped file is read either way, because
-        it is what run_game.sh reads.
+        The bundled layer is the resource override where one exists and the
+        shipped file otherwise (:meth:`_FindRulesFiles.layered`). The shipped
+        file is read either way, because it is what run_game.sh reads.
         """
+        files = self._find_rules_files
         custom_path = os.path.join(self._esde_config_home(), self._FIND_RULES_CUSTOM_SUFFIX)
-        custom = NO_FIND_RULES
-        custom_unreadable: str | None = None
-        status, parsed = self._parsed_find_rules(custom_path)
-        if status != READ_MISSING:
-            if parsed is None:
-                custom_unreadable = custom_path
-            else:
-                custom = parsed
+        custom = files.read(custom_path)
         shipped_path = self._sandbox().bundled(self._ESDE_FIND_RULES_SANDBOX)
-        shipped = self._parsed_find_rules(shipped_path)[1] if shipped_path is not None else None
+        shipped = files.read(shipped_path).rules if shipped_path is not None else None
         shadow_path = os.path.join(self._esde_config_home(), self._FIND_RULES_SHADOW_SUFFIX)
-        bundled = shipped
-        if self._machine.path_kind(shadow_path) in (KIND_FILE, KIND_DIRECTORY):
-            bundled = self._parsed_find_rules(shadow_path)[1]
-        return LayeredFindRules(
-            merge_find_rules((custom, bundled or NO_FIND_RULES)),
-            frozenset(custom.emulators),
-            frozenset(custom.cores),
-            bundled is not None,
-            custom_unreadable,
-            shipped,
-        )
-
-    def _parsed_find_rules(self, path: str) -> tuple[ReadStatus, FindRules | None]:
-        """One find-rules file's read status and parse — ``None`` where it was not read or did not parse.
-
-        The parse is kept on this handle under the file's stat identity (path,
-        ``st_mtime_ns``, ``st_size``, ``st_ino``, ``st_dev`` —
-        :meth:`atlas.machine.RealMachine.file_stamp`) and reused only while the
-        file still carries it: every lookup stats the file, a changed or
-        replaced one — a Flatpak update, whose files all carry mtime 0, swaps
-        the inode — is read and parsed again, and one that is gone, or cannot
-        be stat'ed, is read the ordinary way, so it answers missing or
-        unreadable rather than what it held. A machine that cannot stamp — a
-        fixture's files do not change underneath a handle — reads and parses
-        every time.
-        """
-        stamp = self._machine.file_stamp(path) if isinstance(self._machine, StampingMachine) else None
-        held = self._find_rules_parsed.get(path)
-        if stamp is not None and held is not None and held[0] == stamp:
-            return READ_OK, held[1]
-        result = self._machine.read_text(path)
-        if result.text is None:
-            self._find_rules_parsed.pop(path, None)
-            return result.status, None
-        parsed = parse_find_rules(result.text)
-        if stamp is not None:
-            self._find_rules_parsed[path] = (stamp, parsed)
-        return READ_OK, parsed
+        return files.layered(custom, custom_path, shadow_path, lambda: shipped, shipped)
 
     def _launch_view(self) -> _SandboxLaunchView:
         """The frontend's sandbox as the launch lookup reads it — the deploy resolved once, each file it needs read
@@ -20509,22 +20674,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
     def _launch_for(
         self, lookups: "list[tuple[LaunchLookup, _SandboxLaunchView]] | None" = None
     ) -> Callable[[EmulatorSpec], LaunchResolution]:
-        """Each entry's launch answer, the find rules and the sandbox read once — and only once an entry asks.
+        """Each entry's launch answer, the find rules and the sandbox read once — and only once an entry asks."""
+        return _launch_for(self._lookup, lookups)
 
-        *lookups* is where the one lookup and its view are kept, for a caller
-        that asks them again after the entries are built.
-        """
-        held: list[tuple[LaunchLookup, _SandboxLaunchView]] = [] if lookups is None else lookups
-
-        def launch_for(spec: EmulatorSpec) -> LaunchResolution:
-            if spec.kind == KIND_RETROARCH_FOREIGN_CORE:
-                return command_unsupported("the entry hands RetroArch a core file this host cannot load")
-            if not held:
-                view = self._launch_view()
-                held.append((LaunchLookup(self._find_rules(), view), view))
-            return held[0][0].resolve(spec.command, loads_core=spec.kind == KIND_LIBRETRO)
-
-        return launch_for
+    def _lookup(self) -> tuple[LaunchLookup, _SandboxLaunchView]:
+        view = self._launch_view()
+        return LaunchLookup(self._find_rules(), view), view
 
     def _rom_directory(self) -> tuple[str | None, str | None]:
         """The configured ``ROMDirectory``, and the status that stopped the reading.
@@ -21857,6 +22012,9 @@ class _EsdeSnapshot:
     # (issue #133) can resolve the cores without opening the file a second
     # time inside one query.
     companion_text: str | None = None
+    # settings.sh as the same query read it, for the launch lookup's reading
+    # of what EmuDeck's launcher would rewrite (its toolsPath).
+    settings: Mapping[str, str] = field(default_factory=dict)
 
 
 class EmuDeck(_FirmwareQueries, _CatalogueQueries):
@@ -21878,10 +22036,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ``~/ES-DE`` — the application data directory ES-DE resolves when launched
     with no ``--home`` and no ``ESDE_APPDATA_DIR``, which is how EmuDeck's
     launcher runs it (``tools/launchers/es-de/es-de.sh:5``; ES-DE v3.4.1
-    ``FileSystemUtil.cpp:259-285``). The catalogue answers read those files;
-    what stays out of reach is the **bundled** ``es_systems.xml``, which the
-    AppImage embeds (ES-DE ``INSTALL.md`` v3.4.1:1470) — see
-    :meth:`_read_esde_catalogue`.
+    ``FileSystemUtil.cpp:259-285``). The catalogue answers read those files,
+    and the **bundled** ``es_systems.xml`` the AppImage embeds (ES-DE
+    ``INSTALL.md`` v3.4.1:1470) where the runtime can open the image — see
+    :meth:`_read_esde_catalogue`. Each entry's launch answer is ES-DE's own
+    lookup run on the host, over the find rules laid out the same way and the
+    ``PATH`` EmuDeck's launcher hands the frontend — see :meth:`_lookup`;
+    taking an EmuDeck command apart is not evaluated yet.
     """
 
     kind = "emudeck"
@@ -21905,6 +22066,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     def __init__(self, home: str, machine: Machine) -> None:
         self._home = home
         self._machine = machine
+        # What this handle keeps between questions, each under the stat stamp
+        # of the file it came from: the find-rules parses, and the build
+        # stamp read out of the AppImage.
+        self._find_rules_files = _FindRulesFiles(machine)
+        self._build_held: tuple[FileStamp, AppImageStampResult] | None = None
 
     def _marker_path(self) -> str:
         return os.path.join(self._home, EMUDECK_SETTINGS_SUFFIX)
@@ -22435,6 +22601,159 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return None, _catalogue_invalid_finding(appimage_path, bundled.invalid)
         return bundled, None
 
+    # ── EmuDeck's launch lookup ─────────────────────────────────────────
+    # The find rules this ES-DE reads: the custom layer and the resource
+    # override under its app-data directory (SystemData.cpp:46-51,
+    # ResourceManager.cpp:34-37 @ v3.4.1), and the bundled file inside the
+    # AppImage, at the prefix the image packs it under — verified against the
+    # deployed image, beside the catalogue entry.
+    _FIND_RULES_CUSTOM_SUFFIX = os.path.join("custom_systems", _ES_FIND_RULES_XML)
+    _FIND_RULES_SHADOW_SUFFIX = os.path.join("resources", "systems", "linux", _ES_FIND_RULES_XML)
+    _ESDE_APPIMAGE_FIND_RULES_ENTRY = "usr/share/es-de/resources/systems/linux/es_find_rules.xml"
+    # The ES-DE build the launch lookup mirrors: upstream ES-DE at this
+    # release, whose FileData::findEmulator is the one atlas.launch cites.
+    ESDE_APPIMAGE_BUILD = "3.4.1"
+    # Where the AppImage carries its build, and the stamp read off it there.
+    # ``--version`` prints "ES-DE " and then PROGRAM_VERSION_STRING
+    # (es-app/src/main.cpp:398-400, es-core/src/ApplicationVersion.h:18 @
+    # v3.4.1), and the binary keeps the two literals side by side, each ended
+    # by its NUL: in the 3.4.1 AppImage's usr/bin/es-de this pattern matches
+    # exactly once, where a bare ``M.m.p`` between NULs matches three
+    # different strings.
+    ESDE_BINARY_ENTRY = "usr/bin/es-de"
+    ESDE_VERSION_STAMP = re.compile(rb"ES-DE \x00(\d+\.\d+\.\d+)\x00")
+    # The lines of the backend checkout (~/.config/EmuDeck/backend at
+    # dragoonDorise/EmuDeck@863ab69) the launch lookup's reading rests on, as
+    # (file under the checkout, line, text the line holds): the launcher that
+    # starts ES-DE and the PATH it hands it, and the rewrite of the custom find
+    # rules its start runs first. tests/test_launch_resolution_tripwire.py
+    # holds each against the checkout.
+    _EMUDECK_ESDE_SH = "functions/ToolScripts/emuDeckESDE.sh"
+    _ESDE_LAUNCHER_SH = "tools/launchers/es-de/es-de.sh"
+    _HELPER_FUNCTIONS_SH = "functions/helperFunctions.sh"
+    LAUNCH_CITATIONS: tuple[tuple[str, int, str], ...] = (
+        (_ESDE_LAUNCHER_SH, 2, '. "$HOME/.config/EmuDeck/backend/functions/all.sh"'),
+        (_ESDE_LAUNCHER_SH, 4, 'emulatorInit "esde"'),
+        (_ESDE_LAUNCHER_SH, 5, '"$ESDE_toolPath" "${@}"'),
+        ("functions/all.sh", 13, 'emudeckBackend="$HOME/.config/EmuDeck/backend/"'),
+        ("functions/all.sh", 33, 'export PATH="$emudeckBackend/tools/binaries/:$PATH"'),
+        (_HELPER_FUNCTIONS_SH, 1047, "git reset --hard && git pull"),
+        (_HELPER_FUNCTIONS_SH, 1051, 'emulatorLaunchFixes "$emuName"'),
+        (_HELPER_FUNCTIONS_SH, 1120, 'for fixesFn in "${emuName}_launch_fixes"'),
+        (_EMUDECK_ESDE_SH, 20, 'es_rulesFile="$ESDE_newConfigDirectory/custom_systems/es_find_rules.xml"'),
+        (_EMUDECK_ESDE_SH, 525, '[ -f "$es_rulesFile" ] || return 0'),
+        (_EMUDECK_ESDE_SH, 526, "grep -q 'name=\"RYUJINX\"' \"$es_rulesFile\" && return 0"),
+        (_EMUDECK_ESDE_SH, 527, "<entry>${toolsPath}/launchers/ryujinx.sh</entry>"),
+        (_EMUDECK_ESDE_SH, 533, 'local launcher="${toolsPath}/launchers/dolphin-emu.sh"'),
+        (_EMUDECK_ESDE_SH, 534, 'grep -q "<entry>${launcher}</entry>" "$es_rulesFile" && return 0'),
+        (_EMUDECK_ESDE_SH, 545, 'local launcher="${toolsPath}/launchers/cemu.sh"'),
+        (_EMUDECK_ESDE_SH, 546, 'grep -q "<entry>${launcher}</entry>" "$es_rulesFile" && return 0'),
+        (_EMUDECK_ESDE_SH, 569, "esde_launch_fixes(){"),
+    )
+    # What that rewrite makes of each rule it touches (emuDeckESDE.sh:524-553
+    # at 863ab69), as (token, launcher under toolsPath, the text whose
+    # presence in the file stops it): DOLPHIN's and CEMU's entries all become
+    # their launcher script unless the file already carries that entry, and a
+    # RYUJINX block naming its script is added where the file names none.
+    _START_REWRITES: tuple[tuple[str, str, str | None], ...] = (
+        ("DOLPHIN", "launchers/dolphin-emu.sh", None),
+        ("CEMU", "launchers/cemu.sh", None),
+        ("RYUJINX", "launchers/ryujinx.sh", 'name="RYUJINX"'),
+    )
+
+    def _launch_for(self, snapshot: _EsdeSnapshot) -> Callable[[EmulatorSpec], LaunchResolution]:
+        """Each entry's launch answer, the find rules and the host read once — and only once an entry asks."""
+        return _launch_for(lambda: self._lookup(snapshot))
+
+    def _lookup(self, snapshot: _EsdeSnapshot) -> tuple[LaunchLookup, _HostLaunchView]:
+        """ES-DE's lookup on the host: the three layers, the assumed PATH, and what the next start rewrites.
+
+        The bundled layer is read out of the AppImage only where no resource
+        override stands in for it, and whatever keeps it unread there — no
+        image, not an image, a runtime without its codec, no such entry —
+        leaves it unread: only a name the custom layer defines is answered
+        then, every other one ``find-rules-unreadable`` with
+        ``layer: bundled`` (:func:`atlas.launch._emulator_rules`).
+        """
+        files = self._find_rules_files
+        appdata = self._esde_appdata_dir()
+        custom_path = os.path.join(appdata, self._FIND_RULES_CUSTOM_SUFFIX)
+        custom = files.read(custom_path)
+        rules = files.layered(
+            custom,
+            custom_path,
+            os.path.join(appdata, self._FIND_RULES_SHADOW_SUFFIX),
+            lambda: files.in_appimage(self._esde_appimage_path(), self._ESDE_APPIMAGE_FIND_RULES_ENTRY),
+        )
+        view = _HostLaunchView(
+            machine=self._machine,
+            home=self._home,
+            search_path=frontend_search_path(self.kind, self._home),
+            rom_root=self._launch_rom_directory,
+        )
+        notes = self._start_rewrite_notes(custom.text, snapshot.settings)
+        return LaunchLookup(rules, view, path_assumed=True, token_notes=notes), view
+
+    def _launch_rom_directory(self) -> str | None:
+        """``%ROMPATH%`` in a find rule: the ROM root with one trailing separator, as ``getROMDirectory`` returns it."""
+        directory = self._esde_rom_root().directory
+        return None if directory is None else directory.rstrip("/") + "/"
+
+    def _start_rewrite_notes(self, custom_text: str | None, settings: Mapping[str, str]) -> dict[str, Caveat]:
+        """The ``find-rules-rewritten-at-start`` note per token the launcher's next start would rewrite.
+
+        EmuDeck's launcher runs ``esde_launch_fixes`` before it starts ES-DE
+        (es-de.sh:4, helperFunctions.sh:1051 and :1120 at 863ab69), and that
+        rewrites the custom find rules where the file exists — the ``-f`` test,
+        which a file atlas could not read passes too, but whose contents then
+        say nothing about whether the rewrite is due, so no note is stated
+        for it. The check is the launcher's: whether the file's text carries
+        the entry. The launcher asks ``grep -q``, a basic regular expression
+        over each line, and this asks for the substring — a deliberate
+        simplification, which can differ only where the file holds a near-miss
+        line (the BRE's ``.`` matching another character) or ``toolsPath``
+        holds characters a BRE treats as special. In the latter case ``grep``
+        misses the entry the file carries, and the next start rewrites a file
+        this reads as already carrying it — every entry of the DOLPHIN or CEMU
+        block becomes the launcher (``sed``, emuDeckESDE.sh:536 and :548) —
+        and that rewrite is not stated. The answer stays the disk's. The
+        backend's ``git pull`` before the rewrite (helperFunctions.sh:1047)
+        can change the rewrite itself; that is not modelled.
+        """
+        if custom_text is None:
+            return {}
+        tools = self._setting_path(dict(settings), "toolsPath", "tools")[0]
+        notes: dict[str, Caveat] = {}
+        for token, script, present in self._START_REWRITES:
+            entry = f"{tools}/{script}"
+            if (present or f"<entry>{entry}</entry>") in custom_text:
+                continue
+            notes[token] = Caveat(
+                CAVEAT_FIND_RULES_REWRITTEN_AT_START,
+                f"EmuDeck's launcher rewrites the custom find rules at every ES-DE start, and the next one makes "
+                f"{entry} the {token} rule, which the file does not carry yet — this answer is the file as it "
+                "stands on disk",
+                {"emulator_token": token, "entry": entry},
+            )
+        return notes
+
+    def _deployed_esde_build(self) -> str | None:
+        """The ES-DE build the AppImage states, ``None`` where it states none this read can take.
+
+        Read off ``usr/bin/es-de`` with :data:`ESDE_VERSION_STAMP`, which
+        needs the image's codec (a zstd provider, :mod:`atlas.squashfs`), and
+        kept under the AppImage's stat stamp: a replaced image is read again.
+        """
+        path = self._esde_appimage_path()
+        machine = self._machine
+        stamp = machine.file_stamp(path) if isinstance(machine, StampingMachine) else None
+        held = self._build_held
+        if stamp is not None and held is not None and held[0] == stamp:
+            return held[1].stamp
+        read = machine.read_appimage_stamp(path, self.ESDE_BINARY_ENTRY, self.ESDE_VERSION_STAMP)
+        self._build_held = None if stamp is None else (stamp, read)
+        return read.stamp
+
     def _gamelist_selections(self, system: str) -> GamelistSelections:
         """The gamelist's emulator selections — EmuDeck seeds these itself.
 
@@ -22600,6 +22919,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             (*status, *mismatch),
             exclusive,
             companion_text=companion.text,
+            settings=settings,
         )
 
     def _systems_answer(self) -> tuple[SystemsAnswer, str | None]:
@@ -22754,7 +23074,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                     self._gamelist_selections(system),
                     system_roms_dir=anchor.directory,
                     content_path=content_path,
-                    launch_for=_launch_unsupported(self.kind, _EMUDECK_LAUNCH_LATER),
+                    launch_for=self._launch_for(snapshot),
                 ),
                 (self._catalogue_provenance(snapshot.exclusive),),
                 (*snapshot.findings, *snapshot.tail, *anchor.caveats),
@@ -22811,7 +23131,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             self._gamelist_selections(system),
             system_roms_dir=anchor.directory,
             content_path=content_path,
-            launch_for=_launch_unsupported(self.kind, _EMUDECK_LAUNCH_LATER),
+            launch_for=self._launch_for(snapshot),
         )
         declaration = snapshot.by_system.get(system)
         core_reader = _EntryCoreReader(
