@@ -367,9 +367,11 @@ EMULATOR_FIELDS = {
 # layer; on the custom one it is a note beside any verdict.
 KNOWN_AVAILABILITIES = {"startable", "not-installed", "unestablished"}
 LAUNCHER_FIELDS = {"path", "replacement_command", "app_id", "rule", "entry"}
-KNOWN_LAUNCH_RULES = {"systempath", "staticpath"}
+KNOWN_LAUNCH_RULES = {"systempath", "staticpath", "command"}
 LAUNCH_REASONS = {
     "emulator-not-found": "not-installed",
+    "program-not-found": "not-installed",
+    "launcher-script-missing": "not-installed",
     "core-not-installed": "not-installed",
     "emulator-rules-missing": "unestablished",
     "core-rules-missing": "unestablished",
@@ -464,6 +466,8 @@ KNOWN_EMULATOR_KINDS = {"libretro", "standalone", "retroarch-foreign-core"}
 KNOWN_CAVEAT_CODES = {
     "core-rules-missing",
     "emulator-not-found",
+    "program-not-found",
+    "launcher-script-missing",
     "emulator-rules-missing",
     "find-rules-unreadable",
     "launch-resolution-unsupported",
@@ -471,6 +475,7 @@ KNOWN_CAVEAT_CODES = {
     "run-game-differs",
     "launch-path-assumed",
     "find-rules-rewritten-at-start",
+    "command-rewritten-at-start",
     "launch-command-shell-syntax",
     "launch-command-env-option",
     "launch-command-desktop-file",

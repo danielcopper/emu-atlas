@@ -15,6 +15,7 @@ from atlas.distribution_downloads import lookup_distribution_downloads
 from atlas.distribution_supplied import lookup_distribution_supplied
 from atlas.firmware import resolve_links
 from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPrivateUsage]
+from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN
 from atlas.machine import GLOB_INCOMPLETE, SYMLINK_HOPS, FixtureMachine, GlobResult
 from atlas.oddities import SaveGroup, SaveMode
 from tests.answers import placed, state_placed
@@ -11755,3 +11756,30 @@ class TestRoots:
         reason = atlas.Caveat(atlas.HEALTH_ISSUE_ROMS_ROOT_NOT_ABSOLUTE, "relative", {"value": "roms"})
         with pytest.raises(ValueError, match="states why"):
             atlas.InstallationRoot(atlas.ROOT_NAME_ROMS, "/roms", atlas.PROVENANCE_READ, None, (reason,))
+
+
+class TestTheSandboxOpensWhatBashOpens:
+    """The sandbox view's ``regular_file`` (D12 of #84) and its working directory (D16): read inside the sandbox."""
+
+    @staticmethod
+    def sandbox():
+        vectors = json.loads((Path(__file__).parent.parent / "vectors/machines/launch.json").read_text())
+        name = "launch-a-retrodeck-command-without-a-token-is-searched-in-the-sandbox"
+        inp = next(v for v in vectors["vectors"] if v["name"] == name)["input"]
+        handle = atlas.RetroDeck(inp["home"], fixture_machine(inp))
+        return handle._lookup()[1]  # pyright: ignore[reportPrivateUsage] - the view the handle builds
+
+    def test_a_file_through_the_sandbox_s_own_links_is_present(self):
+        assert self.sandbox().regular_file("/bin/bash") == PROBE_HIT
+
+    def test_nothing_and_a_directory_are_missing_and_a_relative_path_cannot_be_told(self):
+        view = self.sandbox()
+        assert [view.regular_file(p) for p in ("/app/bin/none", "/usr/bin", "bash")] == [
+            PROBE_MISS,
+            PROBE_MISS,
+            PROBE_UNKNOWN,
+        ]
+        assert view.executable("/bin/bash") == view.regular_file("/bin/bash")
+
+    def test_its_working_directory_is_written_nowhere(self):
+        assert self.sandbox().working_directory is None

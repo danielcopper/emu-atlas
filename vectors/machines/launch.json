@@ -1335,8 +1335,8 @@
       }
     },
     {
-      "name": "launch-a-command-without-an-emulator-token-is-not-evaluated",
-      "rationale": "A command naming no %EMULATOR_X% token takes ES-DE's second method, its first word as a path or a program on PATH; taking a command apart is a later step, so the entry is unestablished with launch-resolution-unsupported, which as a fact of the row names no installation.",
+      "name": "launch-a-command-without-an-emulator-token-is-found-by-its-first-word",
+      "rationale": "A command naming no %EMULATOR_X% token takes ES-DE's second method (FileData.cpp:2595-2649 @ v3.4.1): its first word, /bin/bash, is tested as a file in the frontend's view. Inside RetroDECK's sandbox /bin is flatpak's link into the runtime's usr/bin, and the runtime carries bin/bash, so the word is found as it stands: startable, with a launcher whose rule is command and whose entry is the word as written. No PATH directory was searched, and RetroDECK's PATH is read rather than assumed, so no note rides beside it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1381,13 +1381,102 @@
               "emulator": null,
               "declared_index": 0,
               "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/bin/bash",
+                "replacement_command": null,
+                "app_id": "net.retrodeck.retrodeck",
+                "rule": "command",
+                "entry": "/bin/bash"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "launch-a-retrodeck-command-without-a-token-is-searched-in-the-sandbox",
+      "rationale": "Two commands naming no %EMULATOR_X% token, each taken through ES-DE's second method in the sandbox's own view (FileData.cpp:2595-2649 @ v3.4.1). retroarch has no / in it, so ES-DE tests it as a file in its working directory before it searches PATH, and RetroDECK's working directory is whatever Steam or the desktop started the Flatpak in, written nowhere: launch-path-unestablished with the word, and no PATH directory is asked. /app/bin/missing-tool is a path the sandbox shows nothing at, so ES-DE joins it to each directory of the Flatpak's PATH (getPathToBinary joins even a word holding a /) and finds nothing: not-installed with program-not-found, the word as written and the two directories tried. That PATH is the one flatpak gives every sandboxed process, read rather than assumed, so no launch-path-assumed rides beside either.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.iso</extension>\n    <command label=\"Relative\">retroarch -L /app/cores/x_libretro.so %ROM%</command>\n    <command label=\"Absolute\">/app/bin/missing-tool %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu</entry>\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n            <entry>~/.config/retroarch/cores</entry>\n            <entry>/run/current-system/sw/lib/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "catalogue_query": {
+          "system": "ports"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "ports",
+              "label": "Relative",
+              "kind": "libretro",
+              "core_so": "x_libretro.so",
+              "emulator": "x_libretro.so",
+              "declared_index": 0,
+              "selection": null,
               "availability": "unestablished",
               "launcher": null,
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
-                  "data": {}
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "retroarch"
+                  }
+                }
+              ]
+            },
+            {
+              "system": "ports",
+              "label": "Absolute",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": null,
+              "declared_index": 1,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "program-not-found",
+                  "data": {
+                    "program": "/app/bin/missing-tool",
+                    "searched": [
+                      "/app/bin",
+                      "/usr/bin"
+                    ]
+                  }
                 }
               ]
             }
@@ -3555,7 +3644,7 @@
     },
     {
       "name": "launch-an-emudeck-entry-finds-the-flatpak-on-the-assumed-path",
-      "rationale": "EmuDeck's ES-DE runs on the host, so its lookup is the host's own: RetroArch's systempath entry org.libretro.RetroArch is found in /var/lib/flatpak/exports/bin, a directory of the PATH atlas assumes for the frontend's process (atlas/data/frontend_path.json — the frontend's own PATH is written nowhere on disk). The entry is startable, its launcher is the host path with no app id, the core is the first corepath directory holding swanstation_libretro.so with ~ expanded against the user's home, and launch-path-assumed names the directories searched. The bundled rules are read out of the AppImage, the first vectors to model that read; the build stamp beside them is declared too.",
+      "rationale": "EmuDeck's ES-DE runs on the host, so its lookup is the host's own: RetroArch's systempath entry org.libretro.RetroArch is found in /var/lib/flatpak/exports/bin, a directory of the PATH atlas assumes for the frontend's process (atlas/data/frontend_path.json — the frontend's own PATH is written nowhere on disk). The entry is startable, its launcher is the host path with no app id, the core is the first corepath directory holding swanstation_libretro.so with ~ expanded against the user's home, and launch-path-assumed names the directories searched and the working directory atlas assumes beside them. The bundled rules are read out of the AppImage, the first vectors to model that read; the build stamp beside them is declared too.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3639,7 +3728,8 @@
                       "/usr/bin/site_perl",
                       "/usr/bin/vendor_perl",
                       "/usr/bin/core_perl"
-                    ]
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
                   }
                 }
               ]
@@ -3658,7 +3748,7 @@
     },
     {
       "name": "launch-an-emudeck-entry-found-under-the-home-still-searched-the-assumed-path",
-      "rationale": "PCSX2's systempath entries miss on every directory of the assumed PATH, and its staticpath entry ~/Applications/pcsx2*.AppImage then finds the AppImage, ~ expanded against the user's home (no --home on EmuDeck) and the wildcard taking the first sorted match. The verdict is a staticpath hit, and it still rides launch-path-assumed: the systempath entries were tried first, over a PATH atlas assumed, and another PATH could have found something there. The system's other row is a launcher-script command with no %EMULATOR_…% token, which this evaluation does not take apart yet: launch-resolution-unsupported with no installation, a fact of that row.",
+      "rationale": "PCSX2's systempath entries miss on every directory of the assumed PATH, and its staticpath entry ~/Applications/pcsx2*.AppImage then finds the AppImage, ~ expanded against the user's home (no --home on EmuDeck) and the wildcard taking the first sorted match. The verdict is a staticpath hit, and it still rides launch-path-assumed: the systempath entries were tried first, over a PATH atlas assumed, and another PATH could have found something there. The system's other row is a launcher-script command with no %EMULATOR_…% token: ES-DE's second method tests its first word /bin/bash as a file, which this machine does not carry, then joins it to every directory of the assumed PATH and finds nothing there either — not-installed with program-not-found, the word and the directories tried, and launch-path-assumed because that search went through the PATH. The script itself is never asked, because the launch already fails at bash.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3737,7 +3827,8 @@
                       "/usr/bin/site_perl",
                       "/usr/bin/vendor_perl",
                       "/usr/bin/core_perl"
-                    ]
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
                   }
                 }
               ]
@@ -3750,13 +3841,43 @@
               "emulator": "pcsx2-qt",
               "declared_index": 1,
               "selection": null,
-              "availability": "unestablished",
+              "availability": "not-installed",
               "launcher": null,
               "core_path": null,
               "caveats": [
                 {
-                  "code": "launch-resolution-unsupported",
-                  "data": {}
+                  "code": "program-not-found",
+                  "data": {
+                    "program": "/bin/bash",
+                    "searched": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                },
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
+                  }
                 }
               ]
             }
@@ -3856,7 +3977,8 @@
                       "/usr/bin/site_perl",
                       "/usr/bin/vendor_perl",
                       "/usr/bin/core_perl"
-                    ]
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
                   }
                 }
               ]
@@ -4399,7 +4521,8 @@
                       "/usr/bin/site_perl",
                       "/usr/bin/vendor_perl",
                       "/usr/bin/core_perl"
-                    ]
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
                   }
                 },
                 {
@@ -4503,7 +4626,8 @@
                       "/usr/bin/site_perl",
                       "/usr/bin/vendor_perl",
                       "/usr/bin/core_perl"
-                    ]
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
                   }
                 }
               ]
@@ -4514,6 +4638,474 @@
               "code": "emulator-catalogue-sealed",
               "data": {
                 "system": "gc"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-launcher-script-row-turns-on-its-script",
+      "rationale": "EmuDeck's custom catalogue writes /bin/bash <script> rows. ES-DE's second method finds /bin/bash as a file on the host, so no PATH directory is searched and no launch-path-assumed rides; the launch then turns on bash opening the script, the command's second word (D11-D14 of #84). A regular file there once links are followed is present (startable, the launcher being /bin/bash with rule command); nothing there, or a link whose target is gone, is launcher-script-missing with the path as the command spells it, the verdict not-installed; a path under a directory atlas cannot stat is launch-path-unestablished. Readability and the executable bit are not checked: bash opens the file, it does not exec it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>jaguar</name><path>%ROMPATH%/jaguar</path><extension>.iso</extension>\n    <command label=\"Present\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Missing\">/bin/bash /home/deck/Emulation/tools/launchers/missing.sh %ROM%</command>\n    <command label=\"Dead link\">/bin/bash /home/deck/Emulation/tools/launchers/dead.sh %ROM%</command>\n    <command label=\"Unreadable\">/bin/bash /home/deck/locked/model-2-emulator.sh %BASENAME%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": "",
+          "/bin/bash": "",
+          "/home/deck/Emulation/tools/launchers/bigpemu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "jaguar"
+        },
+        "symlinks": {
+          "/home/deck/Emulation/tools/launchers/dead.sh": "/home/deck/gone.sh"
+        },
+        "inaccessible": [
+          "/home/deck/locked"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "jaguar",
+              "label": "Present",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "bigpemu",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/bin/bash",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "command",
+                "entry": "/bin/bash"
+              },
+              "core_path": null,
+              "caveats": []
+            },
+            {
+              "system": "jaguar",
+              "label": "Missing",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "missing",
+              "declared_index": 1,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/home/deck/Emulation/tools/launchers/missing.sh"
+                  }
+                }
+              ]
+            },
+            {
+              "system": "jaguar",
+              "label": "Dead link",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "dead",
+              "declared_index": 2,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/home/deck/Emulation/tools/launchers/dead.sh"
+                  }
+                }
+              ]
+            },
+            {
+              "system": "jaguar",
+              "label": "Unreadable",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": null,
+              "declared_index": 3,
+              "selection": null,
+              "availability": "unestablished",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-unestablished",
+                  "data": {
+                    "path": "/home/deck/locked/model-2-emulator.sh"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "jaguar"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-first-word-is-tried-in-the-backend-directory-then-on-the-assumed-path",
+      "rationale": "Two token-less rows whose first word holds no /. ES-DE tests such a word as a file in its working directory first, and EmuDeck's launcher starts it from the backend checkout (cd $emudeckBackend, helperFunctions.sh:1046 at 863ab69; ES-DE never changes that directory), so the word is tried there, then joined to each directory of the assumed PATH. PLACEHOLDER, the catalogue's own spelling for a system with no Linux emulator, is found nowhere: not-installed with program-not-found, the word and every directory tried in order, the backend directory first. tool is found in /usr/bin: startable, the launcher that directory joined to the word, with rule command and the word as entry. Both searches went through the assumed working directory and PATH, so both carry launch-path-assumed, which names the two.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>pv1000</name><path>%ROMPATH%/pv1000</path><extension>.iso</extension>\n    <command label=\"Placeholder\">PLACEHOLDER %ROM%</command>\n    <command label=\"Tool\">tool %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": "",
+          "/usr/bin/tool": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "pv1000"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "pv1000",
+              "label": "Placeholder",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": null,
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "program-not-found",
+                  "data": {
+                    "program": "PLACEHOLDER",
+                    "searched": [
+                      "/home/deck/.config/EmuDeck/backend",
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ]
+                  }
+                },
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
+                  }
+                }
+              ]
+            },
+            {
+              "system": "pv1000",
+              "label": "Tool",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": null,
+              "declared_index": 1,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/usr/bin/tool",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "command",
+                "entry": "tool"
+              },
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launch-path-assumed",
+                  "data": {
+                    "search_path": [
+                      "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                      "/usr/local/sbin",
+                      "/usr/local/bin",
+                      "/usr/bin",
+                      "/home/deck/.local/share/flatpak/exports/bin",
+                      "/var/lib/flatpak/exports/bin",
+                      "/usr/bin/site_perl",
+                      "/usr/bin/vendor_perl",
+                      "/usr/bin/core_perl"
+                    ],
+                    "working_directory": "/home/deck/.config/EmuDeck/backend"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "pv1000"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-script-row-the-next-start-rewrites-says-so",
+      "rationale": "The custom es_systems.xml holds EmuDeck's template path /run/media/mmcblk0p1/Emulation, and settings.sh sets emulationPath to the home's Emulation folder. EmuDeck's launcher replaces that literal with emulationPath across the custom catalogue at every ES-DE start (ESDE_ensureSystemsPath, emuDeckESDE.sh:555-560 at 863ab69). The answer stays the disk's: the script at the literal path is not there, so launcher-script-missing names it as written, and command-rewritten-at-start rides beside the reason with that path and the one the next start writes, which is present.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\nemulationPath=\"$HOME/Emulation\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>jaguar</name><path>%ROMPATH%/jaguar</path><extension>.iso</extension>\n    <command label=\"Template path\">/bin/bash /run/media/mmcblk0p1/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": "",
+          "/bin/bash": "",
+          "/home/deck/Emulation/tools/launchers/bigpemu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "jaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "jaguar",
+              "label": "Template path",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "bigpemu",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "not-installed",
+              "launcher": null,
+              "core_path": null,
+              "caveats": [
+                {
+                  "code": "launcher-script-missing",
+                  "data": {
+                    "path": "/run/media/mmcblk0p1/Emulation/tools/launchers/bigpemu.sh"
+                  }
+                },
+                {
+                  "code": "command-rewritten-at-start",
+                  "data": {
+                    "path": "/run/media/mmcblk0p1/Emulation/tools/launchers/bigpemu.sh",
+                    "rewritten": "/home/deck/Emulation/tools/launchers/bigpemu.sh"
+                  }
+                }
+              ]
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "jaguar"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-an-emudeck-script-row-already-at-the-template-path-is-not-rewritten",
+      "rationale": "The same template row on a machine whose emulationPath is the template path itself: ESDE_ensureSystemsPath returns before it rewrites anything (emuDeckESDE.sh:558 at 863ab69), so no command-rewritten-at-start rides. The script stands at that path, so the row is startable.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\nemulationPath=\"/run/media/mmcblk0p1/Emulation\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>jaguar</name><path>%ROMPATH%/jaguar</path><extension>.iso</extension>\n    <command label=\"Template path\">/bin/bash /run/media/mmcblk0p1/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.DolphinEmu.dolphin-emu": "",
+          "/bin/bash": "",
+          "/run/media/mmcblk0p1/Emulation/tools/launchers/bigpemu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "catalogue_query": {
+          "installation": "emudeck",
+          "system": "jaguar"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "catalogue": {
+          "entries": [
+            {
+              "system": "jaguar",
+              "label": "Template path",
+              "kind": "standalone",
+              "core_so": null,
+              "emulator": "bigpemu",
+              "declared_index": 0,
+              "selection": null,
+              "availability": "startable",
+              "launcher": {
+                "path": "/bin/bash",
+                "replacement_command": null,
+                "app_id": null,
+                "rule": "command",
+                "entry": "/bin/bash"
+              },
+              "core_path": null,
+              "caveats": []
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "jaguar"
               }
             }
           ]

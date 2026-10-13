@@ -128,6 +128,27 @@ class TestTheReaderWalksARealImage:
             squashfs.read_appimage_entry(str(impostor), CATALOGUE_ENTRY)
 
 
+class TestALinkIsReadAsTheLinkSpellsIt:
+    def test_a_link_answers_its_target_unfollowed(self):
+        assert squashfs.read_appimage_link(GZIP_IMAGE, "usr/links/absolute") == "/" + CATALOGUE_ENTRY
+        assert squashfs.read_appimage_link(GZIP_IMAGE, "usr/links/updir") == (
+            "../share/es-de/resources/systems/linux/es_systems.xml"
+        )
+        assert squashfs.read_appimage_link(GZIP_IMAGE, "usr/esde-dir") == "share/es-de"
+
+    def test_a_file_or_a_directory_is_no_link(self):
+        assert squashfs.read_appimage_link(GZIP_IMAGE, CATALOGUE_ENTRY) is None
+        assert squashfs.read_appimage_link(GZIP_IMAGE, "usr/share") is None
+
+    def test_links_on_the_way_are_followed(self):
+        via_link = "usr/esde-dir/resources/systems/linux/es_systems.xml"
+        assert squashfs.read_appimage_link(GZIP_IMAGE, via_link) is None
+
+    def test_a_missing_entry_is_its_own_refusal(self):
+        with pytest.raises(squashfs.EntryNotFound):
+            squashfs.read_appimage_link(GZIP_IMAGE, "usr/links/nope")
+
+
 class TestTheCodecGate:
     def test_the_zstd_twin_reads_where_the_codec_exists(self):
         if not _HAS_ZSTD:

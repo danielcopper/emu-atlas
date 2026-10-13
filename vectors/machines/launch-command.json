@@ -1657,6 +1657,91 @@
       }
     },
     {
+      "name": "launch-command-a-command-without-a-token-runs-its-first-word-as-found",
+      "rationale": "A command naming no %EMULATOR_X% token: ES-DE's second method finds its first word /bin/bash as a file in the sandbox (FileData.cpp:2634-2636 @ v3.4.1) and puts nothing in place of a token, so the command runs as the catalogue writes it once %ROM% is substituted — bash inside RetroDECK's sandbox with the file as its argument.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/home/deck/retrodeck\", \"saves_path\": \"/home/deck/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/home/deck/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ports</name><path>%ROMPATH%/ports</path><extension>.sh</extension>\n    <command label=\"Script\">/bin/bash %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"MAME\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/mame/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/xemu/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RPCS3\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/rpcs3/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"OS-SHELL\">\n        <rule type=\"systempath\">\n            <entry>bash</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"EMPTYPIPE\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/xemu/component_launcher.sh|</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"BLANKPIPE\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/xemu/component_launcher.sh|   </entry>\n        </rule>\n    </emulator>\n    <emulator name=\"MISSING\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/missing/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/component_version": "retrodeck-main-20260926-172324\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/runtime/org.kde.Platform/x86_64/6.11/active/files/bin/bash": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/mame/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/xemu/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/rpcs3/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/cores/mgba_libretro.so": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/cores/mame_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/retrodeck/saves",
+          "/home/deck/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/cores": "/app/retrodeck/components/retroarch/cores"
+        },
+        "launch_command_query": {
+          "system": "ports",
+          "content_path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs/ports/Game.sh"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/home/deck/retrodeck",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "ports",
+            "label": "Script",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": null,
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/bin/bash",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "command",
+              "entry": "/bin/bash"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": {
+            "program": {
+              "variant": "flatpak",
+              "app_id": "net.retrodeck.retrodeck",
+              "command": "/bin/bash",
+              "path": null
+            },
+            "arguments": [
+              "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs/ports/Game.sh"
+            ],
+            "environment": [],
+            "working_folder": null,
+            "injections": []
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
       "name": "launch-command-an-entry-that-is-not-startable-has-no-command",
       "rationale": "The find rules name nothing that is there: the entry is not-installed with its own reason, and there is no command.",
       "input": {
@@ -3780,7 +3865,8 @@
                     "/usr/bin/site_perl",
                     "/usr/bin/vendor_perl",
                     "/usr/bin/core_perl"
-                  ]
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
                 }
               }
             ]
