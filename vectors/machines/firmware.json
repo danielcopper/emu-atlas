@@ -1832,7 +1832,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -2740,7 +2741,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -3608,7 +3610,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -3905,7 +3908,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -5319,7 +5323,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -5652,7 +5657,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -11059,7 +11065,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -21015,7 +21022,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -21180,7 +21188,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -21516,7 +21525,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -21681,7 +21691,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -21900,7 +21911,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -22065,7 +22077,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -22682,7 +22695,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -23794,7 +23808,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -24010,7 +24025,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -24234,7 +24250,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -24753,7 +24770,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -25113,7 +25131,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -25348,7 +25367,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -25535,7 +25555,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -25562,7 +25583,7 @@
     },
     {
       "name": "firmware-swanstation-a-directory-that-will-not-list-leaves-two-regions-unstated",
-      "rationale": "The one way to a partial group under a content check. One region's named file is there and of a size the core accepts, so that region is settled without any directory being read; what the other two would find is a question the failed listing did not answer, so they get no option at all rather than one claiming an absence. The statement about which option a disc selects therefore names only the region the group carries, and the incomplete-scan statement beside it carries every region the listing left open.",
+      "rationale": "The one way to a partial group under a content check. One region's named file is there and of a size the core accepts, so that region is settled without any directory being read; what the other two would find is a question the failed listing did not answer, so they get no option at all rather than one claiming an absence. The statement about which option a disc selects therefore carries the region the group holds in `regions` and the two it states nothing for in `unstated`, and the incomplete-scan statement beside it carries every region the listing left open.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -25715,6 +25736,10 @@
                     "dir": "/home/deck/.config/retroarch/system",
                     "regions": [
                       "ntsc-u"
+                    ],
+                    "unstated": [
+                      "ntsc-j",
+                      "pal"
                     ]
                   }
                 },
@@ -25742,7 +25767,7 @@
     },
     {
       "name": "firmware-swanstation-a-name-that-climbs-out-over-an-empty-root-leaves-its-region-without-an-option",
-      "rationale": "Both halves of one region's route yield nothing: a configured name that would leave the firmware root is refused before anything is opened, so there is no destination to keep, and the settled search over an empty directory finds nothing to pick. The other two regions keep their named defaults as missing options. The refusal is the one reason that names no region — it names the key and the value — so the statement about which option a disc selects carries only the two regions the group holds and names the third in its sentence, and the empty-directory statement carries every region the search was asked for.",
+      "rationale": "Both halves of one region's route yield nothing: a configured name that would leave the firmware root is refused before anything is opened, so there is no destination to keep, and the settled search over an empty directory finds nothing to pick. The other two regions keep their named defaults as missing options. The refusal is the one reason that names no region — it names the key and the value — so the statement about which option a disc selects carries the two regions the group holds in `regions` and the third in `unstated`, and the empty-directory statement carries every region the search was asked for.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -25911,6 +25936,9 @@
                     "regions": [
                       "ntsc-j",
                       "pal"
+                    ],
+                    "unstated": [
+                      "ntsc-u"
                     ]
                   }
                 },
@@ -26220,7 +26248,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -26524,7 +26553,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -26762,7 +26792,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -27093,7 +27124,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -27403,7 +27435,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -27709,7 +27742,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -27954,7 +27988,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {
@@ -28260,7 +28295,8 @@
                       "ntsc-j",
                       "ntsc-u",
                       "pal"
-                    ]
+                    ],
+                    "unstated": []
                   }
                 },
                 {

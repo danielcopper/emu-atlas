@@ -1261,22 +1261,24 @@ that code name several and a client must not have to test the type first. The sa
 `per-game-build-layer-unread.key`, `core-multi-option.options`, `core-generation-mismatch.options`,
 `core-mode-unestablished.members`, `core-options-unaudited`'s `added` and `removed`, `unverified-version.missing` and
 `patch-formats-unestablished.formats`. The firmware side spells `regions` (on `firmware-path-names-no-file`,
-`firmware-search-unverified` and `core-mode-unestablished`), `firmware-declaration-unread.declared`,
-`firmware-directory-holds-no-image.paths`, `firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`,
-`system-not-in-catalogue` and `system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on
-both `core-without-systemname` and `system-assignment-derived`. Order is contractual: it is the order the answer states,
-and two caveats naming the same names in different orders are two statements.
+`firmware-search-unverified` and `core-mode-unestablished`), `core-mode-unestablished.unstated`,
+`firmware-declaration-unread.declared`, `firmware-directory-holds-no-image.paths`,
+`firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`, `system-not-in-catalogue` and
+`system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on both `core-without-systemname`
+and `system-assignment-derived`. Order is contractual: it is the order the answer states, and two caveats naming the
+same names in different orders are two statements.
 
 An empty list and an absent key are different answers, and which a pair gives is fixed. `[]` says this answer states no
 names under that key; whether none exist, none were read, or a listing failed is the code's business and the message's,
 not the empty array's. Read off the emitters, and measured wherever the corpus reaches it: the pairs always stated and
 carrying `[]` when they hold nothing are `file-set-spans-roots.files`, `system-assignment-derived.database`,
-`core-without-systemname.database` and `core-options-unaudited.removed`; the ones present only when they have something
-to say, and simply absent otherwise, are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`,
-`unverified-version.missing` and the per-user `skipped`, `unestablished` and `build`. `per-game-layer-unread.files` is
-neither, because that code has four emulators' emitters and they do not agree: MAME's states it, `[]` there when only a
-failed listing is left to state, and states no `token`, while the DuckStation, PCSX2 and Dolphin emitters state `token`,
-`dir` and `key` and no `files`. Test for the key before reading it.
+`core-without-systemname.database`, `core-options-unaudited.removed` and `core-mode-unestablished.unstated` wherever it
+explains a core's firmware group; the ones present only when they have something to say, and simply absent otherwise,
+are `core-mode-unestablished.members`, `per-game-layer-unread.unlistable`, `unverified-version.missing` and the per-user
+`skipped`, `unestablished` and `build`. `per-game-layer-unread.files` is neither, because that code has four emulators'
+emitters and they do not agree: MAME's states it, `[]` there when only a failed listing is left to state, and states no
+`token`, while the DuckStation, PCSX2 and Dolphin emitters state `token`, `dir` and `key` and no `files`. Test for the
+key before reading it.
 
 A key a client **branches** on is a value from a closed set, never a sentence. Five of them are set out below; the two
 others the constructor closes — `firmware-search-candidates`'s `readings` and `system-firmware-world-knowledge`'s
@@ -1304,7 +1306,7 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `first-listed-user-opened`            | the configuration records no user the listing holds, and the emulator opens the smallest listed id itself                | —                          |
 | `first-user-created`                  | the listing holds no user, and the emulator creates the first one at start                                               | —                          |
 | `emulator-build-unestablished`        | which rule picks the user turns on the emulator's build, and the build here is not one atlas reads                       | `build`                    |
-| `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | — [^rd]                    |
+| `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | `unstated`[^rd]            |
 | `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                                                                | —                          |
 | `slot-holds-agp-device`               | the slot's GBA cartridge adapter reads a `.sav` this host could not examine, so whether it holds a save is unestablished | `slot`                     |
 | `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                                                  | `slot`, `value`            |
@@ -1334,7 +1336,10 @@ in `message`, and what it embedded is a key of its own (named in the third colum
 | `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal                                       | `members`                  |
 
 [^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
-    lifted out of the sentence.
+    lifted out of the sentence. `unstated` is the one that was: where the caveat explains a core's firmware group, it
+    names the regions of the core's route that group carries no option for, in the route's order, and is `[]` where the
+    group states every region; the sentence still names them. The DuckStation ranking also states this reason, naming
+    the regions its candidates span, so no region is unstated there and it carries no `unstated`.
 
 Five keys ride the sixteen per-user reasons independently of which one it is, so read them by presence rather than by
 reason: `users` is always there and names the users whose trees the per-user groups point at — where none was found it
@@ -3363,16 +3368,18 @@ group = core.requirements[-1]
 Two regions whose launches open the same file under the same reading are **one** option carrying both, which is what a
 search find usually is: the directory answers every region it was asked about. Where the region option pins a region
 instead, one launch is every launch and the entry is a single unconditional requirement with no `regions` and no
-`core-mode-unestablished` beside it. A region has **no option** exactly when both halves of its route yielded nothing:
-the named path gave no destination — a configured name that would climb out of the firmware root is refused, and the
-refusal names the key and the value — and the search did not answer for it either, because files of an accepted size
-were not hashed (`firmware-search-unverified`) or the directory would not list (`firmware-scan-incomplete`), each naming
-the regions whose answer rested on that read. Either half alone still leaves an option: a region whose named file is
-absent and whose settled search found nothing keeps the name the core opens, with `firmware-path-names-no-file` saying
-the directory holds no image it would take; and a region whose name was refused takes the search's find where there is
-one. `core-mode-unestablished` names only the regions the group actually carries an option for, and its sentence names
-the rest — so where no option was reached at all there is no group and no statement about which of them a disc selects.
-The readings behind all of it, and behind both Beetle PSX builds, are in
+`core-mode-unestablished` beside it. A region has **no option** in exactly two cases. The search could not settle for it
+— files of an accepted size were not hashed (`firmware-search-unverified`) or the directory would not list
+(`firmware-scan-incomplete`), each naming the regions whose answer rested on that read — and its named file does not
+boot: stating the named path as missing would claim an absence over files nobody read. Or its configured name is refused
+— a name that would climb out of the firmware root, the refusal naming the key and the value — and the search finds
+nothing, so there is no destination to keep. Every other region keeps an option: one whose named file is absent and
+whose settled search found nothing keeps the name the core opens, with `firmware-path-names-no-file` saying the
+directory holds no image it would take; and one whose name was refused takes the search's find where there is one.
+`core-mode-unestablished` names in `regions` only the regions the group actually carries an option for, and in
+`unstated` the rest, in the route's order — so a client sees a region the group never answered without collecting it
+from the caveats beside it, and where no option was reached at all there is no group and no statement about which of
+them a disc selects. The readings behind all of it, and behind both Beetle PSX builds, are in
 [how a core locates firmware](research/core-firmware-locating.md).
 
 **Beetle PSX is the other shape, and it is `by-name` with names of its own.** Its deployed `.info` declares five images
@@ -3852,8 +3859,8 @@ search — the directory asked for, and the places the walk stopped short at, as
 
 The firmware caveats spell their multi-valued keys as JSON arrays, the same rule the save side follows (see
 [The values inside `data`](#the-values-inside-data)): `regions` on `firmware-path-names-no-file`,
-`firmware-search-unverified` and the region-conditional `core-mode-unestablished`; `declared` on
-`firmware-declaration-unread`; `paths` on `firmware-directory-holds-no-image`; `unreadable` on
+`firmware-search-unverified` and the region-conditional `core-mode-unestablished`, which carries `unstated` beside it;
+`declared` on `firmware-declaration-unread`; `paths` on `firmware-directory-holds-no-image`; `unreadable` on
 `firmware-scan-incomplete`; `files` on `core-without-systemname`, `system-not-in-catalogue` and
 `system-assignment-derived`; `cores` on `system-assignment-may-hide-cores`; and `database` on `core-without-systemname`
 and `system-assignment-derived`, which carries the systems atlas parsed out of the `.info` rather than that field's own

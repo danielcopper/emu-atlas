@@ -8545,16 +8545,20 @@ def _undecided_region_caveat(
 
     ``regions`` is what the group BELOW actually carries an option for, not
     every region the option could pin. The two part where a region reached no
-    answer — a directory of files nobody hashed, a listing that failed — and a
-    caveat explaining a group must not name a region the group says nothing
-    about. Those regions are named in the sentence, and the reason is whichever
-    caveat rides beside this one — which is not one code and does not always
-    carry a region: :data:`CAVEAT_FIRMWARE_SEARCH_UNVERIFIED` where nobody was
-    asked to read the bytes and :data:`CAVEAT_FIRMWARE_SCAN_INCOMPLETE` where
-    the directory would not list, both naming the launches they speak for; and
-    the refusal :func:`destination_under` answered with where the configured
-    name would leave the firmware root, which names the key and the value
-    instead, because what went wrong there is the name rather than a region.
+    answer — a directory of files nobody hashed, a listing that failed, a
+    configured name refused while the search found nothing — and ``regions``
+    must not name a region the group says nothing about. Those regions are
+    ``unstated`` instead, in the route's order, and an empty list where the
+    group states every region: a client reads them off the data rather than out
+    of the sentence, which names them too. Why each one reached no answer is
+    whichever caveat rides beside this one — which is not one code and does not
+    always carry a region: :data:`CAVEAT_FIRMWARE_SEARCH_UNVERIFIED` where
+    nobody was asked to read the bytes and
+    :data:`CAVEAT_FIRMWARE_SCAN_INCOMPLETE` where the directory would not list,
+    both naming the launches they speak for; and the refusal
+    :func:`destination_under` answered with where the configured name would
+    leave the firmware root, which names the key and the value instead, because
+    what went wrong there is the name rather than a region.
 
     It rides only where there IS a group, which is also why a pinned region
     never reaches it: a pinned region is one unconditional requirement, and no
@@ -8566,8 +8570,8 @@ def _undecided_region_caveat(
 
     *every* is every region the core's route knows, in its own order, and the
     split against what *group* carries is made here rather than at the two call
-    sites — the rule that a caveat explaining a group names only the regions the
-    group speaks for is one rule, and a second copy of it is a second answer
+    sites — the split of the route's regions into those the group speaks for and
+    those it does not is one rule, and a second copy of it is a second answer
     waiting to disagree.
     """
     carried = {region for option in group.options for region in option.regions or ()}
@@ -8589,6 +8593,7 @@ def _undecided_region_caveat(
             "reason": REASON_REGION_DECIDED_BY_DISC,
             "dir": directory,
             "regions": list(stated),
+            "unstated": list(unstated),
         },
     )
 
