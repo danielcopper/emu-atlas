@@ -3024,10 +3024,10 @@ class TestACoreThatOpensANameAndThenSearches:
         (caveat,) = [c for c in core.caveats if c.code == code]
         return caveat.data
 
-    def _regions(self, core: CoreFirmware, code: str) -> list[str]:
-        stated = self._data(core, code)["regions"]
-        assert not isinstance(stated, str)
-        return list(stated)
+    def _regions(self, core: CoreFirmware, code: str, key: str = "regions") -> list[str]:
+        named = self._data(core, code)[key]
+        assert not isinstance(named, str)
+        return list(named)
 
     # --- the named door ------------------------------------------------------
 
@@ -3308,6 +3308,40 @@ class TestACoreThatOpensANameAndThenSearches:
         incomplete = self._data(core, CAVEAT_FIRMWARE_SCAN_INCOMPLETE)
         assert incomplete["dir"] == BIOS_DIR
         assert self._regions(core, CAVEAT_FIRMWARE_SCAN_INCOMPLETE) == ["ntsc-j", "pal"]
+
+    # --- the regions the group states nothing for ----------------------------
+    # One test per way a region reaches no option. ``unstated`` is the route's
+    # regions minus what the group carries, in the route's order, so a client
+    # never collects them from the caveats beside it or out of the sentence.
+
+    def test_a_refused_name_over_an_empty_root_leaves_its_region_unstated(self):
+        # The refusal names the key and the value, never a region, and the
+        # empty-directory statement names every region the search was asked
+        # for — neither says which region the group carries no option for.
+        machine = self._machine({}, options='swanstation_BIOS_PathNTSCU = "../escape.bin"\n')
+        core = self._core(machine, verify=True)
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED, "unstated") == ["ntsc-u"]
+
+    def test_a_listing_that_failed_leaves_its_regions_unstated(self):
+        machine = self._machine({f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE}, unlistable=True)
+        core = self._core(machine, verify=True)
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED, "unstated") == ["ntsc-j", "pal"]
+
+    def test_bytes_nobody_read_leave_their_regions_unstated(self):
+        # The named ntsc-u image is an option without a content check; the
+        # other two regions rest on a search over files nobody hashed.
+        machine = self._machine(
+            {f"{BIOS_DIR}/scph5501.bin": SWAN_US_IMAGE, f"{BIOS_DIR}/a-jp-bios": SWAN_US_IMAGE}
+        )
+        core = self._core(machine)
+        assert self._regions(core, CAVEAT_FIRMWARE_SEARCH_UNVERIFIED) == ["ntsc-j", "pal"]
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED) == ["ntsc-u"]
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED, "unstated") == ["ntsc-j", "pal"]
+
+    def test_a_group_that_states_every_region_leaves_an_empty_list(self):
+        core = self._core(self._machine({f"{BIOS_DIR}/a-us-bios": SWAN_US_IMAGE}), verify=True)
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED) == ["ntsc-j", "ntsc-u", "pal"]
+        assert self._regions(core, CAVEAT_CORE_MODE_UNESTABLISHED, "unstated") == []
 
     def test_the_disc_decides_statement_rides_no_answer_without_a_group(self):
         # It explains which of a group's options a launch needs, and with no
@@ -3635,6 +3669,15 @@ class TestACoreThatTriesSeveralSpellingsOfOneImage:
     def test_a_region_is_stated_as_undecided_because_the_disc_decides_it(self):
         core = self._core(self._machine())
         assert CAVEAT_CORE_MODE_UNESTABLISHED in self._codes(core)
+
+    def test_every_region_has_an_option_so_none_is_unstated(self):
+        # Over an empty directory a region with nothing at any spelling still
+        # names its first one, so every region has an option — and the key is
+        # stated all the same, as an empty list.
+        core = self._core(self._machine())
+        (undecided,) = [c for c in core.caveats if c.code == CAVEAT_CORE_MODE_UNESTABLISHED]
+        assert undecided.data["regions"] == ("ntsc-j", "ntsc-u", "pal")
+        assert undecided.data["unstated"] == ()
 
     # --- the declaration beside it -------------------------------------------
 

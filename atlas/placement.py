@@ -730,7 +730,9 @@ REASON_FIRST_USER_CREATED = "first-user-created"
 # both read builds compose alike are still stated.
 REASON_EMULATOR_BUILD_UNESTABLISHED = "emulator-build-unestablished"
 # Which console a launch is, and where the emulator's own root comes from.
-# ``region-decided-by-disc`` rides ``regions``, the regions found side by side.
+# ``region-decided-by-disc`` rides ``regions``, the regions found side by side;
+# where it explains a core's firmware group, ``unstated`` names the route's
+# regions that group carries no option for.
 REASON_REGION_DECIDED_BY_DISC = "region-decided-by-disc"
 REASON_DATA_ROOT_DECIDED_BY_LAUNCH = "data-root-decided-by-launch"
 # What sits in an emulated slot (Dolphin's EXI devices): ``slot`` names the
