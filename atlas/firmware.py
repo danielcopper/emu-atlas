@@ -2819,7 +2819,10 @@ class CoreFirmware:
         ``True`` wherever the question does not arise — no recorded need, or a
         core carrying its own substitute — so the only way this narrows an
         answer is on a core that really is in the state
-        :data:`SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT` names.
+        :data:`SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT` names. That ``True`` is
+        right inside :attr:`requirements_met` and too strong on its own, which
+        is why the published form, :attr:`system_firmware_met`, answers
+        ``None`` where no need was established.
 
         **A disjunction inside each needing system, a conjunction across
         them.** Every system in :attr:`system_firmware_needs` has to have one
@@ -2841,7 +2844,7 @@ class CoreFirmware:
         Where a core in this state **declares for one system** it has one
         needing system, the conjunction has one term, and its disjunction
         spans the whole declaration — which is how this read before the scope
-        was drawn. That is every such core measured so far: **61** blocks, all
+        was drawn. That is every such core measured so far: **69** blocks, all
         for one system, counted over every ``expected.firmware.cores[]`` block
         in ``vectors/machines/*.json`` whose ``system_firmware`` is
         ``cannot-run-without-firmware``, and per block the distinct ``system``
@@ -2902,6 +2905,51 @@ class CoreFirmware:
         if images and not self.refused and all(image.satisfied is False for image in images):
             return False
         return None
+
+    @property
+    def system_firmware_met(self) -> bool | None:
+        """The console-level verdict :attr:`requirements_met` folds in, where the need is
+        established: ``true`` where the system runs without firmware, this core carries
+        its own substitute, or every needing system has an image of its own; ``false`` as
+        soon as one demonstrably has none; ``null`` where what is left is unjudged, and
+        wherever the need itself is not established — a declaration that was not judged,
+        or a ``system_firmware`` of ``null`` or ``open``.
+
+        It separates the two reasons a ``false`` :attr:`requirements_met` can
+        have. Over an alternatives group a client judges by the game's own
+        region, ``false`` here says the console has no usable image of its
+        own, which holds for every region; ``true`` or ``null`` here beside a
+        ``false`` verdict says the failure lies elsewhere — in the group's
+        stated regions, or in a required file of the declaration — and leaves
+        a region no option lists unestablished.
+
+        It is a mapping over :attr:`_system_image_in_place`, never a second
+        computation: where the need is established it is that verdict, and
+        elsewhere it is ``null`` rather than the ``true`` the private verdict
+        answers there. That ``true`` means "nothing recorded narrows the
+        answer", which is right inside :attr:`requirements_met` — a system
+        nobody looked at cannot make a declaration fail — and wrong on its own,
+        because published it would read as "this system needs no image of its
+        own" about a system nobody established that for.
+
+        So the two fields relate one way only. A ``false`` here makes
+        :attr:`requirements_met` ``false``; a ``true`` here does not make it
+        ``true``, because the declaration is judged beside it. And a ``null``
+        here says nothing about it: where the need is not established this is
+        ``null`` while :attr:`requirements_met` can be ``true`` — the
+        declaration is met, and what the console needs beyond it is nobody's
+        established answer.
+
+        One limit, on a core that declares for several systems:
+        :attr:`system_firmware` is the strongest state recorded about any of
+        them (:func:`_system_firmware_state`), so beside a need or a substitute
+        a second system recorded ``open``, or recorded nowhere, goes unchecked
+        here, and a ``true`` does not speak for it. The shipped table records a
+        need for the PlayStation alone, so no answer reaches that today.
+        """
+        if self.declaration in DECLARATIONS_UNJUDGED or self.system_firmware in (None, SYSTEM_FIRMWARE_OPEN):
+            return None
+        return self._system_image_in_place
 
     @property
     def requirements_met(self) -> bool | None:
@@ -2966,10 +3014,11 @@ class CoreFirmware:
         precedences, and for the same reason: a demonstrated absence is a
         demonstration, so it lands with :attr:`unmet` ahead of anything merely
         unjudged, and an absence that is not demonstrated lands with
-        :attr:`undetermined`. Beetle PSX and SwanStation see the identical
-        five files over the identical machine, and the only thing that ever
-        separated their answers was a flag in a text file that cannot express
-        the requirement.
+        :attr:`undetermined`. That system-level verdict is published beside
+        this one as :attr:`system_firmware_met`. Beetle PSX and SwanStation see
+        the identical five files over the identical machine, and the only thing
+        that ever separated their answers was a flag in a text file that cannot
+        express the requirement.
 
         What that system-level need asks for is **one** of the images filed
         under the system that needs it, and where two systems need one it asks
@@ -2979,7 +3028,7 @@ class CoreFirmware:
         list, and mGBA is the case: it declares Game Boy boot ROMs beside its
         GBA BIOS, and a usable Game Boy dump is no answer for a Game Boy
         Advance that needs a BIOS. Where a core in this state declares for one system —
-        every core reaching this state measured so far, 61 blocks in the
+        every core reaching this state measured so far, 69 blocks in the
         vector corpus, all for one system — the conjunction has one term, its
         disjunction spans the whole declaration, and this reads as it always
         did; the counting rule behind that number and the test holding the

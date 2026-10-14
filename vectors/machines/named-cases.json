@@ -9239,6 +9239,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -9406,6 +9407,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -10015,6 +10017,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -10118,6 +10121,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -10200,6 +10204,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "core-supplies-an-alternative",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
@@ -10347,6 +10352,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "core-supplies-an-alternative",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
@@ -11151,6 +11157,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -11173,6 +11180,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -12155,6 +12163,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -13548,6 +13557,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [

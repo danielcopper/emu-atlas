@@ -49,6 +49,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -112,6 +113,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": []
@@ -174,6 +176,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -257,6 +260,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "demo_psx_libretro.so",
@@ -377,6 +381,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -473,6 +478,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -529,6 +535,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "sameboy_libretro.so",
@@ -712,6 +719,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -808,6 +816,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -922,6 +931,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -978,6 +988,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -999,6 +1010,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -1125,6 +1137,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -1195,6 +1208,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "noods_libretro.so",
@@ -1316,6 +1330,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "covered_libretro.so",
@@ -1421,6 +1436,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "skyemu_libretro.so",
@@ -1556,6 +1572,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "bluemsx_libretro.so",
@@ -1667,6 +1684,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -1911,6 +1929,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "demo_psx_libretro.so",
@@ -2020,6 +2039,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -2116,6 +2136,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -2212,6 +2233,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -2299,6 +2321,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -2396,6 +2419,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -2499,6 +2523,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -2597,6 +2622,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -2816,6 +2842,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -2921,6 +2948,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -3028,6 +3056,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -3132,6 +3161,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -3237,6 +3267,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -3327,6 +3358,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "demo_psx_libretro.so",
@@ -3445,6 +3477,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -3701,6 +3734,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -3722,6 +3756,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -3743,6 +3778,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -3980,6 +4016,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "escape_libretro.so",
@@ -4154,6 +4191,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -4254,6 +4292,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "linked_libretro.so",
@@ -4360,6 +4399,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "linked_libretro.so",
@@ -4467,6 +4507,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "linked_libretro.so",
@@ -4586,6 +4627,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "linked_libretro.so",
@@ -4698,6 +4740,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "linked_libretro.so",
@@ -4819,6 +4862,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -4915,6 +4959,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -5035,6 +5080,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -5154,6 +5200,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -5409,6 +5456,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -5834,6 +5882,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -5914,6 +5963,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6009,6 +6059,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6127,6 +6178,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6237,6 +6289,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6348,6 +6401,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6439,6 +6493,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6532,6 +6587,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6624,6 +6680,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6714,6 +6771,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6804,6 +6862,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -6899,6 +6958,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7004,6 +7064,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7104,6 +7165,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7208,6 +7270,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7303,6 +7366,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7393,6 +7457,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7490,6 +7555,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7588,6 +7654,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7686,6 +7753,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7779,6 +7847,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7883,6 +7952,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -7999,6 +8069,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8106,6 +8177,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8210,6 +8282,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8323,6 +8396,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8426,6 +8500,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8536,6 +8611,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8644,6 +8720,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -8750,6 +8827,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -9057,6 +9135,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "demo_psx_libretro.so",
@@ -9249,6 +9328,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -9330,6 +9410,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -9413,6 +9494,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -9488,6 +9570,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "geolith_libretro.so",
@@ -9593,6 +9676,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -9715,6 +9799,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -9820,6 +9905,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -9936,6 +10022,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10086,6 +10173,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10204,6 +10292,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10234,6 +10323,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10330,6 +10420,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10360,6 +10451,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10466,6 +10558,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10506,6 +10599,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -10619,6 +10713,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -10715,6 +10810,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -10820,6 +10916,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "odd_libretro.so",
@@ -10921,6 +11018,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -11154,6 +11252,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -11234,6 +11333,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "overcount_libretro.so",
@@ -11342,6 +11442,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "letterslot_libretro.so",
@@ -11450,6 +11551,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "noindex_libretro.so",
@@ -11558,6 +11660,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "emptyslot_libretro.so",
@@ -11664,6 +11767,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -11771,6 +11875,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "checksum_libretro.so",
@@ -11869,6 +11974,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "repeated_libretro.so",
@@ -11963,6 +12069,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "absolute_libretro.so",
@@ -12051,6 +12158,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "shouting_libretro.so",
@@ -12145,6 +12253,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "trailing_libretro.so",
@@ -12248,6 +12357,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -12334,6 +12444,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [
                 {
@@ -12501,6 +12612,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -12711,6 +12823,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -12926,6 +13039,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mgba_libretro.so",
@@ -13013,6 +13127,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mgba_libretro.so",
@@ -13099,6 +13214,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "fictional_libretro.so",
@@ -13249,6 +13365,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "numero_libretro.so",
@@ -13345,6 +13462,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ep128emu_core_libretro.so",
@@ -13441,6 +13559,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "vice_x128_libretro.so",
@@ -13531,6 +13650,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -13681,6 +13801,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "smsplus_libretro.so",
@@ -13803,6 +13924,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "fbneo_libretro.so",
@@ -13901,6 +14023,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ecwolf_libretro.so",
@@ -13999,6 +14122,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "scummvm_libretro.so",
@@ -14097,6 +14221,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mkxp_libretro.so",
@@ -14189,6 +14314,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_pce_libretro.so",
@@ -14304,6 +14430,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "numero_libretro.so",
@@ -14457,6 +14584,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "numero_libretro.so",
@@ -14631,6 +14759,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -14687,6 +14816,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -14828,6 +14958,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -14950,6 +15081,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -15006,6 +15138,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -15162,6 +15295,7 @@
               "locating": "unestablished",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ppsspp_libretro.so",
@@ -15254,6 +15388,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "ppsspp_libretro.so",
@@ -15346,6 +15481,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -15449,6 +15585,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -15549,6 +15686,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -15675,6 +15813,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -15767,6 +15906,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -15901,6 +16041,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16022,6 +16163,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -16107,6 +16249,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -16197,6 +16340,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -16291,6 +16435,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16387,6 +16532,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16481,6 +16627,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -16572,6 +16719,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16666,6 +16814,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16761,6 +16910,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -16845,6 +16995,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -16970,6 +17121,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -17082,6 +17234,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -17168,6 +17321,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -17298,6 +17452,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -17427,6 +17582,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -17553,6 +17709,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": null,
@@ -17690,6 +17847,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -17819,6 +17977,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": null,
@@ -17987,6 +18146,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": null,
@@ -18140,6 +18300,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -18283,6 +18444,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -18382,6 +18544,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -18484,6 +18647,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -18587,6 +18751,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "alternatives": [
@@ -18750,6 +18915,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "alternatives": [
@@ -18884,6 +19050,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "alternatives": [
@@ -19078,6 +19245,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "alternatives": [
@@ -19247,6 +19415,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "alternatives": [
@@ -19369,6 +19538,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "alternatives": [
@@ -19500,6 +19670,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "alternatives": [
@@ -19650,6 +19821,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -19758,6 +19930,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": null,
@@ -19890,6 +20063,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20014,6 +20188,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20142,6 +20317,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20270,6 +20446,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20404,6 +20581,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "alternatives": [
@@ -20569,6 +20747,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20666,6 +20845,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -20778,6 +20958,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": null,
@@ -20878,6 +21059,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -21044,6 +21226,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -21264,6 +21447,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -21294,6 +21478,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "pcsx2_libretro.so",
@@ -21381,6 +21566,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -21547,6 +21733,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -21767,6 +21954,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -21933,6 +22121,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -22157,6 +22346,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -22192,6 +22382,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "flycast_libretro.so",
@@ -22292,6 +22483,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -22335,6 +22527,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "dolphin_libretro.so",
@@ -22436,6 +22629,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "demo_psx_libretro.so",
@@ -22500,6 +22694,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "core-supplies-an-alternative",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
@@ -22564,6 +22759,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -22775,6 +22971,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "px68k_libretro.so",
@@ -22810,6 +23007,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "yabause_libretro.so",
@@ -22901,6 +23099,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -23006,6 +23205,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": null,
@@ -23144,6 +23344,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "fbneo_libretro.so",
@@ -23179,6 +23380,7 @@
               "locating": "unestablished",
               "requirements_met": false,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "geolith_libretro.so",
@@ -23449,6 +23651,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": null,
+              "system_firmware_met": null,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -23569,6 +23772,7 @@
               "locating": "unestablished",
               "requirements_met": true,
               "system_firmware": "open",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "gambatte_libretro.so",
@@ -23691,6 +23895,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -23895,6 +24100,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24107,6 +24313,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24333,6 +24540,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24479,6 +24687,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24653,6 +24862,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24852,6 +25062,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -24992,6 +25203,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -25217,6 +25429,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -25454,6 +25667,7 @@
               "locating": "by-name-then-content",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -25640,6 +25854,7 @@
               "locating": "by-name-then-content",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -25817,6 +26032,7 @@
               "locating": "by-name-then-content",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "swanstation_libretro.so",
@@ -26020,6 +26236,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -26325,6 +26542,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -26366,6 +26584,317 @@
                   "present": false,
                   "checked": null,
                   "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "reason": "region-decided-by-disc",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ],
+                    "unstated": []
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "firmware-beetle-psx-with-only-the-psp-image-fails-its-regions-and-not-its-console",
+      "rationale": "The console's own image is in place and every region the group lists still fails: psxonpsp660.bin is a verified PlayStation BIOS, so system_firmware_met is true, but Beetle PSX opens it only under an override, and without one each region's list reaches nothing. requirements_met is false for the group's stated regions alone, which is the answer a client judging a game by its region must tell from a console with no image of its own (system_firmware_met false).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 5\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\nfirmware3_desc = \"psxonpsp660.bin (PSP PS1 BIOS)\"\nfirmware3_path = \"psxonpsp660.bin\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"ps1_rom.bin (PS3 PS1 BIOS)\"\nfirmware4_path = \"ps1_rom.bin\"\nfirmware4_opt = \"true\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/psxonpsp660.bin": {
+            "md5": "c53ca5908936d412331790f4426c6c33",
+            "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX"
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "ps1_rom.bin",
+                  "path": "/home/deck/.config/retroarch/system/ps1_rom.bin",
+                  "declared": "ps1_rom.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "81bbe60ba7a3d1cea1d48c14cbcc647b",
+                    "sha1": "c40146361eb8cf670b19fdc9759190257803cab7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "psxonpsp660.bin",
+                  "path": "/home/deck/.config/retroarch/system/psxonpsp660.bin",
+                  "declared": "psxonpsp660.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "c53ca5908936d412331790f4426c6c33",
+                    "sha1": "96880d1ca92a016ff054be5159bb06fe03cb4e14",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
                   "supplied_by": null
                 },
                 {
@@ -26636,6 +27165,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -26875,6 +27405,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -27207,6 +27738,7 @@
               "locating": "by-name",
               "requirements_met": false,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_hw_libretro.so",
@@ -27514,6 +28046,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": null,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -27832,6 +28365,7 @@
               "locating": "by-name",
               "requirements_met": true,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",
@@ -28067,6 +28601,7 @@
               "locating": "by-name",
               "requirements_met": null,
               "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
               "requirements": [
                 {
                   "core_so": "mednafen_psx_libretro.so",

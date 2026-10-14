@@ -194,6 +194,7 @@ def _core(**overrides) -> Vector:
         "locating": "unestablished",
         "requirements_met": False,
         "system_firmware": None,
+        "system_firmware_met": None,
         "requirements": [_requirement()],
         "refused": [],
         "caveats": [],
@@ -1206,6 +1207,27 @@ FIRMWARE_CORE_CASES = [
                                      caveats=[{"code": "firmware-packaged-declaration",
                                                "data": {"core_so": CORE_SO}}])]),
          "requirements_met must be None for this core", id="empty-packaged-list-is-not-an-all-clear"),
+    # The console-level verdict is derived the same way: null wherever the need
+    # is not established, the system-level reading wherever it is, and on a
+    # block whose reading cannot be recomputed still never a false the verdict
+    # beside it does not fold in.
+    case(_base_firmware(cores=[_core(system_firmware_met="no")]),
+         "firmware core system_firmware_met must be true, false, or null", id="console-met-type"),
+    case(_base_firmware(cores=[_core(system_firmware_met=False)]),
+         "system_firmware_met must be None for this core", id="console-met-on-an-unrecorded-system"),
+    case(_base_firmware(cores=[_core(system_firmware="open", system_firmware_met=True)]),
+         "system_firmware_met must be None for this core", id="console-met-on-an-open-system"),
+    case(_base_firmware(cores=[_core(system_firmware="cannot-run-without-firmware",
+                                     requirements=[_requirement(need="optional")])]),
+         "system_firmware_met must be False for this core", id="console-met-is-derived"),
+    case(_base_firmware(hash_checked=True,
+                        cores=[_two_system_core(
+                            requirements=[_requirement(system_source="override", need="optional",
+                                                       found="file", present=True, identity=_identity(),
+                                                       checked="verified", satisfied=True),
+                                          _gba_requirement(need="optional")],
+                            requirements_met=True, system_firmware_met=False)]),
+         "so requirements_met must be false", id="console-met-false-is-folded-in"),
     case(_base_firmware(cores=[_core(refused={})]), "firmware core refused must be a list", id="core-refused-not-list"),
     case(_base_firmware(cores=[_core(refused=[{"declared": "x", "need": "required"}])]),
          "each refused declaration must be exactly the fields", id="refused-missing-field"),

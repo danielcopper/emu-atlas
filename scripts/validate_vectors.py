@@ -220,6 +220,7 @@ FIRMWARE_CORE_FIELDS = {
     "locating",
     "requirements_met",
     "system_firmware",
+    "system_firmware_met",
     "requirements",
     "refused",
     "caveats",
@@ -2597,7 +2598,7 @@ def _needing_system_is_on_the_wire(core: Any) -> bool:
     Nothing is skipped today. Counted over every ``expected.firmware.cores[]``
     block in ``vectors/machines/*.json`` whose ``system_firmware`` is
     ``cannot-run-without-firmware``, by the distinct ``system`` values of its
-    ``requirements[]`` and their ``alternatives[]``: 37 blocks, each resolving
+    ``requirements[]`` and their ``alternatives[]``: 69 blocks, each resolving
     to one system.
     """
     if core["system_firmware"] != "cannot-run-without-firmware":
@@ -2689,6 +2690,44 @@ def _validate_core_verdict(name: str, core: Any, met: Any) -> None:
         )
 
 
+def _validate_core_console_verdict(name: str, core: Any, met: Any) -> None:
+    """``system_firmware_met`` is derived, never asserted: recompute and compare.
+
+    ``null`` wherever the need is not established — a system nothing is
+    recorded about or recorded ``open`` — and elsewhere the system-level
+    reading :func:`_system_image_in_place` recomputes. Where
+    :func:`_needing_system_is_on_the_wire` says that reading cannot be
+    recomputed, the one-way relation still holds: a ``false`` here is a
+    ``false`` verdict, because ``requirements_met`` folds it in.
+
+    An unjudged declaration needs no term of its own here, unlike in the
+    package: by the time this runs, :func:`_validate_core_requirements` has
+    refused one that declares anything, and :func:`_validate_firmware_core`
+    has refused a ``system_firmware`` stated over no requirement — so every
+    unjudged block that reaches this has ``system_firmware`` ``null``, and the
+    first term answers it.
+    """
+    console = core["system_firmware_met"]
+    if console is not None and not isinstance(console, bool):
+        fail(f"{name}: firmware core system_firmware_met must be true, false, or null")
+    if console is False and met is not False:
+        fail(
+            f"{name}: system_firmware_met is false, so requirements_met must be false — the verdict "
+            "folds the console-level one in"
+        )
+    if core["system_firmware"] in (None, "open"):
+        expected = None
+    elif _needing_system_is_on_the_wire(core):
+        expected = _system_image_in_place(core)
+    else:
+        return
+    if console is not expected:
+        fail(
+            f"{name}: system_firmware_met must be {expected!r} for this core — null where the need is not "
+            "established, and the system-level reading wherever it is"
+        )
+
+
 def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bool) -> None:
     _require_exact(name, core, FIRMWARE_CORE_FIELDS, "each firmware core")
     _validate_core_identity(name, core)
@@ -2718,6 +2757,7 @@ def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bo
         )
     _validate_core_refusals(name, core)
     _validate_core_verdict(name, core, met)
+    _validate_core_console_verdict(name, core, met)
     _validate_caveats(name, core["caveats"])
 
 

@@ -4497,6 +4497,113 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
             UNDERSTATER_SO: SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
         }
 
+    # --- the console-level verdict, stated (#639) ----------------------------
+
+    def test_the_console_verdict_is_false_where_the_systems_image_is_demonstrably_absent(self):
+        # The answer a client judging a game by its region needs to read as
+        # "every region": no image of the system is in place at all.
+        core = self._core(self._psx_machine(), UNDERSTATER_SO)
+        assert core.system_firmware_met is False
+        assert core.requirements_met is False
+
+    def test_the_console_verdict_is_true_while_every_stated_region_fails(self):
+        # Beetle PSX over a machine whose only image is the PSP one: the
+        # console has an image of its own, and the group the core reads per
+        # region still reaches nothing. The failure is the group's, which a
+        # client must tell from the console having none.
+        core = self._core(
+            self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"}), BEETLE_PSX_SO
+        )
+        (group,) = [entry for entry in core.requirements if isinstance(entry, FirmwareAlternatives)]
+        assert group.satisfied is False
+        assert core.system_firmware_met is True
+        assert core.requirements_met is False
+
+    def test_the_console_verdict_is_true_where_every_needing_system_has_an_image(self):
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
+        core = self._core(machine, UNDERSTATER_SO)
+        assert core.system_firmware_met is True
+        assert core.requirements_met is True
+
+    def test_the_console_verdict_is_true_where_the_core_supplies_its_own(self):
+        core = self._core(self._psx_machine(), REARMED_SO)
+        assert core.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+        assert core.system_firmware_met is True
+
+    def test_the_console_verdict_is_true_where_the_system_runs_without_one(self):
+        machine = self._demo_machine()
+        context = _context(machine, system_firmware=self._recorded(VERDICT_RUNS_WITHOUT, EVIDENCE_VERIFIED))
+        core = firmware_for_core(machine, context, core_so="demo_libretro.so").cores[0]
+        assert core.system_firmware == SYSTEM_FIRMWARE_RUNS_WITHOUT
+        assert core.system_firmware_met is True
+
+    def test_the_console_verdict_is_null_where_what_is_left_is_unjudged(self):
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/scph5501.bin": "whatever"})
+        core = self._core(machine, UNDERSTATER_SO)
+        assert core.system_firmware_met is None
+        assert core.requirements_met is None
+
+    def test_the_console_verdict_is_null_over_an_open_system_beside_a_true_verdict(self):
+        # The one place the two fields read apart on purpose: the declaration
+        # is met, and whether the console needs an image beyond it is nobody's
+        # established answer — so `true` here would state what nobody checked.
+        machine = _machine(
+            {
+                f"{INFO_DIR}/kronos_libretro.info": SATURN_INFO,
+                f"{INFO_DIR}/kronos_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "kronos_libretro.so")
+        assert core.system_firmware == SYSTEM_FIRMWARE_OPEN
+        assert core.requirements_met is True
+        assert core.system_firmware_met is None
+
+    def test_the_console_verdict_is_null_over_a_system_nobody_recorded(self):
+        machine = _machine(
+            {
+                f"{INFO_DIR}/px68k_libretro.info": UNRECORDED_SYSTEM_INFO,
+                f"{INFO_DIR}/px68k_libretro.so": {"status": "invalid-text"},
+            }
+        )
+        core = self._core(machine, "px68k_libretro.so")
+        assert core.system_firmware is None
+        assert core.system_firmware_met is None
+
+    def test_the_console_verdict_is_null_over_a_declaration_that_was_not_judged(self):
+        # Held on a constructed core that states a system, so the declaration
+        # alone is what answers: no route builds that pair today, and the
+        # field must not lean on that.
+        core = CoreFirmware(
+            core_so="x_libretro.so",
+            label=None,
+            declaration=DECLARATION_UNREADABLE,
+            requirements=(),
+            caveats=(Caveat(code=CAVEAT_FIRMWARE_DECLARATION_UNREAD, message="unread", data={}),),
+            system_firmware=SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
+        )
+        assert core.requirements_met is None
+        assert core.system_firmware_met is None
+
+    def test_the_console_verdict_is_the_one_requirements_met_folds_in(self):
+        # A mapping over the private verdict, never a second computation:
+        # wherever the need is established the two are one value, and a
+        # `false` here is a `false` verdict. Only cores whose need is
+        # established are asked, so a core added to these machines later
+        # cannot fail it for being one where the two read apart on purpose.
+        machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
+        seen: set[bool | None] = set()
+        for bios_machine in (self._psx_machine(), machine):
+            for core in firmware_inventory(bios_machine, _context(bios_machine)).cores:
+                if core.declaration in DECLARATIONS_UNJUDGED or core.system_firmware in (None, SYSTEM_FIRMWARE_OPEN):
+                    continue
+                verdict = core._system_image_in_place  # pyright: ignore[reportPrivateUsage] - what it maps
+                assert core.system_firmware_met is verdict
+                if core.system_firmware_met is False:
+                    assert core.requirements_met is False
+                seen.add(core.system_firmware_met)
+        # Both values the mapping passes through, so the loop cannot go vacuous.
+        assert seen == {True, False}
+
     def _demo_machine(self) -> FixtureMachine:
         return _machine(
             {
