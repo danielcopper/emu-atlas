@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "basedpyright==1.40.1"]
+dev = ["pytest", "pytest-cov", "basedpyright==1.40.2"]
 
 [project.scripts]
 emu-atlas = "atlas.cli:main"
