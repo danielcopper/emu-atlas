@@ -24,6 +24,7 @@ import pytest
 
 from atlas.firmware import SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
 from atlas.system_firmware import (
+    CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
     EVIDENCE_DERIVED,
     EVIDENCE_LEVELS,
     EVIDENCE_OPEN,
@@ -225,10 +226,15 @@ class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:
     states it in: every ``expected.firmware.cores[]`` block in
     ``vectors/machines/*.json`` whose ``system_firmware`` is
     ``cannot-run-without-firmware``, and per block the distinct ``system``
-    values of its ``requirements[]`` and their ``alternatives[]``. The systems
-    come off the requirements here for the reason they come off them in the
-    resolver: that is where ``system_firmware_needs`` is derived from, and a
-    second derivation is a second thing to keep in step. The state is read
+    values of its ``requirements[]`` and their ``alternatives[]`` — or, for a
+    block with no requirement, the ``system`` of its
+    ``system-firmware-world-knowledge`` caveats. The systems come off the
+    requirements here for the reason they come off them in the resolver: that
+    is where ``system_firmware_needs`` is derived from, and a second derivation
+    is a second thing to keep in step. A block with none reaches the state only
+    where the emulator's own search demonstrated that no image is there, and
+    then the mark is the one serialized place the system it searched for
+    appears. The state is read
     through the core field's own constant rather than the table verdict of the
     same spelling — two vocabularies meet on that word, and only one of them is
     what a serialized core carries.
@@ -251,6 +257,14 @@ class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:
     @staticmethod
     def _systems(core: dict[str, Any]) -> list[str]:
         """The distinct systems one block declares for, alternatives flattened."""
+        if not core["requirements"]:
+            return sorted(
+                {
+                    caveat["data"]["system"]
+                    for caveat in core["caveats"]
+                    if caveat["code"] == CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE
+                }
+            )
         return sorted(
             {
                 option["system"]

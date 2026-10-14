@@ -18597,7 +18597,7 @@
     },
     {
       "name": "duckstation-a-directory-with-nothing-of-the-right-size-boots-nothing",
-      "rationale": "The search directory is there and holds only files of sizes the emulator skips before reading a byte of them. Nothing names an image either, so there is no requirement to state and the caveat carries the directory a BIOS belongs in — the same shape PCSX2's empty [Filenames] BIOS answers with, because a PlayStation starts nothing until one is there.",
+      "rationale": "The search directory is there and holds only files of sizes the emulator skips before reading a byte of them. Nothing names an image either, so there is no requirement to state and the caveat carries the directory a BIOS belongs in — the same shape PCSX2's empty [Filenames] BIOS answers with, because a PlayStation starts nothing until one is there. The listing finished and kept nothing, so the emulator's search returns nothing and the boot stops: the console-level verdict is false, and requirements_met with it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -18645,9 +18645,9 @@
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "locating": "by-name-then-content",
-              "requirements_met": null,
-              "system_firmware": null,
-              "system_firmware_met": null,
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -18673,6 +18673,13 @@
                       "pal"
                     ]
                   }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
                 }
               ]
             }
@@ -18689,6 +18696,339 @@
             {
               "code": "info-path-unresolved",
               "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-nothing-at-the-search-directory-boots-nothing",
+      "rationale": "The search directory names a path where nothing is, and every region key is empty. The emulator's listing of it comes back empty, its search returns nothing and the boot stops, so the console-level verdict is false: a PlayStation cannot start without an image and none can be found. No file is stated as a requirement, because nothing names one and a directory is not a file's destination.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[BIOS]\nSearchDirectory = /mnt/sd/retrodeck/bios/duckstation\nPathNTSCU = \nPathNTSCJ = \nPathPAL = \n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "locating": "by-name-then-content",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION",
+                    "key": "BIOS/SearchDirectory",
+                    "declared": "",
+                    "need": "required",
+                    "dir": "/mnt/sd/retrodeck/bios/duckstation",
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duckstation-a-file-in-place-of-the-search-directory-boots-nothing",
+      "rationale": "A file sits where the search directory should be, of a size the emulator accepts and with bytes its table knows. The emulator lists a directory, not a file, so its search returns nothing and the boot stops: the console-level verdict is false, exactly as with nothing at that path.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[BIOS]\nSearchDirectory = /mnt/sd/retrodeck/bios/duckstation\nPathNTSCU = \nPathNTSCJ = \nPathPAL = \n",
+          "/mnt/sd/retrodeck/bios/duckstation": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "size": 524288
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": null,
+              "emulator": "DUCKSTATION",
+              "declared_index": 0,
+              "label": "DuckStation (Legacy) (Standalone)",
+              "declaration": "packaged",
+              "locating": "by-name-then-content",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "label": "DuckStation (Legacy) (Standalone)",
+                    "token": "DUCKSTATION",
+                    "key": "BIOS/SearchDirectory",
+                    "declared": "",
+                    "need": "required",
+                    "dir": "/mnt/sd/retrodeck/bios/duckstation",
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "libretro_directory",
+                "path": "/app/cores"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "firmware-declaration-unknown",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "emudeck-duckstation-an-empty-search-under-a-dataroot-the-launch-decides-demonstrates-nothing",
+      "rationale": "EmuDeck's DuckStation AppImage with no settings.ini on either candidate, launched without XDG pinned: the DataRoot is decided by the launch's environment, so the BIOS directory searched is one of two candidates. The empty search is still stated, but the other candidate may hold the image this one lacks, so it demonstrates no absence: no system is stated and both verdicts stay null beside core-mode-unestablished.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Standalone)\">/bin/bash /home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/Applications/DuckStation.AppImage": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/saves/duckstation/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "psx",
+          "verify": true
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": null,
+              "emulator": "duckstation",
+              "declared_index": 0,
+              "label": "DuckStation (Standalone)",
+              "declaration": "packaged",
+              "locating": "by-name-then-content",
+              "requirements_met": null,
+              "system_firmware": null,
+              "system_firmware_met": null,
+              "requirements": [],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-packaged-declaration",
+                  "data": {
+                    "label": "DuckStation (Standalone)",
+                    "token": "DUCKSTATION"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "token": "DUCKSTATION",
+                    "reason": "data-root-decided-by-launch"
+                  }
+                },
+                {
+                  "code": "firmware-path-names-no-file",
+                  "data": {
+                    "label": "DuckStation (Standalone)",
+                    "token": "DUCKSTATION",
+                    "key": "BIOS/SearchDirectory",
+                    "declared": "",
+                    "need": "required",
+                    "dir": "/home/deck/.local/share/duckstation/bios",
+                    "regions": [
+                      "ntsc-u",
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "firmware-root-missing",
+              "data": {
+                "path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            },
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
             },
             {
               "code": "firmware-declaration-unknown",
@@ -19819,9 +20159,9 @@
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "locating": "by-name-then-content",
-              "requirements_met": null,
-              "system_firmware": null,
-              "system_firmware_met": null,
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -19846,6 +20186,13 @@
                       "ntsc-j",
                       "pal"
                     ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
                   }
                 }
               ]
@@ -20843,9 +21190,9 @@
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "locating": "by-name-then-content",
-              "requirements_met": null,
-              "system_firmware": null,
-              "system_firmware_met": null,
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -20883,6 +21230,13 @@
                       "ntsc-j",
                       "pal"
                     ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
                   }
                 }
               ]
@@ -23097,9 +23451,9 @@
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "locating": "by-name-then-content",
-              "requirements_met": null,
-              "system_firmware": null,
-              "system_firmware_met": null,
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -23124,6 +23478,13 @@
                       "ntsc-j",
                       "pal"
                     ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
                   }
                 }
               ]
@@ -23649,9 +24010,9 @@
               "label": "DuckStation (Legacy) (Standalone)",
               "declaration": "packaged",
               "locating": "by-name-then-content",
-              "requirements_met": null,
-              "system_firmware": null,
-              "system_firmware_met": null,
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
               "requirements": [],
               "refused": [],
               "caveats": [
@@ -23676,6 +24037,13 @@
                       "ntsc-j",
                       "pal"
                     ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
                   }
                 }
               ]

@@ -2425,16 +2425,17 @@ CoreSystemFirmware = Literal[
 ]
 
 # The system does not start without a firmware image, and this core needs one
-# of the ones it declares for that system. The state SwanStation is in over a
-# machine with no PlayStation BIOS: its five images all read ``optional``,
-# because that is what its ``.info`` says, and the system still will not boot.
+# of its own for that system. The state SwanStation is in over a machine with
+# no PlayStation BIOS: its five images all read ``optional``, because that is
+# what its ``.info`` says, and the system still will not boot.
 SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT: CoreSystemFirmware = "cannot-run-without-firmware"
-"""The system does not start without a firmware image, and this core needs one of the ones it
-declares **for that system**. It comes from the packaged table rather than from this machine, so
-it says nothing about whether an image is in place — that is ``requirements_met``, which asks
-each such system for one of the images filed under it: a Game Boy dump is no answer for a Game
-Boy Advance, and a core two such systems speak about needs one image apiece. It is one question
-per system, and this value says one system is in that state without saying how many are.
+"""The system does not start without a firmware image, and this core needs one of its own **for
+that system** — one it declares, or one its search finds. It comes from the packaged table
+rather than from this machine, so it says nothing about whether an image is in place — that is
+``requirements_met``, which asks each such system for one of the images filed under it: a Game
+Boy dump is no answer for a Game Boy Advance, and a core two such systems speak about needs one
+image apiece. It is one question per system, and this value says one system is in that state
+without saying how many are.
 """
 # The system does not start without an image, and this core carries its own
 # substitute, so its all-optional declaration is correct. PCSX ReARMed's HLE
@@ -2451,7 +2452,8 @@ on the same system may still need an image.
 SYSTEM_FIRMWARE_RUNS_WITHOUT: CoreSystemFirmware = "runs-without-firmware"
 """Somebody established that the system starts with no image present. Recorded knowledge, and
 emphatically not the same claim as ``None``: ``None`` is a system nobody has looked at, or a
-core with no requirement and so no system on this answer to state anything about.
+core with no system on this answer to state anything about — no requirement, and no search of
+its own that demonstrated an absence over an established DataRoot.
 """
 # Nobody has established which. A value, not an absence — the table records a
 # system whose cores contradict each other so that the open question is
@@ -2637,6 +2639,9 @@ class CoreFirmware:
     ``core-supplies-an-alternative`` (it needs one and this core carries its
     own substitute), ``runs-without-firmware`` (somebody established that it
     starts with none present), and ``open`` (nobody has established which).
+    A core whose own search ran to the end and kept no image declares none
+    (:attr:`absent_by_search`), and there ``cannot-run-without-firmware`` says
+    the image the system needs is demonstrably not there.
 
     :data:`CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE` is stated per *system*
     rather than per value: one mark for each system whose entry states
@@ -2663,7 +2668,9 @@ class CoreFirmware:
 
     Every id here came off a requirement of this same core
     (:attr:`FirmwareRequirement.system`), which is where the systems the table
-    was asked about came from — so the set it scopes is never empty. Out of
+    was asked about came from — so the set it scopes is never empty — or off
+    :attr:`absent_by_search`, where the scope is empty by demonstration and
+    that system's answer is ``False``. Out of
     the contract for the reason ``unread`` is: what a client acts on is the
     verdict and the mark beside it, and one fact serialized twice is one fact
     that can disagree with itself.
@@ -2718,6 +2725,31 @@ class CoreFirmware:
     the same reason ``unread`` is — the caveats already carry the paths a
     consumer acts on.
     """
+    absent_by_search: tuple[str, ...] = ()
+    """The systems this emulator's own search demonstrated to hold no image for, as system
+    ids — the one place a system reaches :attr:`system_firmware` from somewhere other than
+    :attr:`requirements`.
+
+    DuckStation with every region key empty names no file: what it boots is
+    whatever its search of one directory keeps. Where that listing finished
+    and kept nothing of a size the emulator accepts — an empty directory,
+    nothing at its path, a file in its place — the search returns nothing and
+    the boot stops (bios.cpp:403-417, system.cpp:2510-2512 and :1755-1761 at
+    stenzek/duckstation@64655818e), and there is no file to state as a
+    requirement, because a directory is not a file's destination. That holds
+    only where the DataRoot is established: where the launch decides it
+    (``core-mode-unestablished``), the searched directory is one of two
+    candidates and an empty one demonstrates nothing. So the absence is stated
+    here, under the system the card is for:
+    :func:`_system_firmware_state` asks the table about it as it asks about a
+    requirement's system, and :meth:`_system_image_for` answers ``False`` for
+    it. Empty everywhere else — a listing that stopped short, a search that
+    kept a file whose bytes were not read, a search scoped beside a named key,
+    a DataRoot the launch decides — and never beside a requirement, which
+    ``__post_init__`` refuses. Out of the contract for the reason ``unread``
+    is: ``firmware-path-names-no-file`` already states the absence and the
+    directory it was found in.
+    """
 
     def _check_no_plain_entry_is_region_scoped(self) -> None:
         """A region-scoped requirement stands only inside an alternatives group.
@@ -2771,6 +2803,11 @@ class CoreFirmware:
                 f"CoreFirmware: {SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT!r} names the systems it is about — "
                 "without them the images that would answer the need cannot be told from the ones "
                 "filed under another system"
+            )
+        if self.absent_by_search and (self.requirements or self.declaration != DECLARATION_PACKAGED):
+            raise ValueError(
+                "CoreFirmware: an absence demonstrated by a search stands only on a packaged card "
+                "with no requirement — beside a stated file it would answer for that file's system twice"
             )
         self._check_no_plain_entry_is_region_scoped()
 
@@ -2844,12 +2881,15 @@ class CoreFirmware:
         Where a core in this state **declares for one system** it has one
         needing system, the conjunction has one term, and its disjunction
         spans the whole declaration — which is how this read before the scope
-        was drawn. That is every such core measured so far: **69** blocks, all
+        was drawn. That is every such core measured so far: **76** blocks, all
         for one system, counted over every ``expected.firmware.cores[]`` block
         in ``vectors/machines/*.json`` whose ``system_firmware`` is
         ``cannot-run-without-firmware``, and per block the distinct ``system``
-        values of its ``requirements[]`` and their ``alternatives[]``. The
-        count moves with the corpus and the property does not, so the property
+        values of its ``requirements[]`` and their ``alternatives[]`` — or,
+        for a block with no requirement, the ``system`` of its
+        ``system-firmware-world-knowledge`` caveats, which is where the system
+        a search found no image for (:attr:`absent_by_search`) is serialized.
+        The count moves with the corpus and the property does not, so the property
         is the one held mechanically: a reader counting a different number
         should recount with that rule, and
         ``test_every_block_declares_for_exactly_one_system`` in
@@ -2893,6 +2933,10 @@ class CoreFirmware:
         mean deciding that, which is the guess this package does not make — and
         the safe side of the guess is the one that withholds a demonstration,
         never the one that invents it.
+
+        A system in :attr:`absent_by_search` is ``False`` with no image to
+        weigh: the emulator's own search ran to the end and kept nothing it
+        could boot, which is the absence demonstrated without a file to carry it.
         """
         images = [
             option
@@ -2902,6 +2946,8 @@ class CoreFirmware:
         ]
         if any(image.satisfied is True for image in images):
             return True
+        if system in self.absent_by_search:
+            return False
         if images and not self.refused and all(image.satisfied is False for image in images):
             return False
         return None
@@ -2975,7 +3021,12 @@ class CoreFirmware:
         nothing, while a card with no requirement established nothing — a
         probe whose switch is off, a search whose bytes were never read — so
         an empty packaged list answers ``None`` where an empty read one
-        answers ``True``.
+        answers ``True``. The one exception is a search that ran to the end
+        and kept nothing the emulator could boot
+        (:attr:`absent_by_search`): that is an absence demonstrated at the
+        console level, so it answers ``False`` through
+        :attr:`system_firmware_met` wherever the system is recorded as one that
+        cannot run without an image, and ``None`` wherever it is not.
 
         That second source is what lets this field be right where the
         declaration alone cannot be: a ``.info`` has no way to say "this
@@ -3028,7 +3079,7 @@ class CoreFirmware:
         list, and mGBA is the case: it declares Game Boy boot ROMs beside its
         GBA BIOS, and a usable Game Boy dump is no answer for a Game Boy
         Advance that needs a BIOS. Where a core in this state declares for one system —
-        every core reaching this state measured so far, 69 blocks in the
+        every core reaching this state measured so far, 76 blocks in the
         vector corpus, all for one system — the conjunction has one term, its
         disjunction spans the whole declaration, and this reads as it always
         did; the counting rule behind that number and the test holding the
@@ -3039,7 +3090,10 @@ class CoreFirmware:
         if self.declaration in DECLARATIONS_UNJUDGED:
             return None
         if self.declaration == DECLARATION_PACKAGED and not self.requirements:
-            return None
+            # Nothing established passes this line but an absence the
+            # console-level reading demonstrated: a ``True`` from it would be a
+            # system that needs nothing standing in for a card that stated nothing.
+            return False if self._system_image_in_place is False else None
         group_verdicts = [
             entry.satisfied for entry in self.requirements if isinstance(entry, FirmwareAlternatives)
         ]
@@ -5772,7 +5826,10 @@ def _system_firmware_state(
     (:attr:`FirmwareRequirement.system`, alternatives flattened) rather than
     being derived again here: a second derivation is a second thing to keep in
     step, and a core with no requirement has no system on this answer at all —
-    which is one of the ways the state is ``None``.
+    which is one of the ways the state is ``None``. The one other source is
+    :attr:`CoreFirmware.absent_by_search`, the system a search found no image
+    for: there the absence is the whole answer and no file carries its
+    system, so it is asked about as a requirement's system would be.
 
     A core can reach more than one recorded system, either by declaring files
     filed under several (mGBA declares Game Boy boot ROMs beside its GBA BIOS)
@@ -5796,6 +5853,7 @@ def _system_firmware_state(
             for entry in core.requirements
             for option in (entry.options if isinstance(entry, FirmwareAlternatives) else (entry,))
         }
+        | set(core.absent_by_search)
     )
     hits = [(system, entry) for system in systems for entry in recorded.get(system, ())]
     if not hits:
@@ -7077,7 +7135,9 @@ def _sized_files(
     matches: list[str] = []
     unreadable: list[str] = []
     for pattern in ("*", ".*"):
-        result = machine.glob(os.path.join(bios_dir, pattern))
+        # The directory is a path the emulator opens as spelled, never a
+        # pattern: a ``[`` in it must not turn the listing into a match.
+        result = machine.glob(os.path.join(_glob_escape(bios_dir), pattern))
         matches.extend(result.matches)
         unreadable.extend(result.unreadable)
     sized = ((path, machine.file_size(path)) for path in sorted(set(matches)))
@@ -7572,8 +7632,9 @@ def _duckstation_standalone_core(
     # it searched. Empty where no region fell to the search at all: then the
     # emulator reads no directory, and nothing in one is its answer.
     kept: tuple[str, ...] = ()
+    absent = False
     if searched:
-        found, search_caveats, observed, kept = _duckstation_search(
+        found, search_caveats, observed, kept, absent = _duckstation_search(
             machine,
             entry,
             card,
@@ -7606,6 +7667,10 @@ def _duckstation_standalone_core(
             requirements=requirements,
             caveats=tuple(caveats),
             claims=kept,
+            # Only over an established DataRoot: where the launch decides it,
+            # the searched directory is one of two candidates, and the other
+            # may hold the image this one lacks.
+            absent_by_search=(system,) if absent and not read.ambiguous else (),
         ),
         answer_caveats,
     )
@@ -7622,7 +7687,7 @@ def _duckstation_search(
     regions: tuple[str, ...],
     scoped: bool,
     verify: bool,
-) -> tuple[list[FirmwareRequirement], list[Caveat], list[Caveat], tuple[str, ...]]:
+) -> tuple[list[FirmwareRequirement], list[Caveat], list[Caveat], tuple[str, ...], bool]:
     """The search itself: what the directory holds, and what that establishes.
 
     The regions left to it share one answer, because the pick differs between
@@ -7647,6 +7712,16 @@ def _duckstation_search(
     was stated and whether or not ``verify`` ran: they are the set this
     emulator's own recognition runs over, so they are its entry's claim on the
     tree (:attr:`CoreFirmware.claims`) rather than files nobody asks for.
+
+    The last value says the search demonstrated an absence in this
+    directory: unscoped, the listing finished and kept nothing, so no launch
+    searching it finds an image and the boot stops (bios.cpp:403-417,
+    system.cpp:2510-2512 and :1755-1761). Whether this directory is the one
+    the launch searches is the caller's to say — over a DataRoot the launch
+    decides it is one of two. That takes the size stat alone, so it holds with
+    ``verify`` off as well. Scoped, a named key's image may still serve the
+    regions it took, so the absence speaks for the leftover regions only and
+    stays where it was, in the caveat.
     """
     table = duckstation.bios_table()
     caveats: list[Caveat] = []
@@ -7666,7 +7741,7 @@ def _duckstation_search(
             # The listing failed, so "this directory holds nothing of the right
             # size" is a statement about contents nobody saw. The incomplete
             # scan above is the whole of what was established here.
-            return [], caveats, [], ()
+            return [], caveats, [], (), False
         state = (
             "holds no file of a size this emulator accepts"
             if machine.path_kind(bios_dir) == KIND_DIRECTORY
@@ -7700,7 +7775,7 @@ def _duckstation_search(
                 },
             )
         )
-        return [], caveats, [], ()
+        return [], caveats, [], (), not scoped
     if not verify:
         caveats.append(
             Caveat(
@@ -7721,7 +7796,7 @@ def _duckstation_search(
                 },
             )
         )
-        return [], caveats, [], searched
+        return [], caveats, [], searched, False
     candidates = _search_candidates(machine, table, kept)
     pick = table.pick(candidates, _DUCKSTATION_ANY_REGION)
     assert pick is not None  # kept is non-empty
@@ -7743,7 +7818,7 @@ def _duckstation_search(
         description=f"{search.purpose} — found by the search, not named by any setting",
         regions=regions if scoped else None,
     )
-    return [requirement], caveats, [] if observed is None else [observed], searched
+    return [requirement], caveats, [] if observed is None else [observed], searched, False
 
 
 def _found_image(
