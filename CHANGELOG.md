@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.24.0](https://github.com/danielcopper/emu-atlas/compare/v0.23.0...v0.24.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **firmware:** answer false where duckstation's search finds no file of an accepted size ([#646](https://github.com/danielcopper/emu-atlas/issues/646))
+* **firmware:** state the console-image verdict that requirements_met folds in ([#644](https://github.com/danielcopper/emu-atlas/issues/644))
+* **firmware:** name the regions a one-of group states nothing for in the caveat's data ([#643](https://github.com/danielcopper/emu-atlas/issues/643))
+* **launch:** resolve a command with no emulator token the way es-de does ([#636](https://github.com/danielcopper/emu-atlas/issues/636))
+* **launch:** evaluate emudeck entries with es-de's lookup on the host ([#634](https://github.com/danielcopper/emu-atlas/issues/634))
+
+### Features
+
+* **firmware:** answer false where duckstation's search finds no file of an accepted size ([#646](https://github.com/danielcopper/emu-atlas/issues/646)) ([8b016d3](https://github.com/danielcopper/emu-atlas/commit/8b016d362369e6dc4f097c5c3d780164ce06d02a)), closes [#563](https://github.com/danielcopper/emu-atlas/issues/563)
+* **firmware:** state the console-image verdict that requirements_met folds in ([#644](https://github.com/danielcopper/emu-atlas/issues/644)) ([11cedc8](https://github.com/danielcopper/emu-atlas/commit/11cedc8b2f83df9c26c9050dc0356b2f7eeba61b)), closes [#639](https://github.com/danielcopper/emu-atlas/issues/639)
+* **launch:** evaluate emudeck entries with es-de's lookup on the host ([#634](https://github.com/danielcopper/emu-atlas/issues/634)) ([1f6e602](https://github.com/danielcopper/emu-atlas/commit/1f6e602d0c40332f1767b9ffabd69786b59dccdc)), closes [#84](https://github.com/danielcopper/emu-atlas/issues/84)
+* **launch:** resolve a command with no emulator token the way es-de does ([#636](https://github.com/danielcopper/emu-atlas/issues/636)) ([3e21b3a](https://github.com/danielcopper/emu-atlas/commit/3e21b3a32f22a8c29295433c9f24407071e7f261)), closes [#84](https://github.com/danielcopper/emu-atlas/issues/84)
+* **saves:** answer where saves land with config files appended at launch ([#642](https://github.com/danielcopper/emu-atlas/issues/642)) ([579be77](https://github.com/danielcopper/emu-atlas/commit/579be77301d46e4af52c31f9e3351e486ea116b1)), closes [#637](https://github.com/danielcopper/emu-atlas/issues/637)
+
+
+### Bug Fixes
+
+* **firmware:** name the regions a one-of group states nothing for in the caveat's data ([#643](https://github.com/danielcopper/emu-atlas/issues/643)) ([1566e1e](https://github.com/danielcopper/emu-atlas/commit/1566e1e6d5233300337d5297bf095c9556f52670)), closes [#556](https://github.com/danielcopper/emu-atlas/issues/556)
+
 ## [0.23.0](https://github.com/danielcopper/emu-atlas/compare/v0.22.0...v0.23.0) (2026-10-11)
 
 
