@@ -2658,12 +2658,22 @@ an image, so the reading is neither a proof nor a refutation. An ambiguous pick 
 worth a moment: a known image never ranks with an unknown one, so the files in a tie are known together — what the tie
 leaves open is _which_ image boots, never whether one is there.
 
-Two things the search will not do. It states no requirement at all where it never got to a file — no `verify`, or a
-directory nothing was kept from (no file of an accepted size, or a listing that could not be read) — and an empty
-packaged list is `None`, so **no state of the search alone makes `requirements_met` `False`**. A red light over this
-emulator comes from a region key naming an image that is not there, which a stat settles without hashing. Where it did
-reach a file whose bytes would not come back, it names that file with `checked: "unread"` and the read failure beside
-it, the same answer a region key naming that file would give.
+The search states no requirement at all where it never got to a file — no `verify`, or a directory nothing was kept from
+(no file of an accepted size, or a listing that could not be read) — and an empty packaged list is `None`, with **one
+exception: a search that ran to the end and kept nothing**. With every region key empty, an empty directory, nothing at
+the `SearchDirectory` path and a file in its place are each a listing with no file of an accepted size in it;
+DuckStation's search returns nothing there and the boot stops. So the entry takes its system from the card:
+`system_firmware` is `cannot-run-without-firmware`, `system_firmware_met` is `False`, and `requirements_met` is `False`
+through it, while `requirements` stays empty — no setting names a file, and a directory is not a file's destination —
+and `firmware-path-names-no-file` carries the directory, with the `system-firmware-world-knowledge` mark beside it. The
+size stat settles that, so it holds with and without `verify`. It holds only where the DataRoot is established: with no
+`settings.ini` on either candidate and a launch that does not pin XDG, the search directory is one of two candidates
+(`core-mode-unestablished`), so an empty one demonstrates nothing and the answer stays `None`. A listing that could not
+be read stays `None` too, and so does a directory of images the table does not know: DuckStation boots one of those with
+a warning, so it is no absence. A red light over this emulator therefore comes from that empty search or from a region
+key naming an image that is not there, and a stat settles both without hashing. Where the search did reach a file whose
+bytes would not come back, it names that file with `checked: "unread"` and the read failure beside it, the same answer a
+region key naming that file would give.
 
 **When a region key names an image, the answer becomes alternatives.** One launch reads exactly one of `PathNTSCU`,
 `PathNTSCJ` and `PathPAL` — `GetBIOSImage` switches on the console region, which under the shipped Auto setting is the
@@ -3221,18 +3231,20 @@ The one place a card is read differently from a `.info` is the **empty list**, a
 whose `.info` declares nothing needs nothing, so `requirements_met` is `True`, while a card with no requirement
 established nothing — melonDS with external BIOS switched off probes no path, DuckStation asked without `verify` hashes
 nothing — so `requirements_met` is `None`. An empty `requirements` under `declaration: "packaged"` is never an
-all-clear.
+all-clear. The one empty card that answers otherwise is DuckStation's search that ran to the end and kept nothing over
+an established DataRoot (above): that is an absence demonstrated at the console level, so `system_firmware_met` is
+`False` and `requirements_met` with it.
 
 `core.system_firmware` is what the table says about this core's system, and it is on the answer so the verdict is never
 a black box:
 
-| value                          | what it says                                                                            |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
-| `cannot-run-without-firmware`  | the system needs an image, and this core needs one of the ones it declares for it       |
-| `core-supplies-an-alternative` | it needs one, and this core carries its own substitute — its all-optional list is right |
-| `runs-without-firmware`        | somebody established that the system starts with no image present                       |
-| `open`                         | nobody has established which                                                            |
-| `null`                         | **nothing is recorded about this system** — never "nothing is needed"                   |
+| value                          | what it says                                                                                             |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `cannot-run-without-firmware`  | the system needs an image, and this core needs one of its own — one it declares, or one its search finds |
+| `core-supplies-an-alternative` | it needs one, and this core carries its own substitute — its all-optional list is right                  |
+| `runs-without-firmware`        | somebody established that the system starts with no image present                                        |
+| `open`                         | nobody has established which                                                                             |
+| `null`                         | **nothing is recorded about this system** — never "nothing is needed"                                    |
 
 Read that last row twice: `null` is the state of a system nobody has looked at, and a client rendering it as an
 all-clear reports something nobody checked. It is also the answer for a core whose system could not be established at
@@ -3240,9 +3252,10 @@ all — one whose declaration was never read has no system on this answer to sta
 
 What the reading does to `requirements_met`: over `cannot-run-without-firmware` the images of the needing system are a
 **disjunction** — that system needs one of them, not all — so any image of its own that is usable keeps that system's
-need met, and only every one of them being demonstrably absent or wrong makes it `False`. An image nobody judged, or a
-declaration atlas refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading
-only ever narrows the field, never widens it — nothing becomes `True` that was not `True` before.
+need met, and only every one of them being demonstrably absent or wrong, or a search that ran to completion over an
+established DataRoot and found no file it would open, makes it `False`. An image nobody judged, or a declaration atlas
+refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading only ever narrows
+the field, never widens it — nothing becomes `True` that was not `True` before.
 
 The set that disjunction asks over is **the images filed under the system that needs one**, never every image the core
 declares, and where two systems need one it is asked of each: a disjunction inside each system, a conjunction across
@@ -3254,13 +3267,14 @@ override table files those names under, and that table files the Super Game Boy 
 cartridge runs in an SNES rather than in a Game Boy. The entries the table of systems has for those machines are
 recorded `open`, so nothing about them turns on the state yet. Where a core in this state declares for one system the
 conjunction has one term, its disjunction spans the whole declaration, and the field reads as it always did — which is
-every core reaching that state measured so far: 69 core blocks in the vector corpus, all for one system, counted over
+every core reaching that state measured so far: 76 core blocks in the vector corpus, all for one system, counted over
 every core block in `vectors/machines/*.json` whose `system_firmware` is `cannot-run-without-firmware` and, per block,
-the distinct `system` values of its requirements and their alternatives. The count moves with the corpus and the
-property does not, so the property is the one held mechanically: `tests/test_system_firmware.py` walks the same rule and
-fails naming the block the day one declares for two systems. Which images a system's name covers is as fine as the
-per-file override table makes it — a `.info` files every image under one `systemname`, so where nothing separates them
-they are one system's images.
+the distinct `system` values of its requirements and their alternatives — or, for a block with no requirement, the
+`system` of its `system-firmware-world-knowledge` caveats, which is where the system DuckStation's empty search was for
+is serialized. The count moves with the corpus and the property does not, so the property is the one held mechanically:
+`tests/test_system_firmware.py` walks the same rule and fails naming the block the day one declares for two systems.
+Which images a system's name covers is as fine as the per-file override table makes it — a `.info` files every image
+under one `systemname`, so where nothing separates them they are one system's images.
 
 **`core.system_firmware_met` states that system-level verdict on its own**, so a client can tell why a `False`
 `requirements_met` is false. `True` where the system runs without firmware, the core carries its own substitute, or

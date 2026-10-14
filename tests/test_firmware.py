@@ -2979,10 +2979,16 @@ class TestACoreThatOpensANameAndThenSearches:
         )
 
     def _core(
-        self, machine: FixtureMachine, *, verify: bool = False, per_core_options: bool = False
+        self,
+        machine: FixtureMachine,
+        *,
+        verify: bool = False,
+        per_core_options: bool = False,
+        root: str = BIOS_DIR,
     ) -> CoreFirmware:
         context = _context(
             machine,
+            root=root,
             core_options=CoreOptionsChain(
                 global_file=self.OPTIONS,
                 override_config_dir=self.OPT_DIR,
@@ -3105,6 +3111,20 @@ class TestACoreThatOpensANameAndThenSearches:
         listing = self._data(core, CAVEAT_FIRMWARE_SEARCH_CANDIDATES)
         assert listing["readings"] == {f"{BIOS_DIR}/a-us-bios": READING_IDENTIFIED}
         assert listing["image_regions"] == {f"{BIOS_DIR}/a-us-bios": "ntsc-u"}
+
+    def test_a_system_directory_spelled_with_pattern_characters_is_searched_as_spelled(self):
+        # The core lists the directory it was given, by its name: a bracket in
+        # that name is a character, and read as a pattern it would match no
+        # directory at all and the search would find nothing.
+        system_dir = "/bios[1]"
+        machine = self._machine({f"{system_dir}/a-us-bios": SWAN_US_IMAGE})
+        core = self._core(machine, verify=True, root=system_dir)
+        option = self._option(core, "ntsc-u")
+        assert (option.path, option.checked, option.satisfied) == (
+            f"{system_dir}/a-us-bios",
+            CHECKED_VERIFIED,
+            True,
+        )
 
     def test_a_directory_of_unrecognised_images_boots_nothing(self):
         # The core's search refuses a file its table does not know, so a
@@ -6426,6 +6446,30 @@ class TestAPackagedDeclarationIsJudged:
         # were never read, never an emulator that needs no file.
         assert _packaged_core().requirements_met is None
 
+    def test_an_empty_card_whose_search_found_nothing_is_false_only_through_the_system(self):
+        # The absence reaches the verdict at the console level and nowhere
+        # else: where the table records no need for that system, an empty
+        # card is still a card that established nothing.
+        searched = replace(_packaged_core(), absent_by_search=("psx",))
+        assert searched.requirements_met is None
+        needing = replace(
+            searched,
+            system_firmware=SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
+            system_firmware_needs=("psx",),
+        )
+        assert needing.system_firmware_met is False
+        assert needing.requirements_met is False
+
+    def test_an_absence_found_by_a_search_stands_only_on_an_empty_packaged_card(self):
+        stating = _packaged_core(_card_requirement("scph5501.bin"))
+        with pytest.raises(ValueError, match="absence demonstrated by a search"):
+            replace(stating, absent_by_search=("psx",))
+        with pytest.raises(ValueError, match="absence demonstrated by a search"):
+            CoreFirmware(
+                core_so="swanstation_libretro.so", label=None, declaration=DECLARATION_READ,
+                requirements=(), caveats=(), absent_by_search=("psx",),
+            )
+
 
 class TestAnIdentifiedImageIsVerified:
     """DuckStation hashes the file it is about to load, so the requirement carries that.
@@ -6454,13 +6498,20 @@ class TestAnIdentifiedImageIsVerified:
     PS1_SIZE = 524288
 
     def _machine(
-        self, bios: Mapping[str, FixtureFileSpec], *, named: str = "", **kwargs: object
+        self,
+        bios: Mapping[str, FixtureFileSpec],
+        *,
+        named: str = "",
+        search: str | None = None,
+        **kwargs: object,
     ) -> FixtureMachine:
         """A RetroDECK arrangement whose psx row is the DuckStation standalone entry.
 
         *named* is the value of ``PathNTSCU``; empty leaves every region key
         empty, which is the state both arrangements ship and the one the
-        search speaks for.
+        search speaks for. *search* is the ``SearchDirectory`` value, the
+        firmware root unless a test moves it somewhere the tree does not hold
+        as a directory.
         """
         config = "/home/deck/.var/app/net.retrodeck.retrodeck/config"
         deployed = (
@@ -6485,7 +6536,7 @@ class TestAnIdentifiedImageIsVerified:
                 "    <platform>psx</platform>\n  </system>\n</systemList>\n"
             ),
             f"{config}/duckstation/settings.ini": (
-                f"[BIOS]\nSearchDirectory = {self.BIOS}\nPathNTSCU = {named}\n"
+                f"[BIOS]\nSearchDirectory = {search or self.BIOS}\nPathNTSCU = {named}\n"
                 "PathNTSCJ = \nPathPAL = \n"
             ),
             **bios,
@@ -6563,20 +6614,23 @@ class TestAnIdentifiedImageIsVerified:
         assert searched.satisfied is named.satisfied is None
         assert searched.identity is named.identity is None
 
-    def test_no_state_of_the_search_alone_reaches_a_false_verdict(self):
-        """With every region key empty, the search never demonstrates an absence.
+    def test_only_a_search_that_kept_nothing_reaches_a_false_verdict(self):
+        """With every region key empty, a search that kept nothing is a demonstrated absence.
 
-        Each state either names the file the ranking reached — with what its
-        bytes turned out to be, up to and including that they would not come
-        back — or states no requirement at all, and a packaged card with no
-        requirement answers ``None``. So a red light over this emulator always
-        comes from a named region key, and never from a directory atlas could
-        not read to the end.
+        DuckStation's search returns nothing when its listing finished with no
+        file of an accepted size, and the boot stops on that (bios.cpp:403-417,
+        system.cpp:2510-2512 and :1755-1761 at stenzek/duckstation@64655818e).
+        Every other state either names the file the ranking reached — with
+        what its bytes turned out to be, up to and including that they would
+        not come back — or rests on a listing atlas could not finish, and
+        none of those is a demonstration: a red light over this emulator's
+        search comes from an empty search and from nothing else.
         """
         image = self._image(self.SCPH5501)
         states = {
             "an empty directory": self._machine({}),
             "a directory that cannot be listed": self._machine({}, unlistable=[self.BIOS]),
+            "a directory that cannot be looked at": self._machine({}, inaccessible=[self.BIOS]),
             "a file of an accepted size whose bytes will not come back": self._machine(
                 {f"{self.BIOS}/scph5501.bin": {"status": "unreadable", "size": self.PS1_SIZE}}
             ),
@@ -6586,18 +6640,118 @@ class TestAnIdentifiedImageIsVerified:
             "an image the table knows": self._machine({f"{self.BIOS}/scph5501.bin": image}),
         }
         verdicts = {name: self._core(machine).requirements_met for name, machine in states.items()}
-        assert [name for name, met in verdicts.items() if met is False] == []
+        assert [name for name, met in verdicts.items() if met is False] == ["an empty directory"]
         assert verdicts["an image the table knows"] is True
-        # The unreadable state names its file now rather than staying silent,
-        # and the verdict it leaves is still undetermined rather than green.
+        # The unreadable state names its file rather than staying silent, and
+        # the verdict it leaves is undetermined rather than red or green.
         unreadable = self._core(states["a file of an accepted size whose bytes will not come back"])
         picked = unreadable.requirements[0]
         assert isinstance(picked, FirmwareRequirement)
         assert picked.checked == CHECKED_UNREAD
         assert verdicts["a file of an accepted size whose bytes will not come back"] is None
+        # An image the emulator does not know still boots, with a warning
+        # (bios.cpp:420-421), so a folder of them is not an absence.
+        assert verdicts["bytes no row of the table holds"] is None
         # The same machine asked without a content check: nothing was hashed,
         # so nothing is claimed and nothing is denied either.
         assert self._core(states["an image the table knows"], verify=False).requirements_met is None
+
+    @pytest.mark.parametrize("verify", [True, False])
+    @pytest.mark.parametrize(
+        "where",
+        ["an empty directory", "nothing at the path", "a file in its place"],
+    )
+    def test_a_search_that_kept_nothing_is_an_absence_at_the_console_level(self, where, verify):
+        # Each of these is a listing that finished with nothing of an accepted
+        # size in it: the emulator's own listing of a path where nothing is,
+        # or where a file is, comes back empty too. The size stat settles it,
+        # so the answer does not wait for a content check. A file of an
+        # accepted size, even one the table knows, is no directory to search.
+        elsewhere = "/mnt/sd/retrodeck/bios/duckstation"
+        machine = {
+            "an empty directory": lambda: self._machine({}),
+            "nothing at the path": lambda: self._machine({}, search=elsewhere),
+            "a file in its place": lambda: self._machine(
+                {elsewhere: self._image(self.SCPH5501)}, search=elsewhere
+            ),
+        }[where]()
+        core = self._core(machine, verify=verify)
+        assert core.requirements == ()
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.system_firmware_needs == ("psx",)
+        assert core.system_firmware_met is False
+        assert core.requirements_met is False
+        # The caveat that states it is the one the search always answered
+        # with, and the table's mark rides beside it, as it does wherever
+        # system_firmware states something.
+        codes = self._codes(core)
+        assert CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE in codes
+        marks = [c.data for c in core.caveats if c.code == CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE]
+        assert [mark["system"] for mark in marks] == ["psx"]
+
+    def test_a_search_scoped_beside_a_named_key_demonstrates_nothing_on_its_own(self):
+        # A named key took a region away, so the empty search speaks for the
+        # regions left to it, and the named image may serve its own: the
+        # answer stays in the alternatives group and no absence is stated.
+        core = self._core(
+            self._machine(
+                {f"{self.BIOS}/us/scph5501.bin": self._image(self.SCPH5501)},
+                named="us/scph5501.bin",
+            )
+        )
+        assert core.absent_by_search == ()
+        assert CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE in self._codes(core)
+        assert len(core.requirements) == 1
+        assert isinstance(core.requirements[0], FirmwareAlternatives)
+        assert core.system_firmware_met is not False
+        assert core.requirements_met is not False
+
+    def test_a_search_directory_spelled_with_pattern_characters_is_searched_as_spelled(self):
+        # DuckStation opens the directory its setting names, as spelled: read
+        # as a pattern, the bracket would match no directory, the search would
+        # keep nothing, and a present image would read as a demonstrated absence.
+        bracketed = "/mnt/sd/retrodeck/bios[psx]"
+        core = self._core(
+            self._machine({f"{bracketed}/scph5501.bin": self._image(self.SCPH5501)}, search=bracketed)
+        )
+        requirement = core.requirements[0]
+        assert isinstance(requirement, FirmwareRequirement)
+        assert requirement.path == f"{bracketed}/scph5501.bin"
+        assert requirement.checked == CHECKED_VERIFIED
+        assert core.absent_by_search == ()
+        assert core.requirements_met is True
+
+    @pytest.mark.parametrize("verify", [True, False])
+    def test_an_empty_search_under_a_dataroot_the_launch_decides_demonstrates_nothing(self, verify):
+        # EmuDeck's AppImage with no settings.ini on either candidate: the
+        # DataRoot is decided by the launch's environment, so the directory
+        # searched is one of two and the other may hold the image this one
+        # lacks. The empty search is still stated; the verdict stays unsaid.
+        machine = FixtureMachine(
+            {
+                "/home/deck/.config/EmuDeck/settings.sh": (
+                    'romsPath="$HOME/Emulation/roms"\nsavesPath="$HOME/Emulation/saves"\n'
+                ),
+                "/home/deck/ES-DE/custom_systems/es_systems.xml": (
+                    '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>psx</name>\n'
+                    "    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n"
+                    '    <command label="DuckStation (Standalone)">/bin/bash '
+                    "/home/deck/Emulation/tools/launchers/duckstation.sh %ROM%</command>\n"
+                    "  </system>\n</systemList>\n"
+                ),
+                "/home/deck/Applications/DuckStation.AppImage": "",
+            },
+            dirs=["/home/deck/Emulation/saves", "/home/deck/Emulation/bios", "/home/deck/ROMs"],
+        )
+        answer = atlas.detect("/home/deck", machine)[0].firmware_for_system(system="psx", verify=verify)
+        core = next(core for core in answer.cores if core.declaration == DECLARATION_PACKAGED)
+        codes = self._codes(core)
+        assert CAVEAT_CORE_MODE_UNESTABLISHED in codes
+        assert CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE in codes
+        assert core.absent_by_search == ()
+        assert core.system_firmware is None
+        assert core.system_firmware_met is None
+        assert core.requirements_met is None
 
     # --- every file the search kept, not only the one the ranking reached ---
 

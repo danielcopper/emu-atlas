@@ -2557,6 +2557,11 @@ def _system_image_in_place(core: Any) -> bool | None:
     declaration is one atlas would not follow to a destination, so neither
     settles the absence.
 
+    A needing block with no image at all is ``False``: in the package a
+    needing system comes off a requirement or off a search that ran to the end
+    and kept nothing (:attr:`atlas.firmware.CoreFirmware.absent_by_search`),
+    so a block that declares none can only be that demonstrated absence.
+
     **This reads one needing system, which is all the wire can carry.** The
     package asks that disjunction per needing system and conjoins the results
     (:attr:`atlas.firmware.CoreFirmware._system_image_in_place`), and the
@@ -2569,6 +2574,8 @@ def _system_image_in_place(core: Any) -> bool | None:
     if core["system_firmware"] != "cannot-run-without-firmware":
         return True
     images = _declared_images(core)
+    if not images:
+        return False
     if any(image["satisfied"] is True for image in images):
         return True
     if images and not core["refused"] and all(image["satisfied"] is False for image in images):
@@ -2598,8 +2605,12 @@ def _needing_system_is_on_the_wire(core: Any) -> bool:
     Nothing is skipped today. Counted over every ``expected.firmware.cores[]``
     block in ``vectors/machines/*.json`` whose ``system_firmware`` is
     ``cannot-run-without-firmware``, by the distinct ``system`` values of its
-    ``requirements[]`` and their ``alternatives[]``: 69 blocks, each resolving
-    to one system.
+    ``requirements[]`` and their ``alternatives[]`` — or, for a block with no
+    requirement, the ``system`` of its ``system-firmware-world-knowledge``
+    caveats: 76 blocks, each resolving to one system. A block with no
+    requirement names no system in its requirements and is recomputed all the
+    same, because :func:`_system_image_in_place` answers it without asking
+    which system it is.
     """
     if core["system_firmware"] != "cannot-run-without-firmware":
         return True
@@ -2703,9 +2714,9 @@ def _validate_core_console_verdict(name: str, core: Any, met: Any) -> None:
     An unjudged declaration needs no term of its own here, unlike in the
     package: by the time this runs, :func:`_validate_core_requirements` has
     refused one that declares anything, and :func:`_validate_firmware_core`
-    has refused a ``system_firmware`` stated over no requirement — so every
-    unjudged block that reaches this has ``system_firmware`` ``null``, and the
-    first term answers it.
+    has refused a ``system_firmware`` stated over no requirement on any
+    declaration but ``packaged`` — so every unjudged block that reaches this
+    has ``system_firmware`` ``null``, and the first term answers it.
     """
     console = core["system_firmware_met"]
     if console is not None and not isinstance(console, bool):
@@ -2748,9 +2759,13 @@ def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bo
             f"{name}: firmware core system_firmware must be null or one of "
             f"{sorted(KNOWN_SYSTEM_FIRMWARE_STATES)}, got {state!r}"
         )
-    if state is not None and not core["requirements"]:
+    if state is not None and not core["requirements"] and core["declaration"] != "packaged":
         # The state is read off the systems the requirements carry, so a core
-        # with no requirement has no system on this answer to state one about.
+        # with no requirement has no system on this answer to state one about —
+        # except a packaged card whose own search ran to the end and kept
+        # nothing, which states the system it searched for
+        # (atlas.firmware.CoreFirmware.absent_by_search, refused on every other
+        # declaration).
         fail(
             f"{name}: firmware core system_firmware is stated about the systems this core's "
             "requirements name, and this core names none"

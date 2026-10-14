@@ -354,11 +354,11 @@ excusing nothing.
 enters a firmware answer — and states what it says on every core of that answer:
 
 - **`system_firmware`** is the per-core field. Four stated values: `cannot-run-without-firmware` (the system needs an
-  image and this core needs one of the ones it declares for that system), `core-supplies-an-alternative` (it needs one
-  and this core carries its own substitute), `runs-without-firmware` (somebody established that it starts with none
-  present) and `open`. `null` is the fifth state and it means **nothing is recorded about this system** — never that
-  nothing is needed. A core whose system could not be established answers `null` for the same reason: nothing is
-  recorded about a system nobody named.
+  image and this core needs one of its own for that system — one it declares, or one its search finds),
+  `core-supplies-an-alternative` (it needs one and this core carries its own substitute), `runs-without-firmware`
+  (somebody established that it starts with none present) and `open`. `null` is the fifth state and it means **nothing
+  is recorded about this system** — never that nothing is needed. A core whose system could not be established answers
+  `null` for the same reason: nothing is recorded about a system nobody named.
 - **`requirements_met`** stops being green where a system needs an image, the core is not excused, and every image filed
   under that system is demonstrably not in place. One image being usable is what that system asks for, so any satisfied
   image of its own keeps the answer it had; an image nobody judged, or a declaration atlas refused to follow, leaves
@@ -367,7 +367,11 @@ enters a firmware answer — and states what it says on every core of that answe
   so mGBA's Game Boy boot ROM is no answer for a Game Boy Advance, and a core two entries speak about needs one image
   apiece rather than one between them. Where a core in this state declares for one system that conjunction has one term
   and its disjunction spans the whole declaration. The reading only ever narrows the field — it makes nothing true that
-  was not true before.
+  was not true before. One state reaches it with no image filed at all: DuckStation with every region key empty, whose
+  search ran to the end and kept no file of an accepted size — an empty directory, nothing at its path, or a file in its
+  place — over a DataRoot that is established rather than left to the launch. No setting names a file there, so the
+  system comes from DuckStation's card rather than from a requirement, and the search's empty result is the demonstrated
+  absence; it is the one place `system_firmware` reads its system from anywhere but the requirements.
 - **`system_firmware_met`** states that system-level reading on its own, where the need is established: `true` where the
   system runs without firmware, the core carries its own substitute, or every needing system has an image of its own,
   `false` as soon as one has no usable image, `null` where what is left is unjudged. Where the need is not established —
