@@ -2205,12 +2205,12 @@ SATISFIED_BY_CHECKED: dict[str, tuple[Any, str]] = {
 
 
 def _refuse_unreachable_checked(
-    name: str, identity: Any, checked: Any, *, hash_checked: bool, named_by_setting: bool
+    name: str, identity: Any, checked: Any, *, hash_checked: bool, keyed_by_content: bool
 ) -> None:
     """Could this ``checked`` value have been produced at all, on this run?
 
-    Both rules are about the *reach* of the check rather than its outcome, and
-    both run before any verdict rule — so a value the run could never have
+    The rules here are about the *reach* of the check rather than its outcome,
+    and they run before any verdict rule — so a value the run could never have
     reached is reported as that, not as a wrong ``satisfied``.
 
     :data:`NO_IDENTITY_CHECKED` is the set that may stand where no identity
@@ -2222,15 +2222,21 @@ def _refuse_unreachable_checked(
     checking — and ``unread`` that the bytes were asked for and did not come
     back. The message names the set rather than counting it in prose.
 
-    ``unchecked`` joins them for one shape only: a file a core option named
-    inside a folder declaration. The table that covers such a destination is
+    ``unchecked`` joins them for two shapes only: a file a core option named
+    inside a folder declaration, and an option of an alternatives group on a
+    ``by-name-then-content`` route. The table that covers either destination is
     keyed by CONTENT, so it names the bytes only once they are read and there
     is no identity to pin before that — what is outstanding without a content
     check is the identity and the comparison together, which is exactly what
     the word means. Everywhere else a table pins the identity off the declared
-    NAME before a byte is read, so ``unchecked`` with none is a dropped lookup.
+    NAME before a byte is read, so ``unchecked`` with none is a dropped lookup —
+    an option of a ``by-name`` route included.
+
+    Whatever the shape, ``unchecked`` stands only on a run without hash
+    checking: a run that asked for the bytes answers what it found or could
+    not find, never a comparison nobody asked for.
     """
-    allowed = NO_IDENTITY_CHECKED | ({"unchecked"} if named_by_setting else set())
+    allowed = NO_IDENTITY_CHECKED | ({"unchecked"} if keyed_by_content else set())
     if identity is None and checked not in allowed:
         fail(
             f"{name}: with no known identity, checked must be one of "
@@ -2238,6 +2244,8 @@ def _refuse_unreachable_checked(
         )
     if identity is not None and not hash_checked and checked != "unchecked":
         fail(f"{name}: without hash checking a known identity can only be 'unchecked', never a verdict")
+    if checked == "unchecked" and hash_checked:
+        fail(f"{name}: 'unchecked' says nobody asked for the bytes, which a run with hash checking did")
     if checked in ("unrecognised", "unread") and not hash_checked:
         fail(f"{name}: {checked!r} says the bytes were asked for, which a run without hash checking did not do")
     if checked == "refused" and identity is not None:
@@ -2270,7 +2278,7 @@ def _refuse_unknown_beside_an_identity(name: str, identity: Any, checked: Any) -
 
 
 def _validate_file_requirement(
-    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool, named_by_setting: bool
+    name: str, identity: Any, checked: Any, satisfied: Any, *, hash_checked: bool, keyed_by_content: bool
 ) -> None:
     """A file is at the destination: what was checked settles what is satisfied.
 
@@ -2280,7 +2288,7 @@ def _validate_file_requirement(
     exclusive, so exactly one of them ever applies.
     """
     _refuse_unreachable_checked(
-        name, identity, checked, hash_checked=hash_checked, named_by_setting=named_by_setting
+        name, identity, checked, hash_checked=hash_checked, keyed_by_content=keyed_by_content
     )
     _refuse_unknown_beside_an_identity(name, identity, checked)
     if checked == "not-comparable":
@@ -2335,7 +2343,7 @@ def _validate_directory_at_the_destination(name: str, entry: Any, *, hash_checke
 
 
 def _validate_requirement_verdict(
-    name: str, entry: Any, *, hash_checked: bool, named_by_setting: bool
+    name: str, entry: Any, *, hash_checked: bool, keyed_by_content: bool
 ) -> None:
     found = entry["found"]
     checked = entry["checked"]
@@ -2359,7 +2367,7 @@ def _validate_requirement_verdict(
         checked,
         satisfied,
         hash_checked=hash_checked,
-        named_by_setting=named_by_setting,
+        keyed_by_content=keyed_by_content,
     )
 
 
@@ -2373,6 +2381,7 @@ def _validate_requirement(
     named_by: frozenset[str] = frozenset(),
     spelled: frozenset[str] = frozenset(),
     linked: frozenset[str] = frozenset(),
+    recognised_by_content: bool = False,
 ) -> None:
     _validate_requirement_fields(name, entry, fields)
     _validate_requirement_path(name, entry, root, named_by, spelled, linked)
@@ -2381,8 +2390,11 @@ def _validate_requirement(
         name,
         entry,
         hash_checked=hash_checked,
-        named_by_setting=entry["file_name"] in named_by
-        and os.path.basename(entry["declared"]) != entry["file_name"],
+        keyed_by_content=recognised_by_content
+        or (
+            entry["file_name"] in named_by
+            and os.path.basename(entry["declared"]) != entry["file_name"]
+        ),
     )
     _validate_supplied_by(name, entry)
 
@@ -2392,6 +2404,7 @@ def _validate_alternatives(
     entry: Any,
     *,
     core_so: Any,
+    locating: Any,
     root: str,
     hash_checked: bool,
     spelled: frozenset[str] = frozenset(),
@@ -2403,6 +2416,11 @@ def _validate_alternatives(
     known console regions, disjoint across the group's options: two options
     one region could pick between would leave the pick unstated, which is the
     exact defect the shape exists to remove.
+
+    Under ``by-name-then-content`` (*locating*, the core block's) the emulator
+    recognises an option's image by its content, so an option is covered by a
+    table keyed by content — what :func:`_refuse_unreachable_checked` needs to
+    know to let it be ``unchecked`` with no identity.
     """
     _require_exact(name, entry, FIRMWARE_ALTERNATIVES_FIELDS, "an alternatives entry")
     options = entry["alternatives"]
@@ -2418,6 +2436,7 @@ def _validate_alternatives(
             fields=FIRMWARE_ALTERNATIVE_OPTION_FIELDS,
             spelled=spelled,
             linked=linked,
+            recognised_by_content=locating == "by-name-then-content",
         )
         if option["core_so"] != core_so:
             fail(f"{name}: an alternatives option must name the core it is listed under")
@@ -2482,6 +2501,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
                 name,
                 entry,
                 core_so=core["core_so"],
+                locating=core["locating"],
                 root=root,
                 hash_checked=hash_checked,
                 spelled=spelled,
