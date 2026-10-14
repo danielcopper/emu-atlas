@@ -661,6 +661,20 @@ QUERY_CASES = [
                  entry_texture_query={"system": SYSTEM, "cwd": "/home/deck/launch"}),
          "must carry 'system' plus optional 'label'/'content_path'/'installation'",
          id="entry-query-cwd-on-a-family-that-takes-none"),
+    case(_vector({"savefile_location": _placement()}, installed=True,
+                 savefile_query={"content_path": ROM, "appendconfig": "/home/deck/a.cfg|b.cfg"}),
+         "input.savefile_query.appendconfig must be absolute paths joined by '|'", id="query-appendconfig-relative"),
+    case(_vector({"savestate_location": _placement()}, installed=True,
+                 savestate_query={"content_path": ROM, "appendconfig": "||"}),
+         "input.savestate_query.appendconfig must be absolute paths joined by '|'",
+         id="query-appendconfig-names-no-path"),
+    case(_vector({"texture_pack_location": _texture()}, installed=True,
+                 texture_query={"core_so": CORE_SO, "appendconfig": "/home/deck/a.cfg"}),
+         "input.texture_query keys must be a non-empty subset", id="query-appendconfig-on-a-family-that-takes-none"),
+    case(_vector({"entry_savefile_location": _placement()}, installed=True,
+                 entry_savefile_query={"system": SYSTEM, "appendconfig": "a.cfg"}),
+         "input.entry_savefile_query.appendconfig must be absolute paths joined by '|'",
+         id="entry-query-appendconfig-relative"),
 ]
 
 FIRMWARE_QUERY_CASES = [
@@ -717,6 +731,12 @@ AGGREGATE_QUERY_CASES = [
          "is not asked by", id="aggregate-query-cwd-on-a-question-that-takes-none"),
     case(_vector({"aggregate": []}, aggregate_query={"question": "savestate_location", "cwd": "launch"}),
          "input.aggregate_query.cwd must be an absolute path", id="aggregate-query-cwd-relative"),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "texture_pack_location",
+                                                     "appendconfig": "/home/deck/a.cfg"}),
+         "is not asked by", id="aggregate-query-appendconfig-on-a-question-that-takes-none"),
+    case(_vector({"aggregate": []}, aggregate_query={"question": "savefile_location", "appendconfig": "a.cfg"}),
+         "input.aggregate_query.appendconfig must be absolute paths joined by '|'",
+         id="aggregate-query-appendconfig-relative"),
 ]
 
 PAIRING_CASES = [
@@ -1681,6 +1701,14 @@ ACCEPTED_CASES = [
     pytest.param(_with(_base_aggregate(), aggregate_query={"question": "savefile_location",
                                                            "cwd": "/home/deck/launch"}),
                  id="an-aggregate-save-question-asked-with-a-working-folder"),
+    pytest.param(_with(_base_placement(), savefile_query={"content_path": ROM,
+                                                          "appendconfig": "/home/deck/a.cfg|/home/deck/b.cfg"}),
+                 id="a-save-question-asked-with-appended-files"),
+    pytest.param(_with(_base_entry(), entry_savefile_query={"system": SYSTEM, "appendconfig": "/home/deck/a.cfg"}),
+                 id="an-entry-save-question-asked-with-an-appended-file"),
+    pytest.param(_with(_base_aggregate(), aggregate_query={"question": "savefile_location",
+                                                           "appendconfig": "/home/deck/a.cfg"}),
+                 id="an-aggregate-save-question-asked-with-an-appended-file"),
     pytest.param(_with(_vector(), files={"/a": {"status": "unreadable", "size": 12}}),
                  id="a-file-that-stats-but-cannot-be-read"),
     pytest.param(_with(_vector(), files={"/a": {"md5": "0" * 32, "size": 4}}),

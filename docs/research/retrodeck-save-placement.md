@@ -217,9 +217,10 @@ where RetroArch uses one. **`.info` must never serve as a path source**; it rema
 with a `|` separator; later files win:
 
 1. `retroarch.cfg` (global)
-2. `config/<library_name>/<library_name>.cfg` — core (`configuration.c:7161`)
-3. `config/<library_name>/<content_dir>.cfg` — content directory (`configuration.c:7186`)
-4. `config/<library_name>/<rom_name>.cfg` — game (`configuration.c:7210`)
+2. the files a launch appends with `--appendconfig`, in the order given (`configuration.c:6309-6353`)
+3. `config/<library_name>/<library_name>.cfg` — core (`configuration.c:7161`)
+4. `config/<library_name>/<content_dir>.cfg` — content directory (`configuration.c:7186`)
+5. `config/<library_name>/<rom_name>.cfg` — game (`configuration.c:7210`)
 
 **[V]** RetroDECK sets `quick_menu_show_save_content_dir_overrides = "true"`, so layers 3 and 4 are reachable from the
 in-game menu. These are not hypothetical.
@@ -238,6 +239,54 @@ installation.
 **[V]** When overrides are found, RetroArch unsets the command-line save/state path flags before reloading
 (`configuration.c:7240`), so an override file can set `savefile_directory` even when `--save` was passed.
 
+### The appended layer — `--appendconfig`
+
+**[V]** A launch can hand RetroArch further config files on its command line. `--appendconfig` stores its value in one
+path (`retroarch.c:7617-7619`), so a second flag replaces the first; several files are one value joined by `|`.
+`config_load_file` splits that value on every `|`, skips an empty piece, and merges each file into the global config in
+that order, before any override (`configuration.c:6309-6353`). `config_load_override` keeps them in the override reload
+— "Prevent `--appendconfig` from being ignored" sets `should_append` whenever an append path is set
+(`configuration.c:7155-7157`) — so the overrides land on top of the appended files, not under them.
+
+**[V]** A file RetroArch cannot open is skipped, and the launch goes on without it: `config_append_file` returns false
+when `config_file_new_from_path_to_string` fails, which needs `path_is_valid` and a successful read
+(`config_file.c:773-779`, `:829-850`), and the caller only logs the failure (`configuration.c:6341-6347`). When the
+global config itself fails to load, no appended file is read at all (`configuration.c:6282-6288` returns before `:6309`)
+— but with no `-c` RetroArch starts from a default config and appends all the same.
+
+**[V]** Because the boot load merges the appended files, they also decide the two settings read before any override:
+`auto_overrides_enable` (copied at `runloop.c:4941`, used at `:5002-5003`) and `rgui_config_directory`, which says where
+the overrides are searched (`configuration.c:1736`, `file_path_special.c:196-207`). An appended
+`auto_overrides_enable = "false"` keeps every override unread. Where the cores and their `.info` files live is read from
+the same boot config: `libretro_info_path` by the generic path loop over the merged config (`configuration.c:1688`,
+`:6532-6538`), `libretro_directory` by its own read right after it (`:6541`). RetroArch looks for a core in that
+directory only where `-L` names it by its file name and that name is not a valid file as given (`retroarch.c:7270-7291`,
+the boot load at `:7709`); a catalogue launch passes the core's full path, which is loaded as given.
+
+**[V]** The deployed builds read the same way. Observed at 1.22.2 on the verification machine: RetroDECK 0.10.10b's
+RetroArch, and the `org.libretro.RetroArch` Flatpak EmuDeck runs. At the `v1.22.2` tag the append loop is
+`configuration.c:3863-3890` (a `strtok_r` on `|`, which skips empty pieces the same way), the override stack
+`:3891-3926`, `should_append` `:4637-4641`, the reload `:4736`, the directory tests `:4416-4461`,
+`auto_overrides_enable` `runloop.c:4686` and `:4747-4748`, the flag `retroarch.c:7152-7155`, and `config_append_file`
+`config_file.c:784-790`, `:840-846`.
+
+**[V]** Observed on a RetroDECK 0.10.10b installation, its RetroArch 1.22.2 started directly with `--appendconfig`
+(reported by romm-tender): the redirect works. With `config_save_on_exit` on, quitting writes the appended
+`savefile_directory`, `savestate_directory` and sort flag into RetroDECK's own `retroarch.cfg`; with
+`config_save_on_exit = "false"` appended, `retroarch.cfg` stays unchanged; a manual "Save Current Configuration" from
+the menu still writes the appended keys, `config_save_on_exit` among them. That matches `a79435a` (`retroarch.c:9190`,
+`:9285-9286`; `configuration.c:7313-7345`, `:8205` onwards).
+
+**[D]** atlas puts the appended files into the chain as a layer of their own kind, `appended`, read in the boot read
+beside the global cfg — see the two-read model below. On RetroDECK, whose sandbox atlas models, each appended file and
+each save folder an appended file states is tested through RetroArch's own view of the filesystem: a file the sandbox
+hides or does not hold refuses the answer (`appended-config-unreachable`) instead of being skipped, because the question
+is where the saves land _with_ it; such a folder is `invalid-save-directory` with layer `appended`, and the root
+RetroArch then stands on is the platform default; one the model cannot tell is read as the host's, with
+`appended-config-visibility-unestablished`. Save folders the global cfg and the overrides state keep the host-side test
+every layer had before. Where atlas does not model the sandbox (EmuDeck's and a bare RetroArch Flatpak), every path is
+read as the host's and the same note says so.
+
 ### One merge, two reads — what "later files win" does not mean
 
 **[V]** The chain is not loaded layer by layer. `config_load_override()` collects the override files that exist into a
@@ -249,13 +298,14 @@ shadowed: its value never reaches a getter at all.
 
 **[V]** That reload runs **without** `config_set_defaults` (`configuration.c:7243`; the boot path calls it first,
 `:5907`, and it is what seeds the platform default saves dir, `:5743-5744`). So whatever the reload refuses leaves
-standing what the boot load left — the global cfg alone, read the same way. Two reads, then, not four:
+standing what the boot load left — the global cfg merged with the appended files, if any, read the same way. Two reads,
+then, however long the chain:
 
-| what the merged config holds    | effective value                               |
-| ------------------------------- | --------------------------------------------- |
-| a value the getter accepts      | that value                                    |
-| a value the getter refuses      | the global cfg's own value, validated at boot |
-| nothing (key absent everywhere) | the compile-time default (`config.def.h`)     |
+| what the merged config holds    | effective value                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| a value the getter accepts      | that value                                                                        |
+| a value the getter refuses      | the boot read's value — the global cfg and any appended files — validated at boot |
+| nothing (key absent everywhere) | the compile-time default (`config.def.h`)                                         |
 
 **[V]** For `savefile_directory` the "getter accepts" test is `path_is_directory` (`configuration.c:6914-6933`), run per
 load. Three branches, and only the first two set anything:

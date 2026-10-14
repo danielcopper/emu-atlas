@@ -1593,6 +1593,7 @@ class TestTheDataRegistryReading:
             ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
+            ("appended-config-overridden", "layer"): "CFG_LAYER_OVERRIDE_KINDS",
             ("launch-command-beyond-limits", "limit"): "LAUNCH_COMMAND_LIMITS",
             ("launch-command-shell-syntax", "construct"): "SHELL_CONSTRUCTS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",

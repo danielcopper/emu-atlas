@@ -20470,6 +20470,88 @@
           }
         }
       }
+    },
+    {
+      "name": "a-standalone-entry-asked-with-an-appended-config-answers-without-it",
+      "rationale": "A standalone emulator never reads RetroArch's configuration, so a file appended to a RetroArch launch changes nothing about where melonDS saves: the answer is the one without it, and appended-config-not-read says the redirect does not apply there.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>nds</name>\n    <fullname>Nintendo DS</fullname>\n    <path>%ROMPATH%/nds</path>\n    <extension>.nds .NDS .zip .ZIP</extension>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% %ROM%</command>\n    <platform>nds</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml": "[Instance0]\nSaveFilePath = \"/mnt/sd/retrodeck/saves/nds/melonds\"\n",
+          "/mnt/sd/retrodeck/roms/nds/Some Game.nds": "",
+          "/home/deck/launcher/redirect.cfg": "savefile_directory = \"/home/deck/launcher/saves\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/nds/melonds",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launcher/saves"
+        ],
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Some Game.nds",
+          "appendconfig": "/home/deck/launcher/redirect.cfg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Some Game.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "files": [
+                  "Some Game.sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery"
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "appended-config-not-read",
+              "data": {}
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "save-file-path",
+            "readings": [
+              {
+                "key": "SaveFilePath",
+                "value": "/mnt/sd/retrodeck/saves/nds/melonds",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/melonDS/melonDS.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

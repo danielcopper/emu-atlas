@@ -169,8 +169,10 @@ from .machine import (
     KIND_FILE,
     KIND_INACCESSIBLE,
     KIND_MISSING,
+    READ_INVALID_TEXT,
     READ_MISSING,
     READ_OK,
+    READ_UNREADABLE,
     SYMLINK_HOPS,
     WHDLOAD_MISSING,
     AppImageStampResult,
@@ -222,6 +224,7 @@ from .textures import (
     lookup_texture_card,
 )
 from .placement import (
+    UNRESOLVED_APPENDED_CONFIG_UNREACHABLE,
     UNRESOLVED_CORE_FILE_FOREIGN,
     UNRESOLVED_CORE_NOT_INSTALLED,
     CAVEAT_APP_RELATIVE_PATH_UNEXPANDED,
@@ -253,6 +256,9 @@ from .placement import (
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_INVALID_SAVE_DIRECTORY,
     CAVEAT_INVALID_SCREENSHOT_DIRECTORY,
+    CAVEAT_APPENDED_CONFIG_NOT_READ,
+    CAVEAT_APPENDED_CONFIG_OVERRIDDEN,
+    CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
     CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
@@ -376,6 +382,7 @@ from .placement import (
     build_savefile_placement,
     build_savestate_placement,
     build_soft_patch_candidates,
+    checked_appendconfig,
     checked_cwd,
     file_set_holes,
     needs_with_file_set,
@@ -390,6 +397,7 @@ from .standalone_savestates import (
     lookup_standalone_savestate_card,
 )
 from .retroarch_cfg import (
+    CFG_LAYER_APPENDED,
     CFG_LAYER_CONTENT_DIR_OVERRIDE,
     CFG_LAYER_CORE_OVERRIDE,
     CFG_LAYER_GAME_OVERRIDE,
@@ -409,7 +417,9 @@ from .retroarch_cfg import (
     RetroArchCfg,
     cfg_bool,
     chain_bool,
+    chain_bool_read,
     chain_value,
+    chain_value_read,
     expand_home,
     is_app_relative,
     parse_cfg_once,
@@ -957,13 +967,13 @@ class _Sandbox:
         return self.host(key, expanded) if expanded is not None else None
 
 
-def _core_directory_in(sandbox: _Sandbox, global_text: str) -> str | None:
+def _core_directory_in(sandbox: _Sandbox, values: Mapping[str, str]) -> str | None:
     """A cfg snapshot's ``libretro_directory`` as a host path, or ``None``.
 
     Where the core binaries live is a question every arrangement asks the same
     way; only which app's spellings the cfg is written in differs.
     """
-    raw = parse_cfg_once(global_text).values.get("libretro_directory")
+    raw = values.get("libretro_directory")
     resolved = sandbox.cfg_path("libretro_directory", raw)
     return resolved.path if resolved is not None else None
 
@@ -997,7 +1007,12 @@ def _core_path_from(sandbox: _Sandbox, global_text: str | None, core_so: str) ->
     """
     if global_text is None:
         return _CoreLookup()
-    cores_dir = _core_directory_in(sandbox, global_text)
+    return _core_path_in(sandbox, parse_cfg_once(global_text).values, core_so)
+
+
+def _core_path_in(sandbox: _Sandbox, values: Mapping[str, str], core_so: str) -> _CoreLookup:
+    """:func:`_core_path_from` over settings already read — the boot read where files are appended."""
+    cores_dir = _core_directory_in(sandbox, values)
     if cores_dir is None:
         return _CoreLookup()
     return _CoreLookup(os.path.join(cores_dir, core_so), cores_dir)
@@ -1901,6 +1916,16 @@ class _SaveQuery:
     # host path that fills the ``cwd`` hole of a card rooted there. ``None``
     # leaves the hole open, which is the answer a question without it gets.
     cwd: str | None = None
+    # The files the launch appends with ``--appendconfig`` (issue #637): one
+    # absolute path each, in the order RetroArch reads them, already split and
+    # checked (:func:`atlas.placement.checked_appendconfig`). Empty is a launch
+    # that appends nothing, which is every question asked without them.
+    appendconfig: tuple[str, ...] = ()
+    # The program's own view of the filesystem, where atlas models the sandbox
+    # RetroArch runs in — RetroDECK's, whose RetroArch shares the frontend's
+    # Flatpak. ``None`` where it is not modelled or there is no sandbox at all;
+    # ``sandbox.app_id`` tells those two apart (:func:`_read_appended`).
+    appended_view: "Callable[[], _SandboxLaunchView] | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2093,47 +2118,72 @@ def _identify_core(
 
 @dataclass(frozen=True, slots=True)
 class _OverrideGates:
-    """The global-cfg switches that decide whether overrides apply, and from where."""
+    """The boot-read switches that decide whether overrides apply, and from where.
+
+    ``auto_overrides_source`` is the layer whose ``auto_overrides_enable``
+    stands — ``None`` where the default does — so a refusal to read the
+    overrides names the file that switched them off.
+    """
 
     auto_overrides: bool
     override_config_dir: str
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    auto_overrides_source: CfgSource | None = None
 
 
-def _override_gates(
-    global_text: str | None,
-    *,
-    sandbox: _Sandbox,
-    cfg_label: str,
-    override_config_dir: str,
-    config_file_dir: str,
-) -> _OverrideGates:
-    """The gates, read from the global cfg — an override cannot enable itself.
+def _base_layers(global_text: str | None, *, cfg_label: str, appended: Sequence[_CfgLayer] = ()) -> list[_CfgLayer]:
+    """The layers RetroArch reads at boot: the global cfg, then the appended files.
 
-    ``auto_overrides_enable`` defaults true (config.def.h) and takes only
-    RetroArch's boolean vocabulary; anything else leaves the default in place
-    and is stated. It is read from the global cfg alone because RetroArch
-    copies it into a local *before* it merges the overrides
-    (``runloop.c:4941``, used at ``:5002-5003``) — an override genuinely cannot
-    switch itself on or off. ``game_specific_options`` reads the same way but
-    is decided later, so it is *not* a gate here: see :func:`_apply_card`.
-    Where the override files are read from is :func:`_override_directory`'s
-    question.
+    A missing global cfg contributes no layer, and the appended files still do
+    (issue #637 D9): with no ``-c`` RetroArch starts from its defaults and
+    appends all the same, and atlas cannot tell that launch from one whose
+    ``-c`` names a missing file (``configuration.c:6282-6288``).
     """
     layers: list[_CfgLayer] = (
         [(CfgSource(CFG_LAYER_GLOBAL, cfg_label), global_text)] if global_text is not None else []
     )
-    auto_overrides, auto_ignored = chain_bool(layers, "auto_overrides_enable", default=True)
+    layers.extend(appended)
+    return layers
+
+
+def _override_gates(
+    layers: Sequence[_CfgLayer],
+    *,
+    sandbox: _Sandbox,
+    override_config_dir: str,
+    config_file_dir: str,
+) -> _OverrideGates:
+    """The gates, read from the boot layers — an override cannot enable itself.
+
+    *layers* are the global cfg and the files the launch appends
+    (:func:`_base_layers`). ``auto_overrides_enable`` defaults true
+    (config.def.h) and takes only RetroArch's boolean vocabulary; anything else
+    leaves the default in place and is stated. It is read from those layers
+    alone because RetroArch copies it into a local *before* it merges the
+    overrides (``runloop.c:4941``, used at ``:5002-5003``), from the settings
+    the boot load made of the global cfg and the appended files
+    (``configuration.c:6309-6353``) — an override genuinely cannot switch
+    itself on or off, and an appended file can. ``game_specific_options``
+    reads the same way but is decided later, so it is *not* a gate here: see
+    :func:`_apply_card`. Where the override files are read from is
+    :func:`_override_directory`'s question.
+    """
+    auto_overrides, auto_source, auto_ignored = chain_bool_read(
+        layers, "auto_overrides_enable", default=True
+    )
     directory, dir_sources, dir_caveats = _override_directory(
         layers,
         sandbox=sandbox,
-        cfg_label=cfg_label,
         override_config_dir=override_config_dir,
         config_file_dir=config_file_dir,
     )
     return _OverrideGates(
-        auto_overrides, directory, dir_sources, (*_ignored_caveats(auto_ignored), *dir_caveats)
+        auto_overrides,
+        directory,
+        dir_sources,
+        (*_ignored_caveats(auto_ignored), *dir_caveats),
+        auto_overrides_source=auto_source,
     )
 
 
@@ -2141,7 +2191,6 @@ def _override_directory(
     layers: Sequence[_CfgLayer],
     *,
     sandbox: _Sandbox,
-    cfg_label: str,
     override_config_dir: str,
     config_file_dir: str,
 ) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
@@ -2176,16 +2225,16 @@ def _override_directory(
     the platform default while the file appears to say otherwise, so it is
     stated even though the key is not a save-layout key itself.
     """
-    raw, ignored = chain_value(layers, "rgui_config_directory")
+    raw, source, ignored = chain_value_read(layers, "rgui_config_directory")
     caveats = _ignored_caveats(ignored)
-    if raw is None:
+    if raw is None or source is None:
         return override_config_dir, (), caveats
     configured = sandbox.cfg_path("rgui_config_directory", raw)
     if configured is None:
         return (
             config_file_dir,
             (
-                f'{cfg_label}: rgui_config_directory = "{raw}" — the setting is cleared, so '
+                f'{source.label}: rgui_config_directory = "{raw}" — the setting is cleared, so '
                 f"overrides live beside retroarch.cfg in {config_file_dir} "
                 "(configuration.c:6825, file_path_special.c:196-207)",
             ),
@@ -2193,7 +2242,7 @@ def _override_directory(
         )
     return (
         configured.path if configured.path is not None else configured.configured,
-        (f'{cfg_label}: rgui_config_directory = "{raw}"{configured.note}',),
+        (f'{source.label}: rgui_config_directory = "{raw}"{configured.note}',),
         (*caveats, *configured.caveats),
     )
 
@@ -2213,7 +2262,9 @@ def _override_layers(
     """
     overrides: list[CfgLayer] = []
     if not gates.auto_overrides:
-        return overrides, ('retroarch.cfg: auto_overrides_enable = "false" — override files not applied',)
+        decided_by = gates.auto_overrides_source
+        assert decided_by is not None  # the default is true, so a false was read from a file
+        return overrides, (f'{decided_by.label}: auto_overrides_enable = "false" — override files not applied',)
     if library_name is None:
         return overrides, ()
     candidates = [
@@ -2244,6 +2295,185 @@ def _override_layers(
         if text is not None:
             overrides.append((source, text))
     return overrides, ()
+
+
+@dataclass(frozen=True, slots=True)
+class _Appended:
+    """The files a launch appends, read the way the program would read them (issue #637).
+
+    ``layers`` are the files in RetroArch's order, each named as the caller
+    passed it; ``unestablished`` is the sandbox's app id where whether the
+    program sees one of them was not established (D8), ``None`` where it was
+    or there is no sandbox; ``unreachable`` is the refusal for a file there is
+    no answer with, which ends the question.
+    """
+
+    layers: tuple[_CfgLayer, ...] = ()
+    unestablished: str | None = None
+    unreachable: Unresolved | None = None
+
+
+# Why RetroArch launches without an appended file — the program cannot open it,
+# so it skips the file (``config_append_file`` fails, ``configuration.c:6341-6347``,
+# ``config_file.c:773-779``, ``:829-850``) — by what was found at the path.
+_APPENDED_SKIPPED = (
+    "RetroArch skips a file it cannot open and launches without it (configuration.c:6341-6347, "
+    "config_file.c:773-779), so there is no answer with this file appended"
+)
+_APPENDED_NOT_OPENED = {
+    READ_MISSING: "there is no file at that path",
+    READ_UNREADABLE: "it is no regular file or cannot be read",
+}
+
+
+def _appended_not_opened(path: str, why: str) -> Unresolved:
+    """The refusal for an appended file RetroArch cannot open and skips (D4, D6)."""
+    return Unresolved(
+        UNRESOLVED_APPENDED_CONFIG_UNREACHABLE,
+        f"appended config {path!r} cannot be opened: {why} — {_APPENDED_SKIPPED}",
+        {"file": path},
+    )
+
+
+def _appended_not_text(path: str) -> Unresolved:
+    """The refusal for an appended file RetroArch applies and atlas cannot read (D10).
+
+    The opposite case from :func:`_appended_not_opened`: RetroArch's parser
+    reads bytes, so the file is applied, and what it sets is what atlas
+    cannot know — an answer without it would be false.
+    """
+    return Unresolved(
+        UNRESOLVED_APPENDED_CONFIG_UNREACHABLE,
+        f"appended config {path!r} is not valid UTF-8 text, so atlas could not read what it sets — "
+        "RetroArch reads it byte-wise and applies it, so an answer without it would be false",
+        {"file": path},
+    )
+
+
+def _appended_refusal(path: str, status: str) -> Unresolved:
+    """The refusal for an appended file whose host read answered *status* rather than its text."""
+    if status == READ_INVALID_TEXT:
+        return _appended_not_text(path)
+    return _appended_not_opened(path, _APPENDED_NOT_OPENED.get(status, "it could not be read"))
+
+
+def _appended_host_path(view: "_SandboxLaunchView | None", path: str) -> tuple[str | None, bool]:
+    """Where the host reads the program's *path*, and whether its visibility was established.
+
+    Without a modelled sandbox the path is the host's own. Inside RetroDECK's
+    the sandbox decides: a path it shows nothing at — hidden by the grants,
+    missing, or no file — is ``None``, which the caller refuses; one the model
+    cannot tell is read as the host's own spelling (D7), with the visibility
+    left unestablished.
+    """
+    if view is None:
+        return path, True
+    probe = view.regular_file(path)
+    host = view.host_path(path)
+    if probe == PROBE_HIT:
+        return host, True
+    if probe == PROBE_MISS:
+        return None, True
+    return (host if host is not None else path), False
+
+
+def _read_appended(machine: Machine, query: _SaveQuery, view: "_SandboxLaunchView | None") -> _Appended:
+    """Each file the query appends, through the program's own view of the filesystem (D4, D7, D8).
+
+    RetroDECK's RetroArch runs in the frontend's Flatpak, whose sandbox atlas
+    models (*view*). EmuDeck's RetroArch and a bare RetroArch Flatpak run in a
+    sandbox it does not model: their paths are read as the host's, and the
+    answer says the visibility was not established. A RetroArch on the host
+    (no app id) has no sandbox, and its paths simply are the host's.
+
+    A file there is no answer with refuses the question rather than being
+    skipped as RetroArch skips it (D6): the caller asked where the saves land
+    *with* the file, and that launch does not exist.
+    """
+    if not query.appendconfig:
+        return _Appended()
+    app_id = view.app_id if view is not None else query.sandbox.app_id
+    established = view is not None or app_id is None
+    layers: list[_CfgLayer] = []
+    for path in query.appendconfig:
+        host, told = _appended_host_path(view, path)
+        established = established and told
+        if host is None:
+            return _Appended(
+                unreachable=_appended_not_opened(path, "the program's sandbox shows no file there")
+            )
+        read = machine.read_text(host)
+        if read.text is None:
+            return _Appended(unreachable=_appended_refusal(path, read.status))
+        layers.append((CfgSource(CFG_LAYER_APPENDED, path), read.text))
+    return _Appended(tuple(layers), unestablished=None if established else app_id)
+
+
+@dataclass
+class _ViewDirectoryCheck:
+    """``path_is_directory`` for a root an appended file states, asked of the program's own view (D4).
+
+    RetroDECK's RetroArch tests the folder inside its sandbox, so a folder the
+    sandbox hides or does not hold fails there and the read sets nothing,
+    whatever the host has at that spelling. One the view cannot tell passes —
+    the emulator's own test still decides it — and is remembered, because the
+    answer then rests on a visibility nobody established (D7, D8). Roots the
+    global cfg and the overrides state keep the check every layer had before.
+    """
+
+    view: "_SandboxLaunchView"
+    unestablished: bool = False
+
+    def __call__(self, value: str) -> bool:
+        if is_app_relative(value):
+            return True
+        probe = self.view.is_directory(value)
+        if probe == PROBE_UNKNOWN:
+            self.unestablished = True
+            return True
+        return probe == PROBE_HIT
+
+
+def _visibility_note(app_id: str) -> Caveat:
+    """The one D8 note an answer carries where the program's view of its appended paths was not established."""
+    return Caveat(
+        CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED,
+        f"whether RetroArch in {app_id}'s sandbox sees the appended files and the folders they set "
+        "was not established, so they were read as this host's own paths",
+        {"app_id": app_id},
+    )
+
+
+def _boot_values(base: Sequence[_CfgLayer]) -> dict[str, str]:
+    """The settings RetroArch's boot load makes of the global cfg and the appended files.
+
+    One merged config, the later file winning per key (``config_file.c:773-805``,
+    appended at ``configuration.c:6309-6353``). What is read from it before
+    any override is read from this — where the cores live among it:
+    ``libretro_info_path`` through the generic path loop
+    (``configuration.c:1688``, ``:6532-6538``), ``libretro_directory`` through
+    its own read (``:6541``). A core ``-L`` names by its file name is joined to
+    that directory when the name is not a valid file as given
+    (``retroarch.c:7270-7291``); a full path is loaded as given.
+    """
+    values: dict[str, str] = {}
+    for _, text in base:
+        values.update(parse_cfg_once(text).values)
+    return values
+
+
+def _appended_overridden_caveats(layout: RetroArchCfg) -> tuple[Caveat, ...]:
+    """One note per layout key an appended file sets and an override wins (D3)."""
+    return tuple(
+        Caveat(
+            CAVEAT_APPENDED_CONFIG_OVERRIDDEN,
+            f"{entry.override.label} sets {entry.key} as well, and RetroArch merges the overrides "
+            "on top of the appended files (configuration.c:6355 onwards), so the override's value "
+            "stands and the appended one does not apply",
+            {"key": entry.key, "layer": entry.override.kind, "file": entry.override.file},
+        )
+        for entry in layout.appended_overridden
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -5198,16 +5428,21 @@ class _Chain:
     gates: _OverrideGates
     layers: tuple[_CfgLayer, ...]
     layout: RetroArchCfg
-    # The global cfg's settings from the one parse this chain made. Carried
-    # rather than re-derived: the snapshot is the same either way, but a route
-    # that parses the text again pays for a second walk of a file that runs to
+    # The settings RetroArch's boot load makes — the global cfg merged with the
+    # appended files, the later winning (:func:`_boot_values`) — from the one
+    # parse this chain made. Carried rather than re-derived: a route that
+    # parses the text again pays for a second walk of a file that runs to
     # thousands of lines on a real installation.
-    global_values: Mapping[str, str]
+    boot_values: Mapping[str, str]
     reachable: bool
     platform_default_dir: str
     retroarch_config_dir: str
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
+    # The refusal for an appended file RetroArch could not open (issue #637).
+    # The rest of the chain is then read without the appended files and is
+    # not an answer: the save routes return this instead.
+    appended_unreachable: Unresolved | None = None
 
     @property
     def effective_root(self) -> str:
@@ -5223,9 +5458,10 @@ _NO_CORE_MESSAGES = {
 
 
 def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain:
-    """Global cfg → override chain → resolved layout, for one family, all live.
+    """Global cfg → appended files → override chain → resolved layout, for one family, all live.
 
-    Reads the same four layers RetroArch reads (``configuration.c:7095``) and
+    Reads the same five layers RetroArch reads (``configuration.c:6309-6353``
+    for the files a launch appends, ``:7095`` for the overrides) and
     resolves ``library_name`` from the core binary when a core is named. Every
     degradation is a stated caveat, never a silent guess. The query carries the
     global cfg's content, read exactly once by the caller — one query derives
@@ -5236,10 +5472,23 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     each (``runloop.c:8752-8979``), so the port takes the same shape.
     """
     content = _content_coordinates(query.content_path)
+    view = query.appended_view() if query.appendconfig and query.appended_view is not None else None
+    appended = _read_appended(machine, query, view)
+    base = _base_layers(query.global_text, cfg_label=query.cfg_label, appended=appended.layers)
+    boot_values = _boot_values(base)
+    # Where the cores live is read at boot, from the global cfg and the appended
+    # files alike (configuration.c:6541), and a core named by its file name
+    # is looked up there (retroarch.c:7270-7291), so a file that moves them
+    # moves that core; a full path is taken as given.
+    core_path_resolver = (
+        (lambda so: _core_path_in(query.sandbox, boot_values, so))
+        if appended.layers
+        else query.core_path_resolver
+    )
     core = _identify_core(
         machine,
         core_so=query.core_so,
-        core_path_resolver=query.core_path_resolver,
+        core_path_resolver=core_path_resolver,
         no_core_message=_NO_CORE_MESSAGES[keys.label],
     )
     caveats = [*query.extra_caveats, *core.caveats]
@@ -5249,9 +5498,8 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
 
     retroarch_config_dir = os.path.dirname(query.global_cfg_path)
     gates = _override_gates(
-        query.global_text,
+        base,
         sandbox=query.sandbox,
-        cfg_label=query.cfg_label,
         override_config_dir=query.override_config_dir,
         config_file_dir=retroarch_config_dir,
     )
@@ -5262,24 +5510,26 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     )
     sources_extra.extend(override_sources)
 
+    appended_dirs = _ViewDirectoryCheck(view) if view is not None else None
     layout = resolve_layout(
         query.global_text,
         keys=keys,
         home=query.sandbox.expansion_home,
         cfg_label=query.cfg_label,
         defaults=query.defaults,
+        appended=appended.layers,
         overrides=overrides,
         is_directory=_save_dir_probe(machine, query.sandbox, keys.directory),
+        appended_is_directory=appended_dirs,
     )
+    unestablished = appended.unestablished
+    if unestablished is None and appended_dirs is not None and appended_dirs.unestablished:
+        unestablished = appended_dirs.view.app_id
+    if unestablished is not None:
+        caveats.append(_visibility_note(unestablished))
     caveats.extend(_ignored_caveats(layout.ignored))
-    layers: list[_CfgLayer] = [
-        (source, text)
-        for source, text in (
-            (CfgSource(CFG_LAYER_GLOBAL, query.cfg_label), query.global_text),
-            *overrides,
-        )
-        if text is not None
-    ]
+    caveats.extend(_appended_overridden_caveats(layout))
+    layers: list[_CfgLayer] = [*base, *overrides]
     saves_root = _host_save_dir(query.sandbox, layout)
     layout = saves_root.layout
     sources_extra.extend(saves_root.sources)
@@ -5306,12 +5556,13 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         gates=gates,
         layers=tuple(layers),
         layout=layout,
-        global_values=parse_cfg_once(query.global_text).values if query.global_text is not None else {},
+        boot_values=boot_values,
         reachable=saves_root.reachable,
         platform_default_dir=platform_default_dir,
         retroarch_config_dir=retroarch_config_dir,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),
+        appended_unreachable=appended.unreachable,
     )
 
 
@@ -5428,6 +5679,8 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
     chain = _read_chain(machine, query, SAVEFILE_KEYS)
     if chain.core.not_installed is not None:
         return chain.core.not_installed
+    if chain.appended_unreachable is not None:
+        return chain.appended_unreachable
     content, core = chain.content, chain.core
     layout, layers = chain.layout, list(chain.layers)
     retroarch_config_dir = chain.retroarch_config_dir
@@ -5705,6 +5958,8 @@ def _savestate_location_resolved(machine: Machine, query: _SaveQuery) -> Savesta
     chain = _read_chain(machine, query, SAVESTATE_KEYS)
     if chain.core.not_installed is not None:
         return chain.core.not_installed
+    if chain.appended_unreachable is not None:
+        return chain.appended_unreachable
     content = chain.content
     caveats = list(chain.caveats)
 
@@ -5716,7 +5971,7 @@ def _savestate_location_resolved(machine: Machine, query: _SaveQuery) -> Savesta
             _savestate_support_caveats(
                 machine,
                 sandbox=query.sandbox,
-                parsed=chain.global_values,
+                parsed=chain.boot_values,
                 core_so=query.core_so,
                 layers=chain.layers,
             )
@@ -5793,9 +6048,8 @@ def _screenshot_layers(
     sources = [*query.extra_sources, *core.sources]
     retroarch_config_dir = os.path.dirname(query.global_cfg_path)
     gates = _override_gates(
-        query.global_text,
+        _base_layers(query.global_text, cfg_label=query.cfg_label),
         sandbox=query.sandbox,
-        cfg_label=query.cfg_label,
         override_config_dir=query.override_config_dir,
         config_file_dir=retroarch_config_dir,
     )
@@ -15801,7 +16055,7 @@ def _retroarch_mod_location(machine: Machine, query: _SaveQuery) -> ModPlacement
         applies, applies_sources, _ = _soft_patch_applies(
             machine,
             sandbox=query.sandbox,
-            parsed=chain.global_values,
+            parsed=chain.boot_values,
             core_so=query.core_so,
         )
     return ModPlacement(
@@ -16564,7 +16818,6 @@ def _firmware_core_options(
     override_dir, _, override_caveats = _override_directory(
         layers,
         sandbox=sandbox,
-        cfg_label=cfg_label,
         override_config_dir=os.path.join(retroarch_config_dir, "config"),
         config_file_dir=retroarch_config_dir,
     )
@@ -16928,6 +17181,7 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavefilePlacement | Unresolved: ...
 
     def entry_savestate_location(
@@ -16937,6 +17191,7 @@ class _CatalogueHost(Protocol):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | SavestateAbsence | Unresolved: ...
 
     def entry_texture_pack_location(
@@ -18921,7 +19176,7 @@ class EmulatorEntry:
 
     @one_question
     def savefile_location(
-        self, *, content_path: str | None = None, cwd: str | None = None
+        self, *, content_path: str | None = None, cwd: str | None = None, appendconfig: Sequence[str] = ()
     ) -> SavefilePlacement | Unresolved:
         """Where this emulator keeps the save — core filled in from the catalogue.
 
@@ -18938,15 +19193,28 @@ class EmulatorEntry:
         path: it fills the ``cwd`` hole of an emulator that saves relative to
         it, is ignored where the answer does not depend on it, and a value that
         is not absolute raises ``ValueError``.
+
+        ``appendconfig`` names the files the launch appends to RetroArch with
+        ``--appendconfig``, as the installation's own question takes them. A
+        standalone emulator never reads RetroArch's configuration, so there the
+        answer is the one without them, with an ``appended-config-not-read``
+        note saying the redirect does not apply.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
+        if files and self._spec.kind != KIND_LIBRETRO:
+            return _savefile_with_appended_not_read(
+                self._installation.entry_savefile_location(
+                    self._spec, self._caveats, content_path=content_path, cwd=cwd
+                )
+            )
         return self._installation.entry_savefile_location(
-            self._spec, self._caveats, content_path=content_path, cwd=cwd
+            self._spec, self._caveats, content_path=content_path, cwd=cwd, appendconfig=files
         )
 
     @one_question
     def savestate_location(
-        self, *, content_path: str | None = None, cwd: str | None = None
+        self, *, content_path: str | None = None, cwd: str | None = None, appendconfig: Sequence[str] = ()
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """Where this emulator keeps the savestates — core filled in from the catalogue.
 
@@ -18959,12 +19227,19 @@ class EmulatorEntry:
         and whether atlas has its wiring is a question about packaged
         knowledge. Since #284 there is a third shape: a card can state, with
         its citation, that the emulator has no savestates at all — an answer
-        (:class:`~atlas.placement.SavestateAbsence`), not a refusal. ``cwd`` is
-        taken as :meth:`savefile_location` takes it.
+        (:class:`~atlas.placement.SavestateAbsence`), not a refusal. ``cwd`` and
+        ``appendconfig`` are taken as :meth:`savefile_location` takes them.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
+        if files and self._spec.kind != KIND_LIBRETRO:
+            return _savestate_with_appended_not_read(
+                self._installation.entry_savestate_location(
+                    self._spec, self._caveats, content_path=content_path, cwd=cwd
+                )
+            )
         return self._installation.entry_savestate_location(
-            self._spec, self._caveats, content_path=content_path, cwd=cwd
+            self._spec, self._caveats, content_path=content_path, cwd=cwd, appendconfig=files
         )
 
     @one_question
@@ -19515,6 +19790,39 @@ def _firmware_with_caveats(answer: FirmwareAnswer, caveats: tuple[Caveat, ...]) 
 # An entry's own caveats ride the answer it qualifies, and a refusal is not one:
 # it has no caveat list, and it is already the whole answer. Same shape as the
 # helpers above and monomorphic for the same reason.
+
+
+def _appended_not_read_note() -> Caveat:
+    """The note that a standalone emulator reads no appended RetroArch file (issue #637 D5).
+
+    It carries no data: the caller asked this very entry, and the entry states
+    which emulator it runs itself.
+    """
+    return Caveat(
+        CAVEAT_APPENDED_CONFIG_NOT_READ,
+        "this entry runs a standalone emulator, which never reads RetroArch's configuration, so "
+        "the appended files change nothing and the answer is the one without them",
+    )
+
+
+def _savefile_with_appended_not_read(outcome: SavefilePlacement | Unresolved) -> SavefilePlacement | Unresolved:
+    """*outcome* with :func:`_appended_not_read_note` — a refusal passes through untouched."""
+    if isinstance(outcome, Unresolved):
+        return outcome
+    note = _appended_not_read_note()
+    return cast(SavefilePlacement, _dc_replace(outcome, caveats=(*outcome.caveats, note)))
+
+
+def _savestate_with_appended_not_read(
+    outcome: SavestatePlacement | SavestateAbsence | Unresolved,
+) -> SavestatePlacement | SavestateAbsence | Unresolved:
+    """*outcome* with :func:`_appended_not_read_note` — a refusal passes through untouched."""
+    if isinstance(outcome, Unresolved):
+        return outcome
+    note = _appended_not_read_note()
+    return cast(
+        "SavestatePlacement | SavestateAbsence", _dc_replace(outcome, caveats=(*outcome.caveats, note))
+    )
 
 
 def _entry_savefile_with_caveats(
@@ -21279,6 +21587,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> _SaveQuery:
         """The placement question over a marker snapshot this query already read.
 
@@ -21292,7 +21601,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         that one sandbox, the core path included, so no two parts of one
         answer can read the same cfg value against different homes. The same
         context's filesystem tables ride along as the revocation check the
-        save resolvers apply to their final directory (issue #103).
+        save resolvers apply to their final directory (issue #103). RetroArch
+        runs inside the frontend's own Flatpak here, so the launch view is how
+        it sees the files a launch appends (issue #637).
         """
         health = self._health_from(config, marker_issues)
         global_cfg_path = self._cfg_path()
@@ -21323,6 +21634,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             revocation=context.revocation,
             cwd=cwd,
+            appendconfig=appendconfig,
+            appended_view=self._launch_view,
         )
 
     def _savefile_location_from(
@@ -21335,6 +21648,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavefilePlacement | Unresolved:
         return _retroarch_savefile_location(
             self._machine,
@@ -21346,6 +21660,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 system=system,
                 extra_caveats=extra_caveats,
                 cwd=cwd,
+                appendconfig=appendconfig,
             ),
         )
 
@@ -21357,6 +21672,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
+        appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | Unresolved:
         return _retroarch_savestate_location(
             self._machine,
@@ -21366,6 +21682,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
+                appendconfig=appendconfig,
             ),
         )
 
@@ -21377,6 +21694,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None = None,
         system: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavefilePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the save for *content_path* under *core_so*.
 
@@ -21388,9 +21706,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         guesses. ``cwd`` is the working folder the launch will use, an absolute
         host path: it fills the ``cwd`` hole of a core that saves relative to
         it, is ignored where the answer does not depend on it, and a value that
-        is not absolute raises ``ValueError``.
+        is not absolute raises ``ValueError``. ``appendconfig`` names the files
+        the launch appends with ``--appendconfig``, absolute paths in
+        RetroArch's order (``|``-joined ones are split as RetroArch splits
+        them): the answer is where the saves land with them in the chain.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
             return self._not_set_up_refusal()
@@ -21401,6 +21723,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_so=core_so,
             system=system,
             cwd=cwd,
+            appendconfig=files,
         )
 
     @one_question
@@ -21410,6 +21733,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavestatePlacement | Unresolved:
         """Where this RetroDECK's RetroArch keeps the savestates for *content_path*.
 
@@ -21418,9 +21742,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         quartet of keys instead of the savefile one. RetroArch writes every
         state itself, below a directory its own configuration names, so
         ``cwd`` is checked like the savefile question's and changes nothing
-        here.
+        here; ``appendconfig`` is taken as the savefile question takes it.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
             return self._not_set_up_refusal()
@@ -21429,6 +21754,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             marker_issues,
             content_path=content_path,
             core_so=core_so,
+            appendconfig=files,
         )
 
     def _screenshot_location_from(
@@ -21777,6 +22103,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — one marker read.
 
@@ -21826,6 +22153,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             system=spec.system,
             extra_caveats=entry_caveats,
             cwd=cwd,
+            appendconfig=appendconfig,
         )
         return _entry_savefile_with_caveats(placement, extra)
 
@@ -21837,6 +22165,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savestate_location` — one marker read.
 
@@ -21904,6 +22233,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
+            appendconfig=appendconfig,
         )
         return _entry_savestate_with_caveats(placement, extra)
 
@@ -23448,6 +23778,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind :meth:`EmulatorEntry.savefile_location` — EmuDeck's wiring.
 
@@ -23476,6 +23807,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 system=spec.system,
                 extra_caveats=entry_caveats,
                 cwd=cwd,
+                appendconfig=appendconfig,
             ),
         )
         if content_path is None:
@@ -23862,6 +24194,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | SavestateAbsence | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
@@ -23880,7 +24213,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             )
         placement = _retroarch_savestate_location(
             self._machine,
-            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+            self._query(
+                content_path=content_path,
+                core_so=spec.core_so,
+                extra_caveats=entry_caveats,
+                appendconfig=appendconfig,
+            ),
         )
         if content_path is None:
             return placement
@@ -24100,6 +24438,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> _SaveQuery:
         """The placement question, over one read of the companion cfg.
 
@@ -24110,7 +24449,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         readings of it. The sandbox arrives with its ``~`` base composed from
         the bare Flatpak's override files (:meth:`_cfg_sandbox`) — this
         query's one read of those files — and every resolution goes through
-        that one sandbox, the core path included.
+        that one sandbox, the core path included. The RetroArch Flatpak's own
+        sandbox is not modelled, so the files a launch appends are read as the
+        host's (issue #637).
         """
         settings, marker_issues = self._read_marker()
         global_cfg_path = self._companion_cfg_path()
@@ -24140,6 +24481,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             revocation=context.revocation,
             cwd=cwd,
+            appendconfig=appendconfig,
         )
 
     @one_question
@@ -24150,6 +24492,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None = None,
         system: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavefilePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the save — resolved from the bare Flatpak cfg.
 
@@ -24163,12 +24506,17 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         is. ``cwd`` is the working folder the launch will use, an absolute host
         path: it fills the ``cwd`` hole of a core that saves relative to it, is
         ignored where the answer does not depend on it, and a value that is not
-        absolute raises ``ValueError``.
+        absolute raises ``ValueError``. ``appendconfig`` names the files the
+        launch appends with ``--appendconfig``, as RetroDECK's question takes
+        them.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         return _retroarch_savefile_location(
             self._machine,
-            self._query(content_path=content_path, core_so=core_so, system=system, cwd=cwd),
+            self._query(
+                content_path=content_path, core_so=core_so, system=system, cwd=cwd, appendconfig=files
+            ),
         )
 
     @one_question
@@ -24178,6 +24526,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavestatePlacement | Unresolved:
         """Where EmuDeck's RetroArch keeps the savestates — the same cfg, the state keys.
 
@@ -24195,10 +24544,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         installer history is context, not an input. ``cwd`` is checked as the
         savefile question checks it and changes nothing here: RetroArch writes
         every state below a directory its own configuration names.
+        ``appendconfig`` is taken as the savefile question takes it.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         return _retroarch_savestate_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so)
+            self._machine, self._query(content_path=content_path, core_so=core_so, appendconfig=files)
         )
 
     @one_question
@@ -24543,6 +24894,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         system: str | None = None,
         extra_caveats: tuple[Caveat, ...] = (),
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> _SaveQuery:
         """The placement question, over one read of this install's cfg.
 
@@ -24551,7 +24903,10 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         one read of the app's override files, whose filesystem tables also
         ride as the revocation check (issue #103) — and every resolution goes
         through that one sandbox, the core path included. A native install
-        reads no override files and nothing can revoke its filesystem.
+        reads no override files and nothing can revoke its filesystem. The
+        Flatpak's sandbox is not modelled for the files a launch appends, so
+        they are read as the host's, and a native install has no sandbox at
+        all (issue #637).
         """
         cfg = self._machine.read_text(self._cfg_path())
         health = self._health_from(cfg.status)
@@ -24579,6 +24934,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             extra_caveats=(*extra_caveats, *health.issues, *arrangement_caveats(self.kind)),
             revocation=revocation,
             cwd=cwd,
+            appendconfig=appendconfig,
         )
 
     @one_question
@@ -24589,6 +24945,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         core_so: str | None = None,
         system: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavefilePlacement | Unresolved:
         """Where this RetroArch install keeps the save for *content_path* under *core_so*.
 
@@ -24602,12 +24959,17 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         is. ``cwd`` is the working folder the launch will use, an absolute host
         path: it fills the ``cwd`` hole of a core that saves relative to it, is
         ignored where the answer does not depend on it, and a value that is not
-        absolute raises ``ValueError``.
+        absolute raises ``ValueError``. ``appendconfig`` names the files the
+        launch appends with ``--appendconfig``, as RetroDECK's question takes
+        them.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         return _retroarch_savefile_location(
             self._machine,
-            self._query(content_path=content_path, core_so=core_so, system=system, cwd=cwd),
+            self._query(
+                content_path=content_path, core_so=core_so, system=system, cwd=cwd, appendconfig=files
+            ),
         )
 
     @one_question
@@ -24617,6 +24979,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None = None,
         core_so: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavestatePlacement | Unresolved:
         """Where this RetroArch install keeps the savestates for *content_path*.
 
@@ -24626,11 +24989,13 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         per-``library_name`` subdirectories of ``states`` under the config tree.
         ``cwd`` is checked as the savefile question checks it and changes
         nothing here: RetroArch writes every state below a directory its own
-        configuration names.
+        configuration names. ``appendconfig`` is taken as the savefile
+        question takes it.
         """
         checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
         return _retroarch_savestate_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so)
+            self._machine, self._query(content_path=content_path, core_so=core_so, appendconfig=files)
         )
 
     @one_question
@@ -24862,6 +25227,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavefilePlacement | Unresolved:
         """The entry route behind a derived entry — the core question, asked by the entry.
 
@@ -24885,6 +25251,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
                 system=spec.system,
                 extra_caveats=entry_caveats,
                 cwd=cwd,
+                appendconfig=appendconfig,
             ),
         )
 
@@ -24896,6 +25263,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         *,
         content_path: str | None = None,
         cwd: str | None = None,
+        appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | Unresolved:
         """The savefile entry route's twin — same sources, the savestate keys.
 
@@ -24911,7 +25279,12 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
             return _standalone_savestate_unresolved(spec)
         return _retroarch_savestate_location(
             self._machine,
-            self._query(content_path=content_path, core_so=spec.core_so, extra_caveats=entry_caveats),
+            self._query(
+                content_path=content_path,
+                core_so=spec.core_so,
+                extra_caveats=entry_caveats,
+                appendconfig=appendconfig,
+            ),
         )
 
     @one_question
@@ -25029,6 +25402,7 @@ class Installation(Protocol):
         core_so: str | None = None,
         system: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavefilePlacement | Unresolved: ...
 
     def savestate_location(
@@ -25037,6 +25411,7 @@ class Installation(Protocol):
         content_path: str | None = None,
         core_so: str | None = None,
         cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
     ) -> SavestatePlacement | Unresolved: ...
 
     def screenshot_location(
