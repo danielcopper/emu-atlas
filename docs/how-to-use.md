@@ -3139,6 +3139,7 @@ for core in answer.cores:
                                    #   which door the emulator opens to find firmware — never null (see below)
     core.requirements_met          # True | False | None — THE field to render (see below)
     core.system_firmware           # what is RECORDED about this core's system — world knowledge (see below)
+    core.system_firmware_met       # True | False | None — the console-level verdict requirements_met folds in
     for entry in core.requirements:
         if isinstance(entry, atlas.FirmwareAlternatives):   # one launch needs exactly ONE option — see below
             reqs = entry.options   # each option carries req.regions, the console regions it serves
@@ -3253,13 +3254,27 @@ override table files those names under, and that table files the Super Game Boy 
 cartridge runs in an SNES rather than in a Game Boy. The entries the table of systems has for those machines are
 recorded `open`, so nothing about them turns on the state yet. Where a core in this state declares for one system the
 conjunction has one term, its disjunction spans the whole declaration, and the field reads as it always did — which is
-every core reaching that state measured so far: 61 core blocks in the vector corpus, all for one system, counted over
+every core reaching that state measured so far: 69 core blocks in the vector corpus, all for one system, counted over
 every core block in `vectors/machines/*.json` whose `system_firmware` is `cannot-run-without-firmware` and, per block,
 the distinct `system` values of its requirements and their alternatives. The count moves with the corpus and the
 property does not, so the property is the one held mechanically: `tests/test_system_firmware.py` walks the same rule and
 fails naming the block the day one declares for two systems. Which images a system's name covers is as fine as the
 per-file override table makes it — a `.info` files every image under one `systemname`, so where nothing separates them
 they are one system's images.
+
+**`core.system_firmware_met` states that system-level verdict on its own**, so a client can tell why a `False`
+`requirements_met` is false. `True` where the system runs without firmware, the core carries its own substitute, or
+every needing system has an image of its own; `False` as soon as one demonstrably has none; `None` where what is left is
+unjudged — and `None` wherever the need itself is not established: an unjudged declaration, or a `system_firmware` of
+`null` or `open`. The relation runs one way. A `False` here makes `requirements_met` `False`, and a `True` here does not
+make it `True`, because the declaration is judged beside it. A `None` here beside a `True` `requirements_met` is the
+expected shape over a system nobody recorded or recorded `open`: the declaration is met, and whether the console needs
+an image beyond it is nobody's established answer.
+
+That is the field a client judging an alternatives group by the game's own region reads. `False` says the console has no
+usable image of its own, which holds for every region, including one no option lists. `True` or `None` beside a `False`
+`requirements_met` says the failure lies elsewhere — in the group's stated regions, or in a required file of the
+declaration — and leaves a region no option lists unestablished.
 
 Where the table states something — `cannot-run-without-firmware` in either shape, or `runs-without-firmware` — the core
 carries a `system-firmware-world-knowledge` caveat with `system` and `evidence`, the latter being `verified` or

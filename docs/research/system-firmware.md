@@ -368,6 +368,12 @@ enters a firmware answer — and states what it says on every core of that answe
   apiece rather than one between them. Where a core in this state declares for one system that conjunction has one term
   and its disjunction spans the whole declaration. The reading only ever narrows the field — it makes nothing true that
   was not true before.
+- **`system_firmware_met`** states that system-level reading on its own, where the need is established: `true` where the
+  system runs without firmware, the core carries its own substitute, or every needing system has an image of its own,
+  `false` as soon as one has no usable image, `null` where what is left is unjudged. Where the need is not established —
+  an unjudged declaration, or `system_firmware` `null` or `open` — it is `null`, not the `true` that leaves
+  `requirements_met` unnarrowed there, so it can be `null` beside a `true` `requirements_met`. A `false` here is a
+  `false` there; a `true` here does not make that one `true`.
 - **`system-firmware-world-knowledge`** rides on the core where the table **states** something, carrying the system and
   the evidence level — spelled `verified` or `derived`, because the contract is the public surface and the bracket forms
   above are this repository's own notation — and nothing else. The verdict is the field's job; this is the mark that
