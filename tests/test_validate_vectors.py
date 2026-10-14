@@ -213,6 +213,28 @@ def _gba_requirement(**overrides) -> Vector:
     )
 
 
+def _search_absence_core(**overrides) -> Vector:
+    """DuckStation's card where its search ran to the end and kept nothing.
+
+    No requirement, and the system its card searched for stated all the same,
+    with the world-knowledge mark beside the caveat that names the directory.
+    """
+    return _core(
+        core_so=None,
+        emulator="DUCKSTATION",
+        label="DuckStation (Legacy) (Standalone)",
+        declaration="packaged",
+        requirements=[],
+        system_firmware="cannot-run-without-firmware",
+        caveats=[
+            {"code": "firmware-packaged-declaration", "data": {}},
+            {"code": "firmware-path-names-no-file", "data": {}},
+            {"code": "system-firmware-world-knowledge", "data": {"system": "psx", "evidence": "verified"}},
+        ],
+        **overrides,
+    )
+
+
 def _two_system_core(**overrides) -> Vector:
     """A core declaring for two systems, in the state whose need is asked per system.
 
@@ -1207,6 +1229,18 @@ FIRMWARE_CORE_CASES = [
                                      caveats=[{"code": "firmware-packaged-declaration",
                                                "data": {"core_so": CORE_SO}}])]),
          "requirements_met must be None for this core", id="empty-packaged-list-is-not-an-all-clear"),
+    # A packaged card whose own search ran to the end and kept nothing states
+    # the system it searched for over an empty list, and that absence is a
+    # demonstration: the verdicts beside it are false, never left unsaid.
+    case(_base_firmware(cores=[_search_absence_core(requirements_met=None, system_firmware_met=False)]),
+         "requirements_met must be False for this core", id="a-search-absence-folds-into-the-verdict"),
+    case(_base_firmware(cores=[_search_absence_core(requirements_met=False, system_firmware_met=None)]),
+         "system_firmware_met must be False for this core", id="a-search-absence-is-a-console-false"),
+    # Every other declaration still has no system to state anything about
+    # once its requirement list is empty.
+    case(_base_firmware(cores=[_core(declaration="read", requirements=[], requirements_met=True,
+                                     system_firmware="runs-without-firmware", system_firmware_met=True)]),
+         "this core names none", id="a-stated-state-over-no-requirement-outside-a-card"),
     # The console-level verdict is derived the same way: null wherever the need
     # is not established, the system-level reading wherever it is, and on a
     # block whose reading cannot be recomputed still never a false the verdict
@@ -1819,6 +1853,10 @@ ACCEPTED_CASES = [
                                              caveats=[{"code": "firmware-declaration-unread", "data": {}}])],
                                 caveats=[{"code": "no-firmware-declaration", "data": {}}]),
                  id="a-core-whose-declaration-could-not-be-read"),
+    # DuckStation's search ran to the end and kept nothing: no requirement, the
+    # system its card searched for, and false at both levels.
+    pytest.param(_base_firmware(cores=[_search_absence_core(requirements_met=False, system_firmware_met=False)]),
+                 id="a-search-that-kept-nothing-is-a-demonstrated-absence"),
     # The Game Boy image is usable and the GBA one is missing, and the answer
     # is false: which of the two systems needs an image is what the block does
     # not carry, so the recomputation drops that term instead of insisting on
