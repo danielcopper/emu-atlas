@@ -88,6 +88,7 @@ def _question_argv(question: str, query) -> list[str]:
             + _flag("--content", query.get("content_path"))
             + _flag("--core", query.get("core_so"))
             + _flag("--cwd", query.get("cwd"))
+            + _flag("--appendconfig", query.get("appendconfig"))
         )
     if question == "soft_patch_candidates":
         return ["soft-patch-candidates", query["content_path"]] + _flag("--core", query.get("core_so"))

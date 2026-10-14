@@ -79,6 +79,12 @@ QUERY_FIELDS = {"content_path", "core_so", "installation"}
 CWD_QUERY_FAMILIES = frozenset(
     {"savefile_query", "savestate_query", "entry_savefile_query", "entry_savestate_query"}
 )
+# The files a RetroArch launch appends (issue #637) are taken by exactly the
+# questions that take the working folder — the save and savestate families —
+# spelled as RetroArch's own --appendconfig value: one string, several absolute
+# paths joined by '|'.
+APPENDCONFIG = "appendconfig"
+APPENDCONFIG_QUERY_FAMILIES = CWD_QUERY_FAMILIES
 CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
 # The systems question takes no arguments — only which handle answers it.
 SYSTEMS_QUERY_FIELDS = {"installation"}
@@ -138,8 +144,8 @@ ROOT_SETTING_FIELDS = {"file", "key"}
 # — a core_so on a catalogue question — makes the vector state something no
 # answer can reflect, and half a rule refuses only half of those.
 AGGREGATE_QUESTION_FIELDS = {
-    "savefile_location": ({"question"}, {"content_path", "core_so", "cwd"}),
-    "savestate_location": ({"question"}, {"content_path", "core_so", "cwd"}),
+    "savefile_location": ({"question"}, {"content_path", "core_so", "cwd", APPENDCONFIG}),
+    "savestate_location": ({"question"}, {"content_path", "core_so", "cwd", APPENDCONFIG}),
     "texture_pack_location": ({"question"}, {"content_path", "core_so"}),
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
@@ -511,6 +517,9 @@ KNOWN_CAVEAT_CODES = {
     "per-game-build-layer-unread",
     "unverified-version",
     "invalid-save-directory",
+    "appended-config-overridden",
+    "appended-config-visibility-unestablished",
+    "appended-config-not-read",
     "invalid-screenshot-directory",
     "core-suspect",
     "core-unaudited",
@@ -650,6 +659,7 @@ UNIDENTIFIED_CODES = {
 # "core-not-installed" is the firmware route's word for the same fact, and
 # deliberately the same string: one fact, one code on both routes.
 KNOWN_UNRESOLVED_CODES = {
+    "appended-config-unreachable",
     "standalone-unsupported",
     "standalone-variant-unestablished",
     "core-not-installed",
@@ -693,6 +703,16 @@ def _validate_cwd(name: str, family: str, query: Any) -> None:
         fail(f"{name}: input.{family}.cwd must be an absolute path, got {query['cwd']!r}")
 
 
+def _validate_appendconfig(name: str, family: str, query: Any) -> None:
+    """The appended files as RetroArch's command line spells them — every '|'-joined path absolute."""
+    if APPENDCONFIG not in query:
+        return
+    value = query[APPENDCONFIG]
+    paths = [piece for piece in value.split("|") if piece] if isinstance(value, str) else []
+    if not paths or not all(path.startswith("/") for path in paths):
+        fail(f"{name}: input.{family}.appendconfig must be absolute paths joined by '|', got {value!r}")
+
+
 def _validate_query(name: str, query: Any, family: str = "savefile_query") -> None:
     """A placement question — *family* says which of the two it is.
 
@@ -703,13 +723,18 @@ def _validate_query(name: str, query: Any, family: str = "savefile_query") -> No
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
-    fields = QUERY_FIELDS | ({"cwd"} if family in CWD_QUERY_FAMILIES else set())
+    fields = (
+        QUERY_FIELDS
+        | ({"cwd"} if family in CWD_QUERY_FAMILIES else set())
+        | ({APPENDCONFIG} if family in APPENDCONFIG_QUERY_FAMILIES else set())
+    )
     if not keys or not keys <= fields:
         fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(fields)}")
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
     _validate_cwd(name, family, query)
+    _validate_appendconfig(name, family, query)
     _validate_handle_selector(name, family, query)
 
 
@@ -761,16 +786,23 @@ def _validate_entry_query(name: str, query: Any, family: str = "entry_savefile_q
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
     takes_cwd = family in CWD_QUERY_FAMILIES
-    fields = ENTRY_QUERY_FIELDS | ({"cwd"} if takes_cwd else set())
+    takes_appendconfig = family in APPENDCONFIG_QUERY_FAMILIES
+    fields = (
+        ENTRY_QUERY_FIELDS
+        | ({"cwd"} if takes_cwd else set())
+        | ({APPENDCONFIG} if takes_appendconfig else set())
+    )
     if "system" not in keys or not keys <= fields:
-        optional = "'label'/'content_path'/'cwd'/'installation'" if takes_cwd else (
-            "'label'/'content_path'/'installation'"
-        )
+        named = ["label", "content_path", *(["cwd"] if takes_cwd else []), "installation"]
+        if takes_appendconfig:
+            named.insert(-1, APPENDCONFIG)
+        optional = "/".join(f"'{field}'" for field in named)
         fail(f"{name}: input.{family} must carry 'system' plus optional {optional}")
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
     _validate_cwd(name, family, query)
+    _validate_appendconfig(name, family, query)
     _validate_handle_selector(name, family, query)
 
 
@@ -918,6 +950,7 @@ def _validate_aggregate_query(name: str, query: Any) -> None:
             fail(f"{name}: input.aggregate_query.{key} must be a non-empty string")
     _validate_aggregate_question(name, query)
     _validate_cwd(name, "aggregate_query", query)
+    _validate_appendconfig(name, "aggregate_query", query)
 
 
 def _scoped_digest_field(key: Any) -> tuple[str, int] | None:

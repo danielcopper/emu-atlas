@@ -105,6 +105,7 @@ def _aggregate(installs, query, name):
                 content_path=query.get("content_path"),
                 core_so=query.get("core_so"),
                 cwd=query.get("cwd"),
+                appendconfig=_appendconfig(query),
             ),
             savefile_answer_contract,
         )
@@ -114,6 +115,7 @@ def _aggregate(installs, query, name):
                 content_path=query.get("content_path"),
                 core_so=query.get("core_so"),
                 cwd=query.get("cwd"),
+                appendconfig=_appendconfig(query),
             ),
             savestate_answer_contract,
         )
@@ -178,11 +180,19 @@ def _launch_command(installs, query, name):
     )
 
 
+def _appendconfig(query) -> tuple[str, ...]:
+    """The appended files as the question takes them — the vector spells RetroArch's one '|'-joined value."""
+    return (query["appendconfig"],) if "appendconfig" in query else ()
+
+
 def _savefile_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savefile_answer_contract(
         install.savefile_location(
-            content_path=query.get("content_path"), core_so=query.get("core_so"), cwd=query.get("cwd")
+            content_path=query.get("content_path"),
+            core_so=query.get("core_so"),
+            cwd=query.get("cwd"),
+            appendconfig=_appendconfig(query),
         )
     )
 
@@ -191,7 +201,10 @@ def _savestate_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return savestate_answer_contract(
         install.savestate_location(
-            content_path=query.get("content_path"), core_so=query.get("core_so"), cwd=query.get("cwd")
+            content_path=query.get("content_path"),
+            core_so=query.get("core_so"),
+            cwd=query.get("cwd"),
+            appendconfig=_appendconfig(query),
         )
     )
 
@@ -266,14 +279,22 @@ def _entry_of(installs, query, name):
 def _entry_savefile_location(installs, query, name):
     entry = _entry_of(installs, query, name)
     return savefile_answer_contract(
-        entry.savefile_location(content_path=query.get("content_path"), cwd=query.get("cwd"))
+        entry.savefile_location(
+            content_path=query.get("content_path"),
+            cwd=query.get("cwd"),
+            appendconfig=_appendconfig(query),
+        )
     )
 
 
 def _entry_savestate_location(installs, query, name):
     entry = _entry_of(installs, query, name)
     return savestate_answer_contract(
-        entry.savestate_location(content_path=query.get("content_path"), cwd=query.get("cwd"))
+        entry.savestate_location(
+            content_path=query.get("content_path"),
+            cwd=query.get("cwd"),
+            appendconfig=_appendconfig(query),
+        )
     )
 
 
@@ -670,6 +691,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
         ("file-names-unestablished", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
         ("firmware-search-candidates", "readings"): atlas.FIRMWARE_SEARCH_READINGS,
         ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
+        ("appended-config-overridden", "layer"): atlas.CFG_LAYER_OVERRIDE_KINDS,
         ("system-firmware-world-knowledge", "evidence"): atlas.STATED_EVIDENCE_WORDS,
     }
 

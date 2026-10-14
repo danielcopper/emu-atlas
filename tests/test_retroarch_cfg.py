@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from atlas.retroarch_cfg import (
+    CFG_LAYER_APPENDED,
     CFG_LAYER_CONTENT_DIR_OVERRIDE,
     CFG_LAYER_KINDS,
     CFG_LAYER_CORE_OVERRIDE,
@@ -46,14 +47,17 @@ def _cfg(text):
     )
 
 
-def _chain(global_text, *overrides, is_directory=None):
-    """The layout resolved over a labelled chain — layer N is ``override N``."""
+def _chain(global_text, *overrides, is_directory=None, appended=()):
+    """The layout resolved over a labelled chain — layer N is ``override N``, appended file N ``appended N``."""
     return resolve_layout(
         global_text,
         keys=SAVEFILE_KEYS,
         home=HOME,
         cfg_label="retroarch.cfg",
         defaults=RETRODECK_SHIPPED,
+        appended=[
+            (CfgSource(CFG_LAYER_APPENDED, f"appended {i}"), text) for i, text in enumerate(appended, start=1)
+        ],
         overrides=[(_override(i), text) for i, text in enumerate(overrides, start=1)],
         is_directory=is_directory,
     )
@@ -348,14 +352,16 @@ class TestSavefileDirectoryValidation:
         )
         assert [(r.layer, r.superseded) for r in cfg.rejected_directories] == [(_override(1), False)]
 
-    def test_each_of_the_four_layer_kinds_can_be_the_one_refused(self):
+    def test_each_layer_kind_can_be_the_one_refused(self):
         """The kind is data a client acts on, so each one must be reachable.
 
         The middle of the chain is the one nothing else exercises: a
         content-directory override is loaded between the core's and the game's
         (configuration.c:7095), and a root it states is refused exactly like
-        any other. Without this the vocabulary would document a value no test
-        ever produced.
+        any other. An appended file is merged between the global cfg and the
+        overrides (configuration.c:6309-6353) and is refused the same way.
+        Without this the vocabulary would document a value no test ever
+        produced.
         """
         refused = "/run/media/gone/saves"
         kinds = []
@@ -373,6 +379,16 @@ class TestSavefileDirectoryValidation:
             kinds.append(rejected.layer.kind)
         global_only = _chain(f'savefile_directory = "{refused}"\n', is_directory=_only())
         kinds.append(global_only.rejected_directories[0].layer.kind)
+        appended = _chain(
+            'savefile_directory = "/mnt/sd/saves"\n',
+            'savefile_directory = "/mnt/sd/saves"',
+            appended=[f'savefile_directory = "{refused}"'],
+            is_directory=_only("/mnt/sd/saves"),
+        )
+        assert appended.directory == "/mnt/sd/saves"
+        [rejected] = appended.rejected_directories
+        assert rejected.value == refused
+        kinds.append(rejected.layer.kind)
         assert sorted(kinds) == sorted(CFG_LAYER_KINDS)
 
     def test_a_reset_after_a_refusal_also_supersedes_it(self):
@@ -756,3 +772,22 @@ class TestOnlyThisFamilysDroppedLinesAreStated:
         assert [(i.kind, i.key) for i in _cfg('savefile_directory="/mnt/saves"\n').ignored] == [
             (IGNORED_LINE_DROPPED, "savefile_directory")
         ]
+
+
+class TestOverridesAreMarkedByKindNotPosition:
+    """Without a global cfg the first layer is still an override: RetroArch's boot load holds none of them."""
+
+    def test_a_refused_last_override_falls_to_the_default_not_to_an_earlier_override(self):
+        # The reload merges every override into one config, so a getter sees
+        # only the last one's value; refused, it leaves the boot read standing,
+        # which with no retroarch.cfg is the compile-time default
+        # (configuration.c:6412-6417, :7243).
+        value, _ = chain_bool(
+            [
+                (_override(1), 'game_specific_options = "false"\n'),
+                (_override(3), 'game_specific_options = "yes"\n'),
+            ],
+            "game_specific_options",
+            default=True,
+        )
+        assert value is True
