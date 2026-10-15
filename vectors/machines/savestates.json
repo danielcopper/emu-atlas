@@ -14,7 +14,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/Golden Sun (USA).state": "state"
+          "/mnt/sd/retrodeck/states/Golden Sun (USA).state": "state",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -75,7 +76,8 @@
           "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).state.png": "png",
           "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).srm": "sram",
           "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).replay": "movie",
-          "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).ldci": "index"
+          "/mnt/sd/retrodeck/states/gba/Golden Sun (USA).ldci": "index",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -134,7 +136,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.info": "corename = \"mGBA\"\nsavestate = \"true\"\nsavestate_features = \"basic\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
+          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -191,7 +194,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.info": "corename = \"mGBA\"\nsavestate = \"true\"\nsavestate_features = \"basic\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
+          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -248,7 +252,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"true\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -474,7 +479,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mgba_libretro.info": "corename = \"mGBA\"\nsavestate = \"true\"\nsavestate_features = \"basic\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/mGBA.cfg": "savestate_directory = \"\"",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -591,7 +597,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/gone/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/.keep": ""
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -705,7 +712,7 @@
     },
     {
       "name": "retrodeck-states-sandbox-path-untranslated",
-      "rationale": "A root that exists only inside the sandbox has no host location, so atlas states where the emulator writes and performs no observation there — an empty file set would be a claim about a directory nobody read.",
+      "rationale": "A root that exists only inside the sandbox has no host location, so atlas states where the emulator writes and performs no observation there — an empty file set would be a claim about a directory nobody read. Whether RetroArch sees a folder under the sandbox's private /run/user cannot be told either, so save-directory-visibility-unestablished rides beside it (#641).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -752,6 +759,12 @@
               "data": {}
             },
             {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
               "code": "sandbox-path-untranslated",
               "data": {
                 "key": "savestate_directory",
@@ -772,7 +785,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"true\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -832,7 +846,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -894,7 +909,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/card/real-states/Golden Sun (USA).state": "state"
+          "/mnt/card/real-states/Golden Sun (USA).state": "state",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -953,7 +969,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.info": "corename = \"VaporSpec\"\nsavestate = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1016,7 +1033,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\ncore_info_savestate_bypass = \"true\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.info": "corename = \"VaporSpec\"\nsavestate = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1071,7 +1089,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/vaporspec_libretro.info": "savestate = \"serialized\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1128,7 +1147,8 @@
             "status": "unreadable"
           },
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1190,7 +1210,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savestate_directory = \"/mnt/sd/retrodeck/states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/states/.keep": ""
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1252,7 +1273,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?><systemList><system><name>gba</name><path>%ROMPATH%/gba</path><extension>.gba .zip</extension><command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command></system></systemList>",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?><config><string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" /></config>",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "",
-          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state"
+          "/mnt/sd/retrodeck/states/mGBA/Golden Sun (USA).state": "state",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1355,7 +1377,8 @@
           "/home/deck/.config/retroarch/retroarch.cfg": "savestate_directory = \"/home/deck/ra-states\"\nsavestates_in_content_dir = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
           "/mnt/sd/retrodeck/states/.keep": "",
-          "/home/deck/ra-states/.keep": ""
+          "/home/deck/ra-states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1637,6 +1660,76 @@
                 "key": "savestate_directory",
                 "layer": "core-override",
                 "file": "config/PPSSPP/PPSSPP.cfg"
+              }
+            },
+            {
+              "code": "info-path-unresolved",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "retrodeck-states-a-directory-in-another-apps-tree-is-refused-in-the-sandbox",
+      "rationale": "retroarch.cfg names a savestate directory inside another Flatpak app's ~/.var/app tree. The RetroDECK sandbox masks it, so RetroArch's directory test fails inside it (configuration.c:6941-6959) and the platform default stands, with invalid-save-directory naming the global layer (#641).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/home/deck/.var/app/com.other.App/data/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/com.other.App/data/states"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savestate_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savestate_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states",
+          "root_kind": "savestate_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "global",
+                "file": "retroarch.cfg",
+                "configured": "/home/deck/.var/app/com.other.App/data/states",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/states"
               }
             },
             {

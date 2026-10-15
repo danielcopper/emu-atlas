@@ -520,6 +520,7 @@ KNOWN_CAVEAT_CODES = {
     "invalid-save-directory",
     "appended-config-overridden",
     "appended-config-visibility-unestablished",
+    "save-directory-visibility-unestablished",
     "appended-config-not-read",
     "invalid-screenshot-directory",
     "core-suspect",

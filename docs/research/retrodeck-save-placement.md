@@ -282,10 +282,24 @@ beside the global cfg — see the two-read model below. On RetroDECK, whose sand
 each save folder an appended file states is tested through RetroArch's own view of the filesystem: a file the sandbox
 hides or does not hold refuses the answer (`appended-config-unreachable`) instead of being skipped, because the question
 is where the saves land _with_ it; such a folder is `invalid-save-directory` with layer `appended`, and the root
-RetroArch then stands on is the platform default; one the model cannot tell is read as the host's, with
-`appended-config-visibility-unestablished`. Save folders the global cfg and the overrides state keep the host-side test
-every layer had before. Where atlas does not model the sandbox (EmuDeck's and a bare RetroArch Flatpak), every path is
-read as the host's and the same note says so.
+RetroArch then stands on is the platform default; one the model cannot tell is read as the host's, the host's directory
+test deciding it as for the other layers (#641 D5), with `appended-config-visibility-unestablished`. Where atlas does
+not model the sandbox (EmuDeck's and a bare RetroArch Flatpak), every appended path is read as the host's and the same
+note says so.
+
+**[D]** The save folders the global cfg and the overrides state take the same view on RetroDECK (#641): RetroArch's
+`path_is_directory` (`configuration.c:6914-6960`) runs inside its sandbox, so a folder the sandbox hides or does not
+hold is `invalid-save-directory` with its own layer even where the host has it. One the model cannot tell — an overrides
+file that sets `filesystems`, which the model does not compose, a folder under `/run/user` — is read as the host's own
+path: the host's test decides it, except for a spelling only the sandbox has (`/run/user`), which the cfg translation
+refuses and which passes untested beside `sandbox-path-untranslated`; `save-directory-visibility-unestablished`
+(`app_id`, one per answer) says the answer rests on that reading. Under the `host` grant flatpak exposes every entry of
+the host's root but its reserved names, and a link there by its target, recreating the link
+(flatpak-context.c:2854-2866, flatpak-exports.c:1013-1050 @ 1.16.6): on an ostree host `/mnt -> var/mnt`, `/opt` or
+`/srv` reach into the host's `/var`, which the sandbox otherwise does not bind, so the view reads those links off the
+machine and shows their targets. A relative folder is RetroArch's working directory's question rather than the sandbox's
+and keeps the host-side test without the note. Where atlas does not model the sandbox, these folders are tested as the
+host's with no note: it would ride every such answer and tell a client nothing.
 
 ### One merge, two reads — what "later files win" does not mean
 
@@ -369,12 +383,14 @@ Same device and inode on both sides: one directory under two names, per app id. 
 `readlink -f /var/config` answers `/var/config`, so nothing resolves them for a reader on the host.
 
 **[V]** The rest of `/var` inside the sandbox is the runtime's own filesystem, not the host's: device `239:21` against
-`66310:2` for the host `/var`, holding only `cache config data db mnt run tmp`. `/run/user/1000` differs as well
-(`71:3657` inside, `71:1` outside) — the sandbox gets its own runtime directory. `/run/media` is the same directory on
-both sides (`24:5255`), which is why the SD-card paths above need no translation at all.
+`66310:2` for the host `/var`, holding only `cache config data db mnt run tmp`. Its `tmp` is bound like the XDG
+directories: the sandbox's mount table lists the app's `~/.var/app/<app id>/cache/tmp` mounted at `/var/tmp` (#641).
+`/run/user/1000` differs as well (`71:3657` inside, `71:1` outside) — the sandbox gets its own runtime directory.
+`/run/media` is the same directory on both sides (`24:5255`), which is why the SD-card paths above need no translation
+at all.
 
 **[D]** A cfg-derived absolute path therefore falls into three classes, and the resolver treats them accordingly
-(`_Sandbox`, `atlas/installations.py`): `/app/...` and `/var/{config,data,cache}/...` translate to host locations;
+(`_Sandbox`, `atlas/installations.py`): `/app/...` and `/var/{config,data,cache,tmp}/...` translate to host locations;
 anything else under `/var/` or under `/run/user/` exists only inside the sandbox and is reported as
 `sandbox-path-untranslated` rather than resolved against a host path that means something else; everything else passes
 through untouched. Only a handle that carries an app id translates — a native install writes its cfg outside any
