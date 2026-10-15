@@ -1,14 +1,14 @@
 # Coverage matrix — GENERATED, do not edit
 
-Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). Facts come from
-`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone one; the row set comes
-from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet appears automatically as the work list.
-Cells: ✔ verified (with the arrangement version the knowledge was proven against), ✖ present but not verified, ?
-availability unknown there (EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed),
-— not applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no = absence is
-proven; ? = not established. This is capability, not the active mode on one machine. The row set is RetroDECK's shipped
-matrix. Verdicts and evidence levels are defined in `docs/research/core-audit.md`. Those columns describe the libretro
-half; the standalone half is one column per question, filled from the packaged cards.
+Regenerate with `mise run matrix`. Facts come from `atlas/data/core_audit.json` for the libretro half and from the
+packaged cards for the standalone one; the row set comes from RetroDECK's bundled `es_systems.xml`, so an emulator
+nothing covers yet appears automatically as the work list. Cells: ✔ verified (with the arrangement version the knowledge
+was proven against), ✖ present but not verified, ? availability unknown there (EmuDeck ships its own emulator set —
+unresearched; bare-RetroArch cores are user-installed), — not applicable. Per-game capable: yes = at least one mode is
+proven by source, binary, or observation; no = absence is proven; ? = not established. This is capability, not the
+active mode on one machine. The row set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in
+`docs/research/core-audit.md`. Those columns describe the libretro half; the standalone half is one column per question,
+filled from the packaged cards.
 
 Source identity: `es_systems.xml` sha256 `bafab97825c8` · `core_audit.json` (schema 4) sha256 `3dd098c67492`.
 

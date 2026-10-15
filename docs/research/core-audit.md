@@ -365,7 +365,7 @@ Method per core:
 3. live observation on a real machine where save data exists
 4. verdict + (if deviant) rule card with provenance, per-mode status, and an anchor for every name the card records
 5. for a rule card, after the verdict: re-record the option registration of the deployed build the steps above read,
-   with `python scripts/snapshot_core_registrations.py`. It writes the sorted keys into `core_audit.json`
+   with `.venv/bin/python scripts/snapshot_core_registrations.py`. It writes the sorted keys into `core_audit.json`
    (`registration`, what the resolver compares an installed core with) and the whole registration — defaults and values,
    under the build it was read from — into `tests/data/core_registrations.json`, which the tripwire in
    `tests/test_oddities.py` holds against the deployed core. It skips a card whose `retrodeck` record pins another

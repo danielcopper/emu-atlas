@@ -90,7 +90,7 @@ DEPLOYED_CORES = Path(
 # it was read from — test-side, since the package carries only the keys — and the
 # command that re-records it (docs/research/core-audit.md, the audit method).
 RECORDED_REGISTRATIONS = Path(__file__).parent / "data" / "core_registrations.json"
-RE_RECORD_COMMAND = "python scripts/snapshot_core_registrations.py"
+RE_RECORD_COMMAND = ".venv/bin/python scripts/snapshot_core_registrations.py"
 
 
 @functools.cache
