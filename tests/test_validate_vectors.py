@@ -1423,11 +1423,30 @@ REQUIREMENT_CASES = [
                                                                 checked="unknown", satisfied=None)],
                                      requirements_met=None)]),
          "cannot be 'unknown'", id="requirement-unknown-beside-an-identity"),
-    case(_base_firmware(hash_checked=True,
-                        cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
                                                                 checked="unchecked", satisfied=True)],
                                      requirements_met=True)]),
          "an identity that exists and was not verified is not an all-clear", id="requirement-unchecked-satisfied"),
+    # 'unchecked' is the answer of a run that never asked for the bytes, so a
+    # hash-checked run cannot carry it — whichever shape it stands on.
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
+                                                                checked="unchecked", satisfied=None)],
+                                     requirements_met=None)]),
+         "'unchecked' says nobody asked for the bytes",
+         id="requirement-unchecked-with-identity-on-a-hash-checked-run"),
+    case(_base_firmware(hash_checked=True,
+                        cores=[_core(requirements=[_requirement(file_name="scph70004.bin",
+                                                                path=f"{BIOS}/pcsx2/bios/scph70004.bin",
+                                                                declared="pcsx2/bios", found="file", present=True,
+                                                                checked="unchecked", satisfied=None)],
+                                     requirements_met=None,
+                                     caveats=[{"code": "firmware-image-configured",
+                                               "data": {"core": "pcsx2", "key": "pcsx2_bios",
+                                                        "name": "scph70004.bin",
+                                                        "options_file": "/config/retroarch-core-options.cfg"}}])]),
+         "'unchecked' says nobody asked for the bytes",
+         id="requirement-named-inside-a-folder-unchecked-on-a-hash-checked-run"),
     case(_base_firmware(hash_checked=True,
                         cores=[_core(requirements=[_requirement(found="file", present=True, identity=_identity(),
                                                                 checked="verified", satisfied=None)],
@@ -1470,6 +1489,16 @@ def _renamed_alternative(**overrides) -> Vector:
     """An option answering under another spelling of the name its declaration states."""
     return _alternative(
         file_name="GB_BIOS.bin", path=f"{BIOS}/GB_BIOS.bin", **overrides
+    )
+
+
+def _unchecked_option_core(locating: str) -> Vector:
+    """A core whose one group option is present, nobody hashed it, and no identity is pinned."""
+    return _core(
+        locating=locating,
+        requirements=[{"alternatives": [_alternative(found="file", present=True, checked="unchecked",
+                                                     satisfied=None)]}],
+        requirements_met=None,
     )
 
 
@@ -1521,6 +1550,20 @@ ALTERNATIVES_CASES = [
     # has to say which names it tries, or the rename has nothing behind it.
     case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_renamed_alternative()]}])]),
          "file_name must be the name the core spelled", id="alternatives-renamed-with-no-spellings-stated"),
+    # A route that opens names only pins an option's identity off its declared
+    # name, so an unchecked option with none is a dropped lookup.
+    case(_base_firmware(cores=[_unchecked_option_core("by-name")]),
+         "with no known identity, checked must be one of",
+         id="alternatives-unchecked-option-without-identity-on-a-by-name-route"),
+    # A route nobody read a source for states no content door either.
+    case(_base_firmware(cores=[_unchecked_option_core("unestablished")]),
+         "with no known identity, checked must be one of",
+         id="alternatives-unchecked-option-without-identity-on-an-unestablished-route"),
+    # Even where it may stand with no identity, 'unchecked' is the answer of a
+    # run that never asked for the bytes.
+    case(_base_firmware(hash_checked=True, cores=[_unchecked_option_core("by-name-then-content")]),
+         "'unchecked' says nobody asked for the bytes",
+         id="alternatives-unchecked-option-on-a-hash-checked-run"),
 ]
 
 UNCLAIMED_CASES = [
@@ -1907,6 +1950,10 @@ ACCEPTED_CASES = [
     pytest.param(_base_firmware(cores=[_core(requirements=[{"alternatives": [_renamed_alternative()]}],
                                              caveats=[SPELLINGS_CAVEAT])]),
                  id="an-option-under-another-spelling-the-answer-states"),
+    # A route that recognises an image by its content names the bytes only
+    # once they are read, so without a content check no identity is pinned.
+    pytest.param(_base_firmware(cores=[_unchecked_option_core("by-name-then-content")]),
+                 id="an-unchecked-option-without-identity-on-a-content-recognising-route"),
 ]
 
 
