@@ -232,8 +232,7 @@ class TestTheCommittedMatrixIsRegenerated:
                 ]
                 assert cells[1:] == fresh, (
                     f"the committed matrix shows {cells[1:]} for {key!r} and the cards answer "
-                    f"{fresh} — regenerate with `python scripts/generate_coverage_matrix.py` "
-                    "(then `deno fmt`)"
+                    f"{fresh} — regenerate with `mise run matrix`"
                 )
                 continue
             # A truncated systems cell does not carry the row's whole set, so

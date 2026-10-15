@@ -98,7 +98,7 @@ class TestTheCommittedReferenceIsRegenerated:
         committed = reference.OUTPUT_PATH.read_text(encoding="utf-8")
         assert committed == generated, (
             "the committed docs/contract-reference.md is not what the generator produces — regenerate with "
-            "`python scripts/generate_contract_reference.py` (then `deno fmt docs/contract-reference.md`)"
+            "`mise run contract`"
         )
 
     def test_every_exported_code_has_a_row(self, generated: str) -> None:

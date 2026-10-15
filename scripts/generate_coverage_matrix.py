@@ -19,8 +19,10 @@ whose answers are live-verified on two arrangements (#228). The standalone
 half now shows one column per question, filled from the card file that answers
 it, so a gap is generated rather than surveyed by hand.
 
-Usage: ``python scripts/generate_coverage_matrix.py [path-to-es_systems.xml]``
-(default: the RetroDECK Flatpak deployment's bundled file). Stdlib only, and
+Usage: ``mise run matrix``, which runs this script on the default file and
+formats the page, or ``.venv/bin/python scripts/generate_coverage_matrix.py
+[path-to-es_systems.xml]`` and then ``deno fmt`` (default: the RetroDECK
+Flatpak deployment's bundled file). Stdlib only, and
 the catalogue is read through ``atlas.esde.parse_es_systems`` rather than a
 parse of this module's own: ES-DE can keep fewer ``<command>`` elements than a
 system declares (a duplicate label is dropped, a label-less one ends the walk),
@@ -302,7 +304,7 @@ def main() -> None:
     lines: list[str] = []
     lines.append("# Coverage matrix — GENERATED, do not edit")
     lines.append("")
-    lines.append("Regenerate with `python scripts/generate_coverage_matrix.py` (then `deno fmt`). Facts come from")
+    lines.append("Regenerate with `mise run matrix`. Facts come from")
     lines.append("`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone")
     lines.append("one; the row set comes from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet")
     lines.append("appears automatically as the work list. Cells: ✔ verified (with the arrangement")

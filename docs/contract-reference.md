@@ -1,15 +1,15 @@
 # Contract reference — GENERATED, do not edit
 
-Regenerate with `python scripts/generate_contract_reference.py` (then `deno fmt`). Every cell below is derived from one
-of six readings of this repository, and each says which one spoke: the **annotations** on the answer types (what a field
-_can_ be), the **vectors** under `vectors/machines/` (what an answer _did_ carry), an AST scan of the **construction
-sites** in `atlas/` (which caveat data keys the source itself spells out), an AST scan of the **serializers** in
-`atlas/contract.py` (which function returns which shape, and which key it fills from a differently named attribute), the
-**data registry** `atlas.ENUMERATED_DATA` (which `(code, key)` values are refused at construction, whether or not a
-vector exercises them), and the **docstrings** the package writes — on an answer type's attribute they say what a field
-_means_, and under a value constant what one value of a closed vocabulary means. An attribute an answer type declares
-and no serialized answer carries is listed under [attributes no answer carries](#attributes-no-answer-carries) rather
-than described. [The guide](how-to-use.md) explains the answers at length, field by field; this page is the lookup table
+Regenerate with `mise run contract`. Every cell below is derived from one of six readings of this repository, and each
+says which one spoke: the **annotations** on the answer types (what a field _can_ be), the **vectors** under
+`vectors/machines/` (what an answer _did_ carry), an AST scan of the **construction sites** in `atlas/` (which caveat
+data keys the source itself spells out), an AST scan of the **serializers** in `atlas/contract.py` (which function
+returns which shape, and which key it fills from a differently named attribute), the **data registry**
+`atlas.ENUMERATED_DATA` (which `(code, key)` values are refused at construction, whether or not a vector exercises
+them), and the **docstrings** the package writes — on an answer type's attribute they say what a field _means_, and
+under a value constant what one value of a closed vocabulary means. An attribute an answer type declares and no
+serialized answer carries is listed under [attributes no answer carries](#attributes-no-answer-carries) rather than
+described. [The guide](how-to-use.md) explains the answers at length, field by field; this page is the lookup table
 beside it.
 
 **Corpus:** 1147 vectors in 13 files carry 21 question kinds plus `installations`, which is the only block every vector

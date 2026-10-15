@@ -57,7 +57,9 @@ there — this script exits non-zero and names the field. The other direction
 (annotated nullable, no vector produced ``null``) is not an error: it is a true
 and useful sentence, and the field table states it.
 
-Usage: ``python scripts/generate_contract_reference.py`` (then ``deno fmt``).
+Usage: ``mise run contract``, which runs this script and formats the page
+(directly: ``.venv/bin/python scripts/generate_contract_reference.py``, then
+``deno fmt``).
 Stdlib only, like every script here; it imports ``atlas`` and reads ``vectors/``
 and never touches a real machine.
 """
@@ -2357,7 +2359,7 @@ def corpus_header(reference: Reference) -> list[str]:
         "# Contract reference — GENERATED, do not edit",
         "",
         *paragraph(
-            "Regenerate with `python scripts/generate_contract_reference.py` (then `deno fmt`). Every cell below is "
+            "Regenerate with `mise run contract`. Every cell below is "
             "derived from one of six readings of this repository, and each says which one spoke: the **annotations** "
             "on the answer types (what a field _can_ be), the **vectors** under `vectors/machines/` (what an answer "
             "_did_ carry), an AST scan of the **construction sites** in `atlas/` (which caveat data keys the source "

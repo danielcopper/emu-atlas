@@ -16,7 +16,7 @@ Re-recording is this one command; it follows a card's re-audit against the
 deployed build, never replaces it — where it sits in the audit method is stated
 in ``docs/research/core-audit.md``::
 
-    python scripts/snapshot_core_registrations.py
+    .venv/bin/python scripts/snapshot_core_registrations.py
 
 **Which build.** The cores RetroDECK deploys from its installed Flatpak
 (:data:`DEPLOYED_CORES`, the ``current/active`` deployment), read through the

@@ -26,6 +26,20 @@ description = "Report every function whose cognitive complexity is over Sonar's 
 # directories a bare run walks is the script's own default.
 run = "python scripts/cognitive_complexity.py"
 
+[tasks.contract]
+description = "Regenerate docs/contract-reference.md from this tree and format it"
+# Through mise rather than a bare `python` so the page is read off this tree's
+# own venv and package: in a worktree a bare `python` can be the main checkout's.
+run = "python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md"
+
+[tasks.matrix]
+description = "Regenerate docs/research/coverage-matrix.md from this tree and format it"
+# Reads the default es_systems.xml, the RetroDECK Flatpak's bundled one. For
+# another file call the script directly with its path (`.venv/bin/python`, then
+# the same `deno fmt`): an argument given to this task would be appended to the
+# last command, `deno fmt`, not to the script.
+run = "python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md"
+
 [tasks.test-oldest]
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # Pre-push and pre-release, not part of `test`: this one needs its own venv and, the

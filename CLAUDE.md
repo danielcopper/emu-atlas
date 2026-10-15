@@ -36,13 +36,13 @@ machine, so this repository does not carry them and no contributor needs them.
 Pinned in `docs/research/core-audit.md`: (1) **unfiltered** options/strings scan of the shipped `.so`, (2) upstream
 source for anything the scan implies, (3) live observation where data exists, (4) verdict in
 `atlas/data/core_audit.json` + card in `atlas/data/core_oddities.json` if deviant, (5) for a rule card, re-record the
-option registration of the deployed build (`python scripts/snapshot_core_registrations.py`, step 5 there). Card keys are
-the `.so` short name (`pcsx2`, not a nickname); a test fails if a card lacks an audit entry. After changing audit data
-**or adding a standalone card**, regenerate the matrix — its standalone half is one column per question, derived from
-the card files, and a test fails when the committed file no longer matches them:
+option registration of the deployed build (`.venv/bin/python scripts/snapshot_core_registrations.py`, step 5 there).
+Card keys are the `.so` short name (`pcsx2`, not a nickname); a test fails if a card lacks an audit entry. After
+changing audit data **or adding a standalone card**, regenerate the matrix — its standalone half is one column per
+question, derived from the card files, and a test fails when the committed file no longer matches them:
 
 ```bash
-python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md
+mise run matrix
 ```
 
 That method is about **save behaviour** and stays that way. The separate question "does this system run at all without
@@ -88,7 +88,7 @@ docstring, a sentence under a value constant and a serializer all move the page.
 not what the generator produces.
 
 ```bash
-python scripts/generate_contract_reference.py && deno fmt docs/contract-reference.md
+mise run contract
 ```
 
 ## Commands
@@ -101,6 +101,8 @@ mise run test-oldest # the same tests on the oldest supported interpreter, which
 deno fmt --check     # markdown formatting (CI-enforced)
 basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev extra, installed by mise run setup)
 mise run complexity  # cognitive complexity per function, over 15 fails; runs locally and must stay green, not a CI gate
+mise run contract    # regenerate and format docs/contract-reference.md from this tree
+mise run matrix      # regenerate and format docs/research/coverage-matrix.md from this tree
 ```
 
 `mise run complexity` moves the first complexity measurement to before the push; the Sonar gate on the pull request is
