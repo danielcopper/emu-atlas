@@ -259,6 +259,7 @@ from .placement import (
     CAVEAT_APPENDED_CONFIG_NOT_READ,
     CAVEAT_APPENDED_CONFIG_OVERRIDDEN,
     CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED,
+    CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
     CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
@@ -737,11 +738,13 @@ _ANY_INI_GLOB = "*.ini"
 # "/var/config/retroarch/config". Verified on this machine — /var/config and
 # ~/.var/app/<app id>/config are the same inode, as are /var/data and /var/cache
 # against .../data and .../cache (docs/research/retrodeck-save-placement.md,
-# "Flatpak sandbox spellings").
+# "Flatpak sandbox spellings"). The sandbox's own /var/tmp is bound the same
+# way, to .../cache/tmp, as the sandbox's mount table shows.
 _SANDBOX_XDG_BINDS: tuple[tuple[str, str], ...] = (
     ("/var/config", "config"),
     ("/var/data", "data"),
     ("/var/cache", "cache"),
+    ("/var/tmp", "cache/tmp"),  # NOSONAR S5443: a sandbox spelling to translate; nothing is written here
 )
 
 # Where a flatpak app reads its own deploy tree: the deploy's ``files``
@@ -1046,8 +1049,9 @@ _FLATPAK_BUILT_DIRS = frozenset(("/var", "/run"))
 # ``/boot``, ``/efi`` and ``/root`` are therefore not where the sandbox's
 # paths of those names lead: what the sandbox has there is what flatpak binds
 # into them on purpose — the per-app directories, ``/var/home``,
-# ``/run/media`` and ``/run/host``, each answered by name — and an explicit
-# grant, which the view checks first. Anything else there is no file the
+# ``/run/media`` and ``/run/host``, each answered by name, the target of a
+# link in the host's root, read off the machine — and an explicit grant,
+# which the view checks first. Anything else there is no file the
 # frontend sees, the host's copy included: the host's
 # ``/var/lib/flatpak/exports`` entries the shipped find rules name never hit.
 # The sandbox's ``/etc``, ``/tmp``, ``/dev``, ``/proc`` and ``/sys`` are not
@@ -1055,6 +1059,15 @@ _FLATPAK_BUILT_DIRS = frozenset(("/var", "/run"))
 # does not read, so a path there is not established rather than a miss.
 _FLATPAK_HOST_HIDDEN = frozenset(("var", "run", "boot", "efi", "root"))
 _FLATPAK_SANDBOX_OWN = frozenset(("etc", "tmp", "dev", "proc", "sys"))
+# The whole ``dont_mount_in_root`` list (flatpak-context.c:2765-2786 @ 1.16.6):
+# the names of the host's root a ``host`` grant leaves out. Every other entry
+# is exposed, and one that is a symlink is exposed by its target, the link
+# recreated beside it (flatpak-exports.c:1013-1050) — which is how an ostree
+# host's ``/mnt -> var/mnt``, ``/opt`` or ``/srv`` reaches into its ``/var``.
+_FLATPAK_DONT_MOUNT_IN_ROOT = frozenset(
+    ("app", "bin", "boot", "dev", "efi", "etc", "lib", "lib32", "lib64")
+    + ("proc", "root", "run", "sbin", "sys", "tmp", "usr", "var")
+)
 
 # Where the host's operating system shows inside the sandbox under a ``host``
 # (or ``host-os`` / ``host-etc``) grant: its ``/usr`` and ``/etc`` bound at
@@ -1288,10 +1301,10 @@ class _SandboxLaunchView:
     - ``/app`` is the running deploy (:func:`_running_deploy`), ``/usr`` the
       runtime's deploy (:func:`_runtime_files`), and ``/bin``, ``/lib`` and
       the other merged-``/usr`` directories are flatpak's links into it;
-    - ``/var/config``, ``/var/data`` and ``/var/cache`` are the app's per-app
-      directories (:data:`_SANDBOX_XDG_BINDS`), and ``~/.var/app/<app id>``
-      is that same tree under its home spelling, which flatpak always binds
-      (flatpak-context.c:3033-3044 @ 1.16.6);
+    - ``/var/config``, ``/var/data``, ``/var/cache`` and ``/var/tmp`` are the
+      app's per-app directories (:data:`_SANDBOX_XDG_BINDS`), and
+      ``~/.var/app/<app id>`` is that same tree under its home spelling, which
+      flatpak always binds (flatpak-context.c:3033-3044 @ 1.16.6);
     - an explicit grant of the metadata (``~/…``, ``/…``, ``xdg-data`` and
       its siblings — :class:`_FlatpakGrants`) is the host's own path, and so
       are the directories leading to it, which flatpak creates to bind it — a
@@ -1304,10 +1317,12 @@ class _SandboxLaunchView:
       every revoked directory are masked with a tmpfs, and the host's ``/var``,
       ``/run``, ``/boot``, ``/efi`` and ``/root`` are not bound
       (:meth:`_mask_root`) — ``/run/media`` excepted, which the ``host`` grant
-      binds (flatpak-context.c:2884-2888), and ``/var/home``, the host's homes
-      on an ostree system (:data:`_OSTREE_HOME`). Only a grant at or under such
-      a root lifts it. Under the ``host`` grant a path there is an established
-      miss;
+      binds (flatpak-context.c:2884-2888), ``/var/home``, the host's homes
+      on an ostree system (:data:`_OSTREE_HOME`), and the target of a link in
+      the host's root, which the ``host`` grant exposes in the link's place
+      (:meth:`_root_link_targets`) — an ostree host's ``/mnt -> var/mnt``.
+      Only a grant at or under such a root lifts it. Under the ``host``
+      grant a path there is an established miss;
     - everything else is the host's own path under the ``host`` grant
       (under ``home``, the home directory alone). The sandbox's own ``/etc``,
       ``/tmp``, ``/dev``, ``/proc`` and ``/sys``, its private ``/run/user``,
@@ -1340,6 +1355,10 @@ class _SandboxLaunchView:
     # Each host path's readlink, asked once: the walks of one answer share
     # every directory above the files they test.
     links: dict[str, str | None] = field(default_factory=dict)
+    # The host root's link targets a ``host`` grant exposes
+    # (:meth:`_root_link_targets`), read once — ``None`` where the root
+    # could not be listed.
+    root_targets: list[tuple[str, ...] | None] = field(default_factory=list)
 
     def rom_directory(self) -> str | None:
         return self.rom_root()
@@ -1376,7 +1395,7 @@ class _SandboxLaunchView:
         granted = max((g for g in grants.paths if _under(path, g)), key=len, default=None)
         mask = self._mask_root(path)
         if mask is not None and (granted is None or not _under(granted, mask)):
-            if mask in grants.unread:
+            if mask in grants.unread or self._unbound_root_unread(mask):
                 return None
             return _HIDDEN if grants.host and not grants.unplaced else None
         return _NOT_OWN if granted is None else path
@@ -1386,17 +1405,19 @@ class _SandboxLaunchView:
 
         Masked with a tmpfs: the rest of ``~/.var/app``, the user's own
         Flatpak installation, and every revoked directory
-        (flatpak-context.c:3019-3031, :3131-3143; flatpak-exports.c:1104-1105);
-        a revoked path whose kind is unread is a root too, which
-        :meth:`_granted_or_masked` answers as unknown. Not bound under the
-        ``host`` grant: the host's ``/var``, ``/run``, ``/boot``, ``/efi`` and
-        ``/root`` (:data:`_FLATPAK_HOST_HIDDEN`), ``/var/home`` and
-        ``/run/media`` aside. Only a grant at or under such a root lifts it. At
-        the root itself the higher mode wins and a tmpfs is mode NONE
+        (flatpak-context.c:3019-3031, :3131-3143;
+        flatpak-exports.c:1104-1105); a revoked path whose kind is unread is a
+        root too, which :meth:`_granted_or_masked` answers as unknown. Not
+        bound under the ``host`` grant: the host's ``/var``, ``/run``,
+        ``/boot``, ``/efi`` and ``/root`` (:data:`_FLATPAK_HOST_HIDDEN`),
+        ``/var/home``, ``/run/media`` and the targets of the host root's links
+        (:meth:`_root_link_targets`), with the directories leading to them,
+        aside. Only a grant at or under such a root lifts it. At the root
+        itself the higher mode wins and a tmpfs is mode NONE
         (flatpak-exports.c:102, :772-790), so a grant there binds it; beneath
         the root, exports are emitted parents first (:309-337, :445-447,
-        :487-506), so a parent's bind is mounted before the tmpfs over the root
-        and does not reach beneath it.
+        :487-506), so a parent's bind is mounted before the tmpfs over the
+        root and does not reach beneath it.
         """
         roots = [
             os.path.join(self.real_home, ".var", "app"),
@@ -1407,8 +1428,53 @@ class _SandboxLaunchView:
         first = path.split("/")[1] if path != "/" else ""
         shared = _under(path, _OSTREE_HOME.rstrip("/")) or _under(path, _RUN_MEDIA)
         if self.grants.host and not shared and first in _FLATPAK_HOST_HIDDEN:
-            roots.append("/" + first)
+            # A link's target is the host's own, and so are the directories
+            # leading to it, which flatpak creates to bind it there.
+            targets = self._root_link_targets() or ()
+            if not any(_under(path, target) or target.startswith(path + "/") for target in targets):
+                roots.append("/" + first)
         return max((root for root in roots if _under(path, root)), key=len, default=None)
+
+    def _unbound_root_unread(self, mask: str) -> bool:
+        """Whether *mask* is a root the ``host`` grant leaves unbound while the host root, whose links may lift it,
+        could not be listed — nothing beneath it is established then.
+        """
+        return mask.lstrip("/") in _FLATPAK_HOST_HIDDEN and self._root_link_targets() is None
+
+    def _root_link_targets(self) -> tuple[str, ...] | None:
+        """The targets of the host root's symlinks a ``host`` grant exposes — ``None`` where the root cannot be listed.
+
+        flatpak exposes every entry of ``/`` but :data:`_FLATPAK_DONT_MOUNT_IN_ROOT`
+        (flatpak-context.c:2854-2866 @ 1.16.6), and an entry that is a link
+        by the target the host resolves it to, the link recreated in the
+        sandbox (flatpak-exports.c:1013-1050, ``flatpak_resolve_link``
+        flatpak-utils-base.c:87-101). The target is the host's own directory
+        there even under a root the sandbox otherwise does not bind — an
+        ostree host's ``/mnt -> var/mnt`` makes its ``/var/mnt`` visible, as
+        ``/home -> var/home`` does its homes (:data:`_OSTREE_HOME`). A target
+        flatpak refuses to export (:func:`_flatpak_refuses`) binds nothing.
+        The links are read off this machine, never assumed by name: which
+        ones a host has is its own layout.
+        """
+        if not self.root_targets:
+            self.root_targets.append(self._read_root_link_targets())
+        return self.root_targets[0]
+
+    def _read_root_link_targets(self) -> tuple[str, ...] | None:
+        names = _host_listing(self.machine, "/")
+        if names is None:
+            return None
+        targets: list[str] = []
+        for name in names:
+            if name in _FLATPAK_DONT_MOUNT_IN_ROOT or name in (".", ".."):
+                continue
+            link = self._readlink("/" + name)
+            if link is None:
+                continue
+            target = os.path.normpath(os.path.join("/", link))
+            if not _flatpak_refuses(target):
+                targets.append(target)
+        return tuple(targets)
 
     def _run_host(self, path: str) -> str | _Hidden | None:
         """The host path a ``/run/host`` spelling binds.
@@ -1923,9 +1989,11 @@ class _SaveQuery:
     appendconfig: tuple[str, ...] = ()
     # The program's own view of the filesystem, where atlas models the sandbox
     # RetroArch runs in — RetroDECK's, whose RetroArch shares the frontend's
-    # Flatpak. ``None`` where it is not modelled or there is no sandbox at all;
-    # ``sandbox.app_id`` tells those two apart (:func:`_read_appended`).
-    appended_view: "Callable[[], _SandboxLaunchView] | None" = None
+    # Flatpak. The appended files and every layer's save folders are tested
+    # through it (issues #637, #641). ``None`` where it is not modelled or
+    # there is no sandbox at all; ``sandbox.app_id`` tells those two apart
+    # (:func:`_read_appended`).
+    program_view: "Callable[[], _SandboxLaunchView] | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2411,26 +2479,38 @@ def _read_appended(machine: Machine, query: _SaveQuery, view: "_SandboxLaunchVie
 
 @dataclass
 class _ViewDirectoryCheck:
-    """``path_is_directory`` for a root an appended file states, asked of the program's own view (D4).
+    """``path_is_directory`` for a save root, asked of the program's own view (#637 D4, #641 D1).
 
     RetroDECK's RetroArch tests the folder inside its sandbox, so a folder the
     sandbox hides or does not hold fails there and the read sets nothing,
-    whatever the host has at that spelling. One the view cannot tell passes —
-    the emulator's own test still decides it — and is remembered, because the
-    answer then rests on a visibility nobody established (D7, D8). Roots the
-    global cfg and the overrides state keep the check every layer had before.
+    whatever the host has at that spelling. One the view cannot tell is
+    remembered, because the answer then rests on a visibility nobody
+    established, and is decided by *host_check*: the folder read as the
+    host's own path (#637 D7, #641 D1 and D5). Each layer group keeps its own
+    check, because each states its own note: the appended files' folders
+    :func:`_visibility_note`, the global cfg's and the overrides'
+    :func:`_save_dir_visibility_note`.
     """
 
     view: "_SandboxLaunchView"
+    host_check: Callable[[str], bool]
+    # A relative folder is tested against RetroArch's working directory, not
+    # against the sandbox's grants: where this is set, no view decides it and
+    # the host check keeps the answer it always gave, with no note. The
+    # global cfg's and the overrides' folders take it; an appended file's
+    # relative folder keeps the note it carried under #637.
+    relative_on_host: bool = False
     unestablished: bool = False
 
     def __call__(self, value: str) -> bool:
         if is_app_relative(value):
             return True
+        if self.relative_on_host and not value.startswith("/"):
+            return self.host_check(value)
         probe = self.view.is_directory(value)
         if probe == PROBE_UNKNOWN:
             self.unestablished = True
-            return True
+            return self.host_check(value)
         return probe == PROBE_HIT
 
 
@@ -2440,6 +2520,19 @@ def _visibility_note(app_id: str) -> Caveat:
         CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED,
         f"whether RetroArch in {app_id}'s sandbox sees the appended files and the folders they set "
         "was not established, so they were read as this host's own paths",
+        {"app_id": app_id},
+    )
+
+
+def _save_dir_visibility_note(app_id: str) -> Caveat:
+    """The one #641 D1 note an answer carries where the view could not tell a folder the global cfg or an override
+    sets.
+    """
+    return Caveat(
+        CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED,
+        f"whether RetroArch in {app_id}'s sandbox sees the save folders the global cfg and the overrides "
+        "set was not established, so each was tested as this host's own path — or, where only the sandbox "
+        "can spell it, left untested",
         {"app_id": app_id},
     )
 
@@ -2526,12 +2619,17 @@ def _save_dir_probe(machine: Machine, sandbox: _Sandbox, key: str) -> Callable[[
 
     RetroArch runs this test on every value it reads (``configuration.c:6920``
     for the saves root, ``:6941`` for the savestate one) and keeps the value
-    only when it passes. A value atlas cannot test — one that exists only
-    inside the Flatpak sandbox, one relative to the running executable's
-    directory — passes: the emulator's own test still decides it, and answering
-    "not a directory" here would reject a root that is very likely there. That
-    the answer rests on an unperformed read is stated by the translation's own
-    caveat.
+    only when it passes. Where the program's sandbox is modelled (RetroDECK)
+    the test is asked of its view first (:class:`_ViewDirectoryCheck`), and
+    this one decides only a folder the view cannot tell, which the answer then
+    notes (#641 D1). Where it is not — a RetroArch on the host, EmuDeck's or a
+    bare RetroArch Flatpak — this test is the whole of it, and no note says
+    so (#641 D2): it would stand on every such answer. A value atlas cannot
+    test — one that exists only inside the Flatpak sandbox, one relative to
+    the running executable's directory — passes: the emulator's own test
+    still decides it, and answering "not a directory" here would reject a
+    root that is very likely there. That the answer rests on an unperformed
+    read is stated by the translation's own caveat.
     """
 
     def is_directory(value: str) -> bool:
@@ -5472,7 +5570,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     each (``runloop.c:8752-8979``), so the port takes the same shape.
     """
     content = _content_coordinates(query.content_path)
-    view = query.appended_view() if query.appendconfig and query.appended_view is not None else None
+    view = query.program_view() if query.program_view is not None else None
     appended = _read_appended(machine, query, view)
     base = _base_layers(query.global_text, cfg_label=query.cfg_label, appended=appended.layers)
     boot_values = _boot_values(base)
@@ -5510,7 +5608,11 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
     )
     sources_extra.extend(override_sources)
 
-    appended_dirs = _ViewDirectoryCheck(view) if view is not None else None
+    # Every layer's folder is tested where RetroArch tests it: inside the
+    # sandbox where atlas models one, on the host where it does not (#641).
+    host_dirs = _save_dir_probe(machine, query.sandbox, keys.directory)
+    base_dirs = _ViewDirectoryCheck(view, host_dirs, relative_on_host=True) if view is not None else None
+    appended_dirs = _ViewDirectoryCheck(view, host_dirs) if view is not None else None
     layout = resolve_layout(
         query.global_text,
         keys=keys,
@@ -5519,7 +5621,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         defaults=query.defaults,
         appended=appended.layers,
         overrides=overrides,
-        is_directory=_save_dir_probe(machine, query.sandbox, keys.directory),
+        is_directory=base_dirs if base_dirs is not None else host_dirs,
         appended_is_directory=appended_dirs,
     )
     unestablished = appended.unestablished
@@ -5527,6 +5629,8 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         unestablished = appended_dirs.view.app_id
     if unestablished is not None:
         caveats.append(_visibility_note(unestablished))
+    if base_dirs is not None and base_dirs.unestablished:
+        caveats.append(_save_dir_visibility_note(base_dirs.view.app_id))
     caveats.extend(_ignored_caveats(layout.ignored))
     caveats.extend(_appended_overridden_caveats(layout))
     layers: list[_CfgLayer] = [*base, *overrides]
@@ -18028,6 +18132,10 @@ class _FlatpakQueryContext:
     base_table: dict[str, _FsEntry]
     effective_table: dict[str, _FsEntry]
     home: str
+    # Every flatpak file the query read, path to text: the deploy's metadata
+    # and the overrides files. The sandbox view of the same query is built
+    # from these rather than from a second read of each.
+    texts: Mapping[str, str | None] = field(default_factory=dict)
 
     def revocation(self, path: str) -> Caveat | None:
         if not path.startswith("/"):
@@ -18091,6 +18199,7 @@ def _flatpak_query_context(machine: Machine, home: str, app_id: str) -> _Flatpak
         base_table=base_table,
         effective_table=effective_table,
         home=home,
+        texts=dict(metadata) | dict(texts),
     )
 
 
@@ -21047,9 +21156,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         shadow_path = os.path.join(self._esde_config_home(), self._FIND_RULES_SHADOW_SUFFIX)
         return files.layered(custom, custom_path, shadow_path, lambda: shipped, shipped)
 
-    def _launch_view(self) -> _SandboxLaunchView:
+    def _launch_view(self, read: Mapping[str, str | None] | None = None) -> _SandboxLaunchView:
         """The frontend's sandbox as the launch lookup reads it — the deploy resolved once, each file it needs read
         once.
+
+        *read* holds files the caller has read already, path to text — a save
+        query's flatpak context (:func:`_flatpak_query_context`) — so that one
+        query reads each of them once.
 
         The deploy's ``metadata`` names the runtime behind ``/usr`` and grants
         the filesystem; the overrides files (:func:`_flatpak_override_files_for`,
@@ -21063,15 +21176,19 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         widened it, and atlas does not compose those grants here, so
         everything outside the app's own trees is then not established.
         """
+        known = read or {}
+
+        def text(path: str) -> str | None:
+            return known[path] if path in known else self._machine.read_text(path).text
+
         deploy = _running_deploy(self._machine, self._home, self._APP_ID)
         layers: list[tuple[str, str | None]] = []
         if deploy is not None:
             metadata_path = _flatpak_metadata_path(deploy)
-            layers.append((metadata_path, self._machine.read_text(metadata_path).text))
+            layers.append((metadata_path, text(metadata_path)))
         metadata = _keyfile_groups(layers[0][1]) if layers and layers[0][1] is not None else None
         overrides = tuple(
-            (path, self._machine.read_text(path).text)
-            for path in _flatpak_override_files_for(deploy, self._home, self._APP_ID)
+            (path, text(path)) for path in _flatpak_override_files_for(deploy, self._home, self._APP_ID)
         )
         environment = _flatpak_environment_from((*layers, *overrides))
         search_path = _FLATPAK_DEFAULT_PATH
@@ -21603,7 +21720,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         context's filesystem tables ride along as the revocation check the
         save resolvers apply to their final directory (issue #103). RetroArch
         runs inside the frontend's own Flatpak here, so the launch view is how
-        it sees the files a launch appends (issue #637).
+        it sees the files a launch appends (issue #637) and the save folders
+        every layer states (issue #641).
         """
         health = self._health_from(config, marker_issues)
         global_cfg_path = self._cfg_path()
@@ -21635,7 +21753,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             revocation=context.revocation,
             cwd=cwd,
             appendconfig=appendconfig,
-            appended_view=self._launch_view,
+            program_view=lambda: self._launch_view(context.texts),
         )
 
     def _savefile_location_from(
@@ -24165,19 +24283,20 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
         With an id the launch runs inside that app's sandbox, and its
         configuration is read in that sandbox's spellings
-        (:meth:`_Sandbox._translate`): ``/var/config``, ``/var/data`` and
-        ``/var/cache`` are flatpak's bind points for the app's own trees below
-        ``~/.var/app``; ``/app`` is the deploy that runs, resolved against the
-        installation ``flatpak run`` would start — EmuDeck installs these into
-        the user installation (``flatpak install flathub "$ID" -y --user``,
-        installEmuFP.sh:32) and may leave an older system one behind until the
-        user one is confirmed (:36-38), which is the order
-        :func:`_running_deploy` searches; and the sandbox-only prefixes left
-        over name nothing this host shares, so a value there is refused. Every
-        HOST spelling stays the path it names, because EmuDeck grants each
-        emulator flatpak ``--filesystem=host`` (installEmuFP.sh:33). That grant
-        is what makes a host path mean what it says; it says nothing about
-        where the sandbox's own bind points lead.
+        (:meth:`_Sandbox._translate`): ``/var/config``, ``/var/data``,
+        ``/var/cache`` and ``/var/tmp`` are flatpak's bind points for the
+        app's own trees below ``~/.var/app``; ``/app`` is the deploy that
+        runs, resolved against the installation ``flatpak run`` would start —
+        EmuDeck installs these into the user installation (``flatpak install
+        flathub "$ID" -y --user``, installEmuFP.sh:32) and may leave an older
+        system one behind until the user one is confirmed (:36-38), which is
+        the order :func:`_running_deploy` searches; and the sandbox-only
+        prefixes left over name nothing this host shares, so a value there is
+        refused. Every HOST spelling stays the path it names, because EmuDeck
+        grants each emulator flatpak ``--filesystem=host``
+        (installEmuFP.sh:33). That grant is what makes a host path mean what
+        it says; it says nothing about where the sandbox's own bind points
+        lead.
 
         Without an id nothing sandboxes the launch, so every spelling but
         ``/app`` is the host path it names — and ``/app`` is refused, because

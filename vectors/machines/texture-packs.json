@@ -13,7 +13,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n",
-          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Flycast/textures/readme.txt": "put packs here"
+          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Flycast/textures/readme.txt": "put packs here",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -70,7 +71,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"disabled\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"disabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -132,7 +134,8 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -177,7 +180,8 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -232,7 +236,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -398,7 +403,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"on\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"on\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -462,7 +468,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystemfiles_in_content_dir = \"true\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -520,7 +527,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>dreamcast</name>\n    <fullname>Sega Dreamcast</fullname>\n    <path>%ROMPATH%/dreamcast</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"Flycast\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n    <command label=\"Flycast (Standalone)\">%EMULATOR_FLYCAST% %ROM%</command>\n    <platform>dreamcast</platform>\n    <theme>dreamcast</theme>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -635,7 +643,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_custom_textures = \"enabled\"\n",
           "/home/deck/.config/retroarch/retroarch.cfg": "libretro_directory = \"/home/deck/.config/retroarch/cores\"\nsystem_directory = \"/home/deck/.config/retroarch/system\"\n",
-          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Flycast/textures/readme.txt": "put packs here"
+          "/mnt/sd/retrodeck/texture_packs/retroarch-core/Flycast/textures/readme.txt": "put packs here",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -935,7 +944,8 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -990,7 +1000,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"true\"\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"enabled\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -1054,7 +1065,8 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -1117,7 +1129,8 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/mnt/sd/retrodeck/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -2237,14 +2250,14 @@
     },
     {
       "name": "retrodeck-pcsx2-a-sandbox-only-texture-directory-refuses-with-the-path",
-      "rationale": "PCSX2.ini reads fine and [Folders] Textures states a path only the emulator's sandbox can spell (/var/tmp/ is no XDG bind), so no host directory exists for the answer to anchor at. The refusal is emulator-config-path-untranslatable with the stated value in data.path — the same outcome the memory-card and states directories reach (#274), never a verbatim sandbox path stated as if this host could read it.",
+      "rationale": "PCSX2.ini reads fine and [Folders] Textures states a path only the emulator's sandbox can spell (/var/lib/ is no XDG bind), so no host directory exists for the answer to anchor at. The refusal is emulator-config-path-untranslatable with the stated value in data.path — the same outcome the memory-card and states directories reach (#274), never a verbatim sandbox path stated as if this host could read it.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /var/tmp/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /var/lib/textures\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -2273,7 +2286,7 @@
             "data": {
               "token": "PCSX2",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini",
-              "path": "/var/tmp/textures"
+              "path": "/var/lib/textures"
             }
           }
         }
@@ -2288,7 +2301,7 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"/mnt/sd/retrodeck/saves\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /mnt/sd/retrodeck/texture_packs/PCSX2/textures\nGameSettings = /var/tmp/gamesettings\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nTextures = /mnt/sd/retrodeck/texture_packs/PCSX2/textures\nGameSettings = /var/lib/gamesettings\n[EmuCore/GS]\nLoadTextureReplacements = true\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -2325,14 +2338,14 @@
               "code": "sandbox-path-untranslated",
               "data": {
                 "key": "GameSettings",
-                "path": "/var/tmp/gamesettings"
+                "path": "/var/lib/gamesettings"
               }
             },
             {
               "code": "per-game-layer-unread",
               "data": {
                 "token": "PCSX2",
-                "dir": "/var/tmp/gamesettings",
+                "dir": "/var/lib/gamesettings",
                 "key": [
                   "[EmuCore/GS] LoadTextureReplacements"
                 ]
@@ -2477,14 +2490,14 @@
     },
     {
       "name": "retrodeck-duckstation-a-sandbox-only-texture-directory-refuses-with-the-path",
-      "rationale": "settings.ini reads fine and [Folders] Textures states a path only the emulator's sandbox can spell (/var/tmp/ is no XDG bind) — the refusal is emulator-config-path-untranslatable with the stated value in data.path, the memory-card directory's own outcome (#274), never a verbatim sandbox path and never the unreadable code, whose claim the successful read contradicts.",
+      "rationale": "settings.ini reads fine and [Folders] Textures states a path only the emulator's sandbox can spell (/var/lib/ is no XDG bind) — the refusal is emulator-config-path-untranslatable with the stated value in data.path, the memory-card directory's own outcome (#274), never a verbatim sandbox path and never the unreadable code, whose claim the successful read contradicts.",
       "input": {
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"texture_packs_path\": \"/mnt/sd/retrodeck/texture_packs\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nTextures = /var/tmp/textures\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[Folders]\nTextures = /var/lib/textures\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -2513,7 +2526,7 @@
             "data": {
               "token": "DUCKSTATION",
               "config": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini",
-              "path": "/var/tmp/textures"
+              "path": "/var/lib/textures"
             }
           }
         }

@@ -719,6 +719,76 @@ class TestARevokedSaveRootIsStated:
         assert len(self._revoked(placement)) == 1
 
 
+class TestAHostRootLinkShowsItsTargetInTheSandbox:
+    """#641 D4: under the ``host`` grant flatpak exposes each entry of the host's root by its link target.
+
+    flatpak skips the names of ``dont_mount_in_root`` (flatpak-context.c:2765-2786,
+    :2854-2866 @ 1.16.6) and exposes a link's target in its place
+    (flatpak-exports.c:1013-1050), unless the target is one it refuses to
+    export (:973-1011). The vectors hold the ostree ``/mnt -> var/mnt`` case;
+    these hold the edges, through a save folder RetroArch tests in the sandbox.
+    """
+
+    METADATA = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata"
+    DEPLOY = "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files"
+    CORE = f"{DEPLOY}/cores/mgba_libretro.so"
+    ROM = "/run/media/mmcblk0p1/retrodeck/roms/gba/Game.gba"
+
+    def _placement(self, saves, *, symlinks=None, dirs=(), unlistable=()):
+        machine = FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                RETRODECK_CFG: (
+                    f'savefile_directory = "{saves}"\nlibretro_directory = "/app/cores"\n'
+                    'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+                ),
+                self.METADATA: "[Context]\nfilesystems=host;\n",
+                self.ROM: "",
+            },
+            cores={self.CORE: {"library_name": "mGBA"}},
+            dirs=[self.DEPLOY, *dirs],
+            symlinks=symlinks or {},
+            unlistable=list(unlistable),
+        )
+        rd = atlas.RetroDeck(HOME, machine)
+        return placed(rd.savefile_location(content_path=self.ROM, core_so="mgba_libretro.so"))
+
+    @staticmethod
+    def _refused(placement):
+        return [c.data["configured"] for c in placement.caveats if c.code == atlas.CAVEAT_INVALID_SAVE_DIRECTORY]
+
+    def test_a_link_whose_target_lies_deeper_shows_the_way_to_it(self):
+        # /srv -> var/lib/srv: the target is bound at its own path, and the
+        # directories leading to it are created to hold it.
+        placement = self._placement("/srv/saves", symlinks={"/srv": "var/lib/srv"}, dirs=["/var/lib/srv/saves"])
+        assert self._refused(placement) == []
+        assert placement.dir == "/srv/saves"
+
+    def test_a_link_to_a_target_flatpak_refuses_shows_nothing(self):
+        # /run/flatpak is flatpak's own (dont_export_in): the link's target is
+        # not exported, so the host's /run stays unbound beneath it.
+        placement = self._placement(
+            "/srv/saves", symlinks={"/srv": "run/flatpak/srv"}, dirs=["/run/flatpak/srv/saves"]
+        )
+        assert self._refused(placement) == ["/srv/saves"]
+
+    def test_a_link_flatpak_skips_by_name_shows_nothing(self):
+        # /boot is in dont_mount_in_root: the loop never looks at it, so its
+        # target is not exposed either.
+        placement = self._placement(
+            "/var/boot/saves", symlinks={"/boot": "var/boot"}, dirs=["/var/boot/saves"]
+        )
+        assert self._refused(placement) == ["/var/boot/saves"]
+
+    def test_an_unlistable_root_leaves_the_unbound_roots_unestablished(self):
+        # Which links the root holds cannot be read, so whether one reaches
+        # /var/lib/saves cannot be told: not a miss, the note instead.
+        placement = self._placement("/var/lib/saves", dirs=["/var/lib/saves"], unlistable=["/"])
+        assert self._refused(placement) == []
+        assert atlas.CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED in [c.code for c in placement.caveats]
+
+
+
 class TestRetroDeckPaths:
     def test_roots_from_json(self):
         rd = _retrodeck({RETRODECK_JSON: RD_JSON})
@@ -7832,6 +7902,35 @@ class TestFlatpakSandboxPaths:
         )
         assert p.dir == f"{HOME}/.var/app/net.retrodeck.retrodeck/data/saves"
 
+    def test_the_sandboxs_own_tmp_is_the_apps_cache_tmp_for_any_flatpak(self):
+        # Flatpak binds ~/.var/app/<app id>/cache/tmp at /var/tmp (#641 D3): the
+        # bind is flatpak's, not RetroDECK's, so a bare RetroArch Flatpak's cfg
+        # spelling reaches the same per-app directory.
+        machine = FixtureMachine(
+            {
+                STANDALONE_CFG: 'savefile_directory = "/var/tmp/saves"\n'
+                'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            },
+            dirs=[f"{HOME}/.var/app/org.libretro.RetroArch/cache/tmp/saves"],
+        )
+        p = placed(atlas.BareRetroArchFlatpak(HOME, machine).savefile_location())
+        assert p.dir == f"{HOME}/.var/app/org.libretro.RetroArch/cache/tmp/saves"
+
+    def test_a_var_path_that_only_begins_like_tmp_is_no_bind(self):
+        # The bind is /var/tmp and what lies under it; /var/tmpfs is another
+        # directory of the runtime's own /var, with no host location.
+        machine = FixtureMachine(
+            {
+                STANDALONE_CFG: 'savefile_directory = "/var/tmpfs/saves"\n'
+                'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
+            },
+            dirs=[f"{HOME}/.var/app/org.libretro.RetroArch/cache/tmpfs/saves"],
+        )
+        p = placed(atlas.BareRetroArchFlatpak(HOME, machine).savefile_location())
+        assert [c.data for c in p.caveats if c.code == atlas.CAVEAT_SANDBOX_PATH_UNTRANSLATED] == [
+            {"key": "savefile_directory", "path": "/var/tmpfs/saves"}
+        ]
+
     def test_untranslatable_save_directory_keeps_the_emulators_own_path(self):
         # RetroArch's "not an existing directory" test happens inside the
         # sandbox; atlas cannot reproduce it, so it must not report its outcome.
@@ -10491,19 +10590,19 @@ class TestPcsx2PerGameLayerPrecision:
         p = self._save(
             files={
                 PCSX2_INI_PATH: (
-                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/tmp/layer\n"
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/lib/layer\n"
                     "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
                     "Slot2_Enable = false\n"
                 )
             }
         )
-        assert self._stated(p, atlas.CAVEAT_PER_GAME_LAYER_UNREAD)[0].data["dir"] == "/var/tmp/layer"
+        assert self._stated(p, atlas.CAVEAT_PER_GAME_LAYER_UNREAD)[0].data["dir"] == "/var/lib/layer"
 
     def test_a_sandbox_only_layer_directory_says_why_it_went_unread(self):
         p = self._save(
             files={
                 PCSX2_INI_PATH: (
-                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/tmp/layer\n"
+                    "[Folders]\nMemoryCards = /mnt/sd/memcards\nGameSettings = /var/lib/layer\n"
                     "[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\n"
                     "Slot2_Enable = false\n"
                 )
@@ -10684,7 +10783,7 @@ class TestAnUntranslatableConfigPathIsItsOwnRefusal:
     a configured absolute path through the launch's sandbox.
     """
 
-    SANDBOX_ONLY = "/var/tmp/inside-sandbox"
+    SANDBOX_ONLY = "/var/lib/inside-sandbox"
     BASE = {
         RETRODECK_JSON: RD_JSON,
         RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n'

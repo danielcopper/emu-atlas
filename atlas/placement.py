@@ -554,6 +554,18 @@ CAVEAT_APPENDED_CONFIG_OVERRIDDEN = "appended-config-overridden"
 # answer, ``data`` naming the sandbox's ``app_id``; a RetroArch running on the
 # host has no sandbox and never carries it.
 CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED = "appended-config-visibility-unestablished"
+# The same unknown for the save and savestate folders the global cfg and the
+# overrides set: RetroDECK's model of its sandbox cannot tell whether RetroArch
+# sees one of them (a Flatpak overrides file that sets the filesystem grants, a
+# path under ``/run/user``), so the folder is read as the host's own path: the
+# host's directory test decides it, and a spelling only the sandbox has, such
+# as one under ``/run/user``, passes untested beside
+# ``sandbox-path-untranslated``. One note per answer, ``data`` naming
+# the sandbox's ``app_id``. Only where atlas models the sandbox: where it does
+# not, every such answer would carry it and tell a client nothing, so those
+# folders are read as the host's without it. The folders the appended files
+# set keep the note above.
+CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED = "save-directory-visibility-unestablished"
 # The entry runs a standalone emulator, which never reads RetroArch's
 # configuration, so the appended files the question was asked with change
 # nothing: the answer is the one without them, and this note says the redirect

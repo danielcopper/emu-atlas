@@ -13,7 +13,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -77,7 +78,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/psx/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).m3u": "Disc 1.cue\n",
-          "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/Final Fantasy VII (USA).m3u/Final Fantasy VII (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -142,7 +144,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -206,7 +209,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/mGBA.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/Golden Sun (USA).cfg": "sort_savefiles_by_content_enable = \"true\"",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -268,7 +272,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/gba/mGBA/Golden Sun (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/gba/mGBA/Golden Sun (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -333,7 +338,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -388,7 +394,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -763,7 +770,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -831,7 +839,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -899,7 +908,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -967,7 +977,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1035,7 +1046,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1103,7 +1115,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/apple2/game.dsk": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1355,7 +1368,8 @@
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
           "/mnt/sd/retrodeck/bios/dc/dc_nvmem.bin": "n",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -1484,7 +1498,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1654,7 +1669,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"All VMUs\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Multi Disc Game (Europe).m3u/Multi Disc Game (Europe).m3u": "disc1.cue\ndisc2.cue\n",
           "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u/MK-5105950.A1.bin": "vmu",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -1808,7 +1824,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/roms/dreamcast/dc/vmu_save_A1.bin": "v",
           "/mnt/sd/retrodeck/roms/dreamcast/dc/dc_nvmem.bin": "n",
-          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale"
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -1938,7 +1955,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale"
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "stale",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -2076,7 +2094,8 @@
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/roms/dreamcast/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/roms/dreamcast/dc/dc_nvmem.bin": "n"
+          "/mnt/sd/retrodeck/roms/dreamcast/dc/dc_nvmem.bin": "n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -2208,7 +2227,8 @@
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc/vmu_save_A1.bin": "v",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc/dc_nvmem.bin": "n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc/dc_nvmem.bin": "n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -2338,7 +2358,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsystem_directory = \"/var/db/bios\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -2483,7 +2504,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"VMU A1\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "shared"
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "shared",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -3159,7 +3181,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m"
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -3390,7 +3413,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -3842,7 +3866,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/gba": "a file blocking the sorted dir"
+          "/mnt/sd/retrodeck/saves/gba": "a file blocking the sorted dir",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -3901,7 +3926,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
-          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": ""
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -4002,7 +4028,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
-          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": ""
+          "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -4142,7 +4169,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv"
+          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -4219,7 +4247,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv"
+          "/mnt/sd/retrodeck/saves/opera/per_game/Road Rash (USA).0.srm": "nv",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -4292,7 +4321,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"shared\"\n",
-          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": ""
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -4362,7 +4392,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
-          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": ""
+          "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -4578,7 +4609,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"shared\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"shared\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -4794,7 +4826,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_version = \"7\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_version = \"7\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -5010,7 +5043,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"per game\"\nopera_nvram_version = \"12\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "opera_nvram_storage = \"per game\"\nopera_nvram_version = \"12\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -5083,7 +5117,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
-          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -5221,7 +5256,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
-          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": ""
+          "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -5301,7 +5337,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/mnt/sd/retrodeck/saves/psx/.keep": "",
-          "/mnt/sd/retrodeck/roms/neogeocd/Metal Slug (Japan).chd": ""
+          "/mnt/sd/retrodeck/roms/neogeocd/Metal Slug (Japan).chd": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -5390,7 +5427,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/gba/.keep": ""
+          "/mnt/sd/retrodeck/saves/gba/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -5446,7 +5484,8 @@
           "/mnt/sd/retrodeck/roms/saturn/Sega Rally Championship (USA).chd": "",
           "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).bcr": "backup",
           "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).bkr": "backup",
-          "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).smpc": "smpc"
+          "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).smpc": "smpc",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -5599,7 +5638,8 @@
           "/mnt/sd/retrodeck/roms/saturn/Sega Rally Championship (USA).chd": "",
           "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).bcr": "backup",
           "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).bkr": "backup",
-          "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).smpc": "smpc"
+          "/mnt/sd/retrodeck/saves/saturn/Sega Rally Championship (USA).smpc": "smpc",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -6222,7 +6262,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/config/retroarch/config\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -6285,7 +6326,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\ncore_options_path = \"/var/config/retroarch/opts.cfg\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/opts.cfg": "opera_nvram_storage = \"shared\"\nopera_nvram_version = \"3\"\n",
           "/mnt/sd/retrodeck/roms/3do/Road Rash (USA).chd": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -6477,7 +6519,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/db/retroarch/config\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves/psp",
@@ -6548,7 +6591,8 @@
           "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/var/home/deck/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory = \"/var/config/retroarch/config\"\n",
           "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
           "/var/home/deck/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/var/home/deck/retrodeck/saves/.keep": ""
+          "/var/home/deck/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/var/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -6680,7 +6724,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"yes\""
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"yes\"",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves/psp",
@@ -6752,7 +6797,8 @@
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/mnt/sd/wrong\""
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/mnt/sd/wrong\"",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -6885,7 +6931,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/run/media/gone/saves\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "sort_savefiles_by_content_enable = \"true\"\n",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves/psp",
@@ -6961,7 +7008,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"disabled\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v"
+          "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -7093,7 +7141,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nrgui_config_directory=\"/mnt/sd/retrodeck/rgui\"\n",
           "/mnt/sd/retrodeck/rgui/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"true\"\n",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves/psp",
@@ -7166,7 +7215,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "savefile_directory = \"/run/media/gone/saves\"\n",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/mnt/sd/other/.keep": ""
+          "/mnt/sd/other/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7239,7 +7289,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "sort_savefiles_by_content_enable = \"false\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/Lumines (USA).cfg": "sort_savefiles_by_content_enable = \"yes\"\n",
           "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves/psp",
@@ -7309,7 +7360,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/gba/Pack.zip": "",
-          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/gba/Golden Sun (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7375,7 +7427,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/mGBA/Golden Sun (USA).cfg": "sort_savefiles_by_content_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Pack.zip": "",
-          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7571,7 +7624,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/psx/Game.cue": "",
-          "/mnt/sd/retrodeck/saves/psx/Game.srm": "sram"
+          "/mnt/sd/retrodeck/saves/psx/Game.srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7635,7 +7689,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/psx/Game/disc.bin": "",
-          "/mnt/sd/retrodeck/saves/psx/.hidden": "not a save"
+          "/mnt/sd/retrodeck/saves/psx/.hidden": "not a save",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7694,7 +7749,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
           "/mnt/sd/retrodeck/roms/My.Games/rom": "",
-          "/mnt/sd/retrodeck/saves/roms/My.srm": "sram"
+          "/mnt/sd/retrodeck/saves/roms/My.srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7838,7 +7894,8 @@
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
           "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
-          "/mnt/sd/retrodeck/saves/Game.srm": "sram"
+          "/mnt/sd/retrodeck/saves/Game.srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -7956,7 +8013,8 @@
           "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
           "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
           "/mnt/sd/retrodeck/saves/Game.srm": "sram",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/bios"
@@ -8081,7 +8139,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/es-de-roms\" />\n",
           "/mnt/sd/es-de-roms/n64/Game.m3u": "",
           "/mnt/sd/es-de-roms/n64/Collection/Game.m3u": "",
-          "/mnt/sd/games/n64/Game.m3u": ""
+          "/mnt/sd/games/n64/Game.m3u": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/bios"
@@ -8237,7 +8296,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_info_path = \"/app/cores\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
-          "/mnt/sd/retrodeck/roms/gba/Game (USA).gba": ""
+          "/mnt/sd/retrodeck/roms/gba/Game (USA).gba": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/bios",
@@ -8566,7 +8626,8 @@
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"~/ra-saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
           "/home/deck/roms/gb/Tetris (World).zip": "",
           "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
-          "/home/deck/ra-saves/Tetris (World).srm": "sram"
+          "/home/deck/ra-saves/Tetris (World).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -8899,7 +8960,8 @@
           "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/Emulation/saves/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
           "/home/deck/roms/gb/Tetris (World).zip": "",
           "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
-          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram"
+          "/home/deck/Emulation/saves/retroarch/saves/Tetris (World).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/Emulation/saves",
@@ -9035,7 +9097,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -9323,7 +9386,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -9429,7 +9493,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -9509,7 +9574,8 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -9588,7 +9654,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
-          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -9674,7 +9741,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 7}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).zip": "",
-          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram"
+          "/mnt/sd/retrodeck/saves/Golden Sun (USA).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -10516,7 +10584,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -10590,7 +10659,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"Every VMU\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -10661,7 +10731,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "reicast_per_content_vmus = \"Every VMU\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -10800,7 +10871,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
-          "/mnt/sd/retrodeck/saves/dreamcast/.keep": ""
+          "/mnt/sd/retrodeck/saves/dreamcast/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -11231,7 +11303,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/dreamcast/Dreamcast Game (Europe).gdi": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A1.bin": "v",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -12020,7 +12093,8 @@
           "/mnt/sd/retrodeck/states/.keep": "",
           "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
-          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n\n[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n"
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Environment]\nXDG_CONFIG_HOME=/mnt/elsewhere/config\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -12189,7 +12263,8 @@
           "/mnt/sd/retrodeck/states/.keep": "",
           "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"MediaDirectory\" value=\"\" />\n<string name=\"ROMDirectory\" value=\"\" />\n",
-          "/var/lib/flatpak/overrides/global": "[Environment]\nHOME=/mnt/elsewhere\n"
+          "/var/lib/flatpak/overrides/global": "[Environment]\nHOME=/mnt/elsewhere\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -12293,7 +12368,8 @@
           "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Environment]\nHOME=/mnt/elsewhere\n",
           "/mnt/elsewhere/saves/.keep": "",
           "/mnt/userglobal/saves/.keep": "",
-          "/home/deck/saves/.keep": ""
+          "/home/deck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -12368,7 +12444,8 @@
           "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
           "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nunset-environment=HOME;\n",
-          "/home/deck/saves/.keep": ""
+          "/home/deck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "cores": {
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -12453,7 +12530,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n",
           "/var/lib/flatpak/overrides/global": "[Environment]\nHOME=/mnt/elsewhere\n",
           "/mnt/elsewhere/saves/.keep": "",
-          "/home/deck/saves/.keep": ""
+          "/home/deck/saves/.keep": "",
+          "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "cores": {
           "/home/deck/.local/share/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
@@ -14417,7 +14495,8 @@
           "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/.config/retroarch/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\n",
           "/home/deck/roms/gb/Tetris (World).zip": "",
           "/mnt/sd/retrodeck/saves/Tetris (World).srm": "sram",
-          "/home/deck/.config/retroarch/saves/Tetris (World).srm": "sram"
+          "/home/deck/.config/retroarch/saves/Tetris (World).srm": "sram",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -14780,7 +14859,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name>\n    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n    <command label=\"Libretro\">retroarch -L /app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/n64/Game.z64": "",
-          "/mnt/sd/retrodeck/saves/.keep": ""
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
@@ -14852,7 +14932,7 @@
     },
     {
       "name": "an-inaccessible-flatpak-deploy-tree-establishes-no-running-deploy",
-      "rationale": "The one deploy this machine has cannot be stat'd — a mode-000 parent, an unplugged mount — so which deploy runs is not established, and the cfg's \"/app/retrodeck/saves\" gets no host location: the answer states the sandbox spelling it was given and says atlas cannot read what the emulator reads there. Taking the stat failure for a deploy would compose a host path out of it and hand that to RetroArch's directory test, which refuses everything it cannot read — turning the host's blindness into a claim about the sandbox and quietly relocating the saves to the platform default.",
+      "rationale": "The one deploy this machine has cannot be stat'd — a mode-000 parent, an unplugged mount — so which deploy runs is not established, and the cfg's \"/app/retrodeck/saves\" gets no host location: the answer states the sandbox spelling it was given and says atlas cannot read what the emulator reads there. Taking the stat failure for a deploy would compose a host path out of it and hand that to RetroArch's directory test, which refuses everything it cannot read — turning the host's blindness into a claim about the sandbox and quietly relocating the saves to the platform default. With no deploy established, RetroDECK's sandbox model cannot tell whether RetroArch sees the folder either, so save-directory-visibility-unestablished rides beside it (#641).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -14906,6 +14986,12 @@
           },
           "caveats": [
             {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
               "code": "sandbox-path-untranslated",
               "data": {
                 "key": "savefile_directory",
@@ -14947,7 +15033,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": {
             "status": "invalid-text"
-          }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -15123,7 +15210,8 @@
           "/mnt/sd/retrodeck/saves/.keep": "",
           "/mnt/sd/retrodeck/bios/dc/vmu_save_A2.bin": {
             "status": "invalid-text"
-          }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -15759,7 +15847,8 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
           "/mnt/sd/retrodeck/roms/ps2/Gran Turismo 4 (USA).iso": "",
           "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": "m",
-          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_shared_memory_cards = \"enabled\"\npcsx2_memcard_slot_1 = \"shared8\"\n"
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_shared_memory_cards = \"enabled\"\npcsx2_memcard_slot_1 = \"shared8\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
         },
         "dirs": [
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
@@ -16665,7 +16754,7 @@
     },
     {
       "name": "a-revoked-save-root-is-answered-with-the-statement",
-      "rationale": "The app's own metadata grants host access and a user override revokes the tree the configured save root lives under ('!'-prefixed entry). A revoked path is mounted over as an empty tmpfs even under the broader host grant (flatpak-exports.c:1096-1108, the longest covering entry wins per path_is_mapped :340-378 @ 1.16.6), so the directory exists on the host and the emulator cannot touch it: what it writes never lands where this answer points. The answer stands — the config really names this directory — and save-root-revoked carries the entry and the file a user would edit (issue #103).",
+      "rationale": "The app's own metadata grants host access and a user override revokes the tree the configured save root lives under ('!'-prefixed entry). A revoked path is mounted over as an empty tmpfs even under the broader host grant (flatpak-exports.c:1096-1108, the longest covering entry wins per path_is_mapped :340-378 @ 1.16.6), so the directory exists on the host and the emulator cannot touch it: what it writes never lands where this answer points. The answer stands — the config really names this directory — and save-root-revoked carries the entry and the file a user would edit (issue #103). The override file sets filesystems, which RetroDECK's sandbox model does not compose, so whether RetroArch sees the folder is not established: it is read as the host's own path, and save-directory-visibility-unestablished says so (#641).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -16717,6 +16806,12 @@
           },
           "caveats": [
             {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
               "code": "save-root-revoked",
               "data": {
                 "path": "/run/media/mmcblk0p1/retrodeck/saves",
@@ -16731,7 +16826,7 @@
     },
     {
       "name": "a-more-specific-grant-restores-the-revoked-tree",
-      "rationale": "The same revocation with a grant below it: flatpak's application lets the longest covering entry win (path_is_mapped, flatpak-exports.c:340-378), so the grant on the retrodeck tree brings the save root back into the sandbox and nothing is revoked — the discriminating direction that keeps the statement honest on machines that carve access deliberately.",
+      "rationale": "The same revocation with a grant below it: flatpak's application lets the longest covering entry win (path_is_mapped, flatpak-exports.c:340-378), so the grant on the retrodeck tree brings the save root back into the sandbox and nothing is revoked — the discriminating direction that keeps the statement honest on machines that carve access deliberately. The override sets filesystems, so the answer carries save-directory-visibility-unestablished as its sibling does (#641).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -16781,7 +16876,14 @@
             "complete": false,
             "groups": []
           },
-          "caveats": [],
+          "caveats": [
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ],
           "granularity": null
         }
       }
@@ -19523,6 +19625,807 @@
               "data": {
                 "key": "savefile_directory",
                 "path": "/run/user/1000/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-an-appended-save-directory-of-unknown-visibility-the-host-lacks-is-refused",
+      "rationale": "An overrides file sets filesystems, which RetroDECK's sandbox model does not compose, so whether RetroArch sees the appended file and the folder it names cannot be told. Both are read as the host's own paths: the file is there, the folder is not, so the host's directory test fails as RetroArch's would, the read sets nothing and the platform default stands (configuration.c:6914-6933). invalid-save-directory names the appended layer, and appended-config-visibility-unestablished says the reading rests on the host's paths (#637 D7, #641 D5).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n",
+          "/home/deck/launcher/redirect.cfg": "savefile_directory = \"/home/deck/launcher/gone\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "appendconfig": "/home/deck/launcher/redirect.cfg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "appended-config-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "appended",
+                "file": "/home/deck/launcher/redirect.cfg",
+                "configured": "/home/deck/launcher/gone",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-save-directory-in-another-apps-tree-is-refused-in-the-sandbox",
+      "rationale": "retroarch.cfg names a save directory inside another Flatpak app's ~/.var/app tree. It exists on the host, but the RetroDECK sandbox masks every app tree but its own, so RetroArch's path_is_directory fails inside it (configuration.c:6914-6933) and the read sets nothing: the platform default stands, and invalid-save-directory names the global layer. Every layer's folder is tested through the program's own view, not only an appended file's (#641).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/.var/app/com.other.App/data/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/com.other.App/data/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "global",
+                "file": "retroarch.cfg",
+                "configured": "/home/deck/.var/app/com.other.App/data/saves",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-an-override-save-directory-under-the-hosts-var-is-refused-in-the-sandbox",
+      "rationale": "The PPSSPP core override names /var/saves, a directory on the host. The host's /var is not bound into the sandbox, so RetroArch's directory test fails there and the override's read sets nothing: the global cfg's root stands, and invalid-save-directory names the core override (#641). Tested host-side, /var is a sandbox-only spelling that passes untested.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"/var/saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/var/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "core-override",
+                "file": "config/PPSSPP/PPSSPP.cfg",
+                "configured": "/var/saves",
+                "effective": "/mnt/sd/retrodeck/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-save-directory-whose-visibility-cannot-be-told-is-read-as-the-hosts",
+      "rationale": "A Flatpak overrides file sets filesystems, which RetroDECK's sandbox model does not compose, so whether RetroArch sees the folder retroarch.cfg names cannot be told. The folder is read as the host's own path — it is a directory there, so it stands — and save-directory-visibility-unestablished says the answer rests on that reading (#641 D1).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-save-directory-whose-visibility-cannot-be-told-and-the-host-lacks-is-refused",
+      "rationale": "The same overrides file leaves the folder's visibility in the sandbox unknown, and the folder is read as the host's own path: there is no directory there, so RetroArch's test fails whatever the grants are, the read sets nothing and the platform default stands. The note still says the visibility was not established (#641 D1).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/gone\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "global",
+                "file": "retroarch.cfg",
+                "configured": "/mnt/sd/retrodeck/gone",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-save-directory-under-the-sandboxs-var-tmp-is-its-cache-tmp",
+      "rationale": "retroarch.cfg names /var/tmp/saves, a sandbox spelling: inside RetroDECK's sandbox /var/tmp is the app's own cache/tmp, as the sandbox's mount table shows. The folder is found there and is where the saves land; read as the host's /var/tmp it would be hidden and refused (#641 D3).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/var/tmp/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/cache/tmp/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/cache/tmp/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "emudeck-a-save-directory-in-another-apps-tree-is-read-as-the-hosts",
+      "rationale": "EmuDeck's RetroArch Flatpak runs in a sandbox atlas does not model, so a save directory inside another app's ~/.var/app tree is tested as the host's own path, where it is a directory, and stands. No note: it would ride every answer of an unmodelled sandbox and tell a client nothing (#641 D2).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\nbiosPath=\"$HOME/Emulation/bios\"\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/.var/app/com.other.App/data/saves\"\nsavefiles_in_content_dir = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/saves",
+          "/home/deck/.var/app/com.other.App/data/saves"
+        ],
+        "savefile_query": {
+          "content_path": "/home/deck/Emulation/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/com.other.App/data/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-an-unestablished-cfg-folder-and-appended-file-carry-both-notes",
+      "rationale": "With an overrides file that sets filesystems, neither the appended file nor the folder retroarch.cfg names can be told in RetroDECK's sandbox. Each is read as the host's own path and each layer states its own note: appended-config-visibility-unestablished for the appended file, save-directory-visibility-unestablished for the global cfg's folder (#637 D8, #641 D1). The appended file sets no save folder of its own — one it set would replace the global cfg's before RetroArch tests it, the two being one merged config (configuration.c:6309-6353).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsavestate_directory = \"/mnt/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n",
+          "/home/deck/launcher/redirect.cfg": "sort_savefiles_enable = \"false\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "appendconfig": "/home/deck/launcher/redirect.cfg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "appended-config-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-an-ostree-hosts-mnt-link-shows-its-var-target-in-the-sandbox",
+      "rationale": "On an ostree host /mnt is a link to var/mnt. Under the host grant flatpak exposes every entry of the host's root but its own reserved names (flatpak-context.c:2854-2866 @ 1.16.6) and exposes a link by its target, recreating the link beside it (flatpak-exports.c:1013-1050), so /var/mnt is the host's own inside the sandbox although the rest of the host's /var is not bound. RetroArch's directory test passes on /mnt/games/saves there, and the folder stands (#641 D4).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/sd/retrodeck\", \"saves_path\": \"/run/media/deck/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/games/saves\"\nsavestate_directory = \"/run/media/deck/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/run/media/deck/sd/retrodeck/saves/.keep": "",
+          "/run/media/deck/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/run/media/deck/sd/retrodeck/bios",
+          "/var/mnt/games/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "symlinks": {
+          "/mnt": "var/mnt"
+        },
+        "savefile_query": {
+          "content_path": "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/run/media/deck/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/games/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/var/mnt/games/saves",
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-an-ostree-hosts-var-mnt-spelling-is-shown-in-the-sandbox-too",
+      "rationale": "The same machine with the folder spelled /var/mnt/games/saves: the target of the root's /mnt link is exposed under its own name, so the sandbox shows the directory and RetroArch keeps the value — no invalid-save-directory. The cfg translation still counts /var as sandbox-only, so the answer states the spelling as untranslated rather than reading a file set there (#641 D4).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/sd/retrodeck\", \"saves_path\": \"/run/media/deck/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/var/mnt/games/saves\"\nsavestate_directory = \"/run/media/deck/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/run/media/deck/sd/retrodeck/saves/.keep": "",
+          "/run/media/deck/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/run/media/deck/sd/retrodeck/bios",
+          "/var/mnt/games/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "symlinks": {
+          "/mnt": "var/mnt"
+        },
+        "savefile_query": {
+          "content_path": "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/run/media/deck/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/var/mnt/games/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "sandbox-path-untranslated",
+              "data": {
+                "key": "savefile_directory",
+                "path": "/var/mnt/games/saves"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-on-an-ostree-host-a-var-folder-no-root-link-reaches-stays-hidden",
+      "rationale": "The same machine, the folder under /var/lib: no link in the host's root leads there, so the host's /var stays unbound in the sandbox, RetroArch's directory test fails and the platform default stands with invalid-save-directory (#641 D4).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/run/media/deck/sd/retrodeck\", \"saves_path\": \"/run/media/deck/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/var/lib/games/saves\"\nsavestate_directory = \"/run/media/deck/sd/retrodeck/states\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsort_savestates_by_content_enable = \"false\"\nsort_savestates_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/run/media/deck/sd/retrodeck/saves/.keep": "",
+          "/run/media/deck/sd/retrodeck/states/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/run/media/deck/sd/retrodeck/bios",
+          "/var/mnt/games/saves",
+          "/var/lib/games/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "symlinks": {
+          "/mnt": "var/mnt"
+        },
+        "savefile_query": {
+          "content_path": "/run/media/deck/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/run/media/deck/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "global",
+                "file": "retroarch.cfg",
+                "configured": "/var/lib/games/saves",
+                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
               }
             },
             {

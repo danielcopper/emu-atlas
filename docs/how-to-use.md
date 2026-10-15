@@ -743,6 +743,21 @@ directory really is `<content_dir>/<content_dir>`. The two positions are **not**
 directory, the sort stage is that directory's _name_, so a ROM in `/roms/psx` lands in `/roms/psx/psx`. Pass
 `content_path` and atlas fills both correctly; `needs` only tells you which fact is missing.
 
+**A save folder is tested where RetroArch tests it.** RetroArch keeps a `savefile_directory` or `savestate_directory`
+only where it is an existing directory in its own view of the filesystem; otherwise it refuses the value and the root
+that stood before it stays, which the answer states as `invalid-save-directory`, `data["layer"]` naming the file to fix.
+On RetroDECK that view is its Flatpak sandbox, and atlas tests every layer's folder through its model of it: a folder
+the sandbox hides — another app's `~/.var/app` tree, the host's `/var` — is refused even where the host has it, and a
+sandbox spelling under `/var/config`, `/var/data`, `/var/cache` or `/var/tmp` is the app's own tree under
+`~/.var/app/<app id>/`. On an ostree host a folder reached through a link in the host's root, such as `/mnt` to
+`var/mnt`, is visible, because flatpak exposes the link's target. Where the model cannot tell — a Flatpak overrides file
+that sets `filesystems`, a folder under `/run/user` — a folder from `retroarch.cfg` or an override is tested as the
+host's own path, or passes untested with `sandbox-path-untranslated` where only the sandbox can spell it (`/run/user`),
+and the answer carries **`save-directory-visibility-unestablished`**, a note, one per answer, `data["app_id"]` naming
+the sandbox; the folders an appended file sets carry their own note (below). EmuDeck's and a bare RetroArch Flatpak's
+sandbox is not modelled: their folders are tested as the host's, and no note says so — it would stand on every such
+answer.
+
 ### What `content_path` may be
 
 Pass the path the way RetroArch gets it, and atlas names the content the way RetroArch names it
@@ -799,8 +814,9 @@ rules read, such as `system_directory`. What the answer tells you about the file
   any other layer: RetroArch refuses it, and because the merge shadowed the global cfg's own root, the platform default
   stands. On RetroDECK the folder is tested inside its sandbox, as RetroArch tests it: one the sandbox hides or does not
   hold — another app's `~/.var/app` tree, the host's `/var` — is refused even where the host has it, and one the model
-  cannot tell is read as the host's, with the visibility note. Keep the file and the folders it names under your home
-  directory, which the RetroDECK sandbox shares, and outside other apps' `~/.var/app/<app>/` trees, which it does not.
+  cannot tell is read as the host's — refused where the host has no directory there either — with the visibility note.
+  Keep the file and the folders it names under your home directory, which the RetroDECK sandbox shares, and outside
+  other apps' `~/.var/app/<app>/` trees, which it does not.
 
 ### Reading the file set
 
@@ -1175,6 +1191,7 @@ all.
 | `cfg-value-rejected`                       | the file sets a value the emulator cannot read, so the value it had keeps governing                                       |
 | `appended-config-overridden`               | an override wins a layout key a file you appended sets (`data["key"]`, `layer`, `file`) — the answer is the override's    |
 | `appended-config-visibility-unestablished` | whether the program's sandbox shows the appended files was not established — read as the host's paths                     |
+| `save-directory-visibility-unestablished`  | cfg/override save folder's sandbox visibility unknown — host-tested; `/run/user` passes with `sandbox-path-untranslated`  |
 | `appended-config-not-read`                 | a standalone emulator reads no RetroArch config — the appended files change nothing in this answer                        |
 | `core-unaudited` / `core-suspect`          | no rule card for this core yet / options scan shows save-related keys nobody has verified                                 |
 | `core-multi-option`                        | granularity deliberately unstated — depends on options atlas does not interpret (named in it)                             |
