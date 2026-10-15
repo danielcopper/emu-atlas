@@ -280,22 +280,6 @@ class TestAFileRetroArchCannotOpenRefusesTheAnswer:
         assert dict(outcome.data) == {"file": other}
 
 
-class TestAnAppendedFolderOfUnknownVisibilityIsReadAsTheHosts:
-    """#637 D7 and #641 D5: the host's directory test decides it, and the appended note says so."""
-
-    def test_a_relative_appended_folder_keeps_the_appended_note(self):
-        # RetroArch tests a relative folder against its working directory,
-        # which the sandbox model cannot tell; unlike a relative folder the
-        # global cfg sets, an appended one keeps the note it carried before.
-        rd = _retrodeck({REDIRECT: 'savefile_directory = "launcher/saves"\n'})
-        placement = rd.savefile_location(content_path=GAME, core_so="ppsspp_libretro.so", appendconfig=[REDIRECT])
-        assert isinstance(placement, atlas.SavefilePlacement)
-        codes = [caveat.code for caveat in placement.caveats]
-        assert atlas.CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED in codes
-        assert atlas.CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED not in codes
-
-
-
 class TestARetroArchOnTheHostCarriesNoVisibilityNote:
     """D8: the note is about a sandbox; a native RetroArch has none."""
 

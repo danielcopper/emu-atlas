@@ -1739,6 +1739,125 @@
           ]
         }
       }
+    },
+    {
+      "name": "native-a-relative-savestate-folder-is-opened-from-the-callers-cwd",
+      "rationale": "savestate_directory takes the same read as its savefile twin (configuration.c:6935-6960), so a relative value is opened from the launch's working directory (file_path.c:1066-1101). Joined to the caller's cwd it passes the directory test and is read: the content's states lying there are listed.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savestate_directory = \"states\"\nsort_savestates_enable = \"false\"\n",
+          "/home/deck/roms/gba/Golden Sun (USA).zip": "",
+          "/home/deck/launcher/states/Golden Sun (USA).state": "",
+          "/home/deck/launcher/states/Golden Sun (USA).state1": ""
+        },
+        "savestate_query": {
+          "content_path": "/home/deck/roms/gba/Golden Sun (USA).zip",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savestate_location": {
+          "dir": "/home/deck/launcher/states",
+          "root_kind": "savestate_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Golden Sun (USA).state",
+              "Golden Sun (USA).state1"
+            ],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "native-a-relative-savestate-folder-without-a-cwd-is-the-cwd-template",
+      "rationale": "Without cwd a relative savestate_directory is the <cwd> template with the cwd hole and save-dir-launch-dependent, its directory test left to the launch and nothing read below it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savestate_directory = \"states\"\nsort_savestates_enable = \"false\"\n",
+          "/home/deck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "savestate_query": {
+          "content_path": "/home/deck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savestate_location": {
+          "dir": "<cwd>/states",
+          "root_kind": "savestate_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "key": "savestate_directory",
+                "path": "states"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

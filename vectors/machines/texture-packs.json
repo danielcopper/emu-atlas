@@ -2889,6 +2889,79 @@
           ]
         }
       }
+    },
+    {
+      "name": "a-saves-rooted-core-below-a-relative-save-folder-keeps-the-cwd-hole",
+      "rationale": "PPSSPP's texture tree hangs off the save root. A relative savefile_directory with no cwd is the <cwd> template (file_path.c:1066-1101 expands only ~ and :), so the texture directory below it carries the cwd hole and is not looked at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"bios_path\": \"/mnt/sd/retrodeck/bios\"}, \"version\": \"0.10.9b\"}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "libretro_directory = \"/mnt/sd/retrodeck/cores\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nsavefile_directory = \"saves\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "ppsspp_texture_replacement = \"disabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/mnt/sd/retrodeck/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP",
+            "options": {
+              "ppsspp_texture_replacement": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "texture_query": {
+          "core_so": "ppsspp_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "texture_pack_location": {
+          "dir": "<cwd>/saves/PPSSPP/PSP/TEXTURES",
+          "needs": [
+            "cwd"
+          ],
+          "physical_dir": null,
+          "enabled": false,
+          "keying": null,
+          "caveats": [
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "key": "savefile_directory",
+                "path": "saves"
+              }
+            },
+            {
+              "code": "emulator-read-unestablished",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
