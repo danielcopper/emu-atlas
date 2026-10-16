@@ -747,6 +747,15 @@ symlink** — whether any live Linux installation keeps its only real marker the
 `~/.config/EmuDeck/settings.sh` (a live symlink resolves through `stat` either way; only a dead one reads as missing,
 which is then the truthful state of a removed installation).
 
+**[V]** **The installation root is `emulationPath`, reached through `romsPath`.** atlas derives the EmuDeck installation
+root as the parent of `romsPath`. EmuDeck writes the two settings together and nowhere apart: the installer sets
+`emulationPath` to `<target>/Emulation` and `romsPath` to `<target>/Emulation/roms` (`jsonToBashVars.sh:129-130` at
+`dragoonDorise/EmuDeck` @ `dddb302`), and the migration tool sets them to `<destination>` and `<destination>/roms`
+(`ToolScripts/emuDeckMigration.sh:52-54` at the same revision). So the parent of `romsPath` is `emulationPath` on every
+installation EmuDeck itself wrote; the two part only where `settings.sh` was edited by hand to put `romsPath` outside
+`emulationPath`. In that case `emulationPath` is the root EmuDeck uses for its own trees, the texture packs among them
+(`helperFunctions.sh:559-560` at `dddb302`), and atlas's root would be the parent of the hand-set ROM folder instead.
+
 ## 14. The machine is not just its config files
 
 **[V]** RetroDECK's standalone save architecture is **symlinks** (`dir_prep`), observed live:
