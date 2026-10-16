@@ -12430,7 +12430,7 @@
     },
     {
       "name": "an-unset-home-leaves-the-cfg-tilde-verbatim",
-      "rationale": "unset-environment removes HOME from the sandbox environment (flatpak-context.c:1950-1972; a NULL value unsets, flatpak-run.c:752-755). getenv(\"HOME\") is then NULL, fill_pathname_home_dir leaves its buffer empty, and the substitution block is skipped — the value passes through as the literal ~/saves (file_path.c:1081, :1100, :1457-1468). RetroArch's own path_is_directory test refuses that read (configuration.c:6914-6960) and the root that stood before it stands: the platform default under the pinned config tree. /home/deck/saves exists, which is what a resolver still expanding ~ against the machine home would answer.",
+      "rationale": "unset-environment removes HOME from the sandbox environment (flatpak-context.c:1950-1972; a NULL value unsets, flatpak-run.c:752-755). getenv(\"HOME\") is then NULL, fill_pathname_home_dir leaves its buffer empty, and the substitution block is skipped — the value passes through as the literal ~/saves (file_path.c:1081, :1100, :1457-1468). That is a relative path, which RetroArch opens from the working directory of its own process: the question names no cwd, so the root is the <cwd> template with the cwd hole, and its directory test is left to the launch. /home/deck/saves exists, which is what a resolver still expanding ~ against the machine home would answer.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12470,9 +12470,11 @@
           }
         ],
         "savefile_location": {
-          "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves",
+          "dir": "<cwd>/~/saves",
           "root_kind": "savefile_directory",
-          "needs": [],
+          "needs": [
+            "cwd"
+          ],
           "fallback_dir": null,
           "physical_dir": null,
           "file_set": {
@@ -12485,15 +12487,6 @@
           },
           "caveats": [
             {
-              "code": "invalid-save-directory",
-              "data": {
-                "layer": "global",
-                "file": "retroarch.cfg",
-                "configured": "~/saves",
-                "effective": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/saves"
-              }
-            },
-            {
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
@@ -12501,6 +12494,13 @@
                   "n64",
                   "n64dd"
                 ]
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "key": "savefile_directory",
+                "path": "~/saves"
               }
             }
           ],
@@ -20635,6 +20635,610 @@
               }
             ]
           }
+        }
+      }
+    },
+    {
+      "name": "native-a-relative-save-folder-is-opened-from-the-callers-cwd",
+      "rationale": "RetroArch expands only a leading ~ or : (file_path.c:1066-1101) and opens any other relative value as written, so savefile_directory = \"saves\" is the folder below the RetroArch process's working directory, which the caller names as cwd. The folder is joined to it, passes the directory test there, and is read like any other: its link to the card is followed to the physical directory.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/roms/gba/Golden Sun (USA).zip": "",
+          "/mnt/card/saves/.keep": ""
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/roms/gba/Golden Sun (USA).zip",
+          "cwd": "/home/deck/launcher"
+        },
+        "symlinks": {
+          "/home/deck/launcher/saves": "/mnt/card/saves"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/card/saves",
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "native-a-relative-save-folder-without-a-cwd-is-the-cwd-template",
+      "rationale": "A relative savefile_directory is opened from the working directory of the RetroArch process (file_path.c:1066-1101 expands only ~ and :), which no read of the machine establishes. With no cwd the answer is the <cwd> template with the cwd hole and save-dir-launch-dependent, the directory test is left to the launch, and nothing is read below the template. A saves folder in atlas's own working directory would decide nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/roms/gba/Golden Sun (USA).zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "<cwd>/saves",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "key": "savefile_directory",
+                "path": "saves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "native-a-relative-save-folder-missing-below-the-callers-cwd-is-refused",
+      "rationale": "With cwd named, the relative folder is joined to it and RetroArch's directory test runs there (configuration.c:6914-6960): nothing is at /home/deck/launcher/saves, so the read sets nothing and the platform default stands. invalid-save-directory keeps the cfg's own spelling as configured, the line to edit, and its message names the folder the test was made at.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_enable = \"false\"\n",
+          "/home/deck/roms/gba/Golden Sun (USA).zip": ""
+        },
+        "dirs": [
+          "/home/deck/launcher"
+        ],
+        "savefile_query": {
+          "content_path": "/home/deck/roms/gba/Golden Sun (USA).zip",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/.config/retroarch/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
+              "code": "no-core",
+              "data": {}
+            },
+            {
+              "code": "invalid-save-directory",
+              "data": {
+                "layer": "global",
+                "file": "retroarch.cfg",
+                "configured": "saves",
+                "effective": "/home/deck/.config/retroarch/saves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-save-folder-is-opened-from-the-callers-cwd",
+      "rationale": "RetroDECK's RetroArch opens a relative savefile_directory from its own working directory, the launch's (file_path.c:1066-1101). The caller's cwd fills it; the joined folder is tested through the sandbox's grants like any absolute one, is visible under the host grant, and stands.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launcher/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-save-folder-below-a-cwd-the-sandbox-hides-opens-from-its-home",
+      "rationale": "RetroDECK's RetroArch runs where bubblewrap starts it: flatpak passes no --chdir without an explicit --cwd (flatpak-run.c:3634-3635 at flatpak 1.16.6), and bubblewrap changes into the old working directory only where the sandbox maps it, otherwise into $HOME (bubblewrap.c:3407-3426 at v0.12.0). Another app's ~/.var/app tree is masked inside RetroDECK's sandbox, so a launch from there runs in the sandbox's home, the relative folder is opened below it, and cwd-hidden-in-sandbox names the cwd the sandbox did not show.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/org.other.App",
+          "/home/deck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "cwd": "/home/deck/.var/app/org.other.App"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/.var/app/org.other.App",
+                "working_directory": "/home/deck"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-save-folder-below-a-cwd-the-sandbox-cannot-tell-is-read-as-the-hosts",
+      "rationale": "With a Flatpak overrides file that sets filesystems, RetroDECK's sandbox model cannot tell whether the sandbox shows the caller's cwd. The cwd is then taken as RetroArch's working directory read as the host's, the relative folder is joined to it and tested on the host, and save-directory-visibility-unestablished says the answer rests on that reading.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/.local/share/flatpak/overrides/net.retrodeck.retrodeck": "[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launcher/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            },
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-appended-save-folder-is-opened-from-the-callers-cwd",
+      "rationale": "An appended file's relative savefile_directory resolves against the launch's working directory as the global cfg's does (file_path.c:1066-1101). Joined to the caller's cwd, it is tested through the sandbox's grants, is visible, and stands.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/launcher/redirect.cfg": "savefile_directory = \"saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launcher/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "appendconfig": "/home/deck/launcher/redirect.cfg",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-appended-save-folder-without-a-cwd-is-the-cwd-template",
+      "rationale": "Without cwd an appended file's relative savefile_directory is stated as the <cwd> template with the cwd hole and save-dir-launch-dependent: RetroArch's directory test cannot run without that directory, so the folder passes it and the launch decides. No sandbox view is asked about it, so no visibility note rides.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/launcher/redirect.cfg": "savefile_directory = \"launcher/saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "appendconfig": "/home/deck/launcher/redirect.cfg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "<cwd>/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [
+            "cwd"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            },
+            {
+              "code": "save-dir-launch-dependent",
+              "data": {
+                "key": "savefile_directory",
+                "path": "launcher/saves"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "retrodeck-a-relative-core-override-save-folder-is-opened-from-the-callers-cwd",
+      "rationale": "A core override's relative savefile_directory resolves against the launch's working directory as every other layer's does (file_path.c:1066-1101). Joined to the caller's cwd it is tested through the sandbox's grants, passes, and wins over the global cfg's folder.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PPSSPP/PPSSPP.cfg": "savefile_directory = \"saves\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/launcher/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/ppsspp_libretro.so": {
+            "library_name": "PPSSPP"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Lumines (USA).iso",
+          "core_so": "ppsspp_libretro.so",
+          "cwd": "/home/deck/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/home/deck/launcher/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "core-suspect",
+              "data": {
+                "core": "ppsspp",
+                "verdict": "suspect"
+              }
+            }
+          ],
+          "granularity": null
         }
       }
     }

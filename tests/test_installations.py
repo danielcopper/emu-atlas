@@ -9683,13 +9683,14 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
     def test_an_unset_home_leaves_the_tilde_verbatim(self):
         # getenv("HOME") NULL: fill_pathname_home_dir leaves the buffer empty
         # and the substitution block is skipped — the value stays "~/saves",
-        # which RetroArch's own directory test then refuses, and the root that
-        # stood before it stands (the platform default here).
+        # a relative path the launch's working directory completes (#647 D1).
         placement = self._savefile(
             {self.USER_APP: "[Context]\nunset-environment=HOME;\n"}, dirs=self.HOME_DIRS
         )
-        assert placement.dir == self.PLATFORM_DEFAULT
-        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in [c.code for c in placement.caveats]
+        assert (placement.dir, placement.needs) == ("<cwd>/~/saves", (atlas.HOLE_CWD,))
+        codes = [c.code for c in placement.caveats]
+        assert atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT in codes
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY not in codes
 
     def test_an_empty_home_behaves_like_an_unset_one(self):
         # HOME= (the empty string) is set-but-empty; fill_pathname_home_dir
@@ -9697,16 +9698,19 @@ class TestAHomeOverrideMovesOnlyTheCfgTildeBase:
         placement = self._savefile(
             {self.USER_APP: "[Environment]\nHOME=\n"}, dirs=self.HOME_DIRS
         )
-        assert placement.dir == self.PLATFORM_DEFAULT
+        assert (placement.dir, placement.needs) == ("<cwd>/~/saves", (atlas.HOLE_CWD,))
 
-    def test_a_dollar_carrying_home_is_literal_and_refused(self):
+    def test_a_dollar_carrying_home_is_literal_and_hangs_off_the_working_directory(self):
         # flatpak expands no $VAR — the value is the literal string, the
-        # expansion is not absolute, and RetroArch's directory test refuses it.
+        # expansion is not absolute, and the launch's working directory
+        # completes it like any other relative folder (#647 D1).
         placement = self._savefile(
             {self.USER_APP: "[Environment]\nHOME=$HOME/elsewhere\n"}, dirs=self.HOME_DIRS
         )
-        assert placement.dir == self.PLATFORM_DEFAULT
-        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY in [c.code for c in placement.caveats]
+        assert (placement.dir, placement.needs) == ("<cwd>/$HOME/elsewhere/saves", (atlas.HOLE_CWD,))
+        codes = [c.code for c in placement.caveats]
+        assert atlas.CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT in codes
+        assert atlas.CAVEAT_INVALID_SAVE_DIRECTORY not in codes
 
     def test_a_sandbox_only_home_earns_the_untranslated_statement(self):
         # /var/elsewhere exists only inside the sandbox; the expansion is

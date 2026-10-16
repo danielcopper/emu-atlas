@@ -240,21 +240,31 @@ Rules that hold for every answer:
   `firmware_for_system` and `firmware_inventory`; `identify_firmware` takes none. The answer is then an ordinary one:
   the template filled, `cwd` gone from `needs`, `save-dir-launch-dependent` and `firmware-path-launch-dependent` no
   longer stated, and the place read like any other — a dead link or a missing `.sav` says what it says at an absolute
-  path. That covers DeSmuME 2015's saves; xemu's relative hard-disk image (its saves and its snapshots), EEPROM, boot
-  ROM and flash ROM; melonDS's relative save and state paths; MAME's states where the command states no `%STARTDIR%`
-  (one it states outranks yours), a relative `-inipath` searched below the folder included; the MAME core handed its own
-  paths (`mame_mame_paths_enable`), whose relative save trees become `save-root-redirected` below the folder; and
-  Dolphin's GBA cartridge save beside a relative cartridge path. One answer that depends on the folder does not take it
-  yet: PUAE asks whether an archive member's bare name is a directory, which resolves against RetroArch's working
-  directory, and atlas assumes no directory of that name is there; #597 covers it. A value that is not an absolute path,
-  the empty string included, raises `ValueError` at the call; a question whose answer does not depend on the folder
-  ignores it and answers byte for byte as without it, so a launcher may pass it on every such question. And `region` is
-  the hole a region-keyed standalone answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the
-  disc's own region field, which atlas does not read out of content — a caller with metadata (a library server knows its
-  games' regions) fills it and narrows the `<region>` template to one tree, while the groups list every tree either way.
-  Every hole is filled from the content or the launch — a value the configs state is never one, because you could not
-  supply it either; atlas resolves those itself or states a caveat. Holes are not confined to the directory: a declared
-  file set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
+  path. That covers DeSmuME 2015's saves; a relative `savefile_directory` or `savestate_directory` in any layer — the
+  global cfg, an appended file, an override — which RetroArch opens from its own working directory, because it expands
+  only a leading `~` or `:` (`file_path.c:1066-1101`): with `cwd=` the folder is joined to it and tested and read as the
+  absolute folder it then is — on RetroDECK the `cwd` is read inside the sandbox, where the process starts in it only if
+  the sandbox shows that directory and otherwise in the sandbox's home, which `cwd-hidden-in-sandbox` states, while a
+  `cwd` the sandbox model cannot tell is read as the host's beside `save-directory-visibility-unestablished` — and
+  without it the root is `<cwd>/<value>` beside `save-dir-launch-dependent` (`key` and the relative `path`), its
+  directory test left to the launch — a `~` value no `HOME` expanded is one of them; the hole and the rider ride only an
+  answer built on that save root, so a card that keeps the save in the system or the content directory answers without
+  either; a texture or mod tree that hangs off such a save root keeps the `cwd` hole as well, which you fill yourself,
+  since those questions take no `cwd=`; xemu's relative hard-disk image (its saves and its snapshots), EEPROM, boot ROM
+  and flash ROM; melonDS's relative save and state paths; MAME's states where the command states no `%STARTDIR%` (one it
+  states outranks yours), a relative `-inipath` searched below the folder included; the MAME core handed its own paths
+  (`mame_mame_paths_enable`), whose relative save trees become `save-root-redirected` below the folder; and Dolphin's
+  GBA cartridge save beside a relative cartridge path. One answer that depends on the folder does not take it yet: PUAE
+  asks whether an archive member's bare name is a directory, which resolves against RetroArch's working directory, and
+  atlas assumes no directory of that name is there; #597 covers it. A value that is not an absolute path, the empty
+  string included, raises `ValueError` at the call; a question whose answer does not depend on the folder ignores it and
+  answers byte for byte as without it, so a launcher may pass it on every such question. And `region` is the hole a
+  region-keyed standalone answer keeps: which of Dolphin's per-region GameCube trees a game saves into is the disc's own
+  region field, which atlas does not read out of content — a caller with metadata (a library server knows its games'
+  regions) fills it and narrows the `<region>` template to one tree, while the groups list every tree either way. Every
+  hole is filled from the content or the launch — a value the configs state is never one, because you could not supply
+  it either; atlas resolves those itself or states a caveat. Holes are not confined to the directory: a declared file
+  set can be a template too. An unknown is something atlas refuses to state — it never guesses to keep a field
   non-empty. And a declared **emptiness** is a third thing, distinct from both: a placement with
   `file_set.state == "declared"` and no files says no separate save file exists. When the `save-inside-content` caveat
   rides beside it (quasi88 writing straight into the loaded disk image, hatari writing a floppy back into its own file
@@ -1192,6 +1202,7 @@ all.
 | `appended-config-overridden`               | an override wins a layout key a file you appended sets (`data["key"]`, `layer`, `file`) — the answer is the override's    |
 | `appended-config-visibility-unestablished` | whether the program's sandbox shows the appended files was not established — read as the host's paths                     |
 | `save-directory-visibility-unestablished`  | cfg/override save folder's sandbox visibility unknown — host-tested; `/run/user` passes with `sandbox-path-untranslated`  |
+| `cwd-hidden-in-sandbox`                    | RetroDECK's sandbox shows no directory at `data["cwd"]`: RetroArch runs in `data["working_directory"]` instead            |
 | `appended-config-not-read`                 | a standalone emulator reads no RetroArch config — the appended files change nothing in this answer                        |
 | `core-unaudited` / `core-suspect`          | no rule card for this core yet / options scan shows save-related keys nobody has verified                                 |
 | `core-multi-option`                        | granularity deliberately unstated — depends on options atlas does not interpret (named in it)                             |

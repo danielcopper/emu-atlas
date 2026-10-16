@@ -521,6 +521,7 @@ KNOWN_CAVEAT_CODES = {
     "appended-config-overridden",
     "appended-config-visibility-unestablished",
     "save-directory-visibility-unestablished",
+    "cwd-hidden-in-sandbox",
     "appended-config-not-read",
     "invalid-screenshot-directory",
     "core-suspect",

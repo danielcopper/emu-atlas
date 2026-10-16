@@ -260,6 +260,7 @@ from .placement import (
     CAVEAT_APPENDED_CONFIG_OVERRIDDEN,
     CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED,
     CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED,
+    CAVEAT_CWD_HIDDEN_IN_SANDBOX,
     CAVEAT_UNVERIFIED_VERSION,
     CAVEAT_PER_GAME_ALTERNATIVE_EMULATOR,
     CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
@@ -300,6 +301,7 @@ from .placement import (
     ROOT_CONTENT_DIRECTORY,
     ROOT_EMULATOR_DIRECTORY,
     ROOT_SAVEFILE_DIRECTORY,
+    ROOT_SAVESTATE_DIRECTORY,
     ROOT_SYSTEM_DIRECTORY,
     ROOT_WORKING_DIRECTORY,
     STATE_ROOT_CONTENT_DIRECTORY,
@@ -385,6 +387,7 @@ from .placement import (
     build_soft_patch_candidates,
     checked_appendconfig,
     checked_cwd,
+    cwd_templated,
     file_set_holes,
     needs_with_file_set,
 )
@@ -2494,24 +2497,28 @@ class _ViewDirectoryCheck:
 
     view: "_SandboxLaunchView"
     host_check: Callable[[str], bool]
-    # A relative folder is tested against RetroArch's working directory, not
-    # against the sandbox's grants: where this is set, no view decides it and
-    # the host check keeps the answer it always gave, with no note. The
-    # global cfg's and the overrides' folders take it; an appended file's
-    # relative folder keeps the note it carried under #637.
-    relative_on_host: bool = False
     unestablished: bool = False
 
     def __call__(self, value: str) -> bool:
-        if is_app_relative(value):
+        if _untestable_save_dir(value):
             return True
-        if self.relative_on_host and not value.startswith("/"):
-            return self.host_check(value)
         probe = self.view.is_directory(value)
         if probe == PROBE_UNKNOWN:
             self.unestablished = True
             return self.host_check(value)
         return probe == PROBE_HIT
+
+
+def _untestable_save_dir(value: str) -> bool:
+    """A folder RetroArch's directory test cannot be reproduced for, so it passes and the launch decides.
+
+    An application-relative value names a directory only the running
+    executable knows; a relative one with no ``cwd`` given is the ``<cwd>``
+    template, a directory only the launch knows (#647 D1). A relative value
+    with ``cwd`` given never reaches here: it is joined to it first and tested
+    like any other (:func:`atlas.retroarch_cfg.resolve_layout`).
+    """
+    return is_app_relative(value) or cwd_templated(value)
 
 
 def _visibility_note(app_id: str) -> Caveat:
@@ -2531,10 +2538,99 @@ def _save_dir_visibility_note(app_id: str) -> Caveat:
     return Caveat(
         CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED,
         f"whether RetroArch in {app_id}'s sandbox sees the save folders the global cfg and the overrides "
-        "set was not established, so each was tested as this host's own path — or, where only the sandbox "
-        "can spell it, left untested",
+        "set, or the working directory a relative folder is opened from, was not established, so each was "
+        "tested as this host's own path — or, where only the sandbox can spell it, left untested",
         {"app_id": app_id},
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _LaunchDirectory:
+    """The working directory a relative save folder is opened from, and what the answer says about it (#647).
+
+    ``unestablished`` is a working directory — the ``cwd``, or the sandbox's
+    ``HOME`` it falls back to — whose visibility the sandbox model cannot
+    tell, taken as shown; ``caveats`` the note where the sandbox does not show
+    the ``cwd`` and the process runs elsewhere. Either matters only to an
+    answer whose standing root, or a refusal it states, came from a relative
+    folder.
+    """
+
+    directory: str
+    caveats: tuple[Caveat, ...] = ()
+    unestablished: bool = False
+
+
+def _launch_directory(view: "_SandboxLaunchView | None", cwd: str | None, home: str | None) -> _LaunchDirectory:
+    """Where RetroArch runs for a launch from *cwd* — the ``<cwd>`` template where no ``cwd`` was named.
+
+    Without a modelled sandbox the process runs in *cwd* itself. Inside
+    RetroDECK's (#647 D2) flatpak hands bubblewrap no ``--chdir``
+    (``common/flatpak-run.c:3634-3635`` at flatpak 1.16.6), and bubblewrap
+    changes into the old working directory where the sandbox maps it,
+    otherwise into ``$HOME``, otherwise ``/`` (``bubblewrap.c:3407-3426`` at
+    v0.12.0). So *cwd* is read in the sandbox's view: shown, it is the
+    directory; not shown, the sandbox's *home* is, or ``/`` where that is not
+    shown either; and where the view cannot tell, *cwd* is read as the host's.
+    A *home* whose visibility the view cannot tell is taken as shown, and
+    that reading is stated the same way (#647 D3: the visibility notes keep
+    meaning "could not tell").
+    """
+    if cwd is None:
+        return _LaunchDirectory(TEMPLATE_CWD)
+    if view is None:
+        return _LaunchDirectory(cwd)
+    probe = view.is_directory(cwd)
+    if probe == PROBE_HIT:
+        return _LaunchDirectory(cwd)
+    if probe == PROBE_UNKNOWN:
+        return _LaunchDirectory(cwd, unestablished=True)
+    home_probe = view.is_directory(home) if home and home.startswith("/") else PROBE_MISS
+    fallback = home if home_probe != PROBE_MISS and home else "/"
+    return _LaunchDirectory(
+        fallback,
+        unestablished=home_probe == PROBE_UNKNOWN,
+        caveats=(
+            Caveat(
+                CAVEAT_CWD_HIDDEN_IN_SANDBOX,
+                f"RetroArch in {view.app_id}'s sandbox cannot run in {cwd!r}: the sandbox shows no "
+                f"directory there, so bubblewrap starts it in {fallback!r} instead (flatpak-run.c:3634-3635 "
+                "at flatpak 1.16.6, bubblewrap.c:3407-3426 at v0.12.0), and a relative save folder is "
+                "opened from there",
+                {"app_id": view.app_id, "cwd": cwd, "working_directory": fallback},
+            ),
+        ),
+    )
+
+
+def _visibility_caveats(
+    appended: _Appended,
+    *,
+    appended_dirs: _ViewDirectoryCheck | None,
+    base_dirs: _ViewDirectoryCheck | None,
+    launch: _LaunchDirectory,
+    layout: RetroArchCfg,
+) -> list[Caveat]:
+    """What the chain says about the sandbox's view: one note per layer group, and the launch's own.
+
+    The appended files and the folders they set carry :func:`_visibility_note`;
+    the global cfg's and the overrides' folders, and the working directory a
+    relative folder of any layer is joined to (#647 D2),
+    :func:`_save_dir_visibility_note`. The launch's statements matter only
+    where the standing root, or a refusal the answer states, was relative.
+    """
+    caveats: list[Caveat] = []
+    unestablished = appended.unestablished
+    if unestablished is None and appended_dirs is not None and appended_dirs.unestablished:
+        unestablished = appended_dirs.view.app_id
+    if unestablished is not None:
+        caveats.append(_visibility_note(unestablished))
+    cwd_unestablished = launch.unestablished and layout.relative_root_read
+    if base_dirs is not None and (base_dirs.unestablished or cwd_unestablished):
+        caveats.append(_save_dir_visibility_note(base_dirs.view.app_id))
+    if layout.relative_root_read:
+        caveats.extend(launch.caveats)
+    return caveats
 
 
 def _boot_values(base: Sequence[_CfgLayer]) -> dict[str, str]:
@@ -2582,6 +2678,42 @@ class _SaveRoot:
     reachable: bool = True
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
+    # The <cwd> template's rider, kept apart from the caveats: it rides only
+    # on an answer that hangs off this root (:func:`_rooted_rider`).
+    rider: tuple[Caveat, ...] = ()
+
+
+def _rooted_rider(rider: tuple[Caveat, ...], root_kind: str) -> tuple[Caveat, ...]:
+    """The templated save root's rider, for an answer that hangs off that root (#647).
+
+    The template and its ``cwd`` hole reach exactly the answers built on the
+    save root — the standard placement of either family, a card that keeps the
+    save below it, a texture or mod tree under it — and the rider goes where
+    the hole goes. An answer the content flag or a card roots elsewhere (a
+    system-directory card, a content-directory one, the working-directory
+    root) names no part of the folder and carries neither.
+    """
+    return rider if root_kind in (ROOT_SAVEFILE_DIRECTORY, ROOT_SAVESTATE_DIRECTORY) else ()
+
+
+def _relative_save_dir_caveat(key: str, templated: str) -> Caveat:
+    """The rider of a relative save folder no ``cwd`` was given for (#647 D1).
+
+    RetroArch expands only a leading ``~`` or ``:`` (``file_path.c:1066-1101``)
+    and opens any other relative value as written, so the kernel resolves it
+    against the working directory of the RetroArch process — the launch's,
+    exactly the ``working_directory`` root's fact. ``path`` is the value below
+    that directory, as the template carries it.
+    """
+    value = templated[len(TEMPLATE_CWD) + 1 :] or "."
+    return Caveat(
+        CAVEAT_SAVE_DIR_LAUNCH_DEPENDENT,
+        f"{key} is the relative value {value!r}, which RetroArch opens relative to the working "
+        "directory of its own process (it expands only a leading ~ or :, file_path.c:1066-1101) — "
+        "a property of the launch, not of the machine, so its directory test was not run and the "
+        "launch decides it; fill 'cwd' with the launcher's working directory to complete the path",
+        {"key": key, "path": value},
+    )
 
 
 def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
@@ -2596,6 +2728,11 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
 
     Which key is being translated comes off the layout itself, so the savefile
     and savestate roots take the same route and each names its own key.
+
+    A relative value the caller gave no ``cwd`` for is the ``<cwd>`` template:
+    a host path on no machine, so it is not translated, and its rider says the
+    launch completes it (#647 D1). Nothing is read below it, because every
+    answer built on it carries the ``cwd`` hole, which withholds the reads.
     """
     key = layout.keys.directory
     configured = layout.directory
@@ -2603,6 +2740,8 @@ def _host_save_dir(sandbox: _Sandbox, layout: RetroArchCfg) -> _SaveRoot:
         return _SaveRoot(layout)
     if is_app_relative(configured):
         return _SaveRoot(layout, reachable=False, caveats=(_app_relative_caveat(key, configured),))
+    if cwd_templated(configured):
+        return _SaveRoot(layout, rider=(_relative_save_dir_caveat(key, configured),))
     resolved = sandbox.host(key, configured)
     if resolved.path == configured:
         return _SaveRoot(layout)
@@ -2626,14 +2765,15 @@ def _save_dir_probe(machine: Machine, sandbox: _Sandbox, key: str) -> Callable[[
     bare RetroArch Flatpak — this test is the whole of it, and no note says
     so (#641 D2): it would stand on every such answer. A value atlas cannot
     test — one that exists only inside the Flatpak sandbox, one relative to
-    the running executable's directory — passes: the emulator's own test
+    the running executable's directory, one relative to a working directory
+    the caller did not name — passes: the emulator's own test
     still decides it, and answering "not a directory" here would reject a
     root that is very likely there. That the answer rests on an unperformed
     read is stated by the translation's own caveat.
     """
 
     def is_directory(value: str) -> bool:
-        if is_app_relative(value):
+        if _untestable_save_dir(value):
             return True
         host = sandbox.host(key, value).path
         return host is None or machine.path_kind(host) == KIND_DIRECTORY
@@ -2663,9 +2803,11 @@ def _rejected_dir_caveats(
     which file to fix.
 
     ``configured`` stays the cfg's own spelling — that is the line to edit —
-    but inside a Flatpak that spelling is not where atlas looked. Where the two
-    differ, the message names the host path too, so "not an existing directory"
-    can be checked against the place the check was actually made.
+    but that spelling is not always where the test was made: a relative value
+    is opened from the working directory (:attr:`RejectedDirectory.tested`),
+    and inside a Flatpak a path is read at its host spelling. Where either
+    differs, the message names it too, so "not an existing directory" can be
+    checked against the place the check was actually made.
 
     The code is the same for both families and the data is unchanged, because
     the caveat rides on the answer whose root it is about: a client reading it
@@ -2680,12 +2822,13 @@ def _rejected_dir_caveats(
             if entry.superseded
             else f"keeps {effective!r}, the root that stood before this file"
         )
-        host = sandbox.host(key, entry.value).path
-        looked_at = (
-            f" (atlas looked at its host spelling {host!r})"
-            if host is not None and host != entry.value
-            else ""
-        )
+        tested = entry.tested or entry.value
+        host = sandbox.host(key, tested).path
+        places = [
+            *([f"opened from the working directory as {tested!r}"] if entry.tested is not None else []),
+            *([f"atlas looked at its host spelling {host!r}"] if host is not None and host != tested else []),
+        ]
+        looked_at = f" ({'; '.join(places)})" if places else ""
         caveats.append(
             Caveat(
                 CAVEAT_INVALID_SAVE_DIRECTORY,
@@ -5360,15 +5503,13 @@ def _standard_placement(
     machine: Machine,
     query: _SaveQuery,
     *,
-    layout: RetroArchCfg,
-    platform_default_dir: str,
+    chain: _Chain,
     content: _Content,
     core: _CoreIdentity,
     card: CoreCard | None,
     mode: SaveMode | None,
     granularity: Granularity | None,
     cross_parts: _CrossParts,
-    reachable: bool,
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
@@ -5379,13 +5520,16 @@ def _standard_placement(
     card core's nested subtree and the files actually present are all resolved
     against the machine before the answer is stated.
 
-    Unless the root cannot be reached from here (*reachable* false, a sandbox
-    path with no host location): the path math still applies and ``dir`` still
-    names where the emulator writes, but every observation of the result —
-    whether the sorted directory exists, what it links to, which files lie in
-    it — would come from a read that never applied, so none is performed and
-    ``fallback_dir`` stays empty rather than claiming a fallback nobody takes.
+    Unless the root cannot be reached from here (``chain.reachable`` false, a
+    sandbox path with no host location): the path math still applies and
+    ``dir`` still names where the emulator writes, but every observation of
+    the result — whether the sorted directory exists, what it links to, which
+    files lie in it — would come from a read that never applied, so none is
+    performed and ``fallback_dir`` stays empty rather than claiming a fallback
+    nobody takes. The layout, its platform default and the save root's rider
+    come off *chain* too.
     """
+    layout, platform_default_dir = chain.layout, chain.platform_default_dir
     all_caveats = list(caveats)
     if card is not None and mode is not None:
         all_caveats.extend(_stated_mode_caveats(card, mode, granularity))
@@ -5423,6 +5567,7 @@ def _standard_placement(
         library_name=core.library_name,
         extra_sources=sources,
     )
+    all_caveats.extend(_rooted_rider(chain.save_root_rider, placement.root_kind))
 
     final_dir = placement.dir
     fallback_dir: str | None = None
@@ -5448,7 +5593,7 @@ def _standard_placement(
                 card=card,
                 mode=mode,
                 declared=declared,
-                reachable=reachable,
+                reachable=chain.reachable,
             )
         )
         final_sources.extend(subdir_sources)
@@ -5541,6 +5686,9 @@ class _Chain:
     # The rest of the chain is then read without the appended files and is
     # not an answer: the save routes return this instead.
     appended_unreachable: Unresolved | None = None
+    # The rider of a <cwd>-templated save root (#647), for the answers that
+    # hang off that root to add (:func:`_rooted_rider`); never in ``caveats``.
+    save_root_rider: tuple[Caveat, ...] = ()
 
     @property
     def effective_root(self) -> str:
@@ -5610,8 +5758,11 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
 
     # Every layer's folder is tested where RetroArch tests it: inside the
     # sandbox where atlas models one, on the host where it does not (#641).
+    # A relative folder is first joined to the launch's working directory, or
+    # to the <cwd> template where the caller did not name it (#647).
+    launch = _launch_directory(view, query.cwd, query.sandbox.expansion_home)
     host_dirs = _save_dir_probe(machine, query.sandbox, keys.directory)
-    base_dirs = _ViewDirectoryCheck(view, host_dirs, relative_on_host=True) if view is not None else None
+    base_dirs = _ViewDirectoryCheck(view, host_dirs) if view is not None else None
     appended_dirs = _ViewDirectoryCheck(view, host_dirs) if view is not None else None
     layout = resolve_layout(
         query.global_text,
@@ -5623,14 +5774,13 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         overrides=overrides,
         is_directory=base_dirs if base_dirs is not None else host_dirs,
         appended_is_directory=appended_dirs,
+        working_directory=launch.directory,
     )
-    unestablished = appended.unestablished
-    if unestablished is None and appended_dirs is not None and appended_dirs.unestablished:
-        unestablished = appended_dirs.view.app_id
-    if unestablished is not None:
-        caveats.append(_visibility_note(unestablished))
-    if base_dirs is not None and base_dirs.unestablished:
-        caveats.append(_save_dir_visibility_note(base_dirs.view.app_id))
+    caveats.extend(
+        _visibility_caveats(
+            appended, appended_dirs=appended_dirs, base_dirs=base_dirs, launch=launch, layout=layout
+        )
+    )
     caveats.extend(_ignored_caveats(layout.ignored))
     caveats.extend(_appended_overridden_caveats(layout))
     layers: list[_CfgLayer] = [*base, *overrides]
@@ -5667,6 +5817,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         sources=tuple(sources_extra),
         caveats=tuple(caveats),
         appended_unreachable=appended.unreachable,
+        save_root_rider=saves_root.rider,
     )
 
 
@@ -5788,7 +5939,6 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
     content, core = chain.content, chain.core
     layout, layers = chain.layout, list(chain.layers)
     retroarch_config_dir = chain.retroarch_config_dir
-    platform_default_dir = chain.platform_default_dir
     sources_extra = list(chain.sources)
     caveats = list(chain.caveats)
 
@@ -5869,15 +6019,13 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
     return _standard_placement(
         machine,
         query,
-        layout=layout,
-        platform_default_dir=platform_default_dir,
+        chain=chain,
         content=content,
         core=core,
         card=card,
         mode=card_mode,
         granularity=granularity,
         cross_parts=cross_parts,
-        reachable=chain.reachable,
         sources=tuple(sources_extra),
         caveats=tuple(caveats),
     )
@@ -6089,6 +6237,7 @@ def _savestate_location_resolved(machine: Machine, query: _SaveQuery) -> Savesta
         library_name=chain.core.library_name,
         extra_sources=chain.sources,
     )
+    caveats.extend(_rooted_rider(chain.save_root_rider, placement.root_kind))
 
     final_dir = placement.dir
     fallback_dir: str | None = None
@@ -6433,7 +6582,9 @@ def _card_root(
     return _SystemRoot(
         chain.effective_root,
         ROOT_SAVEFILE_DIRECTORY,
+        needs=(HOLE_CWD,) if cwd_templated(chain.effective_root) else (),
         reachable=chain.reachable,
+        caveats=_rooted_rider(chain.save_root_rider, ROOT_SAVEFILE_DIRECTORY),
         sources=(
             f"{query.cfg_label} chain: the core builds its user directory under the save root "
             f"({chain.effective_root})",
@@ -9016,11 +9167,6 @@ def _xemu_launch_dependent_caveat(token: str, key: str, value: str) -> Caveat:
     )
 
 
-def _cwd_templated(directory: str) -> bool:
-    """Is this directory the launch's own — the ``<cwd>`` template or below it?"""
-    return directory == TEMPLATE_CWD or directory.startswith(TEMPLATE_CWD + "/")
-
-
 def _xemu_group(
     sandbox: _Sandbox,
     key: str,
@@ -9248,7 +9394,7 @@ def _xemu_savefile_placement(
     # The caller's cwd fills the template, and the directory below it is then
     # walked like any other; it is still the launch's directory that anchors it.
     launch_anchored = _xemu_primary_is_relative(hdd if disk_groups else eeprom)
-    if _cwd_templated(directory):
+    if cwd_templated(directory):
         physical = None
     else:
         physical, link_caveats = _link_view(machine, directory)
@@ -9259,7 +9405,7 @@ def _xemu_savefile_placement(
     return SavefilePlacement(
         dir=directory,
         root_kind=ROOT_WORKING_DIRECTORY if launch_anchored else ROOT_EMULATOR_DIRECTORY,
-        needs=(HOLE_CWD,) if any(_cwd_templated(g.dir) for g in groups) else (),
+        needs=(HOLE_CWD,) if any(cwd_templated(g.dir) for g in groups) else (),
         fallback_dir=None,
         file_set=FileSet(
             FILE_SET_DECLARED,
@@ -21790,6 +21936,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         content_path: str | None,
         core_so: str | None,
         extra_caveats: tuple[Caveat, ...] = (),
+        cwd: str | None = None,
         appendconfig: tuple[str, ...] = (),
     ) -> SavestatePlacement | Unresolved:
         return _retroarch_savestate_location(
@@ -21800,6 +21947,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=core_so,
                 extra_caveats=extra_caveats,
+                cwd=cwd,
                 appendconfig=appendconfig,
             ),
         )
@@ -21823,11 +21971,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         three are optional — missing ones leave holes and stated caveats, never
         guesses. ``cwd`` is the working folder the launch will use, an absolute
         host path: it fills the ``cwd`` hole of a core that saves relative to
-        it, is ignored where the answer does not depend on it, and a value that
-        is not absolute raises ``ValueError``. ``appendconfig`` names the files
-        the launch appends with ``--appendconfig``, absolute paths in
-        RetroArch's order (``|``-joined ones are split as RetroArch splits
-        them): the answer is where the saves land with them in the chain.
+        it and completes a relative ``savefile_directory``, is ignored where
+        the answer does not depend on it, and a value that is not absolute
+        raises ``ValueError``. ``appendconfig`` names the files the launch
+        appends with ``--appendconfig``, absolute paths in RetroArch's order
+        (``|``-joined ones are split as RetroArch splits them): the answer is
+        where the saves land with them in the chain.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
@@ -21857,10 +22006,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         The savefile question's twin, taking the same optional arguments but
         ``system`` and answering off the same configs — through the savestate
-        quartet of keys instead of the savefile one. RetroArch writes every
-        state itself, below a directory its own configuration names, so
-        ``cwd`` is checked like the savefile question's and changes nothing
-        here; ``appendconfig`` is taken as the savefile question takes it.
+        quartet of keys instead of the savefile one. ``cwd`` and
+        ``appendconfig`` are taken as the savefile question takes them: the
+        working folder completes a relative ``savestate_directory``, which
+        RetroArch opens from the launch's working directory.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
@@ -21872,6 +22021,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             marker_issues,
             content_path=content_path,
             core_so=core_so,
+            cwd=cwd,
             appendconfig=files,
         )
 
@@ -22351,6 +22501,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             core_so=spec.core_so,
             extra_caveats=entry_caveats,
+            cwd=cwd,
             appendconfig=appendconfig,
         )
         return _entry_savestate_with_caveats(placement, extra)
@@ -24336,6 +24487,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=spec.core_so,
                 extra_caveats=entry_caveats,
+                cwd=cwd,
                 appendconfig=appendconfig,
             ),
         )
@@ -24623,11 +24775,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         catalogue, and it is never guessed from the core — a core's own
         metadata says which systems it *can* run, never which one this content
         is. ``cwd`` is the working folder the launch will use, an absolute host
-        path: it fills the ``cwd`` hole of a core that saves relative to it, is
-        ignored where the answer does not depend on it, and a value that is not
-        absolute raises ``ValueError``. ``appendconfig`` names the files the
-        launch appends with ``--appendconfig``, as RetroDECK's question takes
-        them.
+        path: it fills the ``cwd`` hole of a core that saves relative to it and
+        completes a relative ``savefile_directory``, is ignored where the answer
+        does not depend on it, and a value that is not absolute raises
+        ``ValueError``. ``appendconfig`` names the files the launch appends
+        with ``--appendconfig``, as RetroDECK's question takes them.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
@@ -24660,15 +24812,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         tree via ``RetroArch_maincfg.sh:3053`` — a writer that at the current
         pin has no caller in the Linux backend and targets an override file no
         launch path reads. The handle reads the live cfg either way; the
-        installer history is context, not an input. ``cwd`` is checked as the
-        savefile question checks it and changes nothing here: RetroArch writes
-        every state below a directory its own configuration names.
-        ``appendconfig`` is taken as the savefile question takes it.
+        installer history is context, not an input. ``cwd`` and
+        ``appendconfig`` are taken as the savefile question takes them: the
+        working folder completes a relative ``savestate_directory``, which
+        RetroArch opens from the launch's working directory.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
         return _retroarch_savestate_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so, appendconfig=files)
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so, cwd=cwd, appendconfig=files),
         )
 
     @one_question
@@ -25076,11 +25229,11 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         catalogue, and it is never guessed from the core — a core's own
         metadata says which systems it *can* run, never which one this content
         is. ``cwd`` is the working folder the launch will use, an absolute host
-        path: it fills the ``cwd`` hole of a core that saves relative to it, is
-        ignored where the answer does not depend on it, and a value that is not
-        absolute raises ``ValueError``. ``appendconfig`` names the files the
-        launch appends with ``--appendconfig``, as RetroDECK's question takes
-        them.
+        path: it fills the ``cwd`` hole of a core that saves relative to it and
+        completes a relative ``savefile_directory``, is ignored where the answer
+        does not depend on it, and a value that is not absolute raises
+        ``ValueError``. ``appendconfig`` names the files the launch appends
+        with ``--appendconfig``, as RetroDECK's question takes them.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
@@ -25106,15 +25259,15 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         ``sort_savestates_enable`` is **true** (``config.def.h:983``) exactly as
         its savefile twin is — so an unconfigured install sorts states into
         per-``library_name`` subdirectories of ``states`` under the config tree.
-        ``cwd`` is checked as the savefile question checks it and changes
-        nothing here: RetroArch writes every state below a directory its own
-        configuration names. ``appendconfig`` is taken as the savefile
-        question takes it.
+        ``cwd`` and ``appendconfig`` are taken as the savefile question takes
+        them: the working folder completes a relative ``savestate_directory``,
+        which RetroArch opens from the launch's working directory.
         """
         checked_cwd(cwd)
         files = checked_appendconfig(appendconfig)
         return _retroarch_savestate_location(
-            self._machine, self._query(content_path=content_path, core_so=core_so, appendconfig=files)
+            self._machine,
+            self._query(content_path=content_path, core_so=core_so, cwd=cwd, appendconfig=files),
         )
 
     @one_question
@@ -25387,8 +25540,8 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         """The savefile entry route's twin — same sources, the savestate keys.
 
         The guards stand for the day a spec arrives from somewhere else, as on
-        the savefile route: a derived entry is always a libretro core, and no
-        RetroArch state depends on *cwd*, which is checked and changes nothing.
+        the savefile route: a derived entry is always a libretro core. *cwd* is
+        the launch's working folder, as the entry question takes it.
         """
         checked_cwd(cwd)
         foreign = _foreign_core_of(spec.kind, spec.command)
@@ -25402,6 +25555,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
                 content_path=content_path,
                 core_so=spec.core_so,
                 extra_caveats=entry_caveats,
+                cwd=cwd,
                 appendconfig=appendconfig,
             ),
         )

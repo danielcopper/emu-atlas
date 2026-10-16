@@ -297,9 +297,17 @@ refuses and which passes untested beside `sandbox-path-untranslated`; `save-dire
 the host's root but its reserved names, and a link there by its target, recreating the link
 (flatpak-context.c:2854-2866, flatpak-exports.c:1013-1050 @ 1.16.6): on an ostree host `/mnt -> var/mnt`, `/opt` or
 `/srv` reach into the host's `/var`, which the sandbox otherwise does not bind, so the view reads those links off the
-machine and shows their targets. A relative folder is RetroArch's working directory's question rather than the sandbox's
-and keeps the host-side test without the note. Where atlas does not model the sandbox, these folders are tested as the
-host's with no note: it would ride every such answer and tell a client nothing.
+machine and shows their targets. A relative folder is opened from RetroArch's working directory (#647), and inside the
+sandbox that is the caller's `cwd` read in the sandbox's view: flatpak hands bubblewrap no `--chdir` without an explicit
+`--cwd` (`common/flatpak-run.c:3634-3635` at flatpak 1.16.6), and bubblewrap changes into the old working directory
+where the sandbox maps it, otherwise into `$HOME`, otherwise `/` (`bubblewrap.c:3407-3426` at bubblewrap v0.12.0). So
+the folder is joined to `cwd` where the view shows a directory there; to the sandbox's `HOME`, or `/` where that is not
+shown either, where it shows none, beside `cwd-hidden-in-sandbox` (`app_id`, `cwd`, `working_directory`); and to `cwd`
+read as the host's where the view cannot tell, beside `save-directory-visibility-unestablished`, which a `HOME` the view
+cannot tell carries too. These notes ride only where the standing root, or a refusal the answer states, came from a
+relative value. The joined folder is then tested as any absolute one, through the same view. Without a `cwd` it is the
+`<cwd>` template, which no view is asked about and which passes, the launch deciding it. Where atlas does not model the
+sandbox, these folders are tested as the host's with no note: it would ride every such answer and tell a client nothing.
 
 ### One merge, two reads — what "later files win" does not mean
 
@@ -951,9 +959,9 @@ ES-DE's whole tree via the launcher's `--home "${XDG_CONFIG_HOME}"` (`components
 resolves against `HOME` is RetroArch's own `~` substitution in cfg values: `fill_pathname_expand_special`
 (`file_path.c:1066-1101`, RetroArch `a79435a`) calls `fill_pathname_home_dir` (`:1457-1468`), which reads
 `getenv("HOME")`. With `HOME` unset — or set to the empty string — the buffer stays empty, the substitution block is
-skipped (`:1081`), and the value passes through **verbatim** (`:1100`): a `~/`-value becomes a relative path RetroArch's
-own `path_is_directory` test then refuses (`configuration.c:6914-6960`). A home ending in a slash is not doubled
-(`:1088-1094`).
+skipped (`:1081`), and the value passes through **verbatim** (`:1100`): a `~/`-value becomes a relative path, which
+RetroArch opens from its own working directory — a literal `~` folder below the launch's directory, answered as any
+other relative save folder is (#647). A home ending in a slash is not doubled (`:1088-1094`).
 
 **[D]** **Version range.** The pin is source-verified at 1.16.6 (this machine's flatpak) and documented in
 flatpak-run(1); #2413 dates the behavior to 2018. It is taken as the behavior of every flatpak a supported RetroDECK
