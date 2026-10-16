@@ -646,8 +646,8 @@ by hand translates without any table knowing it.
 Each match's `status` says what your next step is, and the three never collapse:
 
 - **`declared`** — this installation's catalogue lists it: place content now.
-- **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK ships 31 systems that way):
-  present and deliberately off — the user would have to enable it.
+- **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK 0.10.9b shipped 31 systems that
+  way): present and deliberately off — the user would have to enable it.
 - **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here.
 
 `tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
@@ -2305,10 +2305,10 @@ top of it, stopping at the first gap, which is why each candidate carries its ni
 it loads into memory — every core that does not need a full path. Atlas reads the `needs_fullpath` declaration in the
 core's own `.info`; `True` means this core is patched, `False` means it never is (disc and full-path cores: LRPS2,
 PPSSPP, the Dolphin and Azahar cores…), and `None` means nothing established it — no core named, or that `.info` states
-nothing (118 of the 292 files a stock RetroDECK ships state nothing), or it could not be read (`core-info-unreadable`,
-`info-path-unresolved` say which). Two further conditions ride every `True` and are not fields because neither is a fact
-about your machine: only the **first** content file is patched, and only when it is not a media type. A single-file
-launch — what every launcher does — meets both.
+nothing (118 of the 292 files a stock RetroDECK 0.10.9b ships state nothing), or it could not be read
+(`core-info-unreadable`, `info-path-unresolved` say which). Two further conditions ride every `True` and are not fields
+because neither is a fact about your machine: only the **first** content file is patched, and only when it is not a
+media type. A single-file launch — what every launcher does — meets both.
 
 **`attempted` is about the build, and it is not readable at all.** Patching and its `.xdelta` applier are compile-time
 flags; no setting, log or file on a running machine states how they were set. So atlas states them only where someone

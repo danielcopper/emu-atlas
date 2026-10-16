@@ -23,7 +23,8 @@ env-composition subsection).
 
 ## 1. The target matrix
 
-**[V]** From the ES-DE variant RetroDECK ships (`components/es-de/share/es-de/resources/systems/linux/es_systems.xml`):
+**[V]** Counted from the ES-DE variant RetroDECK 0.10.9b ships
+(`components/es-de/share/es-de/resources/systems/linux/es_systems.xml`), so the counts are that release's:
 
 |                                                 |              |
 | ----------------------------------------------- | ------------ |
@@ -36,12 +37,15 @@ env-composition subsection).
 | libretro-only / mixed / standalone-only systems | 95 / 54 / 23 |
 | systems with at least one libretro entry        | 149 (86%)    |
 
-**[V]** 211 core `.so` files are installed under `components/retroarch/rd_extras/cores/`.
+The current libretro cores and standalone emulators are listed in `coverage-matrix.md`, which is generated from the
+deployed file and counts them by its own rule.
+
+**[V]** RetroDECK 0.10.9b installs 211 core `.so` files under `components/retroarch/rd_extras/cores/`.
 
 This is the scope of "atlas covers RetroDECK". Any single installation exercises a small fraction of it, so coverage
 cannot be established by playing — see §10 for what can and cannot be reached without ROMs. In the resolver model the
-matrix is a **test matrix**, not a work list: one reading procedure covers all 391 libretro entries at once; each
-standalone config format is its own procedure.
+matrix is a **test matrix**, not a work list: one reading procedure covers every libretro entry at once (391 in
+0.10.9b's catalogue); each standalone config format is its own procedure.
 
 ## 2. Where RetroDECK keeps its truth
 
@@ -188,9 +192,10 @@ config/<library_name>/<content_dir>.cfg      content-dir override
 config/<library_name>/<rom_name>.cfg         game override
 ```
 
-**[V]** Extracted from 210 of 211 installed cores by `dlopen` + `retro_get_system_info` — the same read RetroArch itself
-performs. The one failure is `applewin_libretro.so`, which needs `libslirp.so.0` — present inside the Flatpak sandbox,
-absent on the host; a host artifact, not a core defect. Crash isolation matters: each core was probed in a forked child.
+**[V]** Extracted by `dlopen` + `retro_get_system_info` from 210 of the 211 cores RetroDECK 0.10.9b installs — the same
+read RetroArch itself performs. The one failure is `applewin_libretro.so`, which needs `libslirp.so.0` — present inside
+the Flatpak sandbox, absent on the host; a host artifact, not a core defect. Crash isolation matters: each core was
+probed in a forked child.
 
 **[V]** **Only 27 of 210 cores have a `library_name` equal to the `.so` basename.** Deriving the path component from the
 filename is wrong for 87% of the matrix.
@@ -205,7 +210,7 @@ mupen64plus_next -> Mupen64Plus-Next     melonds     -> melonDS
 **[V]** Independently cross-checked against a real installation: `saves/gba/mGBA/`, `saves/ps2/retroarch-core/LRPS2/`
 and `bios/dolphin-emu/` all exist on disk carrying exactly the extracted names.
 
-**[V]** **The `.info` `corename` is not the same value.** Compared across all installed cores: 147 match, **56
+**[V]** **The `.info` `corename` is not the same value.** Compared across the 210 extracted cores: 147 match, **56
 disagree**, 7 have no usable `.info`. The bsnes family shows why this is dangerous: `bsnes2014_accuracy`, `_balanced`
 and `_performance` all report `library_name = "bsnes2014"` — one shared save directory and one override directory —
 while their `.info` files carry three distinct `corename`s. A resolver using `.info` would invent three directories
@@ -369,8 +374,8 @@ system_directory      = "/run/media/deck/Emulation/retrodeck/bios"
 ```
 
 `/app` is the deployment, `/var/config` the app's private config directory, `/run/media` the SD card exactly as the host
-sees it. 13 values in that cfg carry the `/var/config` spelling — including the override directory, which is the one
-that decides whether §6's chain is read at all.
+sees it. In that cfg as RetroDECK 0.10.9b ships it, 13 values carry the `/var/config` spelling — including the override
+directory, which is the one that decides whether §6's chain is read at all.
 
 **[V]** Flatpak binds the app's per-app XDG directories into the sandbox under `/var`. Observed inside the RetroDECK
 0.10.9b sandbox via `flatpak run --command=sh net.retrodeck.retrodeck -c '…'`:
@@ -437,11 +442,11 @@ core-declared extensions from `retro_subsystem_memory_info`.
 (ROM extensions) and `libretro_saves`, and the latter does not discriminate: `mgba` (plain `.srm`) and `mednafen_saturn`
 (three files) both declare `true`, and 101 of 295 `.info` files omit the key entirely.
 
-**This splits the project.** Directory knowledge is one rule, centrally implemented in RetroArch, correct for all 159
-cores at once. File-set knowledge is per core, sourced only from each core's own code, and never "finished". They are
-different kinds of knowledge with different acquisition costs and different completeness. In the resolver model the
-file-set question largely dissolves: for existing saves the resolver **observes** the set (`glob("<rom_stem>.*")`), and
-a server-supplied save brings its own filenames — only the directory must be resolved.
+**This splits the project.** Directory knowledge is one rule, centrally implemented in RetroArch, correct for every core
+at once (159 in 0.10.9b's catalogue). File-set knowledge is per core, sourced only from each core's own code, and never
+"finished". They are different kinds of knowledge with different acquisition costs and different completeness. In the
+resolver model the file-set question largely dissolves: for existing saves the resolver **observes** the set
+(`glob("<rom_stem>.*")`), and a server-supplied save brings its own filenames — only the directory must be resolved.
 
 > **Superseded for recorded cores.** The observation above is what the resolver does where nothing else is established,
 > and it remains the answer for most cores. Where a core's memory ids _have_ been read from its source
@@ -586,8 +591,8 @@ honestly omitted.
 
 ## 10. Launch commands
 
-**[V]** Of 391 RetroArch launch commands in `es_systems.xml`, **none** uses `--save`, `--config` or `--appendconfig`.
-For RetroDECK the configuration chain is therefore the whole truth.
+**[V]** Of 391 RetroArch launch commands in RetroDECK 0.10.9b's `es_systems.xml`, **none** uses `--save`, `--config` or
+`--appendconfig`. For RetroDECK the configuration chain is therefore the whole truth.
 
 **[V]** The mechanism exists and would defeat the chain: `--save` sets `RARCH_OVERRIDE_SETTING_SAVE_PATH`, and while
 set, the configured directory is not applied (`runloop.c:8718`, `configuration.c:9062`). RetroDECK does not use it.
@@ -773,11 +778,11 @@ Consequences:
 - **Two truthful answers.** "Where does PPSSPP save?" is emulator-side `config/ppsspp/PSP/SAVEDATA` and real
   `saves/PSP/PPSSPP-SA`. Different questions; a byte-only seam cannot even see the difference.
 - **`exists` misleads on dead links.** `config/retroarch/cores` links to `/app/...` — valid inside the Flatpak sandbox,
-  dead from the host. An `exists`-based scan reported **0 installed cores** on a machine carrying 211. A seam must be
-  able to report "link present, target absent".
-- **Fixture trees of `path → contents` cannot encode links at all** — the standalone family (118 entries) is untestable
-  with a byte-only seam. This finding motivated extending the machine seam (`readlink`, `query_core`); the settled form
-  is in `DESIGN.md`.
+  dead from the host. An `exists`-based scan reported **0 installed cores** on a machine carrying 211 (RetroDECK
+  0.10.9b). A seam must be able to report "link present, target absent".
+- **Fixture trees of `path → contents` cannot encode links at all** — the standalone family (118 entries in RetroDECK
+  0.10.9b) is untestable with a byte-only seam. This finding motivated extending the machine seam (`readlink`,
+  `query_core`); the settled form is in `DESIGN.md`.
 
 ## 15. Emulator catalogue sources
 
@@ -1032,8 +1037,8 @@ Recorded as consequences of the findings; the decisions themselves are settled i
 ## 17. Reproduction
 
 - The probe scripts used during this research live in the session scratchpad, not in the repository. The `library_name`
-  extraction (210 cores) is a research artifact validating the `query_core` approach — the _procedure_ ships (as the
-  seam), the extracted table does not.
+  extraction (210 cores, RetroDECK 0.10.9b) is a research artifact validating the `query_core` approach — the
+  _procedure_ ships (as the seam), the extracted table does not.
 - A filesystem baseline (`saves/`, `states/`, `bios/`; size and mtime per file) taken before an experiment and diffed
   after is sufficient to attribute newly written files to a run.
 - Core probing requires crash isolation (fork per core) and tolerates missing host libraries as "unknown", never as a

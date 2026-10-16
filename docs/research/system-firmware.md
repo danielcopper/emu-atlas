@@ -103,11 +103,11 @@ says the same thing in words, at `00_example_libretro.info:47`:
 # Is firmware optional or not, if not defined RetroArch will assume it is required
 ```
 
-The line is documentation, not a load-bearing citation, and it is nearly gone: **two** files still carry it, the
-template itself and `puzzlescript_libretro.info:45`. Both are among the 291 matching `*_libretro.info`, the glob the
-catalogue walk uses and the one the measurement table below counts; a plain `*.info` matches 292, the extra being
-`open-source-notices.info`, which is not a core entry. `atlas.core_info` ports the source rule, so an absent flag reads
-as required everywhere in atlas and `need` says `required`. One deployed core is written that way: `ecwolf`, whose
+The line is documentation, not a load-bearing citation, and it is nearly gone: **two** files in RetroDECK 0.10.9b still
+carry it, the template itself and `puzzlescript_libretro.info:45`. Both are among the 291 matching `*_libretro.info`,
+the glob the catalogue walk uses and the one the measurement table below counts; a plain `*.info` matches 292, the extra
+being `open-source-notices.info`, which is not a core entry. `atlas.core_info` ports the source rule, so an absent flag
+reads as required everywhere in atlas and `need` says `required`. One deployed core is written that way: `ecwolf`, whose
 single `ecwolf.pk3` slot carries no `_opt` at all. Of the 118 cores declaring firmware, 117 state `_opt` on every slot,
 exactly one states it on none, and none are mixed. The third shape is worth naming because reading an absent flag as
 optional is the mistake that would make a hard requirement look like no requirement at all.
@@ -200,7 +200,7 @@ system this table either leaves open or says nothing about.
 Where one core of a system declares a file required and another declares every file optional, the machine is already
 carrying the answer, in the other core's entry. `tests/test_system_firmware_tripwire.py` recomputes those collisions
 from the `.info` files RetroDECK deploys and fails when it finds a system `system_firmware.json` records no verdict for.
-Measured against the deployed catalogue at the time of writing:
+Measured against the catalogue RetroDECK 0.10.9b deploys:
 
 | measurement                                               | count |
 | --------------------------------------------------------- | ----- |
@@ -252,9 +252,10 @@ Four things about the derivation are worth stating rather than leaving to be dis
   appears beside an all-optional one, the tripwire fires rather than going quiet, and a test pins that rather than
   leaving it to the port.
 - **It reads every deployed `.info`, with or without a `.so` beside it.** The two sets differ: 291 catalogue entries
-  against 211 binaries on the reference machine. The declarations are what the derivation is about, so filtering to the
-  cores this deployment happens to be able to load would make the evidence an accident of one installation — 96 of the
-  118 declaring entries here have a binary, and holding the derivation to those loses three of the seven disagreements.
+  against 211 binaries on the reference machine under RetroDECK 0.10.9b. The declarations are what the derivation is
+  about, so filtering to the cores this deployment happens to be able to load would make the evidence an accident of one
+  installation — 96 of the 118 declaring entries here have a binary, and holding the derivation to those loses three of
+  the seven disagreements.
 
 **And what it cannot see: a system where every core understates.** There is no disagreement to find, so the derivation
 is silent. **36** systems declare firmware with every declaring core saying all-optional, and the derivation says

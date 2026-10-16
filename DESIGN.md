@@ -553,9 +553,9 @@ visible in `system_source`, and marked as derived where the core spans systems.
   — RetroArch seeds the platform default before reading a config, so both the card route and the firmware route resolve
   it and answer; only a key cleared to nothing refuses, because what a core is handed then depends on the run.
 
-- **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of the installed cores that load and declare a
-  `corename`; the bsnes variants would split one real save directory into three fictional ones. `.info` serves
-  capability and firmware-declaration queries only — never a save path.
+- **`.info` is never a path source.** `corename` ≠ `library_name` for 27% of the cores RetroDECK 0.10.9b installs that
+  load and declare a `corename`; the bsnes variants would split one real save directory into three fictional ones.
+  `.info` serves capability and firmware-declaration queries only — never a save path.
 
 - **Firmware splits at the boundary rule; installer-step knowledge is bonus.** Which files a core wants _is_ on the
   machine (`.info` `firmwareN_path`), so it is read live and never shipped. What a correct file's bytes are is not on
