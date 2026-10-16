@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.25.0](https://github.com/danielcopper/emu-atlas/compare/v0.24.0...v0.25.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** a relative savefile_directory or savestate_directory, including a ~ value no HOME expanded, answers the `<cwd>` template with "cwd" in needs and save-dir-launch-dependent (data: key, path) where no cwd is given, on every answer built on that save root; it was tested at atlas's own working directory and, where nothing was there, answered invalid-save-directory with the platform default standing. With cwd it answers the folder below cwd, on RetroDECK below the directory the sandbox starts RetroArch in, with cwd-hidden-in-sandbox where that is not the cwd.
+* **saves:** RetroDECK save and savestate answers whose folder from retroarch.cfg or an override is masked by the sandbox grants now answer invalid-save-directory and the root RetroArch falls back to, and answers where the sandbox model cannot tell a folder's visibility carry the new note save-directory-visibility-unestablished. An appended file's folder whose visibility the model cannot tell is refused where the host has no directory there, instead of passing; so is a relative folder in an appended file, now tested on the host as spelled. A configured path under /var/tmp in a Flatpak emulator's config now resolves to the app's cache/tmp instead of being stated as untranslatable.
+
+### Bug Fixes
+
+* **saves:** resolve a relative RetroArch save folder against the launch's working directory ([#662](https://github.com/danielcopper/emu-atlas/issues/662)) ([d331001](https://github.com/danielcopper/emu-atlas/commit/d3310017beb7ed6a8b75daad804a4ce8834729d1)), closes [#647](https://github.com/danielcopper/emu-atlas/issues/647)
+* **saves:** test a save folder through RetroDECK's sandbox grants, as RetroArch's directory test sees it ([#654](https://github.com/danielcopper/emu-atlas/issues/654)) ([29a06b3](https://github.com/danielcopper/emu-atlas/commit/29a06b3cdfb02d059f33cbb838b9c6d29217f266)), closes [#641](https://github.com/danielcopper/emu-atlas/issues/641)
+* **vectors:** let a firmware-group option be unchecked with no identity, as the resolver answers it ([#649](https://github.com/danielcopper/emu-atlas/issues/649)) ([c26b512](https://github.com/danielcopper/emu-atlas/commit/c26b512a9bcc288eb60d7e2b1482b355c8a6dc85)), closes [#640](https://github.com/danielcopper/emu-atlas/issues/640)
+
+
+### Documentation
+
+* **research:** regenerate the coverage matrix from RetroDECK 0.10.10b's catalogue ([#663](https://github.com/danielcopper/emu-atlas/issues/663)) ([283f477](https://github.com/danielcopper/emu-atlas/commit/283f47727e35768521cfd6b46917cc1b574b6f29))
+
 ## [0.24.0](https://github.com/danielcopper/emu-atlas/compare/v0.23.0...v0.24.0) (2026-10-14)
 
 
