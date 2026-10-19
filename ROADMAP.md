@@ -153,12 +153,12 @@ The four firmware entry points ship: live `.info` declarations from the installe
   here, `super-gb` there). Where a declaration falls back on a multi-system core the answer states it. The vocabulary
   itself is settled (item 20b shipped: the map's values are ES-DE ids, `DESIGN.md` Vocabulary); what remains is evidence
   per file, and the standing list is `docs/tasks/firmware-system-evidence.md` — 167 inherited declarations across 39
-  uncertain cores at the current snapshot. Growing the table by hand is a race lost to every core release; a real fix
-  needs a per-file source of truth, and none exists upstream today (`.info` has one `systemname` per core, `System.dat`
-  keys by name without a system). Two known limits of the signal: a core with a `systemname` and no `database` has only
-  one source and is taken at its word, and the "two sources disagree" reading needs both names mapped, which the
-  largely-unmapped database vocabulary often prevents (vice_x128's database says `Commodore - 64`, a name the systemname
-  map does not carry, so atlas cannot compare the pair).
+  uncertain cores at the RetroDECK 0.10.9b snapshot. Growing the table by hand is a race lost to every core release; a
+  real fix needs a per-file source of truth, and none exists upstream today (`.info` has one `systemname` per core,
+  `System.dat` keys by name without a system). Two known limits of the signal: a core with a `systemname` and no
+  `database` has only one source and is taken at its word, and the "two sources disagree" reading needs both names
+  mapped, which the largely-unmapped database vocabulary often prevents (vice_x128's database says `Commodore - 64`, a
+  name the systemname map does not carry, so atlas cannot compare the pair).
 - **The unclaimed bucket has substructure.** It currently mixes genuine alternative BIOS revisions with core runtime
   data (blueMSX machine ROMs, PPSSPP assets, Dolphin `Sys`). Save artifacts are already excluded via the rule cards;
   runtime data needs the same treatment, and `docs/tasks/save-detection.md` task 1 draws exactly that line on the save

@@ -27,10 +27,10 @@ CELL_BOUNDARY = re.compile(r"(?<!\\)\|")
 # The verdict cell is bold — an unbolded value would render as a different
 # claim than every other row makes.
 VERDICT = re.compile(r"^\*\*[a-z-]+\*\*$")
-# The one row of the table that names no core: it stands in for every core
-# still unaudited, and its count moves with the shipped set, so it is matched
-# by its opening word rather than by a number that will go stale.
-PLACEHOLDER_PREFIX = "_remaining"
+# The one row of the table that names no core: it stands in for every core the
+# table has no row for, audited or not, and points to the coverage matrix for
+# their verdicts, so it carries no verdict and no count that would go stale.
+PLACEHOLDER_PREFIX = "_cores without a row"
 
 
 def _first_table(text: str) -> list[str]:
@@ -90,5 +90,5 @@ def test_exactly_one_row_is_the_unaudited_placeholder():
     table = _first_table(PAGE.read_text(encoding="utf-8"))
     placeholders = [_cells(row)[0] for row in table if _cells(row)[0].startswith(PLACEHOLDER_PREFIX)]
     assert len(placeholders) == 1, (
-        f"exactly one row stands in for the unaudited rest; found {placeholders}"
+        f"exactly one row stands in for the cores without a row; found {placeholders}"
     )

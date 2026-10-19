@@ -34,8 +34,9 @@ covers the answer.
 
 ## Not on this list, and why
 
-- **Standalone emulators.** 31 of the declared systems launch a full program (Dolphin, PCSX2, PPSSPP, Cemu, Vita3K, …)
-  rather than a core. Nothing here applies to them: they write their saves by their own rules, not through RetroArch.
+- **Standalone emulators.** 31 of the systems RetroDECK 0.10.9b declares launch a full program (Dolphin, PCSX2, PPSSPP,
+  Cemu, Vita3K, …) rather than a core. Nothing here applies to them: they write their saves by their own rules, not
+  through RetroArch.
 - **Cores that already carry a rule card** (`flycast`, `opera`, `fbneo`, the four MAME builds, the five FB Alpha 2012
   builds, `cannonball`, `cap32`, `desmume`, `dosbox_pure`, `easyrpg`, `geolith`, `kronos`, `mednafen_ngp`, `melonds`,
   `noods`, `nxengine`, `openlara`, `pokemini`, `prboom`, the two `puae` builds, `quasi88`, `race`, `pcsx2`, `tyrquake`,
@@ -71,9 +72,9 @@ the record by — the third tier's whole problem, tracked in #133.
 
 ### Cores shipped but never catalogued
 
-Roughly 50 more `.so` files ship that no ES-DE catalogue entry names. They are **not** out of scope: a bare RetroArch is
-a frontend of its own, atlas answers for it, and a user there loads any shipped core by hand. Same reading, no catalogue
-line to hang it off — so they come last, not never.
+Roughly 50 more `.so` files shipped in RetroDECK 0.10.9b that no ES-DE catalogue entry names. They are **not** out of
+scope: a bare RetroArch is a frontend of its own, atlas answers for it, and a user there loads any shipped core by hand.
+Same reading, no catalogue line to hang it off — so they come last, not never.
 
 ## Done
 
