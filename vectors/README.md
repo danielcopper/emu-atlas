@@ -69,7 +69,11 @@ walk it could read, and a fixture could state a directory that exists and cannot
   outcome. The `size` belongs with it because the two come from different reads on a real machine: a chmod-000 file
   `stat`s fine and only its bytes fail.
 - **`{"md5": …, "sha1": …, "size": …}`** — a binary blob: it exists, reads as `invalid-text`, and answers those values
-  for `file_digest` / `file_size`. Any subset of the three.
+  for `file_digest` / `file_size`. Any subset of the three, plus a **scoped** digest under `"<algorithm>:<bytes>"`
+  (`"md5:524288"`): the digest of the file's first N bytes, which an emulator that hashes a fixed-length prefix asks for
+  and which is a different fact from the file's own digest. It is needed only where the file is longer than the scope —
+  inside it the read yields the whole file, so the bare algorithm answers both, and a scope at least the stated `size`
+  is refused as one fact written twice. The scope is decimal, at least 1, with no leading zero.
 
 **`dirs`** — directories that exist with nothing in them. Parents of every path named anywhere are directories already;
 this list is how an _empty_ one is stated. A configured save root must be a directory: list it here, or put a file in
@@ -95,6 +99,33 @@ answers. And a path with nothing at it, or one under a directory whose `stat` fa
 from (`binary-inaccessible`), which is why that word is refused as a state string: one machine would have two spellings
 a resolver cannot tell apart. A declaration outranks what the rest of the tree says about its path, the way an
 AppImage's entries do.
+
+**`appimages`** — AppImage path (absolute) → what a read inside it answers, modeled at the seam rather than as bytes: an
+object of entries, each a relative entry path → its text or `{"status": "unreadable" | "invalid-text"}`, or one
+whole-image state — `"unreadable"`, `"not-appimage"` (the file is not an AppImage with a squashfs inside) or
+`"capability-missing"` (the runtime lacks the codec the image is compressed with, which is the process's failure, not
+the file's). A fixture never carries the image itself, so a vector stays independent of the codec and of the
+interpreter's version. Absence is declared by not declaring: a path with no entry here is a missing AppImage, and an
+entry its image does not list answers `entry-missing`.
+
+**`appimage_stamps`** — AppImage path → entry path → the build stamp a search of that entry's bytes yields, or
+`"no-stamp"` (nothing matches) / `"ambiguous"` (more than one place does, and the read refuses to pick between them).
+The search pattern is the caller's and is never applied to a fixture: the declaration states what applying it yields. A
+stamp describes an entry's bytes, so its path must be an AppImage `appimages` declares with entries, not a whole-image
+state, and its entry one that image declares and not one declared `unreadable`, whose bytes never come back to be
+searched; an entry declared `invalid-text` is searched like any other, because a binary is what a stamp is read out of.
+A declared entry with no stamp here answers **no stamp**, so a vector that forgot the key cannot pass a build off as
+stamped.
+
+**`ps2_bios_headers`** — the path of a file `files` declares → what the core's own ROMDIR read of it yields:
+`{"romver": …, "serial": …}`, the two strings the walk reads — `romver` exactly 14 characters, `serial` at most 15 —
+from which the reference builds the same header fields its reader builds; or `"unreadable"` / `"not-a-bios"` (the file
+was read and fails the core's own test, which is a finding about the bytes, not a read failure). It is modeled at the
+seam for the reason `appimages` is: the real read walks a table inside a whole BIOS image, which no fixture should
+carry. The file must not be one declared `unreadable` — its bytes are what cannot be read, so a real read answers
+`unreadable` before any test. A declared file with no entry here answers **missing**, which the firmware folder route
+states as `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as
+no BIOS.
 
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
 `/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
@@ -135,31 +166,46 @@ A path in both lists is a contradiction, not a mode-000 shorthand, and is refuse
 Each expectation is paired with the input key that asks it. Several may appear in one vector; each pair must be complete
 — a query with no expectation asks nothing, an expectation with no query is checked by nobody.
 
-| input key               | expected key                  | the question                                          |
-| ----------------------- | ----------------------------- | ----------------------------------------------------- |
-| `savefile_query`        | `savefile_location`           | where does this savefile live                         |
-| `entry_savefile_query`  | `entry_savefile_location`     | the same placement, asked _through_ a catalogue entry |
-| `savestate_query`       | `savestate_location`          | where does this savestate live                        |
-| `entry_savestate_query` | `entry_savestate_location`    | the same placement, asked _through_ a catalogue entry |
-| `texture_query`         | `texture_pack_location`       | where does this emulator read texture packs           |
-| `entry_texture_query`   | `entry_texture_pack_location` | the same, asked _through_ a catalogue entry           |
-| `mod_query`             | `mod_location`                | where does this emulator read mods                    |
-| `entry_mod_query`       | `entry_mod_location`          | the same, asked _through_ a catalogue entry           |
-| `soft_patch_query`      | `soft_patch_candidates`       | which patch files this content would be patched with  |
-| `catalogue_query`       | `catalogue`                   | which emulators can launch this system                |
-| `systems_query`         | `systems`                     | which systems does the frontend declare               |
-| `rom_location_query`    | `rom_location`                | where do this system's ROMs live                      |
-| `launch_command_query`  | `launch_command`              | the command the frontend would run for this file      |
-| `roots_query`           | `roots`                       | where each root folder is, and what decided it        |
-| `firmware_query`        | `firmware`                    | `kind` is `core`, `system` or `inventory`             |
-| `identify_query`        | `identification`              | what is this content, by `md5` / `sha1` / `size`      |
-| `aggregate_query`       | `aggregate`                   | one question put to **every** detected installation   |
+| input key                | expected key                  | the question                                                |
+| ------------------------ | ----------------------------- | ----------------------------------------------------------- |
+| `savefile_query`         | `savefile_location`           | where does this savefile live                               |
+| `entry_savefile_query`   | `entry_savefile_location`     | the same placement, asked _through_ a catalogue entry       |
+| `savestate_query`        | `savestate_location`          | where does this savestate live                              |
+| `entry_savestate_query`  | `entry_savestate_location`    | the same placement, asked _through_ a catalogue entry       |
+| `screenshot_query`       | `screenshot_location`         | where does RetroArch write screenshots for this content     |
+| `texture_query`          | `texture_pack_location`       | where does this emulator read texture packs                 |
+| `entry_texture_query`    | `entry_texture_pack_location` | the same, asked _through_ a catalogue entry                 |
+| `mod_query`              | `mod_location`                | where does this emulator read mods                          |
+| `entry_mod_query`        | `entry_mod_location`          | the same, asked _through_ a catalogue entry                 |
+| `soft_patch_query`       | `soft_patch_candidates`       | which patch files this content would be patched with        |
+| `catalogue_query`        | `catalogue`                   | which emulators can launch this system                      |
+| `systems_query`          | `systems`                     | which systems does the frontend declare                     |
+| `platform_systems_query` | `systems_for_platform`        | which systems here answer to a public platform id           |
+| `platform_ids_query`     | `platform_ids`                | which public platform ids belong to this system             |
+| `launchable_query`       | `launchable`                  | does this file launch as this system's content, and why not |
+| `rom_location_query`     | `rom_location`                | where do this system's ROMs live                            |
+| `launch_command_query`   | `launch_command`              | the command the frontend would run for this file            |
+| `roots_query`            | `roots`                       | where each root folder is, and what decided it              |
+| `firmware_query`         | `firmware`                    | `kind` is `core`, `system` or `inventory`                   |
+| `identify_query`         | `identification`              | what is this content, by `md5` / `sha1` / `size`            |
+| `aggregate_query`        | `aggregate`                   | one question put to **every** detected installation         |
 
 `soft_patch_query` is the one family whose `content_path` is required rather than optional: the content is that
 question's subject — the patch files are named after it — so a vector asking it without one asks about no file at all.
 
 `launch_command_query` carries `system` and an absolute `content_path`, as the question requires, and may name the
 catalogue entry by its `label`; without one the frontend's own choice answers.
+
+`launchable_query` carries `system` and `content_path`, both required — a verdict without a file has no extension to
+judge, and one without a system has no accept-list to judge it by — and takes no `label`.
+
+`screenshot_query` carries what `savefile_query` and `texture_query` carry, a non-empty subset of `content_path`,
+`core_so` and `installation`, and like `texture_query` it takes no `cwd`.
+
+`platform_systems_query` carries `vocabulary` and `value`: the vocabulary is one of `igdb`, `libretro`, `screenscraper`
+and `thegamesdb`, a closed set, so any other is refused; the value is the id in that vocabulary as a string, and a
+numeric id is written as its decimal string, never as a JSON number. `platform_ids_query` asks the reverse direction and
+carries `system` alone.
 
 `cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
 on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `firmware_query`, and an
