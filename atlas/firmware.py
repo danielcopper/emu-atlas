@@ -166,11 +166,13 @@ from .placement import (
 )
 from .retroarch_cfg import cfg_uint
 from .system_firmware import (
+    CAVEAT_FIRMWARE_CORE_SUBSTITUTE,
     CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
     EVIDENCE_WORDS,
     VERDICT_CANNOT_RUN_WITHOUT,
     VERDICT_OPEN,
     VERDICT_RUNS_WITHOUT,
+    CoreAlternative,
     SystemFirmware,
     load_system_firmware,
 )
@@ -2053,15 +2055,20 @@ class FirmwareRequirement:
     """What the core asks for — ``required``, or ``optional`` where its declaration marks
     the slot so.
 
-    One rule moves it away from the declaration, and only for a row the entry
-    beside it already speaks for: where the core's own route tries several
+    Two rules move it away from the declaration, and only for a row something
+    beside it already speaks for. Where the core's own route tries several
     spellings of one image, the declared row naming one of those spellings is
     ``optional``, because the group states what a launch needs and the row is
     the file it is one spelling of (:func:`_spoken_for_by_the_route`). Left
     ``required`` it would be read as a conjunction — three region images for a
     launch that opens one — and a machine holding the right image for the disc
-    in it would answer ``False``. Every other row keeps what its declaration
-    says.
+    in it would answer ``False``. And on a question about a system the packaged
+    table records the core as starting on a substitute of its own, under an
+    exemption scoped to that system, every row filed under the system the
+    excusing entry reaches is ``optional`` — for PUAE, ``amiga``, under which
+    all its kickstarts are filed, whichever computer the question names: the
+    launch needs none of them in particular (:func:`_asked_for_nothing`).
+    Every other row keeps what its declaration says.
     """
     file_name: str
     """The declaration's own file name: the basename the core opens, and the key the
@@ -2438,13 +2445,18 @@ image apiece. It is one question per system, and this value says one system is i
 without saying how many are.
 """
 # The system does not start without an image, and this core carries its own
-# substitute, so its all-optional declaration is correct. PCSX ReARMed's HLE
-# BIOS is the recorded case; the table names such cores per system, each with
-# the evidence for it.
+# substitute. PCSX ReARMed's HLE BIOS is one recorded case, an all-optional
+# declaration that is right as it stands; PUAE's AROS kickstart is the other,
+# excused on the Amiga computers alone, where the kickstarts its declaration
+# marks required read optional. The table names such cores per system, each
+# with the evidence for it.
 SYSTEM_FIRMWARE_CORE_ALTERNATIVE: CoreSystemFirmware = "core-supplies-an-alternative"
-"""The system needs an image and this core carries its own substitute, so its all-optional
-declaration is right. It is a statement about this core and not about the system: another core
-on the same system may still need an image.
+"""The system needs an image and this core carries its own substitute. It is a statement about
+this core and not about the system: another core on the same system may still need an image.
+Where the table scopes the substitute to some of the systems a core runs, it is stated on a
+question naming one of them alone, and there every image the core declares under the system the
+excusing entry reaches (for PUAE, ``amiga``) reads ``optional``; elsewhere the same core answers
+``cannot-run-without-firmware``. ``firmware-core-substitute`` names the substitute on every question.
 """
 # Somebody established that the system starts with no image present. Recorded
 # knowledge like the other two, and the reason it is a value of its own: it is
@@ -2514,7 +2526,9 @@ class CoreFirmware:
     **Two of these fields answer to different owners, and the difference is
     the point.** ``requirements`` is the *emulator's* statement, reproduced:
     every entry and every ``need`` on it is what this core's own declaration
-    said, read off this machine and never overwritten. ``requirements_met`` is
+    said, read off this machine, but for the rows the two rules
+    :attr:`FirmwareRequirement.need` names cover — rows something beside them
+    already speaks for. ``requirements_met`` is
     *atlas's* verdict about that declaration, and since it began reading
     ``system_firmware`` it rests on world knowledge as well — a packaged,
     source-cited table about the system, not a reading of the machine. The
@@ -2538,10 +2552,12 @@ class CoreFirmware:
     """What this emulator itself declared, reproduced: a conjunction, every entry needed,
     and where one is an alternatives group what is needed is exactly one of its options.
 
-    Nothing here is atlas's own judgement. Every ``need`` is the value the
-    core's declaration carries, so a core that marks a file it cannot start
-    without ``optional`` still reads ``optional`` — what the machine says is
-    never overwritten. The verdict about it is
+    Nothing here is atlas's own judgement of what a file is worth. Every
+    ``need`` is the value the core's declaration carries, so a core that marks
+    a file it cannot start without ``optional`` still reads ``optional`` — a
+    ``need`` moves only to ``optional``, and only where an entry beside the row
+    already states what the launch needs (:attr:`FirmwareRequirement.need`).
+    The verdict about it is
     :attr:`requirements_met`, which is a different field with a different
     owner.
     """
@@ -3042,9 +3058,13 @@ class CoreFirmware:
         could not be judged — including one that was simply never verified — or
         when a required declaration was refused.
         ``True`` is never reached with a required file whose bytes are known to
-        be wrong. The system-level reading only ever narrows this: it can turn a
-        ``True`` into ``False`` or ``None``, and it makes nothing true that was
-        not true before.
+        be wrong. The system-level reading narrows this everywhere but one
+        place: it can turn a ``True`` into ``False`` or ``None``, and the one
+        answer it turns green is a question about a system an exemption scoped
+        to systems covers, where the excused core's rows filed under the
+        system the excusing entry reaches read ``optional`` — PUAE on the
+        Amiga computers, whose kickstarts are all filed under ``amiga`` and
+        which it starts on its built-in AROS kickstart (#657).
 
         An alternatives group folds in through its own three-valued
         :attr:`FirmwareAlternatives.satisfied`: ``False`` blocks (no region
@@ -3052,10 +3072,12 @@ class CoreFirmware:
         is the run-time fact atlas cannot read), and only an all-satisfied
         group lets ``True`` through.
 
-        What a group does to the rows BESIDE it is the one place a declared
-        ``need`` is not the declaration's own: a row whose name the route's
+        A declared ``need`` is not the declaration's own in two places
+        (:attr:`FirmwareRequirement.need`). One is a system an exemption
+        scoped to systems excuses the core for, described above. The other is
+        what a group does to the rows BESIDE it: a row whose name the route's
         lists try is ``optional``, because the group is already the statement
-        of what the launch needs (:attr:`FirmwareRequirement.need`). Without
+        of what the launch needs. Without
         that rule the two statements would be read as one conjunction and
         Beetle PSX's three required region images would veto every machine
         that holds one of them — which is the answer its declaration gave
@@ -5812,15 +5834,66 @@ def _core_alternative_key(core_so: str | None) -> str | None:
     return core_so[: -len(SO_SUFFIX)]
 
 
+def _excuses(candidate: CoreAlternative, alternative: str | None, asked: str | None) -> bool:
+    """Does this exemption excuse the core *alternative* on a question about *asked*?
+
+    An exemption with no systems holds on every question; one scoped to
+    systems holds only on a question naming one of them, so a question about
+    another system, or about none, finds the core unexcused
+    (:attr:`~atlas.system_firmware.CoreAlternative.systems`).
+    """
+    if candidate.core != alternative:
+        return False
+    return not candidate.systems or asked in candidate.systems
+
+
+def _substitute_caveats(
+    needs: list[tuple[str, SystemFirmware]], alternative: str | None
+) -> tuple[Caveat, ...]:
+    """The substitute a scoped exemption names for this core, on every question.
+
+    Read off the exemptions whatever system the question names, because what
+    it states holds of the core on all of them
+    (:data:`CAVEAT_FIRMWARE_CORE_SUBSTITUTE`). One per distinct statement: two
+    table keys landing on one id would otherwise say it twice.
+    """
+    if alternative is None:
+        return ()
+    stated = dict.fromkeys(
+        (candidate.substitute, candidate.systems)
+        for _, entry in needs
+        for candidate in entry.alternatives
+        if candidate.core == alternative and candidate.substitute is not None
+    )
+    return tuple(
+        Caveat(
+            CAVEAT_FIRMWARE_CORE_SUBSTITUTE,
+            f"{alternative} starts {', '.join(systems)} on its built-in {substitute} where the "
+            "image it would use is missing — a substitute of limited compatibility: a title it "
+            "cannot run fails at run time, which no file read predicts, so a real image is "
+            "preferred",
+            {"core": alternative, "substitute": substitute, "systems": systems},
+        )
+        for substitute, systems in stated
+    )
+
+
 def _system_firmware_state(
-    core: CoreFirmware, recorded: Mapping[str, tuple[SystemFirmware, ...]]
-) -> tuple[CoreSystemFirmware | None, tuple[str, ...], tuple[Caveat, ...]]:
+    core: CoreFirmware,
+    recorded: Mapping[str, tuple[SystemFirmware, ...]],
+    asked: str | None = None,
+) -> tuple[CoreSystemFirmware | None, tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
     """What the table says about the systems *core* declares firmware for.
 
-    Three things, because the state alone does not say *which* system it is
+    Four things, because the state alone does not say *which* system it is
     about: the state, the systems whose unexcused need it rests on (empty
     under every other state, and what :attr:`CoreFirmware.system_firmware_needs`
-    carries so the need is asked over that system's images), and the marks.
+    carries so the need is asked over that system's images), the systems an
+    exemption scoped to systems excuses the core for on this question (whose
+    rows :func:`_stating_system_firmware` reads as ``optional``), and the
+    marks. *asked* is the system the question names, and ``None`` on a
+    question that names none: an exemption scoped to systems is read against
+    it (:func:`_excuses`).
 
     The systems come off the requirements already on the answer
     (:attr:`FirmwareRequirement.system`, alternatives flattened) rather than
@@ -5857,7 +5930,7 @@ def _system_firmware_state(
     )
     hits = [(system, entry) for system in systems for entry in recorded.get(system, ())]
     if not hits:
-        return None, (), ()
+        return None, (), (), ()
     # One mark per stated (system, evidence) pair rather than per entry: two
     # table keys can land on one system id, and where they also rest on the
     # same level the second mark would repeat the first word for word. The
@@ -5882,6 +5955,7 @@ def _system_firmware_state(
     )
     alternative = _core_alternative_key(core.core_so)
     needs = [(system, entry) for system, entry in hits if entry.verdict == VERDICT_CANNOT_RUN_WITHOUT]
+    caveats = (*caveats, *_substitute_caveats(needs, alternative))
     # The systems, not the entries: which machine each need is about is what
     # the image the need asks for is filed under, and two table keys landing
     # on one id are one machine asking once.
@@ -5889,17 +5963,34 @@ def _system_firmware_state(
         dict.fromkeys(
             system
             for system, entry in needs
-            if not any(candidate.core == alternative for candidate in entry.alternatives)
+            if not any(_excuses(candidate, alternative, asked) for candidate in entry.alternatives)
+        )
+    )
+    # The systems a SCOPED exemption excuses on this question, whose rows are
+    # read ``optional`` (:func:`_asked_for_nothing`). An exemption naming no
+    # systems excuses a declaration that is right as it stands, so it moves no
+    # row. They travel even where another system leaves the core unexcused:
+    # rows filed under a system the core starts on its own substitute are
+    # asked for nothing there, whatever another system needs.
+    excused = tuple(
+        dict.fromkeys(
+            system
+            for system, entry in needs
+            if system not in unexcused
+            and any(
+                candidate.systems and _excuses(candidate, alternative, asked)
+                for candidate in entry.alternatives
+            )
         )
     )
     if unexcused:
-        return SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT, unexcused, caveats
+        return SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT, unexcused, excused, caveats
     if needs:
-        return SYSTEM_FIRMWARE_CORE_ALTERNATIVE, (), caveats
+        return SYSTEM_FIRMWARE_CORE_ALTERNATIVE, (), excused, caveats
     if any(entry.verdict == VERDICT_OPEN for _, entry in hits):
-        return SYSTEM_FIRMWARE_OPEN, (), caveats
+        return SYSTEM_FIRMWARE_OPEN, (), (), caveats
     if any(entry.verdict == VERDICT_RUNS_WITHOUT for _, entry in hits):
-        return SYSTEM_FIRMWARE_RUNS_WITHOUT, (), caveats
+        return SYSTEM_FIRMWARE_RUNS_WITHOUT, (), (), caveats
     # Unreachable while this vocabulary is total over the table's verdicts,
     # and it refuses rather than answering ``None`` precisely because the day
     # it stops being total is the day a recorded verdict would silently become
@@ -5913,8 +6004,53 @@ def _system_firmware_state(
     )
 
 
+def _excused_row(row: FirmwareRequirement, excused: tuple[str, ...]) -> FirmwareRequirement:
+    """A row filed under a system its core supplies its own substitute for asks for nothing."""
+    if row.system in excused and row.need == NEED_REQUIRED:
+        return replace(row, need=NEED_OPTIONAL)
+    return row
+
+
+def _asked_for_nothing(
+    requirements: tuple[FirmwareRequirement | FirmwareAlternatives, ...], excused: tuple[str, ...]
+) -> tuple[FirmwareRequirement | FirmwareAlternatives, ...]:
+    """The requirements with every row filed under an *excused* system read ``optional``.
+
+    The second rule that moves a ``need`` away from the declaration, beside
+    :func:`_spoken_for_by_the_route`, and for the same kind of reason: an entry
+    beside the row already says what the launch needs. There it is the
+    route's group; here it is an exemption scoped to systems in the packaged
+    table, which records that this core starts the system the question names
+    on a substitute of its own, so the launch needs none of the images it
+    declares under the system the excusing entry reaches in particular. That
+    is the id *excused* holds, not the id asked about: every PUAE row is
+    filed under ``amiga``, whichever computer the question names. An
+    exemption naming no systems moves no row: it excuses a declaration that
+    is right as it stands. PUAE's ``.info`` marks four kickstarts required
+    and the core boots its built-in AROS when the one it would use is missing
+    (#657); left ``required`` they would turn the verdict red over a machine
+    the core starts. Rows filed under any other system keep their ``need``,
+    and so does every row on a question the exemption does not cover — there
+    nothing is excused.
+
+    Refused declarations are left as declared: they carry no system, so which
+    system's image one would have been is not read, and the verdict keeps
+    withholding over a refused row that says ``required``.
+    """
+    if not excused:
+        return requirements
+    return tuple(
+        replace(entry, options=tuple(_excused_row(option, excused) for option in entry.options))
+        if isinstance(entry, FirmwareAlternatives)
+        else _excused_row(entry, excused)
+        for entry in requirements
+    )
+
+
 def _stating_system_firmware(
-    cores: tuple[CoreFirmware, ...], recorded: "Mapping[str, SystemFirmware]"
+    cores: tuple[CoreFirmware, ...],
+    recorded: "Mapping[str, SystemFirmware]",
+    asked: str | None = None,
 ) -> tuple[CoreFirmware, ...]:
     """Every core with what the packaged tables add to it, and the mark that they did.
 
@@ -5937,7 +6073,11 @@ def _stating_system_firmware(
     every carded answer leaves through.
 
     *recorded* is the context's snapshot of the packaged system table, so one
-    answer can never mix two revisions of it.
+    answer can never mix two revisions of it. *asked* is the system the
+    question names — :func:`firmware_for_system` passes it, the questions that
+    name no system do not — and it is what an exemption scoped to systems is
+    read against, so one core's block can answer differently for two systems
+    it runs (:func:`_excuses`).
     """
     table = _recorded_by_system(recorded)
     stated: list[CoreFirmware] = []
@@ -5947,12 +6087,13 @@ def _stating_system_firmware(
             if core.core_so is None
             else replace(core, locating=locating_of_core(core.core_so))
         )
-        state, needs, caveats = _system_firmware_state(located, table)
+        state, needs, excused, caveats = _system_firmware_state(located, table, asked)
         stated.append(
             located
             if state is None
             else replace(
                 located,
+                requirements=_asked_for_nothing(located.requirements, excused),
                 system_firmware=state,
                 system_firmware_needs=needs,
                 caveats=(*located.caveats, *caveats),
@@ -9738,7 +9879,12 @@ def firmware_for_system(
     carrying its own ``system``: a multi-system core (mGBA declares Game Boy
     boot ROMs) wants what it wants regardless of which of its systems was
     asked about, and silently dropping entries would turn "needs firmware" into
-    a wrong answer.
+    a wrong answer. The *verdict* can follow *system*, though, and does in one
+    case: where the packaged table excuses a core on some of the systems it
+    runs, a question naming one of them answers that core excused and its
+    rows filed under the system the excusing entry reaches ``optional`` (for
+    PUAE, ``amiga``), and a question naming another
+    answers it as declared (:func:`_stating_system_firmware`).
     """
     if context.root is None:
         return _empty_answer(context)
@@ -9801,7 +9947,7 @@ def firmware_for_system(
 
     return FirmwareAnswer(
         root=context.root,
-        cores=_stating_system_firmware(tuple(resolved), context.system_firmware),
+        cores=_stating_system_firmware(tuple(resolved), context.system_firmware, system),
         unclaimed=(),
         hash_checked=verify,
         sources=context.sources,

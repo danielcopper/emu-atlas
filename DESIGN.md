@@ -642,16 +642,20 @@ visible in `system_source`, and marked as derived where the core spans systems.
   one read off the machine and atlas's own packaged card alike — and the three that state none (`unreadable`, `absent`,
   `unsupported`) answer `null` because they are named, never because an inequality left them there.
 - **The requirement list is the emulator's statement; the verdict beside it is atlas's, and it reads world knowledge.**
-  Every `need` is `firmware<N>_opt` inverted and stays whatever the core declared — nothing read off the machine is
-  overwritten. But the format has no way to say "this machine does not start without one of these", so a core that knows
-  its system needs a BIOS can only mark every image optional, and the faithful reading of that declaration reports
-  nothing missing over a system that will not boot. The missing half is about the **system**, is written nowhere on the
-  machine, and is therefore packaged, versioned and source-cited like every other piece of world knowledge
-  (`atlas/data/system_firmware.json`). `system_firmware` states it per core — four values plus `null`, which means
-  nothing is recorded about that system and never that nothing is needed — and `requirements_met` folds it in: a system
-  that cannot run without an image, a core the table does not excuse, and no declared image in place is `false`. The
-  `system-firmware-world-knowledge` caveat marks the cores where the table stated something, carrying the system and the
-  evidence level (`verified` or `derived`) and nothing else, because a derived field that starts crossing the
+  Every `need` is `firmware<N>_opt` inverted and stays whatever the core declared, but where something beside the row
+  already states what the launch needs — a route's alternatives group, or the packaged table excusing the core on the
+  system the question names — and then only to `optional`. But the format has no way to say "this machine does not start
+  without one of these", so a core that knows its system needs a BIOS can only mark every image optional, and the
+  faithful reading of that declaration reports nothing missing over a system that will not boot. The missing half is
+  about the **system**, is written nowhere on the machine, and is therefore packaged, versioned and source-cited like
+  every other piece of world knowledge (`atlas/data/system_firmware.json`). `system_firmware` states it per core — four
+  values plus `null`, which means nothing is recorded about that system and never that nothing is needed — and
+  `requirements_met` folds it in: a system that cannot run without an image, a core the table does not excuse, and no
+  declared image in place is `false`. An exemption the table scopes to some of a core's systems holds only on a question
+  naming one of them — PUAE starts the Amiga computers on its AROS kickstart and not a CD32 — so one core's verdict can
+  follow the system asked about, and `firmware-core-substitute` names the substitute on every answer about such a core.
+  The `system-firmware-world-knowledge` caveat marks the cores where the table stated something, carrying the system and
+  the evidence level (`verified` or `derived`) and nothing else, because a derived field that starts crossing the
   read/world-knowledge line silently is the same defect one layer up. It stays off an `open` system, whose whole content
   is already the field value beside it.
 - **A requirement list is a conjunction, and alternatives say so as data.** Where an emulator reads exactly one of

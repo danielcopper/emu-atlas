@@ -299,10 +299,10 @@ question cannot claim a verified reading. The `source` prose uses the finer mark
 observation on a real machine, `[V-binary]` a read of the shipped core, `[V-script]` the arrangement's own scripts.
 
 **A catalogue disagreement is never itself a verdict.** It is what makes the question worth asking. Only an observation
-or a source read can close it, which is why six of the seven shipped entries are `open`: the disagreement is derived,
+or a source read can close it, which is why six of the eight shipped entries are `open`: the disagreement is derived,
 and nothing beyond it has been established.
 
-The one entry that is not `open` carries its evidence in two places, and they should not be added together:
+The PlayStation entry carries its evidence in two places, and they should not be added together:
 
 - **The verdict's own `source`** — one `[V-live]` mark over two device observations (SwanStation never starting, Beetle
   PSX refusing at load and naming `scph5501.bin` on screen) and one `[V-binary]` mark over one core's options
@@ -321,12 +321,31 @@ than a narrower one. The `source` also records what it does **not** establish: t
 the four declaring entries whose binaries were never read. A verdict that hides its own gaps is the kind a reader stops
 trusting the moment they find one.
 
+The Amiga entry is the other one that is not `open`, and it was not reached through the tripwire: every core declaring
+firmware under `Amiga` (puae, puae2021, uae4arm) marks kickstarts required, so the catalogue agrees with itself and the
+derivation finds nothing (#657). Its verdict rests on PUAE's source — the machine it emulates always boots on a
+kickstart, a file or the core's built-in substitute (`sources/src/memory.c:2895-2900` at libretro/libretro-uae@0043cf9)
+— and on one observation, a CD32 disc that did not boot under that substitute. Its exemptions carry the route that
+excuses the cores, cited at the revision each deployed core reports, and the observation of a game starting with no
+kickstart present.
+
 ## Exempting a core that is right
 
 A system that needs firmware can still have a core that runs without a file, because the core supplies its own
-substitute. Its catalogue entry declares everything optional and is _correct_ to, so it has to be nameable.
-`cores_supplying_an_alternative` is that place, on a `cannot-run-without-firmware` entry only, and each core carries its
-own reason: a bare exemption excuses by assertion.
+substitute, so the core has to be nameable. `cores_supplying_an_alternative` is that place, on a
+`cannot-run-without-firmware` entry only, and each core carries its own reason: a bare exemption excuses by assertion.
+
+An exemption takes one of two shapes. **A reason alone** excuses the core wherever the entry reaches, for a catalogue
+entry that declares everything optional and is _correct_ to. **An object** adds `systems`, the atlas system ids it holds
+on, and `substitute`, what the core starts them on; the two come together or not at all. That shape is for a core whose
+`.info` marks required the images its substitute stands in for, on some of the systems one `systemname` covers but not
+all. PUAE is the case: its `.info` marks four kickstarts required, the core boots its built-in AROS kickstart whenever
+the one it would use is missing and never refuses to load over it, and a CD32 disc does not boot under AROS — while
+`amiga`, `amiga600`, `amiga1200`, `amigacd32` and `cdtv` are all one `systemname`, `Amiga`, and every image is filed
+under `amiga`. So the exemption names the three computers. On a question naming one of them the core is excused and its
+rows filed under the system the excusing entry reaches — `amiga`, whichever computer is named — read `need: optional`,
+because the launch needs none of them in particular; on a question about `amigacd32`, `cdtv` or no system at all it
+answers its declaration.
 
 **What the field is for, precisely, because it is easy to overstate.** It is what keeps a system's requirement off a
 core that carries its own substitute: the answer reads it, and a core named here is reported
@@ -346,7 +365,8 @@ read. The exemption rests on the one core that was watched running without firmw
 
 The list is not a completeness claim. It holds the cores whose substitute has been established; a core absent from it is
 one nobody has looked at, never one judged to be understating. The tripwire checks the other direction — a named core
-must still be declaring everything optional for that system in the deployed catalogue, or the exemption is stale and
+must still declare what its exemption excuses for that system in the deployed catalogue: everything optional for an
+exemption naming no systems, at least one file required for one scoped to systems. Otherwise the exemption is stale and
 excusing nothing.
 
 ## What the answer carries
@@ -356,10 +376,11 @@ enters a firmware answer — and states what it says on every core of that answe
 
 - **`system_firmware`** is the per-core field. Four stated values: `cannot-run-without-firmware` (the system needs an
   image and this core needs one of its own for that system — one it declares, or one its search finds),
-  `core-supplies-an-alternative` (it needs one and this core carries its own substitute), `runs-without-firmware`
-  (somebody established that it starts with none present) and `open`. `null` is the fifth state and it means **nothing
-  is recorded about this system** — never that nothing is needed. A core whose system could not be established answers
-  `null` for the same reason: nothing is recorded about a system nobody named.
+  `core-supplies-an-alternative` (it needs one and this core carries its own substitute — on a question the exemption
+  covers, where one is scoped to systems), `runs-without-firmware` (somebody established that it starts with none
+  present) and `open`. `null` is the fifth state and it means **nothing is recorded about this system** — never that
+  nothing is needed. A core whose system could not be established answers `null` for the same reason: nothing is
+  recorded about a system nobody named.
 - **`requirements_met`** stops being green where a system needs an image, the core is not excused, and every image filed
   under that system is demonstrably not in place. One image being usable is what that system asks for, so any satisfied
   image of its own keeps the answer it had; an image nobody judged, or a declaration atlas refused to follow, leaves
@@ -367,8 +388,10 @@ enters a firmware answer — and states what it says on every core of that answe
   of its own images and all of them have to be answered — a disjunction inside each system, a conjunction across them —
   so mGBA's Game Boy boot ROM is no answer for a Game Boy Advance, and a core two entries speak about needs one image
   apiece rather than one between them. Where a core in this state declares for one system that conjunction has one term
-  and its disjunction spans the whole declaration. The reading only ever narrows the field — it makes nothing true that
-  was not true before. One state reaches it with no image filed at all: DuckStation with every region key empty, whose
+  and its disjunction spans the whole declaration. The reading narrows the field everywhere but one place: on a question
+  about a system an exemption scoped to systems covers, the excused core's rows filed under the system the excusing
+  entry reaches (for PUAE, `amiga`) read `optional`, and that turns its answer green — PUAE on the Amiga computers with
+  no kickstart present. One state reaches it with no image filed at all: DuckStation with every region key empty, whose
   search ran to the end and kept no file of an accepted size — an empty directory, nothing at its path, or a file in its
   place — over a DataRoot that is established rather than left to the launch. No setting names a file there, so the
   system comes from DuckStation's card rather than from a requirement, and the search's empty result is the demonstrated
@@ -386,10 +409,17 @@ enters a firmware answer — and states what it says on every core of that answe
   open entry's whole content is that nobody established the answer, which is exactly what the field value `open` on that
   same core already says, so a mark there would restate the field rather than degrade the answer. `open` means the same
   thing as a verdict and as an evidence level, and because of this it never reaches a client as an evidence level.
+- **`firmware-core-substitute`** rides on a core whose exemption names a substitute, on every question about it —
+  excused or not — carrying `core` (the table's spelling), `substitute` and `systems`. The substitute is of limited
+  compatibility: a title it cannot run fails at run time, which no file read predicts, so a real image is preferred even
+  where the verdict is green. Beside a question about a system it does not cover, it says where the core does start
+  without an image.
 
-**What does not move is the declaration.** Every `need` on a requirement is still `firmware<N>_opt` inverted, so
-SwanStation's images still read `optional`: nothing read off the machine is overwritten. The requirement list is the
-emulator's statement; the verdict beside it is atlas's.
+**The declaration moves in two places.** Every `need` on a requirement is `firmware<N>_opt` inverted, so SwanStation's
+images still read `optional`, except where something beside a row already states what the launch needs — and then only
+to `optional`. One is a row beside a route's alternatives group; the other is a question about a system an exemption
+scoped to systems covers, where the excused core's rows filed under the system the excusing entry reaches (for PUAE,
+`amiga`) read `optional`. The requirement list is the emulator's statement; the verdict beside it is atlas's.
 
 The keys here are `systemname` strings and an answer speaks atlas's system ids, so the join is the systemname map
 (`atlas.firmware.system_firmware_system`). A key naming several machines therefore reaches the one id that map rules for

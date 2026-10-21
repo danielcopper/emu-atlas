@@ -35,6 +35,7 @@ from atlas.system_firmware import (
     VERDICT_RUNS_WITHOUT,
     load_system_firmware,
 )
+from atlas.systems import load_system_ids
 from tests.corpus import expected_blocks
 
 
@@ -57,8 +58,8 @@ class TestTheShippedTable:
             assert entry.source
 
     def test_playstation_cannot_run_without_firmware_and_exempts_rearmed(self):
-        # The one system with observations behind it, and the one exemption: a
-        # core whose all-optional declaration is correct because it supplies a
+        # The system this table was written around, and its exemption: a core
+        # whose all-optional declaration is correct because it supplies a
         # substitute. The answer reads the exemption — PCSX ReARMed is the
         # core it keeps green over a machine with no PlayStation BIOS — and
         # the tripwire's staleness check reads it from the other direction.
@@ -78,6 +79,33 @@ class TestTheShippedTable:
         assert entry.evidence == EVIDENCE_OPEN
         assert entry.alternatives == ()
         assert entry.source
+
+    def test_the_amiga_exempts_both_puae_cores_on_the_three_computers(self):
+        # AROS stands in for a missing kickstart on every model, and a CD32
+        # disc does not boot under it — so the exemption names the computers
+        # and leaves amigacd32 and cdtv to the declaration (#657).
+        entry = load_system_firmware()["Amiga"]
+        assert entry.verdict == VERDICT_CANNOT_RUN_WITHOUT
+        assert [
+            (alternative.core, alternative.systems, alternative.substitute)
+            for alternative in entry.alternatives
+        ] == [
+            ("puae", ("amiga", "amiga600", "amiga1200"), "AROS"),
+            ("puae2021", ("amiga", "amiga600", "amiga1200"), "AROS"),
+        ]
+
+    def test_every_system_an_exemption_names_is_an_atlas_system_id(self):
+        # The question's system is compared against these verbatim, so a
+        # misspelt id would be an exemption no question can ever reach.
+        known = load_system_ids()
+        named = {
+            system
+            for entry in load_system_firmware().values()
+            for alternative in entry.alternatives
+            for system in alternative.systems
+        }
+        assert named
+        assert named <= known, sorted(named - known)
 
     def test_only_a_needs_firmware_entry_exempts_a_core(self):
         for entry in load_system_firmware().values():
@@ -210,6 +238,68 @@ class TestTheLoaderRefuses:
         table = _table(_SOUND, system=system)
         with pytest.raises(ValueError, match="system key: expected a non-blank string"):
             load_system_firmware(table)
+
+
+def _scoped(alternative: object) -> str:
+    return _table(
+        {
+            "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+            "evidence": EVIDENCE_VERIFIED,
+            "source": "[V-live] watched it refuse",
+            "cores_supplying_an_alternative": {"demo": alternative},
+        }
+    )
+
+
+_SCOPED = {"reason": "[V-live] watched it run", "systems": ["amiga"], "substitute": "AROS"}
+
+
+class TestAnExemptionScopedToSystems:
+    """The second shape an exemption takes: the systems it holds on, and what the core starts them on."""
+
+    def test_it_loads_with_its_systems_and_substitute(self):
+        (entry,) = load_system_firmware(_scoped(_SCOPED)).values()
+        (alternative,) = entry.alternatives
+        assert (alternative.systems, alternative.substitute) == (("amiga",), "AROS")
+
+    def test_a_reason_alone_in_the_object_form_is_the_unscoped_shape(self):
+        (entry,) = load_system_firmware(_scoped({"reason": "it has HLE"})).values()
+        (alternative,) = entry.alternatives
+        assert (alternative.systems, alternative.substitute) == ((), None)
+
+    @pytest.mark.parametrize("missing", ["systems", "substitute"])
+    def test_systems_and_substitute_come_together(self, missing):
+        alternative = {key: value for key, value in _SCOPED.items() if key != missing}
+        with pytest.raises(ValueError, match="together or neither"):
+            load_system_firmware(_scoped(alternative))
+
+    def test_an_object_without_a_reason(self):
+        alternative = {key: value for key, value in _SCOPED.items() if key != "reason"}
+        with pytest.raises(ValueError, match="states a reason"):
+            load_system_firmware(_scoped(alternative))
+
+    def test_an_unknown_key(self):
+        with pytest.raises(ValueError, match="states a reason"):
+            load_system_firmware(_scoped({**_SCOPED, "files": ["a.bin"]}))
+
+    @pytest.mark.parametrize("systems", [[], "amiga", None])
+    def test_systems_that_are_not_a_non_empty_list(self, systems):
+        with pytest.raises(ValueError, match="non-empty list of system ids"):
+            load_system_firmware(_scoped({**_SCOPED, "systems": systems}))
+
+    @pytest.mark.parametrize("system", ["", "   ", 7])
+    def test_a_blank_system(self, system):
+        with pytest.raises(ValueError, match="system: expected a non-blank string"):
+            load_system_firmware(_scoped({**_SCOPED, "systems": ["amiga", system]}))
+
+    def test_a_system_named_twice(self):
+        with pytest.raises(ValueError, match="names a system twice"):
+            load_system_firmware(_scoped({**_SCOPED, "systems": ["amiga", "amiga"]}))
+
+    @pytest.mark.parametrize("substitute", ["", "  ", None])
+    def test_a_blank_substitute(self, substitute):
+        with pytest.raises(ValueError, match="substitute: expected a non-blank string"):
+            load_system_firmware(_scoped({**_SCOPED, "substitute": substitute}))
 
 
 class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:

@@ -3243,8 +3243,10 @@ list.
 ### Two fields, two owners — `requirements` and `requirements_met`
 
 `requirements` is what the **emulator itself declared**, reproduced. Every entry and every `need` on it is the value
-that core's own `.info` carries, read live off the machine and never overwritten — a core that marks a file it cannot
-start without `optional` still reads `optional` here.
+that core's own `.info` carries, read live off the machine — a core that marks a file it cannot start without `optional`
+still reads `optional` here. A `need` moves in two places only, both to `optional` and both where something beside the
+row already states what the launch needs: a row one of the route's own spellings covers, beside the alternatives group
+that speaks for it, and every row filed under a system the packaged table excuses the core for on that question (below).
 
 One field inside an entry has two owners along the same line, and it is `description`: under a `read` declaration it is
 the packager's own `firmwareN_desc`, prose atlas passes through and never acts on, while under a `packaged` one there is
@@ -3282,7 +3284,7 @@ a black box:
 | value                          | what it says                                                                                             |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `cannot-run-without-firmware`  | the system needs an image, and this core needs one of its own — one it declares, or one its search finds |
-| `core-supplies-an-alternative` | it needs one, and this core carries its own substitute — its all-optional list is right                  |
+| `core-supplies-an-alternative` | it needs one, and this core carries its own substitute                                                   |
 | `runs-without-firmware`        | somebody established that the system starts with no image present                                        |
 | `open`                         | nobody has established which                                                                             |
 | `null`                         | **nothing is recorded about this system** — never "nothing is needed"                                    |
@@ -3295,8 +3297,28 @@ What the reading does to `requirements_met`: over `cannot-run-without-firmware` 
 **disjunction** — that system needs one of them, not all — so any image of its own that is usable keeps that system's
 need met, and only every one of them being demonstrably absent or wrong, or a search that ran to completion over an
 established DataRoot and found no file it would open, makes it `False`. An image nobody judged, or a declaration atlas
-refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading only ever narrows
-the field, never widens it — nothing becomes `True` that was not `True` before.
+refused to follow, leaves `None` instead: neither establishes that the core has nothing. The reading narrows the field
+everywhere but one place, described next.
+
+**One core's verdict can follow the system you ask about.** The table can scope an exemption to some of the systems a
+core runs. PUAE boots its built-in AROS kickstart whenever the kickstart it would use is missing, and a CD32 disc does
+not boot under AROS — while all five Amiga systems are one `systemname`, so every kickstart PUAE declares is filed under
+`amiga`. So the Amiga entry excuses PUAE and PUAE 2021 on `amiga`, `amiga600` and `amiga1200` alone:
+
+```python
+inst.firmware_for_system("amiga").cores[0]      # PUAE, no kickstart in place
+# system_firmware 'core-supplies-an-alternative', requirements_met True,
+# all four kickstarts the .info marks required read need 'optional'
+inst.firmware_for_system("amigacd32").cores[0]  # the same core, the same machine
+# system_firmware 'cannot-run-without-firmware', requirements_met False, the four read 'required'
+inst.firmware_for_core("puae_libretro.so").cores[0]  # names no system: answers as declared, False
+```
+
+That is the one answer the reading turns green. A question naming no system — `firmware_for_core`, `firmware_inventory`
+— finds the core unexcused, because a CD32 or CDTV launch still needs its images. Every PUAE block carries
+`firmware-core-substitute` with `core`, `substitute` (`AROS`) and `systems` (the three computers), on every question:
+the substitute is of limited compatibility, a title it cannot run fails at run time and no file read predicts it, so a
+real kickstart is preferred even where the verdict is green.
 
 The set that disjunction asks over is **the images filed under the system that needs one**, never every image the core
 declares, and where two systems need one it is asked of each: a disjunction inside each system, a conjunction across

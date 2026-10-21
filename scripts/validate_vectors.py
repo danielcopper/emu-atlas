@@ -579,6 +579,7 @@ KNOWN_CAVEAT_CODES = {
     "core-without-systemname",
     "system-assignment-may-hide-cores",
     "system-firmware-world-knowledge",
+    "firmware-core-substitute",
     "core-info-unreadable",
     "emulator-catalogue-unreadable",
     "emulator-catalogue-unestablished",

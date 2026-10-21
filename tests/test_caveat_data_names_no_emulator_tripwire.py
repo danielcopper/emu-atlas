@@ -190,6 +190,9 @@ UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
     ("firmware.py", "_configured_image_caveat", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "_configured_image_missing", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "_override_image_missing", CORE_KEY): "core_short_name(core.stem)",
+    # The ``.so`` short name off :func:`atlas.firmware._core_alternative_key`,
+    # which is the spelling the system table names exempted cores by.
+    ("firmware.py", "_substitute_caveats", CORE_KEY): "alternative",
     ("firmware.py", "firmware_for_core", CORE_SO_KEY): "f'{stem}.so'",
     ("installations.py", "_core_info_unreadable_caveat", CORE_SO_KEY): (
         "os.path.basename(core_so)"
