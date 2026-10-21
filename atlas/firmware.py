@@ -5859,11 +5859,13 @@ def _substitute_caveats(
     """
     if alternative is None:
         return ()
-    stated = dict.fromkeys(
-        (candidate.substitute, candidate.systems)
-        for _, entry in needs
-        for candidate in entry.alternatives
-        if candidate.core == alternative and candidate.substitute is not None
+    stated = tuple(
+        dict.fromkeys(
+            (candidate.substitute, candidate.systems)
+            for _, entry in needs
+            for candidate in entry.alternatives
+            if candidate.core == alternative and candidate.substitute is not None
+        )
     )
     return tuple(
         Caveat(
@@ -6007,7 +6009,7 @@ def _system_firmware_state(
 def _excused_row(row: FirmwareRequirement, excused: tuple[str, ...]) -> FirmwareRequirement:
     """A row filed under a system its core supplies its own substitute for asks for nothing."""
     if row.system in excused and row.need == NEED_REQUIRED:
-        return replace(row, need=NEED_OPTIONAL)
+        return cast(FirmwareRequirement, replace(row, need=NEED_OPTIONAL))
     return row
 
 

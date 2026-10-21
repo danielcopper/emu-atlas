@@ -269,37 +269,42 @@ class TestAnExemptionScopedToSystems:
 
     @pytest.mark.parametrize("missing", ["systems", "substitute"])
     def test_systems_and_substitute_come_together(self, missing):
-        alternative = {key: value for key, value in _SCOPED.items() if key != missing}
+        table = _scoped({key: value for key, value in _SCOPED.items() if key != missing})
         with pytest.raises(ValueError, match="together or neither"):
-            load_system_firmware(_scoped(alternative))
+            load_system_firmware(table)
 
     def test_an_object_without_a_reason(self):
-        alternative = {key: value for key, value in _SCOPED.items() if key != "reason"}
+        table = _scoped({key: value for key, value in _SCOPED.items() if key != "reason"})
         with pytest.raises(ValueError, match="states a reason"):
-            load_system_firmware(_scoped(alternative))
+            load_system_firmware(table)
 
     def test_an_unknown_key(self):
+        table = _scoped({**_SCOPED, "files": ["a.bin"]})
         with pytest.raises(ValueError, match="states a reason"):
-            load_system_firmware(_scoped({**_SCOPED, "files": ["a.bin"]}))
+            load_system_firmware(table)
 
     @pytest.mark.parametrize("systems", [[], "amiga", None])
     def test_systems_that_are_not_a_non_empty_list(self, systems):
+        table = _scoped({**_SCOPED, "systems": systems})
         with pytest.raises(ValueError, match="non-empty list of system ids"):
-            load_system_firmware(_scoped({**_SCOPED, "systems": systems}))
+            load_system_firmware(table)
 
     @pytest.mark.parametrize("system", ["", "   ", 7])
     def test_a_blank_system(self, system):
+        table = _scoped({**_SCOPED, "systems": ["amiga", system]})
         with pytest.raises(ValueError, match="system: expected a non-blank string"):
-            load_system_firmware(_scoped({**_SCOPED, "systems": ["amiga", system]}))
+            load_system_firmware(table)
 
     def test_a_system_named_twice(self):
+        table = _scoped({**_SCOPED, "systems": ["amiga", "amiga"]})
         with pytest.raises(ValueError, match="names a system twice"):
-            load_system_firmware(_scoped({**_SCOPED, "systems": ["amiga", "amiga"]}))
+            load_system_firmware(table)
 
     @pytest.mark.parametrize("substitute", ["", "  ", None])
     def test_a_blank_substitute(self, substitute):
+        table = _scoped({**_SCOPED, "substitute": substitute})
         with pytest.raises(ValueError, match="substitute: expected a non-blank string"):
-            load_system_firmware(_scoped({**_SCOPED, "substitute": substitute}))
+            load_system_firmware(table)
 
 
 class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:
