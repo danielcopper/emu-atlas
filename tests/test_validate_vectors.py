@@ -609,6 +609,12 @@ INPUT_PS2_BIOS_HEADER_CASES = [
          "romver must be 14 characters", id="header-romver-length"),
     case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER, "serial": "x" * 16}}),
          "serial must be at most 15 characters", id="header-serial-length"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER[:-1] + "€", "serial": ""}}),
+         "romver must be one byte per character (latin-1)", id="header-romver-not-latin1"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER, "serial": "SCPH-€"}}),
+         "serial must be one byte per character (latin-1)", id="header-serial-not-latin1"),
+    case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER, "serial": "SCPH\x00"}}),
+         "serial must carry no NUL", id="header-serial-nul"),
 ]
 
 AN_IMAGE = "/Applications/ES-DE.AppImage"
