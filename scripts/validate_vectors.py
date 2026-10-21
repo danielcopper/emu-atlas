@@ -1346,10 +1346,17 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
         )
     if not all(isinstance(value, str) for value in spec.values()):
         fail(f"{name}: ps2 bios header {path!r} romver and serial must be strings")
+    # The strings stand for the bytes the core reads, so each character is one
+    # byte (latin-1) — which also makes the character counts below byte counts.
+    for key in ("romver", "serial"):
+        if any(ord(char) > 0xFF for char in spec[key]):
+            fail(f"{name}: ps2 bios header {path!r} {key} must be one byte per character (latin-1)")
     if len(spec["romver"]) != PS2_BIOS_ROMVER_LENGTH:
         fail(f"{name}: ps2 bios header {path!r} romver must be {PS2_BIOS_ROMVER_LENGTH} characters")
     if len(spec["serial"]) > PS2_BIOS_SERIAL_LENGTH:
         fail(f"{name}: ps2 bios header {path!r} serial must be at most {PS2_BIOS_SERIAL_LENGTH} characters")
+    if "\x00" in spec["serial"]:
+        fail(f"{name}: ps2 bios header {path!r} serial must carry no NUL, which a C string cannot hold")
 
 
 # The archive modeling vocabulary — mirrored from FixtureMachine

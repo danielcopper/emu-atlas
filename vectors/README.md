@@ -118,14 +118,14 @@ A declared entry with no stamp here answers **no stamp**, so a vector that forgo
 stamped.
 
 **`ps2_bios_headers`** — the path of a file `files` declares → what the core's own ROMDIR read of it yields:
-`{"romver": …, "serial": …}`, the two strings the walk reads — `romver` exactly 14 characters, `serial` at most 15 —
-from which the reference builds the same header fields its reader builds; or `"unreadable"` / `"not-a-bios"` (the file
-was read and fails the core's own test, which is a finding about the bytes, not a read failure). It is modeled at the
-seam for the reason `appimages` is: the real read walks a table inside a whole BIOS image, which no fixture should
-carry. The file must not be one declared `unreadable` — its bytes are what cannot be read, so a real read answers
-`unreadable` before any test. A declared file with no entry here answers **missing**, which the firmware folder route
-states as `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as
-no BIOS.
+`{"romver": …, "serial": …}`, the two strings the walk reads — `romver` exactly 14 characters, `serial` at most 15, each
+character one byte (latin-1), and no NUL in `serial`, which a C string read from fifteen bytes cannot hold — from which
+the reference builds the same header fields its reader builds; or `"unreadable"` / `"not-a-bios"` (the file was read and
+fails the core's own test, which is a finding about the bytes, not a read failure). It is modeled at the seam for the
+reason `appimages` is: the real read walks a table inside a whole BIOS image, which no fixture should carry. The file
+must not be one declared `unreadable` — its bytes are what cannot be read, so a real read answers `unreadable` before
+any test. A declared file with no entry here answers **missing**, which the firmware folder route states as
+`firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as no BIOS.
 
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
 `/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
