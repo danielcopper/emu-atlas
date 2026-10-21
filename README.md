@@ -15,7 +15,7 @@
 <a href="docs/how-to-use.md"><img alt="How to use" src="https://img.shields.io/badge/how%20to%20use-read-649a83?style=for-the-badge&labelColor=16382c"></a>
 <a href="https://github.com/danielcopper/emu-atlas/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/danielcopper/emu-atlas?style=for-the-badge&label=release&color=649a83&labelColor=16382c"></a>
 <a href="https://github.com/danielcopper/emu-atlas/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/danielcopper/emu-atlas?style=for-the-badge&color=649a83&labelColor=16382c"></a>
-<a href="pyproject.toml"><img alt="Requires Python 3.11 or newer" src="https://img.shields.io/badge/Python-%E2%89%A5%203.11-649a83?style=for-the-badge&labelColor=16382c"></a>
+<a href="pyproject.toml"><img alt="Requires Python 3.12 or newer" src="https://img.shields.io/badge/Python-%E2%89%A5%203.12-649a83?style=for-the-badge&labelColor=16382c"></a>
 <a href="pyproject.toml"><img alt="Zero runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-zero-649a83?style=for-the-badge&labelColor=16382c"></a>
 
 </div>

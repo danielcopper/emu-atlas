@@ -49,10 +49,11 @@ importing a copy under a parent package in an interpreter that provably cannot s
 
 The copy also runs on the host's interpreter, and a frozen runtime is not a whole interpreter: a PyInstaller bundle
 ships the stdlib modules its build analysis reached, so availability there is a per-module question rather than a
-per-version one. Decky Loader's bundle carries `pyexpat` but not the `xml.etree` wrapper around it, and atlas, which
-imported that wrapper, failed there at import time (issue #339). Since v0.5.1 the XML reads go through `atlas/_xml.py`:
-the same expat ElementTree itself parses with, in ElementTree's shape. Zero runtime dependencies is one half of "a
-directory copy runs where the consumer runs"; keeping atlas's own stdlib surface small is the other.
+per-version one. Decky Loader's bundle, where the first consumer's backend ran, carried `pyexpat` but not the
+`xml.etree` wrapper around it, and atlas, which imported that wrapper, failed there at import time (issue #339). Since
+v0.5.1 the XML reads go through `atlas/_xml.py`: the same expat ElementTree itself parses with, in ElementTree's shape.
+Zero runtime dependencies is one half of "a directory copy runs where the consumer runs"; keeping atlas's own stdlib
+surface small is the other.
 
 ### Proving the copy against a release
 
@@ -92,20 +93,20 @@ it. Those reads are the codec's only consumers: the resolver asks for AppImage c
 whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the stdlib's
 `compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
 
-On an older interpreter the codec has to come from the host, and a host that vendors the backport under its own parent
-package imports it as `_vendor.backports.zstd` — neither name the probe tries. As shipped, `backports.zstd` 1.7.0 does
-not import under another parent at all: its `__init__.py` and `_zstdfile.py` import their own package by its absolute
-name (`import backports.zstd._zstd as _zstd`, `from backports.zstd import _streams`), so a literal copy under `_vendor`
-fails with `ModuleNotFoundError: No module named 'backports'`. The host makes those self-imports relative first
+On 3.12 and 3.13 the codec has to come from the host, and a host that vendors the backport under its own parent package
+imports it as `_vendor.backports.zstd` — neither name the probe tries. As shipped, `backports.zstd` 1.7.0 does not
+import under another parent at all: its `__init__.py` and `_zstdfile.py` import their own package by its absolute name
+(`import backports.zstd._zstd as _zstd`, `from backports.zstd import _streams`), so a literal copy under `_vendor` fails
+with `ModuleNotFoundError: No module named 'backports'`. The host makes those self-imports relative first
 (`from . import _zstd as _zstd`, `from . import _streams`).
 
-How far that edit reaches, measured against the 1.7.0 wheel under CPython 3.11: importing the package for `decompress`
-runs five absolute self-imports, three in `__init__.py` and two in `_zstdfile.py`, and each one is needed — leaving any
-one absolute fails the import. The whole wheel holds 31 such lines in 13 files; the other 26 run only when their feature
-is used (the lazy `register_shutil` import in `__init__.py` and `_shutil` itself, the CFFI fallback in `_zstd.py` and
-`_cffi/`, `tarfile`, `zipfile`), and a host that makes all 31 relative has the whole package. Those numbers are 1.7.0's,
-so a later wheel is counted again before it is vendored — atlas ships no copy of the backport, and nothing in its own
-tests notices when they move.
+How far that edit reaches, measured against the 1.7.0 wheels for CPython 3.12 and 3.13, each under its own interpreter
+(the two carry the same Python files): importing the package for `decompress` runs five absolute self-imports, three in
+`__init__.py` and two in `_zstdfile.py`, and each one is needed — leaving any one absolute fails the import. Each wheel
+holds 31 such lines in 13 files; the other 26 run only when their feature is used (the lazy `register_shutil` import in
+`__init__.py` and `_shutil` itself, the CFFI fallback in `_zstd.py` and `_cffi/`, `tarfile`, `zipfile`), and a host that
+makes all 31 relative has the whole package. Those numbers are 1.7.0's, so a later wheel is counted again before it is
+vendored — atlas ships no copy of the backport, and nothing in its own tests notices when they move.
 
 Then the host hands the module over, before the first atlas call:
 
@@ -124,21 +125,14 @@ provider zstd images go through here and by which route — or `None` where no p
 result is an `atlas.ZstdProvider`: `name` is the registered object's own name, or the name the probe imported it under,
 and `registered` says which of the two it was.
 
-The first consumer has measured the runtime side of this on its own bundle and published what it found
+The case this seam was built for is the first consumer's runtime at the time: its backend ran under Decky Loader 3.2.6,
+a PyInstaller bundle embedding CPython 3.11 that ran a plugin backend as a re-exec'd child of that same binary — a
+frozen host on an interpreter without `compression.zstd`, where the codec could come only from the host's own packaging.
+That consumer measured the runtime side on its own bundle and published what it found
 ([danielcopper/romm-tender#1660](https://github.com/danielcopper/romm-tender/issues/1660#issuecomment-5481535804)) —
-that consumer's measurement on that consumer's runtime, not a result verified here. Decky Loader 3.2.6 is a PyInstaller
-bundle embedding CPython 3.11, and it runs a plugin backend as a re-exec'd child of that same binary; it already imports
-third-party cp311 extension modules of its own, so one more imported extension module is not a new capability for that
-runtime. The `cp311-cp311-manylinux2014_x86_64` wheel of `backports.zstd` 1.7.0 fits it: the extension module declares
-no `NEEDED` entry for libpython (it resolves the CPython symbols it uses out of the host process), needs only libc and
-libpthread, and asks for no versioned glibc symbol above `GLIBC_2.14`. The licence is PSF-2.0, unpacked the wheel is 1.4
-MB of which the extension module is 960 KB, and the `_cffi/` fallback the wheel also carries is inert in that wheel,
-because the `_zstd_cffi` module that fallback imports is not included.
+that consumer's measurement on that consumer's runtime, not a result verified here.
 
-The codec's single reader is also why that consumer does not ship the backport in its first cut: shipping without the
-codec degrades only EmuDeck's catalogue answer, and `emulator-catalogue-sealed` says so where it does, which puts the
-wheel in the later wave that brings that consumer's EmuDeck surface. atlas itself neither ships nor imports the
-backport: the probe is discovery, not a dependency.
+atlas itself neither ships nor imports the backport: the probe is discovery, not a dependency.
 
 ### The core probe under a frozen host
 
@@ -2480,12 +2474,12 @@ force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
 `es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the runtime has the image's codec —
 `compression.zstd` arrives with Python 3.14, and `backports.zstd` (the same code, published for older interpreters) is
 accepted equally. So is the module a host hands over with `atlas.register_zstd_provider`, which is what a host that
-vendors the codec under its own packaging needs. A host application that carries the backport grants its 3.11 runtime
-the capability without atlas gaining a dependency — and the catalogue is then complete: nothing sealed, no list derived,
-and an embedded system's `<platform>` tag reads live like any other. On older interpreters, and wherever the image is
-missing, replaced or restructured, the sealed state stays exactly what it always was. The capability is the _runtime's_,
-so the same machine can answer differently under two Pythons — both answers are honest, and the caveat says which one
-you got.
+vendors the codec under its own packaging needs. A host application that carries the backport grants its 3.12 or 3.13
+runtime the capability without atlas gaining a dependency — and the catalogue is then complete: nothing sealed, no list
+derived, and an embedded system's `<platform>` tag reads live like any other. On 3.12 and 3.13 without a provider, and
+wherever the image is missing, replaced or restructured, the sealed state stays exactly what it always was. The
+capability is the _runtime's_, so the same machine can answer differently under two Pythons — both answers are honest,
+and the caveat says which one you got.
 
 Read the four codes, not the emptiness of `caveats`: a broken installation puts the health findings every answer carries
 in front of any of these, so `if not answer.caveats:` is not the "read and declares nothing" test — a broken marker,

@@ -42,7 +42,7 @@ guessed from a file extension.
 - _API shape_ (M8, M10): `Installation` protocol instead of a union, standalone entries as typed `Unresolved` domain
   outcomes, Literal vocabularies with validated constructors, deeply immutable value objects, no boolean coercion at
   data boundaries.
-- _Packaging honesty_ (M14, M15): one version source (pyproject, release-please python type), CI on 3.11/3.12/3.14 (the
+- _Packaging honesty_ (M14, M15): one version source (pyproject, release-please python type), CI on 3.12/3.13/3.14 (the
   matrix covers both sides of the zstd capability), wheel and sdist built and verified from a clean install, generated
   docs with full source identity.
 
