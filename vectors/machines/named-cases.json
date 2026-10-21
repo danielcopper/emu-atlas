@@ -12653,6 +12653,363 @@
       }
     },
     {
+      "name": "rom-locations-answers-every-declared-system-as-rom-location-does",
+      "rationale": "Every system the catalogue declares, in the systems answer's order, each with exactly the placement rom_location gives it: n64 resolved through ES-DE's own ROMDirectory setting, and a system declared with no <path> keeping its rom-path-undeclared caveat on its own entry. The catalogue was read, so the answer as a whole carries no caveat.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<bool name=\"AlternativeEmulatorPerGame\" value=\"true\" />\n<string name=\"MediaDirectory\" value=\"/mnt/sd/retrodeck/ES-DE/downloaded_media\" />\n<string name=\"ROMDirectory\" value=\"/mnt/sd/retrodeck/roms\" />\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "rom_locations_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "rom_locations": {
+          "placements": [
+            {
+              "system": "n64",
+              "placement": {
+                "dir": "/mnt/sd/retrodeck/roms/n64",
+                "physical_dir": null,
+                "extensions": [
+                  ".n64",
+                  ".N64",
+                  ".z64",
+                  ".Z64",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "caveats": []
+              }
+            },
+            {
+              "system": "pathless",
+              "placement": {
+                "dir": null,
+                "physical_dir": null,
+                "extensions": [],
+                "caveats": [
+                  {
+                    "code": "rom-path-undeclared",
+                    "data": {
+                      "system": "pathless"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "emudeck-rom-locations-answers-every-system-of-the-on-disk-layers",
+      "rationale": "EmuDeck's ES-DE answers from the layers it can read while the bundled one stays sealed in the AppImage: the systems answer's emulator-catalogue-sealed rides once on the whole answer, and the one system's entry is the placement rom_location gives, its own sealed caveat included.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />",
+          "/bin/bash": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/roms"
+        ],
+        "rom_locations_query": {
+          "installation": "emudeck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "rom_locations": {
+          "placements": [
+            {
+              "system": "atarijaguar",
+              "placement": {
+                "dir": "/home/deck/Emulation/roms/atarijaguar",
+                "physical_dir": null,
+                "extensions": [
+                  ".j64",
+                  ".J64",
+                  ".rom",
+                  ".ROM",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "caveats": [
+                  {
+                    "code": "emulator-catalogue-sealed",
+                    "data": {
+                      "system": "atarijaguar"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "rom-locations-of-a-catalogue-that-could-not-be-read-says-why-it-is-empty",
+      "rationale": "No entries, and the whole answer says why: the bundled catalogue could not be read, so emulator-catalogue-unreadable states that the empty list is atlas unable to look rather than a catalogue that declares no systems.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
+            "status": "unreadable"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "rom_locations_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "rom_locations": {
+          "placements": [],
+          "caveats": [
+            {
+              "code": "emulator-catalogue-unreadable",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "rom-locations-keeps-a-rompath-nothing-resolves-on-its-system",
+      "rationale": "A relative ROMDirectory is not a path ES-DE can substitute for %ROMPATH%, so the system's entry has no dir and carries rom-path-unresolved with the declared and configured values, exactly as rom_location answers it; the extensions survive, and the catalogue itself was read, so the answer as a whole states nothing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
+          "/mnt/sd/retrodeck/bios/.keep": "",
+          "/mnt/sd/retrodeck/saves/.keep": "",
+          "/mnt/sd/retrodeck/roms/n64/.keep": "",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"Emulation/roms\" />\n"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.so": {
+            "library_name": "Mupen64Plus-Next"
+          }
+        },
+        "rom_locations_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": [
+              {
+                "code": "roms-root-not-absolute",
+                "data": {
+                  "value": "Emulation/roms"
+                }
+              }
+            ]
+          }
+        ],
+        "rom_locations": {
+          "placements": [
+            {
+              "system": "n64",
+              "placement": {
+                "dir": null,
+                "physical_dir": null,
+                "extensions": [
+                  ".n64",
+                  ".N64",
+                  ".z64",
+                  ".Z64",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "caveats": [
+                  {
+                    "code": "rom-path-unresolved",
+                    "data": {
+                      "system": "n64",
+                      "declared": "%ROMPATH%/n64",
+                      "configured": "Emulation/roms"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "rom-locations-on-a-bare-retroarch-refuses-each-system-as-rom-location-does",
+      "rationale": "A bare RetroArch lists the systems its cores file under, derived rather than read from a frontend catalogue, and has no catalogue that declares where their ROMs live: each entry is rom_location's refusal for that system, and the derivation is stated once on the whole answer.",
+      "input": {
+        "home": "/home/user",
+        "files": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+        },
+        "cores": {
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          },
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte"
+          }
+        },
+        "rom_locations_query": {}
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_flatpak",
+            "label": "RetroArch (Flatpak)",
+            "kinds": [
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/user/.var/app/org.libretro.RetroArch/config/retroarch",
+            "health": []
+          }
+        ],
+        "rom_locations": {
+          "placements": [
+            {
+              "system": "gba",
+              "placement": {
+                "dir": null,
+                "physical_dir": null,
+                "extensions": [],
+                "caveats": [
+                  {
+                    "code": "emulator-catalogue-unavailable",
+                    "data": {
+                      "arrangement": "retroarch"
+                    }
+                  },
+                  {
+                    "code": "arrangement-unverified",
+                    "data": {
+                      "kind": "bare_retroarch_flatpak"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "system": "gbc",
+              "placement": {
+                "dir": null,
+                "physical_dir": null,
+                "extensions": [],
+                "caveats": [
+                  {
+                    "code": "emulator-catalogue-unavailable",
+                    "data": {
+                      "arrangement": "retroarch"
+                    }
+                  },
+                  {
+                    "code": "arrangement-unverified",
+                    "data": {
+                      "kind": "bare_retroarch_flatpak"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "caveats": [
+            {
+              "code": "emulator-list-derived",
+              "data": {}
+            },
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_flatpak"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "emudeck-esde-answers-from-the-on-disk-layers",
       "rationale": "EmuDeck deploys upstream ES-DE as an AppImage and wires it through plain files under ~/ES-DE (dragoonDorise/EmuDeck @ 863ab69; ES-DE v3.4.1). The catalogue answers come from the readable layers — the custom_systems overlay EmuDeck writes, the gamelist selections it seeds, es_settings.xml's ROMDirectory — and every one carries emulator-catalogue-sealed, because the bundled es_systems.xml is embedded in the AppImage (INSTALL.md v3.4.1:1470) and atlas does not open it. An overlay system answers fully (ES-DE's merge replaces a same-name bundled system entirely), the gamelist's alternativeEmulator promotes Virtual Jaguar over the declared order, and %ROMPATH% resolves against the ROMDirectory EmuDeck itself wrote (emuDeckESDE.sh:407-409).",
       "input": {

@@ -50,6 +50,7 @@ INPUT_FIELDS_OPTIONAL = {
     "launchable_query",
     "launch_command_query",
     "rom_location_query",
+    "rom_locations_query",
     "entry_savefile_query",
     "savestate_query",
     "entry_savestate_query",
@@ -113,6 +114,10 @@ KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
 # ROM placement is asked of one system; content plays no part in where a
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
+# Every system's ROM placement at once (issue #670) is asked of the systems the
+# catalogue declares, so like the systems question it takes no arguments —
+# only which handle answers it.
+ROM_LOCATIONS_QUERY_FIELDS = {"installation"}
 # The platform questions (issue #68): forward takes a public vocabulary and a
 # value in it, reverse takes one system. The vocabularies, statuses and tag
 # sources mirror atlas.platforms / atlas.installations — closed sets.
@@ -837,6 +842,12 @@ def _validate_rom_location_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "rom_location_query", query)
 
 
+def _validate_rom_locations_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not set(query) <= ROM_LOCATIONS_QUERY_FIELDS:
+        fail(f"{name}: input.rom_locations_query keys must be a subset of {sorted(ROM_LOCATIONS_QUERY_FIELDS)}")
+    _validate_handle_selector(name, "rom_locations_query", query)
+
+
 def _validate_systems_query(name: str, query: Any) -> None:
     if not isinstance(query, dict) or not set(query) <= SYSTEMS_QUERY_FIELDS:
         fail(f"{name}: input.systems_query keys must be a subset of {sorted(SYSTEMS_QUERY_FIELDS)}")
@@ -1156,6 +1167,7 @@ _OWN_QUERY_VALIDATORS = {
     "launchable_query": _validate_launchable_query,
     "launch_command_query": _validate_launch_command_query,
     "rom_location_query": _validate_rom_location_query,
+    "rom_locations_query": _validate_rom_locations_query,
     "firmware_query": _validate_firmware_query,
     "identify_query": _validate_identify_query,
     "platform_systems_query": _validate_platform_systems_query,
@@ -3132,39 +3144,70 @@ def _no_catalogue_codes_in(caveats: list[Any]) -> list[str]:
     return sorted({c["code"] for c in caveats} & NO_CATALOGUE_CODES)
 
 
-def _validate_rom_location_dirs(name: str, placement: dict[str, Any]) -> None:
+def _validate_rom_location_dirs(name: str, placement: dict[str, Any], label: str) -> None:
     """The pair of directory views: each a non-empty string or null, and the
     physical view never stated without the resolved dir it backs."""
     for key in ("dir", "physical_dir"):
         if placement[key] is not None and (not isinstance(placement[key], str) or not placement[key]):
-            fail(f"{name}: expected.rom_location.{key} must be a non-empty string or null")
+            fail(f"{name}: {label}.{key} must be a non-empty string or null")
     if placement["physical_dir"] is not None and placement["dir"] is None:
-        fail(f"{name}: expected.rom_location.physical_dir without a dir — nothing was resolved to back")
+        fail(f"{name}: {label}.physical_dir without a dir — nothing was resolved to back")
 
 
-def _validate_rom_location(name: str, placement: Any) -> None:
-    """A ROM placement: the pair of directory views, the declaration, and why not."""
+def _validate_rom_location(name: str, placement: Any, label: str = "expected.rom_location") -> None:
+    """A ROM placement: the pair of directory views, the declaration, and why not.
+
+    *label* is where the placement sits, for the complaint: the per-system
+    question's block, or one entry of the every-system one.
+    """
     fields = {"dir", "physical_dir", "extensions", "caveats"}
     if not isinstance(placement, dict) or set(placement) != fields:
-        fail(f"{name}: expected.rom_location must carry exactly {sorted(fields)}")
-    _validate_rom_location_dirs(name, placement)
+        fail(f"{name}: {label} must carry exactly {sorted(fields)}")
+    _validate_rom_location_dirs(name, placement, label)
     if not isinstance(placement["extensions"], list) or not all(
         isinstance(e, str) and e for e in placement["extensions"]
     ):
-        fail(f"{name}: expected.rom_location.extensions must be a list of non-empty strings")
+        fail(f"{name}: {label}.extensions must be a list of non-empty strings")
     _validate_caveats(name, placement["caveats"])
     # Both facts come out of the same <system> element, so a catalogue nobody
     # read yields neither — an expectation stating either alongside one of those
     # codes locks in an answer no resolver can produce.
     unread = _no_catalogue_codes_in(placement["caveats"])
     if unread and (placement["dir"] or placement["extensions"]):
-        fail(f"{name}: expected.rom_location states an answer and {unread}")
+        fail(f"{name}: {label} states an answer and {unread}")
     # No directory is never the whole answer: every branch that resolves none
     # says which kind of none it is, and a vector asserting silence would lock
     # in the one shape the caveats exist to prevent — a client reading null as
     # "look in the default place".
     if placement["dir"] is None and not placement["caveats"]:
-        fail(f"{name}: expected.rom_location resolved no dir and states no caveat saying why")
+        fail(f"{name}: {label} resolved no dir and states no caveat saying why")
+
+
+def _validate_rom_locations(name: str, answer: Any) -> None:
+    """Every system's ROM placement: one entry per listed system, and the catalogue's caveats.
+
+    Each entry's placement is held to the per-system question's own form, and
+    the top-level caveats are the systems answer's, held to its rule: systems
+    listed beside a code saying no catalogue was read is an answer no resolver
+    gives, unless the list was derived from the emulators instead.
+    """
+    _require_exact(name, answer, {"placements", "caveats"}, "expected.rom_locations")
+    if not isinstance(answer["placements"], list):
+        fail(f"{name}: expected.rom_locations.placements must be a list")
+    systems: list[str] = []
+    for entry in answer["placements"]:
+        _require_exact(name, entry, {"system", "placement"}, "each expected.rom_locations entry")
+        if not isinstance(entry["system"], str) or not entry["system"]:
+            fail(f"{name}: expected.rom_locations entries name their system as a non-empty string")
+        _validate_rom_location(name, entry["placement"], f"expected.rom_locations[{entry['system']}]")
+        systems.append(entry["system"])
+    if len(set(systems)) != len(systems):
+        fail(f"{name}: expected.rom_locations names a system more than once")
+    _validate_caveats(name, answer["caveats"])
+    unread = _no_catalogue_codes_in(answer["caveats"])
+    derived = any(c["code"] == "emulator-list-derived" for c in answer["caveats"])
+    if systems and unread and not derived:
+        fail(f"{name}: expected.rom_locations states systems and {unread} without emulator-list-derived")
 
 
 def _validate_declared_indexes(name: str, entries: list[Any], *, derived: bool) -> None:
@@ -3545,6 +3588,7 @@ _EXPECTED_KEYS = {
     "launchable",
     "launch_command",
     "rom_location",
+    "rom_locations",
     "entry_savefile_location",
     "savestate_location",
     "entry_savestate_location",
@@ -3573,6 +3617,7 @@ _EXPECTATION_PAIRINGS = (
     ("launchable", "launchable_query"),
     ("launch_command", "launch_command_query"),
     ("rom_location", "rom_location_query"),
+    ("rom_locations", "rom_locations_query"),
     ("savefile_location", "savefile_query"),
     ("entry_savefile_location", "entry_savefile_query"),
     ("savestate_location", "savestate_query"),
@@ -3606,6 +3651,7 @@ _RESOLVER_EXPECTATIONS = {
     "entry_mod_location",
     "catalogue",
     "systems",
+    "rom_locations",
     "launchable",
     "launch_command",
     "firmware",
@@ -3661,6 +3707,7 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         ),
         _BlockCheck("catalogue", _validate_catalogue),
         _BlockCheck("rom_location", _validate_rom_location),
+        _BlockCheck("rom_locations", _validate_rom_locations),
         _BlockCheck("systems", _validate_systems),
         _BlockCheck("systems_for_platform", _validate_platform_systems),
         _BlockCheck("platform_ids", _validate_platform_ids),

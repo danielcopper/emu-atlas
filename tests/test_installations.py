@@ -11801,6 +11801,39 @@ class TestThePlaceNotReadCodes:
         assert atlas.CAVEAT_EMULATOR_CONFIG_MISSING in atlas.PLACE_NOT_READ_CODES
 
 
+class TestRomLocations:
+    """Every system's ROM folder in one question (issue #670): the per-system answers, unchanged."""
+
+    @staticmethod
+    def _rom_locations_vectors():
+        path = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "named-cases.json"
+        return [v for v in json.loads(path.read_text())["vectors"] if "rom_locations_query" in v["input"]]
+
+    def _handles(self):
+        for vector in self._rom_locations_vectors():
+            inp = vector["input"]
+            installs = atlas.detect(inp["home"], fixture_machine(inp))
+            kind = inp["rom_locations_query"].get("installation")
+            yield vector["name"], next(i for i in installs if kind is None or i.kind == kind)
+
+    def test_the_vectors_ask_it_of_every_handle_kind_that_answers_it(self):
+        assert {handle.kind for _, handle in self._handles()} == {
+            "retrodeck",
+            "emudeck",
+            "bare_retroarch_flatpak",
+        }
+
+    def test_every_entry_is_the_answer_rom_location_gives(self):
+        for name, handle in self._handles():
+            entries = [(entry.system, entry.placement) for entry in handle.rom_locations().placements]
+            assert entries == [(system, handle.rom_location(system)) for system in handle.systems().systems], name
+
+    def test_the_answer_states_the_catalogue_as_the_systems_answer_does(self):
+        for name, handle in self._handles():
+            answer, listed = handle.rom_locations(), handle.systems()
+            assert (answer.sources, answer.caveats) == (listed.sources, listed.caveats), name
+
+
 class TestRoots:
     """The roots question (issue #612): the four paths, where each came from, and what decides it."""
 

@@ -184,6 +184,7 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `platform_ids_query`     | `platform_ids`                | which public platform ids belong to this system             |
 | `launchable_query`       | `launchable`                  | does this file launch as this system's content, and why not |
 | `rom_location_query`     | `rom_location`                | where do this system's ROMs live                            |
+| `rom_locations_query`    | `rom_locations`               | where do the ROMs of every listed system live               |
 | `launch_command_query`   | `launch_command`              | the command the frontend would run for this file            |
 | `roots_query`            | `roots`                       | where each root folder is, and what decided it              |
 | `firmware_query`         | `firmware`                    | `kind` is `core`, `system` or `inventory`                   |
@@ -195,6 +196,10 @@ question's subject — the patch files are named after it — so a vector asking
 
 `launch_command_query` carries `system` and an absolute `content_path`, as the question requires, and may name the
 catalogue entry by its `label`; without one the frontend's own choice answers.
+
+`rom_locations_query` asks every system the `systems` answer lists at once and, like `systems_query`, carries nothing
+but an optional `installation`: each entry of its answer is the `rom_location` answer for that system, and the answer's
+own `caveats` are the `systems` answer's.
 
 `launchable_query` carries `system` and `content_path`, both required — a verdict without a file has no extension to
 judge, and one without a system has no accept-list to judge it by — and takes no `label`.

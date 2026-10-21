@@ -76,6 +76,9 @@ inst.rom_location("n64")             # on EVERY handle: a RomPlacement (dir, phy
                                      # sources, caveats) — where that system's ROMs live and which files
                                      # the frontend launches, both off the same <system> declaration.
                                      # no dir? the caveat says which kind of none, same as above.
+inst.rom_locations()                 # on EVERY handle: a RomLocationsAnswer — rom_location for every
+                                     # system systems() lists, in its order, in one question that reads
+                                     # the catalogue once; systems()'s caveats ride once on the whole.
 
 # -> SavefilePlacement (dir, root_kind, needs, file_set, granularity, caveats, fallback_dir, physical_dir),
 #    or — on the entry route — Unresolved (a typed domain outcome, e.g. a standalone entry

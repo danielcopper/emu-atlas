@@ -331,6 +331,15 @@ def _base_systems(**overrides) -> Vector:
     return _vector({"systems": block}, installed=True, systems_query={})
 
 
+def _rom_placement(**overrides) -> Vector:
+    return {"dir": f"{HOME}/roms/{SYSTEM}", "physical_dir": None, "extensions": [".gb"], "caveats": [], **overrides}
+
+
+def _base_rom_locations(**overrides) -> Vector:
+    block = {"placements": [{"system": SYSTEM, "placement": _rom_placement()}], "caveats": [], **overrides}
+    return _vector({"rom_locations": block}, installed=True, rom_locations_query={})
+
+
 def _base_platform_systems(**overrides) -> Vector:
     block = {
         "vocabulary": "screenscraper",
@@ -474,6 +483,7 @@ BASES = {
     "identification": _base_identification,
     "catalogue": _base_catalogue,
     "systems": _base_systems,
+    "rom_locations": _base_rom_locations,
     "platform_systems": _base_platform_systems,
     "entry": _base_entry,
     "texture": _base_texture,
@@ -1100,6 +1110,40 @@ SYSTEMS_CASES = [
          "states systems and", id="systems-and-unread"),
 ]
 
+UNREAD_CATALOGUE = [{"code": "emulator-catalogue-unreadable", "data": {}}]
+ROM_LOCATIONS_CASES = [
+    case(_base_rom_locations(sources=[]), "expected.rom_locations must be exactly the fields",
+         id="rom-locations-stray-key"),
+    case(_base_rom_locations(placements={}), "expected.rom_locations.placements must be a list",
+         id="rom-locations-placements-not-list"),
+    case(_base_rom_locations(placements=[{"system": SYSTEM}]),
+         "each expected.rom_locations entry must be exactly the fields", id="rom-locations-entry-without-placement"),
+    case(_base_rom_locations(placements=[{"system": "", "placement": _rom_placement()}]),
+         "entries name their system as a non-empty string", id="rom-locations-empty-system"),
+    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement(dir=None)}]),
+         "expected.rom_locations[gb] resolved no dir and states no caveat", id="rom-locations-silent-placement"),
+    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement(physical_dir=f"{HOME}/x",
+                                                                                        dir=None)}]),
+         "expected.rom_locations[gb].physical_dir without a dir", id="rom-locations-physical-without-dir"),
+    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement()}] * 2),
+         "names a system more than once", id="rom-locations-repeated-system"),
+    case(_base_rom_locations(caveats=[{"code": "nope", "data": {}}]),
+         "caveat code must be one of", id="rom-locations-unknown-code"),
+    case(_base_rom_locations(caveats=UNREAD_CATALOGUE),
+         "expected.rom_locations states systems and", id="rom-locations-systems-and-unread"),
+    case(_vector({"rom_locations": {"placements": [], "caveats": UNREAD_CATALOGUE}}, rom_locations_query={}),
+         "a resolver expectation needs a detected installation", id="rom-locations-nothing-detected"),
+    case(_base_rom_locations() | {"input": {"home": HOME, "files": {f"{HOME}/marker": ""},
+                                            "rom_locations_query": "x"}},
+         "input.rom_locations_query keys must be a subset", id="rom-locations-query-not-object"),
+    case(_with(_base_rom_locations(), rom_locations_query={"system": SYSTEM}),
+         "input.rom_locations_query keys must be a subset", id="rom-locations-query-stray"),
+    case(_with(_base_rom_locations(), rom_locations_query={"installation": "nope"}),
+         "input.rom_locations_query.installation must be one of", id="rom-locations-query-unknown-handle"),
+    case(_vector({"rom_locations": {"placements": [], "caveats": UNREAD_CATALOGUE}}, installed=True),
+         "rom_locations_query and rom_locations expectation", id="pair-rom-locations"),
+]
+
 # Issue #584: an id resolves through the per-system table or the crosswalk,
 # never both, or states platform-unmapped.
 UNMAPPED = {"code": "platform-unmapped", "data": {"vocabulary": "screenscraper", "value": "6"}}
@@ -1667,6 +1711,7 @@ ALL_CASES = [
     *ENTRY_CASES,
     *CATALOGUE_CASES,
     *SYSTEMS_CASES,
+    *ROM_LOCATIONS_CASES,
     *PLATFORM_SYSTEMS_CASES,
     *AGGREGATE_CASES,
     *FIRMWARE_SHAPE_CASES,

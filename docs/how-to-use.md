@@ -515,8 +515,8 @@ that differs between two installations on one machine, so this is the route wher
 side is the normal case.
 
 Every question a handle answers, the aggregate asks all of them: `health()`, `savefile_location()`, `systems()`,
-`emulators_for()`, `rom_location()`, `firmware_for_core()`, `firmware_for_system()`, `firmware_inventory()`,
-`identify_firmware()` — same arguments, same answers. Each returns a tuple of labelled answers:
+`emulators_for()`, `rom_location()`, `rom_locations()`, `firmware_for_core()`, `firmware_for_system()`,
+`firmware_inventory()`, `identify_firmware()` — same arguments, same answers. Each returns a tuple of labelled answers:
 
 - `answered.installation` is the handle itself, not a copy of its identity: read `kind`, `kinds`, `root()` and
   `health()` off it, or ask it the next question (its `emulators_for`, then that entry's own `savefile_location`).
@@ -2978,6 +2978,25 @@ matching needs — but do it on your side, on a copy. atlas will not clean the l
 about what the frontend launches, and the frontend launches what its own typo says: a dot-less token matches nothing
 there either, and inventing the dot would make atlas's answer disagree with the machine.
 
+### Every system at once — `rom_locations()`
+
+A client that needs the ROM folder of every system — to refuse a place for its own folder that lies inside one, say —
+asks once instead of looping over `systems()`:
+
+```python
+answer = inst.rom_locations()
+for entry in answer.placements:   # one per system, in the order systems() lists them
+    entry.system                  # 'n64'
+    entry.placement               # exactly what rom_location('n64') answers, caveats included
+answer.caveats                    # the systems answer's caveats, once for the whole answer
+```
+
+Each entry is the per-system answer, so everything above holds for it unchanged — including a `None` directory and the
+caveat saying which of the seven reasons. What the answer adds is the catalogue as a whole: its `caveats` are what
+`systems()` states, so an empty `placements` says whether the catalogue declares no systems or could not be read. One
+question reads and parses the catalogue and the frontend's settings once for every system, where the loop would read
+them once per system.
+
 ## Is this file launchable here?
 
 A client that has a file and a system needs to know whether anything on this machine will launch it — and when the
@@ -4053,11 +4072,11 @@ emu-atlas health
 
 Every question above has a subcommand under its own name (`savestate-location`, `screenshot-location`,
 `texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `systems-for-platform`, `platform-ids`,
-`rom-location`, `firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from
-the sections above: without `--installation` every detected installation answers and the output is the labelled list
-(`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers alone, in the
-question's bare shape. `--home` asks about another home directory. `--cwd` is `cwd=` on the save, savestate and firmware
-questions; a value that is not an absolute path is a usage error.
+`rom-location`, `rom-locations`, `firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer
+forms, both from the sections above: without `--installation` every detected installation answers and the output is the
+labelled list (`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers
+alone, in the question's bare shape. `--home` asks about another home directory. `--cwd` is `cwd=` on the save,
+savestate and firmware questions; a value that is not an absolute path is a usage error.
 
 The exit code separates answering from asking. `0` is an answer — an `unresolved` payload and an empty list are answers,
 exactly as in the library. `2` is a question that could not be put: a usage error, or an `--installation` kind this

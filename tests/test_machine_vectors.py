@@ -44,6 +44,7 @@ from atlas.contract import (
     installation_answers_contract,
     installation_contract,
     platform_systems_contract,
+    rom_locations_contract,
     rom_placement_contract,
     roots_contract,
     system_platforms_contract,
@@ -144,6 +145,10 @@ def _catalogue(installs, query, name):
 def _rom_location(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return rom_placement_contract(install.rom_location(query["system"]))
+
+
+def _rom_locations(installs, query, name):
+    return rom_locations_contract(_select(installs, query.get("installation"), name).rom_locations())
 
 
 def _systems(installs, query, name):
@@ -316,6 +321,7 @@ QUESTIONS = {
     "launchable": ("launchable_query", _launchable),
     "launch_command": ("launch_command_query", _launch_command),
     "rom_location": ("rom_location_query", _rom_location),
+    "rom_locations": ("rom_locations_query", _rom_locations),
     "aggregate": ("aggregate_query", _aggregate),
     "savefile_location": ("savefile_query", _savefile_location),
     "savestate_location": ("savestate_query", _savestate_location),
