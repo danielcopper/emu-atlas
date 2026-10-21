@@ -21,12 +21,14 @@ syntactically correct path handed out as if it were usable.
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import re
 import shlex
 import tomllib
 from glob import escape as _glob_escape
+from types import MappingProxyType
 from typing import (
     Any,
     Callable,
@@ -44,7 +46,7 @@ from typing import (
 from dataclasses import dataclass, field, replace as _dc_replace
 
 from . import _xml as _ET
-from ._question import one_question
+from ._question import once, one_question
 from . import whdload
 from .content_path import (
     content_basename,
@@ -18379,6 +18381,66 @@ _ES_FIND_RULES_XML = "es_find_rules.xml"
 _CUSTOM_OVERLAY_PROVENANCE = "es_systems.xml (custom_systems overlay)"
 
 
+def _catalogue_layer_once(
+    machine: Machine, path: str, provenance: str
+) -> tuple[ReadResult, CatalogueLayer | None]:
+    """One on-disk ``es_systems.xml`` layer → ``(read, layer)``, read and parsed once per question.
+
+    ``layer`` is ``None`` exactly where the read answered no text. A question
+    that asks the catalogue about every system it declares would otherwise
+    read and parse each layer once per system (issue #670); within one
+    question the layers are the same files, so the reading is done once and
+    handed on (:mod:`atlas._question`). Both halves are immutable, so every
+    caller shares the one reading.
+    """
+
+    def read_and_parse() -> tuple[ReadResult, CatalogueLayer | None]:
+        read = machine.read_text(path)
+        if read.text is None:
+            return read, None
+        return read, parse_es_systems(read.text, provenance=provenance)
+
+    return once(("es_systems", id(machine), path, provenance), read_and_parse)
+
+
+def _embedded_catalogue_layer_once(machine: Machine, appimage_path: str, entry: str) -> CatalogueLayer | None:
+    """The ``es_systems.xml`` layer embedded in an AppImage, read and parsed once per question.
+
+    :func:`_catalogue_layer_once` for the layer EmuDeck's ES-DE seals inside
+    its image: ``None`` is every outcome of the read short of text, which the
+    caller states as the sealed layer it always was.
+    """
+
+    def read_and_parse() -> CatalogueLayer | None:
+        embedded = machine.read_appimage_text(appimage_path, entry)
+        if embedded.text is None:
+            return None
+        return parse_es_systems(embedded.text, provenance="es_systems.xml (AppImage-embedded)")
+
+    return once(("es_systems_embedded", id(machine), appimage_path, entry), read_and_parse)
+
+
+def _esde_settings_once(machine: Machine, path: str) -> tuple[ReadResult, Mapping[str, str] | None]:
+    """ES-DE's ``es_settings.xml`` → ``(read, settings)``, read and parsed once per question.
+
+    ``settings`` is ``None`` where the read answered no text or the text did
+    not parse; the read's status tells the two apart. Every ROM placement
+    resolves ``%ROMPATH%`` through this file, so a question that places every
+    system's ROMs would otherwise read and parse it once per system (issue
+    #670); the settings are handed out read-only, so every caller shares the
+    one reading (:mod:`atlas._question`).
+    """
+
+    def read_and_parse() -> tuple[ReadResult, Mapping[str, str] | None]:
+        read = machine.read_text(path)
+        if read.text is None:
+            return read, None
+        settings = parse_es_settings(read.text)
+        return read, None if settings is None else MappingProxyType(settings)
+
+    return once(("es_settings", id(machine), path), read_and_parse)
+
+
 def _catalogue_unread_caveat(system: str | None = None) -> tuple[Caveat, ...]:
     """The caveat for a catalogue that could not be read — the same fact as the firmware route's.
 
@@ -19278,6 +19340,40 @@ class RomPlacement:
     caveats: tuple[Caveat, ...] = ()
     """Every degradation of this answer, and on an absent ``dir`` the statement of which
     kind of unresolved it is.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class SystemRomPlacement:
+    """One system of a :class:`RomLocationsAnswer` and where its ROMs live."""
+
+    system: str
+    """The system, in the catalogue's own spelling, as the systems answer lists it."""
+    placement: RomPlacement
+    """Exactly the placement the per-system ROM question answers for this system, caveats included."""
+
+
+@dataclass(frozen=True, slots=True)
+class RomLocationsAnswer:
+    """Where every system an installation's systems answer lists keeps its ROMs, in one answer.
+
+    The bulk form of :class:`RomPlacement` for a client that needs every ROM
+    folder at once: one entry per system the systems answer lists, in its
+    order, each carrying the placement the per-system question gives. What
+    the systems answer states about the catalogue as a whole — what was read,
+    and on an empty answer whether the catalogue declares no systems or could
+    not be read — is stated once here rather than inferred from the entries.
+    """
+
+    placements: tuple[SystemRomPlacement, ...] = ()
+    """One entry per system the systems answer lists, in its order — an empty list says
+    nothing on its own, and the caveats say which empty it is.
+    """
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    """The systems answer's caveats: every degradation of the catalogue as a whole,
+    and on an empty answer the statement of whether the catalogue declares no
+    systems or could not be read.
     """
 
 
@@ -20193,12 +20289,18 @@ def _platform_matches(
 
 
 def _commented_map(texts: tuple[str | None, ...]) -> dict[str, tuple[str, ...]]:
-    """The commented-out systems of *texts*, first sighting of a name winning."""
+    """The commented-out systems of *texts*, first sighting of a name winning.
+
+    Each text's commented blocks are parsed once per question, the way its
+    declarations are (:func:`_catalogue_layer_once`): every catalogue read
+    reaches here, so a question that reads the catalogue once per system would
+    otherwise parse them once per system too (issue #670).
+    """
     disabled: dict[str, tuple[str, ...]] = {}
     for text in texts:
         if text is None:
             continue
-        for name, tags in commented_out_systems(text):
+        for name, tags in once(("commented_out_systems", text), functools.partial(commented_out_systems, text)):
             disabled.setdefault(name, tags)
     return disabled
 
@@ -20471,6 +20573,24 @@ class _CatalogueQueries:
         answer, version = self._rom_location_answer(system)
         return _rom_placement_with_caveats(
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
+        )
+
+    @one_question
+    def rom_locations(self) -> RomLocationsAnswer:
+        """Where every system :meth:`systems` lists keeps its ROMs, in that answer's order.
+
+        Each entry is exactly what :meth:`rom_location` answers for that
+        system, asked within this one question, so the catalogue is read and
+        parsed once for all of them rather than once per system. The systems
+        answer's sources and caveats ride once on the whole answer: an empty
+        one says whether the catalogue declares no systems or could not be
+        read.
+        """
+        listed = self.systems()
+        return RomLocationsAnswer(
+            tuple(SystemRomPlacement(system, self.rom_location(system)) for system in listed.systems),
+            listed.sources,
+            listed.caveats,
         )
 
     @one_question
@@ -21175,11 +21295,10 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """
         empty: dict[str, SystemDeclaration] = {}
         no_disabled: dict[str, tuple[str, ...]] = {}
-        custom = CatalogueLayer(systems={})
         overlay_path = self._overlay_path(root)
-        custom_text = self._machine.read_text(overlay_path).text
-        if custom_text is not None:
-            custom = parse_es_systems(custom_text, provenance=_CUSTOM_OVERLAY_PROVENANCE)
+        custom_read, custom_layer = _catalogue_layer_once(self._machine, overlay_path, _CUSTOM_OVERLAY_PROVENANCE)
+        custom_text = custom_read.text
+        custom = CatalogueLayer(systems={}) if custom_layer is None else custom_layer
         if custom.invalid is not None:
             return empty, True, False, _catalogue_invalid_finding(overlay_path, custom.invalid), no_disabled
         if custom.load_exclusive:
@@ -21189,16 +21308,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         bundled_text: str | None = None
         bundled_path = self._sandbox().bundled(self._ESDE_BUNDLED_SANDBOX)
         if bundled_path is not None:
-            text = self._machine.read_text(bundled_path).text
-            if text is not None:
-                bundled = parse_es_systems(text, provenance="es_systems.xml (bundled)")
+            bundled_read, bundled_layer = _catalogue_layer_once(
+                self._machine, bundled_path, "es_systems.xml (bundled)"
+            )
+            if bundled_layer is not None:
+                bundled = bundled_layer
                 if bundled.invalid is not None:
                     return empty, True, False, _catalogue_invalid_finding(bundled_path, bundled.invalid), no_disabled
                 # Read AND parsed. RetroDECK ships the custom overlay fully
                 # commented out inside an empty <systemList/>, so it parses to
                 # zero systems by design and can never stand in for this.
                 read = True
-                bundled_text = text
+                bundled_text = bundled_read.text
         return (
             merge_layers(bundled.systems, custom.systems),
             read,
@@ -21394,12 +21515,11 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         The status rather than the caveat, because the two callers label it
         differently and only one of them has a system to name.
         """
-        result = self._machine.read_text(self._esde_settings_path())
+        result, settings = _esde_settings_once(self._machine, self._esde_settings_path())
         if result.status == READ_MISSING:
             return None, None
         if result.text is None:
             return None, result.status
-        settings = parse_es_settings(result.text)
         if settings is None:
             return None, _SETTINGS_UNPARSEABLE
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
@@ -23251,11 +23371,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         fine, so what the catalogue says is unknown, never refused.
         """
         appdata = self._esde_appdata_dir()
-        custom = CatalogueLayer(systems={})
         overlay_path = os.path.join(appdata, self._ESDE_OVERLAY_SUFFIX)
-        custom_text = self._machine.read_text(overlay_path).text
-        if custom_text is not None:
-            custom = parse_es_systems(custom_text, provenance=_CUSTOM_OVERLAY_PROVENANCE)
+        _, custom_layer = _catalogue_layer_once(self._machine, overlay_path, _CUSTOM_OVERLAY_PROVENANCE)
+        custom = CatalogueLayer(systems={}) if custom_layer is None else custom_layer
         if custom.invalid is not None:
             return {}, True, False, False, _catalogue_invalid_finding(overlay_path, custom.invalid)
         if custom.load_exclusive:
@@ -23280,13 +23398,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         empty = CatalogueLayer(systems={})
         shadow_path = os.path.join(appdata, self._ESDE_SHADOW_SUFFIX)
-        shadow = self._machine.read_text(shadow_path)
+        shadow, bundled = _catalogue_layer_once(
+            self._machine, shadow_path, "es_systems.xml (resource-override shadow)"
+        )
         if shadow.status != READ_MISSING:
-            if shadow.text is None:
+            if bundled is None:
                 return empty, False, True, None
-            bundled = parse_es_systems(
-                shadow.text, provenance="es_systems.xml (resource-override shadow)"
-            )
             if bundled.invalid is not None:
                 return empty, True, False, _catalogue_invalid_finding(shadow_path, bundled.invalid)
             # Read AND parsed: the shadow is the bundled layer, on disk.
@@ -23310,12 +23427,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         same embedded file and aborts its whole ``loadConfig`` on it.
         """
         appimage_path = self._esde_appimage_path()
-        embedded = self._machine.read_appimage_text(
-            appimage_path, self._ESDE_APPIMAGE_CATALOGUE_ENTRY
+        bundled = _embedded_catalogue_layer_once(
+            self._machine, appimage_path, self._ESDE_APPIMAGE_CATALOGUE_ENTRY
         )
-        if embedded.text is None:
+        if bundled is None:
             return None, None
-        bundled = parse_es_systems(embedded.text, provenance="es_systems.xml (AppImage-embedded)")
         if bundled.invalid is not None:
             return None, _catalogue_invalid_finding(appimage_path, bundled.invalid)
         return bundled, None
@@ -23575,12 +23691,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         seds ``${romsPath}`` into it (``emuDeckESDE.sh:407-409``) — so on a
         stock machine it is configured and absolute.
         """
-        result = self._machine.read_text(self._esde_settings_path())
+        result, settings = _esde_settings_once(self._machine, self._esde_settings_path())
         if result.status == READ_MISSING:
             return None, None
         if result.text is None:
             return None, result.status
-        settings = parse_es_settings(result.text)
         if settings is None:
             return None, _SETTINGS_UNPARSEABLE
         return settings.get(self._ROM_DIRECTORY_SETTING) or None, None
@@ -25718,6 +25833,8 @@ class Installation(Protocol):
     ) -> LaunchCommandAnswer: ...
 
     def rom_location(self, system: str) -> RomPlacement: ...
+
+    def rom_locations(self) -> RomLocationsAnswer: ...
 
     def firmware_for_core(
         self, core_so: str, *, verify: bool = False, cwd: str | None = None

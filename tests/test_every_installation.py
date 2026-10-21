@@ -23,6 +23,7 @@ from atlas.contract import (
     savefile_answer_contract,
     installation_contract,
     savefile_placement_contract,
+    rom_locations_contract,
     rom_placement_contract,
     savestate_placement_contract,
     systems_contract,
@@ -157,6 +158,10 @@ class TestItDelegates:
         assert [rom_placement_contract(p) for p in asked] == [
             rom_placement_contract(p) for p in direct
         ]
+
+    def test_rom_locations(self):
+        asked, direct = self._pairs(lambda h: h.rom_locations())
+        assert [rom_locations_contract(a) for a in asked] == [rom_locations_contract(a) for a in direct]
 
     def test_health(self):
         asked, direct = self._pairs(lambda h: h.health())

@@ -325,6 +325,7 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
         "launchable": tuple(c.code for c in handle.launchable(SYSTEM, "/roms/gb/Game.gb").caveats),
         "launch_command": tuple(c.code for c in handle.launch_command(SYSTEM, "/roms/gb/Game.gb").caveats),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),
+        "rom_locations": tuple(c.code for c in handle.rom_locations().caveats),
         "firmware_for_core": tuple(c.code for c in handle.firmware_for_core(core_so=CORE_SO).caveats),
         "firmware_for_system": tuple(c.code for c in handle.firmware_for_system(system=SYSTEM).caveats),
         "firmware_inventory": tuple(c.code for c in handle.firmware_inventory().caveats),

@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import inspect
+import json
 from collections import Counter
+from pathlib import Path
 from typing import Callable, Iterable, Mapping, cast
 
 import pytest
 
 import atlas
+import atlas.installations
 import atlas.retroarch_cfg
 from atlas._question import once, one_question
+from atlas.esde import CatalogueLayer
 from atlas.machine import FixtureFileSpec, FixtureMachine, ReadResult
 from atlas.retroarch_cfg import ParsedCfg, parse_cfg_once
+from tests.test_machine_vectors import fixture_machine
 
 HOME = "/home/deck"
 INFO_DIR = "/usr/share/libretro/info"
@@ -232,6 +237,138 @@ class TestOneQuestionParsesEachLayerOnce:
         handle.firmware_for_system("psx")
         assert machine.reads[f"{cfg_dir}/retroarch.cfg"] == 2
         assert parses[GLOBAL_CFG] == 2
+
+
+# One fixture machine per way a handle reads its catalogue's layers, taken from
+# the vectors: RetroDECK's bundled file and custom overlay, EmuDeck's overlay
+# and resource-override shadow, and EmuDeck's overlay and the file embedded in
+# its AppImage — each with the layers it parses, by the provenance it parses
+# them under.
+_VECTORS = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "named-cases.json"
+_OVERLAY = "es_systems.xml (custom_systems overlay)"
+CATALOGUE_MACHINES: dict[str, tuple[str, str, set[str]]] = {
+    "retrodeck-bundled-and-overlay": (
+        "catalogue-custom-overlay-replaces-system",
+        "retrodeck",
+        {"es_systems.xml (bundled)", _OVERLAY},
+    ),
+    "emudeck-overlay-and-shadow": (
+        "emudeck-esde-resource-shadow-is-the-bundled-layer",
+        "emudeck",
+        {"es_systems.xml (resource-override shadow)", _OVERLAY},
+    ),
+    "emudeck-overlay-and-embedded": (
+        "emudeck-the-appimage-embedded-catalogue-unseals",
+        "emudeck",
+        {"es_systems.xml (AppImage-embedded)", _OVERLAY},
+    ),
+}
+
+
+def _vector_handle(name: str, kind: str, edit: Callable[[str], str] | None = None) -> atlas.Installation:
+    """The handle of *kind* detected on the fixture machine of the vector called *name*.
+
+    *edit*, where given, rewrites every ``es_systems.xml`` the machine carries.
+    """
+    vector = next(v for v in json.loads(_VECTORS.read_text())["vectors"] if v["name"] == name)
+    inp = vector["input"]
+    if edit is not None:
+        inp["files"] = {
+            path: edit(spec) if path.endswith("/es_systems.xml") and isinstance(spec, str) else spec
+            for path, spec in inp["files"].items()
+        }
+    return next(i for i in atlas.detect(inp["home"], fixture_machine(inp)) if i.kind == kind)
+
+
+def _catalogue_handle(machine: str) -> atlas.Installation:
+    name, kind, _ = CATALOGUE_MACHINES[machine]
+    return _vector_handle(name, kind)
+
+
+# Fixture machines whose ES-DE settings file sets the ROM directory, one per
+# handle that reads it, each declaring more than one system with a path — a
+# system declared without one never reaches the settings. The RetroDECK machine
+# declares its second system without a path, so it is given one here.
+SETTINGS_MACHINES: dict[str, Callable[[], atlas.Installation]] = {
+    "retrodeck": lambda: _vector_handle(
+        "rom-locations-answers-every-declared-system-as-rom-location-does",
+        "retrodeck",
+        lambda text: text.replace("<name>pathless</name>", "<name>pathless</name><path>%ROMPATH%/pathless</path>"),
+    ),
+    "emudeck": lambda: _vector_handle("emudeck-esde-resource-shadow-is-the-bundled-layer", "emudeck"),
+}
+
+
+@pytest.fixture
+def catalogue_parses(monkeypatch: pytest.MonkeyPatch) -> Counter[str]:
+    """How often ES-DE's catalogue parser ran over each layer, by the provenance it parsed it under."""
+    counted: Counter[str] = Counter()
+    parse = atlas.installations.parse_es_systems
+
+    def counting(text: str, *, provenance: str) -> CatalogueLayer:
+        counted[provenance] += 1
+        return parse(text, provenance=provenance)
+
+    monkeypatch.setattr(atlas.installations, "parse_es_systems", counting)
+    return counted
+
+
+class TestOneQuestionParsesTheCatalogueOnce:
+    """Issue #670: the catalogue read goes through the question's memo, every layer of it."""
+
+    @pytest.mark.parametrize("machine", CATALOGUE_MACHINES)
+    def test_every_systems_rom_folder_parses_each_layer_once(self, machine: str, catalogue_parses: Counter[str]):
+        answer = _catalogue_handle(machine).rom_locations()
+        # More than one system, or a parse per system would look the same as one.
+        assert len(answer.placements) > 1
+        assert catalogue_parses == Counter(dict.fromkeys(CATALOGUE_MACHINES[machine][2], 1))
+
+    @pytest.mark.parametrize("machine", CATALOGUE_MACHINES)
+    def test_a_question_that_reads_the_catalogue_several_times_parses_it_once(
+        self, machine: str, catalogue_parses: Counter[str]
+    ):
+        handle = _catalogue_handle(machine)
+        (system, *_) = handle.systems().systems
+        catalogue_parses.clear()
+        one_question(lambda: (handle.systems(), handle.rom_location(system), handle.emulators_for(system)))()
+        assert catalogue_parses == Counter(dict.fromkeys(CATALOGUE_MACHINES[machine][2], 1))
+
+    def test_the_commented_blocks_of_each_layer_are_parsed_once(self, monkeypatch: pytest.MonkeyPatch):
+        # RetroDECK's catalogue read also states the systems its layers carry
+        # only inside comments, a second parse of the same texts.
+        counted: Counter[str] = Counter()
+        scan = atlas.installations.commented_out_systems
+
+        def counting(text: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+            counted[text] += 1
+            return scan(text)
+
+        monkeypatch.setattr(atlas.installations, "commented_out_systems", counting)
+        _catalogue_handle("retrodeck-bundled-and-overlay").rom_locations()
+        assert sorted(counted.values()) == [1, 1]
+
+    @pytest.mark.parametrize("machine", SETTINGS_MACHINES)
+    def test_the_frontends_settings_are_read_and_parsed_once(self, machine: str, monkeypatch: pytest.MonkeyPatch):
+        # Every system's directory substitutes %ROMPATH% from ES-DE's settings
+        # file, so it is the other file a question placing every system reads.
+        counted: Counter[str] = Counter()
+        parse = atlas.installations.parse_es_settings
+
+        def counting(text: str) -> dict[str, str] | None:
+            counted[text] += 1
+            return parse(text)
+
+        monkeypatch.setattr(atlas.installations, "parse_es_settings", counting)
+        answer = SETTINGS_MACHINES[machine]().rom_locations()
+        assert len([entry for entry in answer.placements if entry.placement.dir is not None]) > 1
+        assert list(counted.values()) == [1]
+
+    @pytest.mark.parametrize("machine", CATALOGUE_MACHINES)
+    def test_the_next_question_parses_the_catalogue_again(self, machine: str, catalogue_parses: Counter[str]):
+        handle = _catalogue_handle(machine)
+        handle.rom_locations()
+        handle.rom_locations()
+        assert catalogue_parses == Counter(dict.fromkeys(CATALOGUE_MACHINES[machine][2], 2))
 
 
 # The code every wrapper one_question makes runs: a method runs as one

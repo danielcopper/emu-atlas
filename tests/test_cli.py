@@ -35,6 +35,7 @@ _QUERY_KEY = {
     "roots": "roots_query",
     "launchable": "launchable_query",
     "rom_location": "rom_location_query",
+    "rom_locations": "rom_locations_query",
     "aggregate": "aggregate_query",
     "savefile_location": "savefile_query",
     "savestate_location": "savestate_query",
@@ -106,6 +107,8 @@ def _question_argv(question: str, query) -> list[str]:
         return ["emulators-for", query["system"]] + _flag("--content", query.get("content_path"))
     if question == "rom_location":
         return ["rom-location", query["system"]]
+    if question == "rom_locations":
+        return ["rom-locations"]
     if question == "launchable":
         return ["launchable", query["system"], query["content_path"]]
     if question == "launch_command":
