@@ -44,7 +44,7 @@ run = "python scripts/generate_coverage_matrix.py && deno fmt docs/research/cove
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # Pre-push and pre-release, not part of `test`: this one needs its own venv and, the
 # first time, an interpreter download. The floor comes from pyproject's requires-python
-# (">=3.11" -> "3.11") so the number is not repeated here. The venv is a separate
+# (">=3.12" -> "3.12") so the number is not repeated here. The venv is a separate
 # directory and the interpreter is called by its own path on purpose: .venv is the
 # activated one, and a console script inside it pins its interpreter in the shebang, so
 # neither PATH nor `mise x python@<floor>` can redirect it. --clear rebuilds that venv on

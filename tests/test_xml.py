@@ -302,11 +302,12 @@ class TestTheRuntimeItHasToRunOn:
     """The property the module exists for: no wrapper package, still an answer.
 
     A frozen consumer runtime ships only what its build analysis reached, and
-    Decky Loader's bundle reached the expat extension but not ``xml.etree``
-    (issue #339). Both halves of that are pinned — that no module reintroduces
-    the import, and that a runtime without it answers a question through the
-    contract and parses the files it would parse — the way
-    ``tests/test_relocation.py`` pins the vendoring property.
+    Decky Loader's bundle, the case the module was built for, reached the expat
+    extension but not ``xml.etree`` (issue #339). Both halves of that are
+    pinned — that no module reintroduces the import, and that a runtime
+    without it answers a question through the contract and parses the files it
+    would parse — the way ``tests/test_relocation.py`` pins the vendoring
+    property.
     """
 
     def test_no_module_in_the_package_imports_the_wrapper(self):
