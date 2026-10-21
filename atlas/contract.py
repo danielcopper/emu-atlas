@@ -484,9 +484,10 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
 
     **Two of the fields on a core answer to different owners.**
     ``requirements`` is what the *emulator itself declared*, reproduced down to
-    each entry's ``need``: nothing read off the machine is ever overwritten, so
-    a core that marks a file it cannot start without ``optional`` still
-    serializes ``optional``. ``requirements_met`` is *atlas's own verdict*
+    each entry's ``need``, so a core that marks a file it cannot start without
+    ``optional`` still serializes ``optional``; a ``need`` moves only to
+    ``optional``, and only where something beside the row already states what
+    the launch needs (:attr:`atlas.firmware.FirmwareRequirement.need`). ``requirements_met`` is *atlas's own verdict*
     about that declaration, and it draws on **world knowledge** as well as on
     what was read from the machine — a packaged, source-cited table
     (``atlas/data/system_firmware.json``) recording which systems do not start

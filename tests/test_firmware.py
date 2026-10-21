@@ -24,6 +24,7 @@ from xml.etree import ElementTree as ET
 import pytest
 
 from atlas.firmware import (
+    CAVEAT_FIRMWARE_CORE_SUBSTITUTE,
     CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
     CORE_DECLARATION_STATES,
@@ -3979,7 +3980,9 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     (``atlas/data/system_firmware.json``), and these tests hold the two things
     it must do and the one thing it must not: ``system_firmware`` states what
     is recorded, ``requirements_met`` stops being green where the system
-    cannot run — and every ``need`` stays exactly what the core declared.
+    cannot run — and every ``need`` stays exactly what the core declared,
+    except on a system an exemption scoped to it excuses the core for
+    (``TestAnExemptionScopedToTheSystemAsked``).
 
     The all-optional core here is :data:`UNDERSTATER_SO`, which carries
     SwanStation's declaration under a stem no packaged entry names — so it
@@ -4155,11 +4158,20 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         assert core.system_firmware is None
         assert core.requirements_met is None
 
-    def test_the_reading_never_turns_an_answer_green(self):
-        # The one-way rule: over every core this machine has, an answer that
-        # is true with the system-level reading was true without it. Held
-        # mechanically, because "it only narrows" is the kind of claim a
-        # future branch quietly breaks.
+    def test_the_reading_turns_no_answer_green_outside_a_scoped_exemption(self):
+        # The one-way rule, with its one exception named. The exception is an
+        # exemption scoped to the system a question names, which reads the
+        # excused core's required rows optional and so turns its verdict green
+        # on purpose (#657) — `TestAnExemptionScopedToTheSystemAsked` holds
+        # that side. No PlayStation exemption is scoped, so here the table
+        # must move no row at all, and the rule is held in two halves: every
+        # `need` on every core is the one the same machine answers with no
+        # table, and with the needs fixed, a verdict true with the system
+        # state was true with that state removed. The second half alone could
+        # not see a row the table rewrote — removing the state keeps the
+        # rewritten row — which is why the first exists. Held mechanically,
+        # because "it only narrows" is the kind of claim a future branch
+        # quietly breaks.
         #
         # The machine is chosen so the rule has something to break: the
         # optional image is in place and the required one is not, so Beetle
@@ -4169,6 +4181,19 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
         answer = firmware_inventory(machine, _context(machine))
         assert [core.core_so for core in answer.cores] == [BEETLE_PSX_SO, REARMED_SO, UNDERSTATER_SO]
+        without_table = firmware_inventory(machine, _context(machine, system_firmware={}))
+
+        def needs(cores: tuple[CoreFirmware, ...]) -> dict[str | None, list[tuple[str, str]]]:
+            return {
+                core.core_so: [
+                    (option.file_name, option.need)
+                    for entry in core.requirements
+                    for option in (entry.options if isinstance(entry, FirmwareAlternatives) else (entry,))
+                ]
+                for core in cores
+            }
+
+        assert needs(answer.cores) == needs(without_table.cores)
         for core in answer.cores:
             unaided = replace(core, system_firmware=None)
             assert core.requirements_met is not True or unaided.requirements_met is True
@@ -4816,6 +4841,210 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # A systemname nothing maps still answers a word, and nothing is
         # recorded under it.
         assert system_firmware_system("Some New Machine") == "some-new-machine"
+
+
+# PUAE's declaration cut to three rows that keep its shape: a computer's
+# kickstart and a CD32 image both marked required, and a second computer
+# kickstart optional. The five systems it runs are one systemname, so every
+# row is filed under `amiga`.
+AMIGA_INFO = """
+systemname = "Amiga"
+firmware_count = 3
+firmware0_desc = "kick34005.A500 (A500 KS v1.3)"
+firmware0_path = "kick34005.A500"
+firmware0_opt = "false"
+firmware1_desc = "kick37175.A500 (A500+ KS v2.04)"
+firmware1_path = "kick37175.A500"
+firmware1_opt = "true"
+firmware2_desc = "kick40060.CD32 (CD32 KS v3.1)"
+firmware2_path = "kick40060.CD32"
+firmware2_opt = "false"
+"""
+AMIGA_SO = "puae_libretro.so"
+AMIGA_COMPUTERS = ("amiga", "amiga600", "amiga1200")
+
+
+class TestAnExemptionScopedToTheSystemAsked:
+    """The verdict follows the system the question names (#657).
+
+    PUAE boots its built-in AROS kickstart for the Amiga computers when the
+    image it would use is missing, and AROS does not boot a CD32 disc — while
+    all five systems the core runs are one ``systemname``, so every image it
+    declares is filed under one id. The exemption therefore names the systems
+    it holds on, and one core's block answers differently for two systems it
+    runs: excused, with the required rows read ``optional``, on a question
+    about a computer; as declared on a question about the CD32 or about no
+    system at all.
+    """
+
+    def _machine(self, *, bios: Mapping[str, FixtureFileSpec] | None = None) -> FixtureMachine:
+        return _machine(
+            {
+                f"{INFO_DIR}/{AMIGA_SO[: -len('.so')]}.info": AMIGA_INFO,
+                f"{INFO_DIR}/{AMIGA_SO}": {"status": "invalid-text"},
+                **(bios or {}),
+            }
+        )
+
+    def _table(self, alternative: object) -> dict[str, SystemFirmware]:
+        # Routed through the loader, so the shape is one it accepts.
+        return load_system_firmware(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "spec": "a spec",
+                    "systems": {
+                        "Amiga": {
+                            "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+                            "evidence": EVIDENCE_VERIFIED,
+                            "source": "a fixture",
+                            "cores_supplying_an_alternative": {"puae": alternative},
+                        }
+                    },
+                }
+            )
+        )
+
+    def _scoped(self) -> dict[str, SystemFirmware]:
+        return self._table(
+            {"reason": "a fixture", "systems": list(AMIGA_COMPUTERS), "substitute": "AROS"}
+        )
+
+    def _asked(
+        self, system: str, table: Mapping[str, SystemFirmware], machine: FixtureMachine | None = None
+    ) -> CoreFirmware:
+        machine = machine or self._machine()
+        catalogue = Catalogue((CatalogueEntry(label="PUAE", kind="libretro", core_so=AMIGA_SO),))
+        answer = firmware_for_system(
+            machine, _context(machine, system_firmware=table), system=system, catalogue=catalogue
+        )
+        (core,) = answer.cores
+        return core
+
+    def _needs(self, core: CoreFirmware) -> list[tuple[str, str]]:
+        return [(r.file_name, r.need) for r in _plain_requirements(core)]
+
+    @pytest.mark.parametrize("system", AMIGA_COMPUTERS)
+    def test_a_computer_starts_without_a_kickstart(self, system):
+        core = self._asked(system, self._scoped())
+        assert core.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+        assert core.system_firmware_needs == ()
+        assert core.requirements_met is True
+        assert core.system_firmware_met is True
+
+    @pytest.mark.parametrize("system", AMIGA_COMPUTERS)
+    def test_on_a_computer_every_required_kickstart_reads_optional(self, system):
+        # The launch needs none of them in particular, as beside a group.
+        core = self._asked(system, self._scoped())
+        assert self._needs(core) == [
+            ("kick34005.A500", NEED_OPTIONAL),
+            ("kick37175.A500", NEED_OPTIONAL),
+            ("kick40060.CD32", NEED_OPTIONAL),
+        ]
+        assert core.unmet == ()
+
+    @pytest.mark.parametrize("system", ["amigacd32", "cdtv"])
+    def test_a_system_the_exemption_does_not_name_answers_as_declared(self, system):
+        core = self._asked(system, self._scoped())
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.system_firmware_needs == ("amiga",)
+        assert core.requirements_met is False
+        assert self._needs(core) == [
+            ("kick34005.A500", NEED_REQUIRED),
+            ("kick37175.A500", NEED_OPTIONAL),
+            ("kick40060.CD32", NEED_REQUIRED),
+        ]
+
+    def test_a_question_that_names_no_system_answers_as_declared(self):
+        machine = self._machine()
+        core = firmware_for_core(
+            machine, _context(machine, system_firmware=self._scoped()), core_so=AMIGA_SO
+        ).cores[0]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is False
+        assert [n for _, n in self._needs(core)] == [NEED_REQUIRED, NEED_OPTIONAL, NEED_REQUIRED]
+
+    def test_the_inventory_names_no_system_either(self):
+        machine = self._machine()
+        answer = firmware_inventory(machine, _context(machine, system_firmware=self._scoped()))
+        (core,) = [c for c in answer.cores if c.core_so == AMIGA_SO]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
+        assert core.requirements_met is False
+
+    def test_an_exemption_without_systems_holds_on_every_question(self):
+        # The PlayStation's shape: no systems named, excused everywhere the
+        # entry reaches — on a question naming no system as well.
+        table = self._table("a fixture")
+        unscoped = self._asked("amigacd32", table)
+        assert unscoped.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+        # And it moves no row: it excuses a declaration that is right as it
+        # stands, so a required file it declares stays required.
+        assert [n for _, n in self._needs(unscoped)] == [NEED_REQUIRED, NEED_OPTIONAL, NEED_REQUIRED]
+        assert self._needs(self._asked("amiga", table)) == self._needs(unscoped)
+        machine = self._machine()
+        core = firmware_for_core(machine, _context(machine, system_firmware=table), core_so=AMIGA_SO).cores[0]
+        assert core.system_firmware == SYSTEM_FIRMWARE_CORE_ALTERNATIVE
+
+    # --- the substitute, named on every question ------------------------------
+
+    def _substitute(self, core: CoreFirmware) -> list[Mapping[str, object]]:
+        return [dict(c.data) for c in core.caveats if c.code == CAVEAT_FIRMWARE_CORE_SUBSTITUTE]
+
+    @pytest.mark.parametrize("system", [*AMIGA_COMPUTERS, "amigacd32", "cdtv"])
+    def test_every_system_question_names_the_substitute_and_where_it_holds(self, system):
+        # Beside the excuse it is why the verdict is green; beside a CD32 it
+        # is where the core does start without an image.
+        assert self._substitute(self._asked(system, self._scoped())) == [
+            {"core": "puae", "substitute": "AROS", "systems": AMIGA_COMPUTERS}
+        ]
+
+    def test_a_question_that_names_no_system_names_the_substitute(self):
+        machine = self._machine()
+        core = firmware_for_core(
+            machine, _context(machine, system_firmware=self._scoped()), core_so=AMIGA_SO
+        ).cores[0]
+        assert self._substitute(core) == [
+            {"core": "puae", "substitute": "AROS", "systems": AMIGA_COMPUTERS}
+        ]
+
+    def test_an_exemption_without_systems_names_no_substitute(self):
+        assert self._substitute(self._asked("amiga", self._table("a fixture"))) == []
+
+    def test_the_substitute_is_named_once_where_two_table_keys_reach_one_system(self):
+        # "Amiga" and "Commodore - Amiga" both land on `amiga`; the same
+        # statement from both is one statement.
+        entry = {
+            "verdict": VERDICT_CANNOT_RUN_WITHOUT,
+            "evidence": EVIDENCE_VERIFIED,
+            "source": "a fixture",
+            "cores_supplying_an_alternative": {
+                "puae": {"reason": "a fixture", "systems": ["amiga"], "substitute": "AROS"}
+            },
+        }
+        table = load_system_firmware(
+            json.dumps(
+                {"schema": 1, "spec": "a spec", "systems": {"Amiga": entry, "Commodore - Amiga": entry}}
+            )
+        )
+        assert len(self._substitute(self._asked("amiga", table))) == 1
+
+    # --- the shipped table ---------------------------------------------------
+
+    @pytest.mark.parametrize(
+        ("system", "met"),
+        [("amiga", True), ("amiga600", True), ("amiga1200", True), ("amigacd32", False), ("cdtv", False)],
+    )
+    def test_the_shipped_table_excuses_the_computers_alone(self, system, met):
+        core = self._asked(system, _shipped_system_firmware())
+        assert core.requirements_met is met
+
+    def test_a_kickstart_in_place_still_reads_optional_on_a_computer(self):
+        # The excuse moves the `need`, never what was read at the destination.
+        machine = self._machine(bios={f"{BIOS_DIR}/kick34005.A500": "whatever"})
+        core = self._asked("amiga", self._scoped(), machine)
+        (row, *_) = _plain_requirements(core)
+        assert (row.file_name, row.need, row.present) == ("kick34005.A500", NEED_OPTIONAL, True)
+        assert core.requirements_met is True
 
 
 class TestPerSystemAnswer:

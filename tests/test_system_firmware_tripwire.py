@@ -200,16 +200,34 @@ def unrecorded_disagreements(catalogue: Catalogue, recorded: Iterable[str]) -> l
     return sorted(set(systems_whose_cores_disagree(catalogue)) - set(recorded))
 
 
+def _still_matches(alternative: CoreAlternative, declares_all_optional: bool | None) -> bool:
+    """Does the catalogue still declare what this exemption excuses?
+
+    Two rules, chosen by the exemption's own shape. One with no systems
+    excuses a core whose declaration is right as it stands, so it matches
+    while the core declares every file optional. One scoped to systems
+    excuses required files on those systems — PUAE's kickstarts, read
+    ``optional`` there — so it matches while the core still declares at least
+    one file required under that ``systemname``; with none left, the excuse
+    would turn nothing optional. A core no longer declaring under the system
+    at all matches neither.
+    """
+    if alternative.systems:
+        return declares_all_optional is False
+    return declares_all_optional is True
+
+
 def stale_exemptions(
     catalogue: Catalogue, recorded: Mapping[str, SystemFirmware]
 ) -> list[str]:
-    """Exempted cores the catalogue no longer has declaring everything optional.
+    """Exempted cores the catalogue no longer declares the way the exemption excuses.
 
     The other direction of the exemption field. An exemption matches nothing
     when the core's entry changed, when the exemption names the wrong core, or
     when that system left the catalogue — and one matching nothing excuses
     nothing while still reading, to anyone scanning the table, as a core
-    somebody cleared.
+    somebody cleared. What "the way it excuses" is depends on the exemption's
+    shape (:func:`_still_matches`).
 
     Factored out for the same reason :func:`unrecorded_disagreements` is: the
     comparison lived inline in its test, so nothing could watch it go red
@@ -226,7 +244,7 @@ def stale_exemptions(
         f"{system}/{alternative.core}"
         for system, entry in recorded.items()
         for alternative in entry.alternatives
-        if catalogue.get(system, {}).get(alternative.core) is not True
+        if not _still_matches(alternative, catalogue.get(system, {}).get(alternative.core))
     )
 
 
@@ -296,19 +314,48 @@ class TestTheStalenessCheckBites:
     Its comparison used to live inline in the machine-bound test, so nothing
     could watch it go red without breaking a deployed catalogue — and a check
     nobody has seen fail is a check nobody knows fires. These are the three
-    ways an exemption stops matching.
+    ways an exemption stops matching, for each of its two shapes.
     """
 
-    def _recorded(self, system: str, core: str) -> dict[str, SystemFirmware]:
+    def _recorded(
+        self, system: str, core: str, systems: tuple[str, ...] = ()
+    ) -> dict[str, SystemFirmware]:
         return {
             system: SystemFirmware(
                 system=system,
                 verdict="cannot-run-without-firmware",
                 evidence="[V]",
                 source="[V-live] watched it refuse",
-                alternatives=(CoreAlternative(core=core, reason="[V-live] watched it run"),),
+                alternatives=(
+                    CoreAlternative(
+                        core=core,
+                        reason="[V-live] watched it run",
+                        systems=systems,
+                        substitute="a substitute" if systems else None,
+                    ),
+                ),
             )
         }
+
+    # --- an exemption scoped to systems excuses required files ---------------
+
+    def test_a_scoped_exemption_over_a_core_declaring_required_firmware_is_not_stale(self):
+        # PUAE's shape: required kickstarts, read optional on the named systems.
+        recorded = self._recorded("Demo System", "strict", ("demo",))
+        assert stale_exemptions({"Demo System": {"strict": False}}, recorded) == []
+
+    def test_a_scoped_exemption_over_a_core_now_declaring_everything_optional_is_stale(self):
+        # Nothing required is left for it to turn optional.
+        recorded = self._recorded("Demo System", "strict", ("demo",))
+        assert stale_exemptions({"Demo System": {"strict": True}}, recorded) == [
+            "Demo System/strict"
+        ]
+
+    def test_a_scoped_exemption_naming_a_core_the_catalogue_does_not_have_is_stale(self):
+        recorded = self._recorded("Demo System", "ghost", ("demo",))
+        assert stale_exemptions({"Demo System": {"strict": False}}, recorded) == [
+            "Demo System/ghost"
+        ]
 
     def test_an_exemption_matching_an_all_optional_core_is_not_stale(self):
         recorded = self._recorded("Demo System", "lax")
@@ -403,15 +450,16 @@ class TestEveryDisagreementIsRecorded:
             "somebody watches the system start with no firmware present"
         )
 
-    def test_an_exempted_core_really_declares_everything_optional(self):
+    def test_an_exempted_core_still_declares_what_its_exemption_excuses(self):
         catalogue = _catalogue_or_skip()
         stale = stale_exemptions(catalogue, load_system_firmware())
         assert stale == [], (
-            f"{stale} are recorded as cores whose all-optional declaration is correct because "
-            "they supply an alternative, and the deployed catalogue no longer has them "
-            "declaring everything optional for that system — either the core's entry changed "
-            "or the exemption names the wrong core. An exemption that matches nothing excuses "
-            "nothing and hides the next real understatement"
+            f"{stale} are recorded as cores that supply an alternative, and the deployed "
+            "catalogue no longer declares them the way the exemption excuses — everything "
+            "optional for an exemption naming no systems, at least one file required for one "
+            "scoped to systems. Either the core's entry changed or the exemption names the "
+            "wrong core. An exemption that matches nothing excuses nothing and hides the next "
+            "real understatement"
         )
 
     def test_the_catalogue_is_really_read_where_cores_are_deployed(self):

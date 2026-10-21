@@ -23278,6 +23278,1591 @@
       }
     },
     {
+      "name": "retrodeck-puae-starts-an-amiga-computer-without-a-kickstart",
+      "rationale": "PUAE and PUAE 2021 over a RetroDECK with no kickstart in the BIOS folder, asked about the amiga system. Both .info files mark four kickstarts required (kick34005.A500, kick40068.A1200, kick40060.CD32, kick40060.CD32.ext), and read on the declaration alone both answer requirements_met false — yet the core boots its built-in AROS kickstart whenever the image it would use is missing, and never refuses to load over it (#657). atlas/data/system_firmware.json records the Amiga as cannot-run-without-firmware and excuses both cores on the three Amiga computer systems, so on a question naming one of them each answers core-supplies-an-alternative and true, all four required kickstarts read need optional (the launch needs none of them in particular), and firmware-core-substitute names the substitute (AROS) and the systems it holds on, beside the system-firmware-world-knowledge mark. Every image stays filed under amiga, the one id the systemname 'Amiga' reaches.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>amiga</name><path>%ROMPATH%/amiga</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n  <system><name>amigacd32</name><path>%ROMPATH%/amigacd32</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.info": "display_name = \"Commodore - Amiga (PUAE)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.info": "display_name = \"Commodore - Amiga (PUAE 2021)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "amiga"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "puae_libretro.so",
+              "emulator": "puae_libretro.so",
+              "declared_index": 0,
+              "label": "PUAE",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": "core-supplies-an-alternative",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick33180.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick33180.A500",
+                  "declared": "kick33180.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "85ad74194e87c08904327de1a9443b7a",
+                    "sha1": "11f9e62cf299f72184835b7b2a70a16333fc0d88",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.A500",
+                  "declared": "kick34005.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "82a21c1890cae844b3df741f2762d48d",
+                    "sha1": "891e9a547772fe0c6c19b610baf8bc4ea7fcb785",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.CDTV",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.CDTV",
+                  "declared": "kick34005.CDTV",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "89da1838a24460e4b93f4f0c5d92d48d",
+                    "sha1": "7ba40ffa17e500ed9fed041f3424bd81d9c907be",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37175.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick37175.A500",
+                  "declared": "kick37175.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc10d7bdd1b6f450773dfb558477c230",
+                    "sha1": "c5839f5cb98a7a8947065c3ed2f14f5f42e334a1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37350.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick37350.A600",
+                  "declared": "kick37350.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "465646c9b6729f77eea5314d1f057951",
+                    "sha1": "02843c4253bbd29aba535b0aa3bd9a85034ecde4",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A1200",
+                  "declared": "kick39106.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "b7cc148386aa631136f510cd29e42fc3",
+                    "sha1": "70033828182fffc7ed106e5373a8b89dda76faa5",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A4000",
+                  "declared": "kick39106.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9b8bdd5a3fd32c2a5a6f5b1aefc799a5",
+                    "sha1": "f0b4e9e29e12218c2d5bd7020e4e785297d91fd7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40060.CD32",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32",
+                  "declared": "kick40060.CD32",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "5f8924d013dd57a89cf349f4cdedc6b1",
+                    "sha1": "3525be8887f79b5929e017b42380a79edfee542d",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40060.CD32.ext",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32.ext",
+                  "declared": "kick40060.CD32.ext",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "bb72565701b1b6faece07d68ea5da639",
+                    "sha1": "5bef3d628ce59cc02a66e6e4ae0da48f60e78f7f",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40063.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick40063.A600",
+                  "declared": "kick40063.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "e40a5dfb3d017ba8779faba30cbd1c8e",
+                    "sha1": "3b7f1493b27e212830f989f26ca76c02049f09ca",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A1200",
+                  "declared": "kick40068.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "646773759326fbac3b2311fd8c8793ee",
+                    "sha1": "e21545723fe8374e91342617604f1b3d703094f1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A4000",
+                  "declared": "kick40068.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9bdedde6a4f33555b4a270c8ca53297d",
+                    "sha1": "5fe04842d04a489720f0f4bb0e46948199406f49",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "amiga",
+                    "evidence": "verified"
+                  }
+                },
+                {
+                  "code": "firmware-core-substitute",
+                  "data": {
+                    "core": "puae",
+                    "substitute": "AROS",
+                    "systems": [
+                      "amiga",
+                      "amiga600",
+                      "amiga1200"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "puae2021_libretro.so",
+              "emulator": "puae2021_libretro.so",
+              "declared_index": 1,
+              "label": "PUAE 2021",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": true,
+              "system_firmware": "core-supplies-an-alternative",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick33180.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick33180.A500",
+                  "declared": "kick33180.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "85ad74194e87c08904327de1a9443b7a",
+                    "sha1": "11f9e62cf299f72184835b7b2a70a16333fc0d88",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.A500",
+                  "declared": "kick34005.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "82a21c1890cae844b3df741f2762d48d",
+                    "sha1": "891e9a547772fe0c6c19b610baf8bc4ea7fcb785",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.CDTV",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.CDTV",
+                  "declared": "kick34005.CDTV",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "89da1838a24460e4b93f4f0c5d92d48d",
+                    "sha1": "7ba40ffa17e500ed9fed041f3424bd81d9c907be",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37175.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick37175.A500",
+                  "declared": "kick37175.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc10d7bdd1b6f450773dfb558477c230",
+                    "sha1": "c5839f5cb98a7a8947065c3ed2f14f5f42e334a1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37350.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick37350.A600",
+                  "declared": "kick37350.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "465646c9b6729f77eea5314d1f057951",
+                    "sha1": "02843c4253bbd29aba535b0aa3bd9a85034ecde4",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A1200",
+                  "declared": "kick39106.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "b7cc148386aa631136f510cd29e42fc3",
+                    "sha1": "70033828182fffc7ed106e5373a8b89dda76faa5",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A4000",
+                  "declared": "kick39106.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9b8bdd5a3fd32c2a5a6f5b1aefc799a5",
+                    "sha1": "f0b4e9e29e12218c2d5bd7020e4e785297d91fd7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40060.CD32",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32",
+                  "declared": "kick40060.CD32",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "5f8924d013dd57a89cf349f4cdedc6b1",
+                    "sha1": "3525be8887f79b5929e017b42380a79edfee542d",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40060.CD32.ext",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32.ext",
+                  "declared": "kick40060.CD32.ext",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "bb72565701b1b6faece07d68ea5da639",
+                    "sha1": "5bef3d628ce59cc02a66e6e4ae0da48f60e78f7f",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40063.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick40063.A600",
+                  "declared": "kick40063.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "e40a5dfb3d017ba8779faba30cbd1c8e",
+                    "sha1": "3b7f1493b27e212830f989f26ca76c02049f09ca",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A1200",
+                  "declared": "kick40068.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "646773759326fbac3b2311fd8c8793ee",
+                    "sha1": "e21545723fe8374e91342617604f1b3d703094f1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A4000",
+                  "declared": "kick40068.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9bdedde6a4f33555b4a270c8ca53297d",
+                    "sha1": "5fe04842d04a489720f0f4bb0e46948199406f49",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "amiga",
+                    "evidence": "verified"
+                  }
+                },
+                {
+                  "code": "firmware-core-substitute",
+                  "data": {
+                    "core": "puae2021",
+                    "substitute": "AROS",
+                    "systems": [
+                      "amiga",
+                      "amiga600",
+                      "amiga1200"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-puae-asked-about-the-cd32-keeps-its-declared-kickstarts",
+      "rationale": "The machine of retrodeck-puae-starts-an-amiga-computer-without-a-kickstart, asked about amigacd32 instead. The exemption is scoped to the Amiga computers: AROS replaces the extended ROM as well and a CD32 disc was observed not to boot under it. So the same two cores answer what their declaration says — the four kickstarts required, requirements_met false — and the table's verdict stands unexcused: cannot-run-without-firmware, with system_firmware_met false because no image filed under amiga is in place. firmware-core-substitute still names AROS and the computer systems, because where the core does start without a kickstart is true of it on this question too. One libretro block, two answers, decided by the system the question names.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>amiga</name><path>%ROMPATH%/amiga</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n  <system><name>amigacd32</name><path>%ROMPATH%/amigacd32</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.info": "display_name = \"Commodore - Amiga (PUAE)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.info": "display_name = \"Commodore - Amiga (PUAE 2021)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "system",
+          "system": "amigacd32"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "puae_libretro.so",
+              "emulator": "puae_libretro.so",
+              "declared_index": 0,
+              "label": "PUAE",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
+              "requirements": [
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick33180.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick33180.A500",
+                  "declared": "kick33180.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "85ad74194e87c08904327de1a9443b7a",
+                    "sha1": "11f9e62cf299f72184835b7b2a70a16333fc0d88",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick34005.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.A500",
+                  "declared": "kick34005.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "82a21c1890cae844b3df741f2762d48d",
+                    "sha1": "891e9a547772fe0c6c19b610baf8bc4ea7fcb785",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.CDTV",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.CDTV",
+                  "declared": "kick34005.CDTV",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "89da1838a24460e4b93f4f0c5d92d48d",
+                    "sha1": "7ba40ffa17e500ed9fed041f3424bd81d9c907be",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37175.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick37175.A500",
+                  "declared": "kick37175.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc10d7bdd1b6f450773dfb558477c230",
+                    "sha1": "c5839f5cb98a7a8947065c3ed2f14f5f42e334a1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37350.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick37350.A600",
+                  "declared": "kick37350.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "465646c9b6729f77eea5314d1f057951",
+                    "sha1": "02843c4253bbd29aba535b0aa3bd9a85034ecde4",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A1200",
+                  "declared": "kick39106.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "b7cc148386aa631136f510cd29e42fc3",
+                    "sha1": "70033828182fffc7ed106e5373a8b89dda76faa5",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A4000",
+                  "declared": "kick39106.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9b8bdd5a3fd32c2a5a6f5b1aefc799a5",
+                    "sha1": "f0b4e9e29e12218c2d5bd7020e4e785297d91fd7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32",
+                  "declared": "kick40060.CD32",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "5f8924d013dd57a89cf349f4cdedc6b1",
+                    "sha1": "3525be8887f79b5929e017b42380a79edfee542d",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32.ext",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32.ext",
+                  "declared": "kick40060.CD32.ext",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "bb72565701b1b6faece07d68ea5da639",
+                    "sha1": "5bef3d628ce59cc02a66e6e4ae0da48f60e78f7f",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40063.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick40063.A600",
+                  "declared": "kick40063.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "e40a5dfb3d017ba8779faba30cbd1c8e",
+                    "sha1": "3b7f1493b27e212830f989f26ca76c02049f09ca",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40068.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A1200",
+                  "declared": "kick40068.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "646773759326fbac3b2311fd8c8793ee",
+                    "sha1": "e21545723fe8374e91342617604f1b3d703094f1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A4000",
+                  "declared": "kick40068.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9bdedde6a4f33555b4a270c8ca53297d",
+                    "sha1": "5fe04842d04a489720f0f4bb0e46948199406f49",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "amiga",
+                    "evidence": "verified"
+                  }
+                },
+                {
+                  "code": "firmware-core-substitute",
+                  "data": {
+                    "core": "puae",
+                    "substitute": "AROS",
+                    "systems": [
+                      "amiga",
+                      "amiga600",
+                      "amiga1200"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "core_so": "puae2021_libretro.so",
+              "emulator": "puae2021_libretro.so",
+              "declared_index": 1,
+              "label": "PUAE 2021",
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
+              "requirements": [
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick33180.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick33180.A500",
+                  "declared": "kick33180.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "85ad74194e87c08904327de1a9443b7a",
+                    "sha1": "11f9e62cf299f72184835b7b2a70a16333fc0d88",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick34005.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.A500",
+                  "declared": "kick34005.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "82a21c1890cae844b3df741f2762d48d",
+                    "sha1": "891e9a547772fe0c6c19b610baf8bc4ea7fcb785",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.CDTV",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.CDTV",
+                  "declared": "kick34005.CDTV",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "89da1838a24460e4b93f4f0c5d92d48d",
+                    "sha1": "7ba40ffa17e500ed9fed041f3424bd81d9c907be",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37175.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick37175.A500",
+                  "declared": "kick37175.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc10d7bdd1b6f450773dfb558477c230",
+                    "sha1": "c5839f5cb98a7a8947065c3ed2f14f5f42e334a1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37350.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick37350.A600",
+                  "declared": "kick37350.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "465646c9b6729f77eea5314d1f057951",
+                    "sha1": "02843c4253bbd29aba535b0aa3bd9a85034ecde4",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A1200",
+                  "declared": "kick39106.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "b7cc148386aa631136f510cd29e42fc3",
+                    "sha1": "70033828182fffc7ed106e5373a8b89dda76faa5",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A4000",
+                  "declared": "kick39106.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9b8bdd5a3fd32c2a5a6f5b1aefc799a5",
+                    "sha1": "f0b4e9e29e12218c2d5bd7020e4e785297d91fd7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32",
+                  "declared": "kick40060.CD32",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "5f8924d013dd57a89cf349f4cdedc6b1",
+                    "sha1": "3525be8887f79b5929e017b42380a79edfee542d",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32.ext",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32.ext",
+                  "declared": "kick40060.CD32.ext",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "bb72565701b1b6faece07d68ea5da639",
+                    "sha1": "5bef3d628ce59cc02a66e6e4ae0da48f60e78f7f",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40063.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick40063.A600",
+                  "declared": "kick40063.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "e40a5dfb3d017ba8779faba30cbd1c8e",
+                    "sha1": "3b7f1493b27e212830f989f26ca76c02049f09ca",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40068.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A1200",
+                  "declared": "kick40068.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "646773759326fbac3b2311fd8c8793ee",
+                    "sha1": "e21545723fe8374e91342617604f1b3d703094f1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae2021_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A4000",
+                  "declared": "kick40068.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9bdedde6a4f33555b4a270c8ca53297d",
+                    "sha1": "5fe04842d04a489720f0f4bb0e46948199406f49",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "amiga",
+                    "evidence": "verified"
+                  }
+                },
+                {
+                  "code": "firmware-core-substitute",
+                  "data": {
+                    "core": "puae2021",
+                    "substitute": "AROS",
+                    "systems": [
+                      "amiga",
+                      "amiga600",
+                      "amiga1200"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "retrodeck-puae-asked-by-name-keeps-its-declared-kickstarts",
+      "rationale": "The machine of retrodeck-puae-starts-an-amiga-computer-without-a-kickstart, asked about PUAE by name — a question naming no system. The exemption holds only on a question naming one of the Amiga computers, so the answer is the declaration's: the four kickstarts required and requirements_met false, because a CD32 or CDTV launch still needs its images. firmware-core-substitute names the systems PUAE starts without a kickstart, so the false is not read as a core that cannot start an Amiga at all.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>amiga</name><path>%ROMPATH%/amiga</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n  <system><name>amigacd32</name><path>%ROMPATH%/amigacd32</path>\n    <command label=\"PUAE\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae_libretro.so %ROM%</command>\n    <command label=\"PUAE 2021\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/puae2021_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.info": "display_name = \"Commodore - Amiga (PUAE)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.info": "display_name = \"Commodore - Amiga (PUAE 2021)\"\nsystemname = \"Amiga\"\nfirmware_count = 12\nfirmware0_desc = \"kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)\"\nfirmware0_path = \"kick33180.A500\"\nfirmware0_opt = \"true\"\nfirmware1_desc = \"kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)\"\nfirmware1_path = \"kick34005.A500\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)\"\nfirmware2_path = \"kick37175.A500\"\nfirmware2_opt = \"true\"\nfirmware3_desc = \"kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)\"\nfirmware3_path = \"kick37350.A600\"\nfirmware3_opt = \"true\"\nfirmware4_desc = \"kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)\"\nfirmware4_path = \"kick40063.A600\"\nfirmware4_opt = \"true\"\nfirmware5_desc = \"kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)\"\nfirmware5_path = \"kick39106.A1200\"\nfirmware5_opt = \"true\"\nfirmware6_desc = \"kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)\"\nfirmware6_path = \"kick40068.A1200\"\nfirmware6_opt = \"false\"\nfirmware7_desc = \"kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)\"\nfirmware7_path = \"kick39106.A4000\"\nfirmware7_opt = \"true\"\nfirmware8_desc = \"kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)\"\nfirmware8_path = \"kick40068.A4000\"\nfirmware8_opt = \"true\"\nfirmware9_desc = \"kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)\"\nfirmware9_path = \"kick34005.CDTV\"\nfirmware9_opt = \"true\"\nfirmware10_desc = \"kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)\"\nfirmware10_path = \"kick40060.CD32\"\nfirmware10_opt = \"false\"\nfirmware11_desc = \"kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)\"\nfirmware11_path = \"kick40060.CD32.ext\"\nfirmware11_opt = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/puae2021_libretro.so": {
+            "status": "invalid-text"
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "puae_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/mnt/sd/retrodeck/bios",
+          "hash_checked": false,
+          "cores": [
+            {
+              "core_so": "puae_libretro.so",
+              "emulator": "puae_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "unestablished",
+              "requirements_met": false,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": false,
+              "requirements": [
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick33180.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick33180.A500",
+                  "declared": "kick33180.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "85ad74194e87c08904327de1a9443b7a",
+                    "sha1": "11f9e62cf299f72184835b7b2a70a16333fc0d88",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick34005.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.A500",
+                  "declared": "kick34005.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "82a21c1890cae844b3df741f2762d48d",
+                    "sha1": "891e9a547772fe0c6c19b610baf8bc4ea7fcb785",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick34005.CDTV",
+                  "path": "/mnt/sd/retrodeck/bios/kick34005.CDTV",
+                  "declared": "kick34005.CDTV",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "89da1838a24460e4b93f4f0c5d92d48d",
+                    "sha1": "7ba40ffa17e500ed9fed041f3424bd81d9c907be",
+                    "size": 262144,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37175.A500",
+                  "path": "/mnt/sd/retrodeck/bios/kick37175.A500",
+                  "declared": "kick37175.A500",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "dc10d7bdd1b6f450773dfb558477c230",
+                    "sha1": "c5839f5cb98a7a8947065c3ed2f14f5f42e334a1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick37350.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick37350.A600",
+                  "declared": "kick37350.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "465646c9b6729f77eea5314d1f057951",
+                    "sha1": "02843c4253bbd29aba535b0aa3bd9a85034ecde4",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A1200",
+                  "declared": "kick39106.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "b7cc148386aa631136f510cd29e42fc3",
+                    "sha1": "70033828182fffc7ed106e5373a8b89dda76faa5",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick39106.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick39106.A4000",
+                  "declared": "kick39106.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9b8bdd5a3fd32c2a5a6f5b1aefc799a5",
+                    "sha1": "f0b4e9e29e12218c2d5bd7020e4e785297d91fd7",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32",
+                  "declared": "kick40060.CD32",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "5f8924d013dd57a89cf349f4cdedc6b1",
+                    "sha1": "3525be8887f79b5929e017b42380a79edfee542d",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40060.CD32.ext",
+                  "path": "/mnt/sd/retrodeck/bios/kick40060.CD32.ext",
+                  "declared": "kick40060.CD32.ext",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "bb72565701b1b6faece07d68ea5da639",
+                    "sha1": "5bef3d628ce59cc02a66e6e4ae0da48f60e78f7f",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40063.A600",
+                  "path": "/mnt/sd/retrodeck/bios/kick40063.A600",
+                  "declared": "kick40063.A600",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "e40a5dfb3d017ba8779faba30cbd1c8e",
+                    "sha1": "3b7f1493b27e212830f989f26ca76c02049f09ca",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "required",
+                  "file_name": "kick40068.A1200",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A1200",
+                  "declared": "kick40068.A1200",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "646773759326fbac3b2311fd8c8793ee",
+                    "sha1": "e21545723fe8374e91342617604f1b3d703094f1",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "puae_libretro.so",
+                  "system": "amiga",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "kick40068.A4000",
+                  "path": "/mnt/sd/retrodeck/bios/kick40068.A4000",
+                  "declared": "kick40068.A4000",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "9bdedde6a4f33555b4a270c8ca53297d",
+                    "sha1": "5fe04842d04a489720f0f4bb0e46948199406f49",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "amiga",
+                    "evidence": "verified"
+                  }
+                },
+                {
+                  "code": "firmware-core-substitute",
+                  "data": {
+                    "core": "puae",
+                    "substitute": "AROS",
+                    "systems": [
+                      "amiga",
+                      "amiga600",
+                      "amiga1200"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": []
+        }
+      }
+    },
+    {
       "name": "firmware-an-open-system-and-an-unrecorded-one-both-move-nothing",
       "rationale": "The other two states, and the reason they are different words. Yabause's Saturn is a system the table records as open — its cores contradict each other and nobody has watched one start with no firmware present — so the answer states open, carries the mark at evidence level [O], and changes no verdict: an open question is not a finding. PX68k's Sharp X68000 is recorded nowhere at all, so system_firmware is null and no mark rides the core. Null means nothing is recorded about this system, never that nothing is needed, and the two cores here differ in exactly that: one says somebody looked and did not settle it, the other says nobody looked.",
       "input": {

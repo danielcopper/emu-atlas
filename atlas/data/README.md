@@ -1486,6 +1486,18 @@ Shape:
       "source": "[V-live] ... [V-binary] ...",
       "cores_supplying_an_alternative": { "pcsx_rearmed": "[V-binary] ... [V-live] ..." }
     },
+    "Amiga": {
+      "verdict": "cannot-run-without-firmware",
+      "evidence": "[V]",
+      "source": "[V-source] ... [V-live] ... [D] ...",
+      "cores_supplying_an_alternative": {
+        "puae": {
+          "reason": "[V-source] ... [V-binary] ... [V-live] ...",
+          "systems": ["amiga", "amiga600", "amiga1200"],
+          "substitute": "AROS"
+        }
+      }
+    },
     "Saturn": { "verdict": "open", "evidence": "[O]", "source": "[D] ... [O] ..." }
   }
 }
@@ -1493,26 +1505,33 @@ Shape:
 
 - Keys are libretro `systemname` strings **verbatim**, not atlas system ids. That is the unit the `.info` catalogue
   groups firmware by and therefore the unit the derivation produces; translating is not free (`Game Boy/Game Boy Color`
-  is one `systemname` over two catalogue systems) and it is a decision for the cut that makes an answer carry this
-  table.
+  is one `systemname` over two catalogue systems), so the answer translates at its own edge, through
+  `atlas.firmware.system_firmware_system`.
 - `verdict` — `cannot-run-without-firmware`, `runs-without-firmware`, or `open`. **`open` is a value, not an absence**:
   it is how a system whose cores contradict each other becomes visible without anyone claiming to know whether it boots.
-  Six of the seven shipped entries are open, and that is the honest state.
+  Six of the eight shipped entries are open, and that is the honest state.
 - `evidence` — the repo's own level (`[V]` / `[D]` / `[O]`), tied to the verdict by the loader: `open` carries `[O]` and
   nothing else may, because a verdict that states something cannot rest on an open question and an open question cannot
   claim a verified reading. The `source` prose uses the finer markers the other tables use (`[V-live]`, `[V-binary]`,
   `[V-script]`).
-- `cores_supplying_an_alternative` — the cores whose all-optional declaration is **correct** for a system that needs
-  firmware, because the core itself supplies a substitute. PCSX ReARMed's HLE BIOS is the case the field was written
-  around. It is recorded **for the cut that makes an answer read this table**, where a system needing firmware must not
-  be reported against a core carrying its own substitute. It is not what makes the derivation pass, which compares whole
-  systems and never consults it; **two** checks do read it today, the staleness one below and the unit test pinning this
-  entry's contents. On a `cannot-run-without-firmware` entry only, and each core names its own reason rather than being
-  a bare exemption. It is not a completeness claim: a core absent from it is one nobody has looked at, never one judged
-  to be understating.
+- `cores_supplying_an_alternative` — the cores that run a system needing firmware without a file, because the core
+  itself supplies a substitute. An exemption takes one of two shapes. A reason alone excuses the core wherever the entry
+  reaches, for a declaration that is **correct** as it stands: PCSX ReARMed's HLE BIOS, all-optional, the case the field
+  was written around. An object adds `systems` (atlas system ids) and `substitute`, which come together or not at all,
+  for a core whose `.info` marks required the images its substitute stands in for on some of the systems it runs: PUAE's
+  AROS kickstart starts the Amiga computers, and a CD32 disc does not boot under it, while all five Amiga systems are
+  one `systemname`. That exemption holds only on a question naming one of its systems, and there the core's rows filed
+  under the system the excusing entry reaches (for PUAE, `amiga`, whichever computer is named) read `need: optional`; a
+  question about another system, or about none, answers the declaration. The firmware answer reads the field: an excused
+  core is `core-supplies-an-alternative` where its unexcused siblings are `cannot-run-without-firmware`, and a core
+  whose exemption names a substitute carries `firmware-core-substitute` on every question. It is not what makes the
+  derivation pass, which compares whole systems and never consults it. On a `cannot-run-without-firmware` entry only,
+  and each core names its own reason rather than being a bare exemption. It is not a completeness claim: a core absent
+  from it is one nobody has looked at, never one judged to be understating.
 - **`tests/test_system_firmware_tripwire.py` is what keeps the file honest.** It recomputes the catalogue disagreements
   from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
-  fails when an exempted core has stopped declaring everything optional. It is a machine-bound test, so an ordinary CI
+  fails when an exempted core no longer declares what its exemption excuses — everything optional for an exemption
+  naming no systems, at least one file required for one scoped to systems. It is a machine-bound test, so an ordinary CI
   run skips it and the weekly canary is where a new disagreement surfaces. It finds a system only where cores
   _disagree_: where every core of a system understates there is nothing to find, which is the case for **36** systems in
   RetroDECK 0.10.9b's catalogue. `3DO` (opera), `SNK Neo Geo CD` (neocd) and `PC-98` (np2kai) are each the only core
@@ -1520,8 +1539,9 @@ Shape:
   Whether any of the three needs firmware is **[O]**, and the other 33 were not examined, so naming three is no claim
   about the rest. How many of the 36 understate is what the derivation cannot say. A floor on what is recorded, not a
   proof that the record is complete.
-- No answer reads a verdict yet. The module is deliberately not exported from `atlas`, no field is added and no caveat
-  is emitted; the table and its guard exist so the answer that reads them has something to read.
+- The firmware answer reads every stated verdict: it lands on each core as `system_firmware`, folds into
+  `requirements_met`, and is marked with `system-firmware-world-knowledge` (the exemptions' part is in the bullet
+  above). `atlas` exports the state words and both caveat codes; `load_system_firmware` is not exported.
 
 ## `core_firmware.json` — how each core goes looking for firmware
 
