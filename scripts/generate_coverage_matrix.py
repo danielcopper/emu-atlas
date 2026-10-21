@@ -301,26 +301,27 @@ def main() -> None:
         else:
             standalone.setdefault(key, set())
 
-    lines: list[str] = []
-    lines.append("# Coverage matrix — GENERATED, do not edit")
-    lines.append("")
-    lines.append("Regenerate with `mise run matrix`. Facts come from")
-    lines.append("`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone")
-    lines.append("one; the row set comes from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet")
-    lines.append("appears automatically as the work list. Cells: ✔ verified (with the arrangement")
-    lines.append("version the knowledge was proven against), ✖ present but not verified, ? availability unknown there")
-    lines.append("(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not")
-    lines.append("applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no =")
-    lines.append("absence is proven; ? = not established. This is capability, not the active mode on one machine. The row")
-    lines.append("set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in")
-    lines.append("`docs/research/core-audit.md`. Those columns describe the libretro half; the")
-    lines.append("standalone half is one column per question, filled from the packaged cards.")
-    lines.append("")
-    lines.append(
-        f"Source identity: `es_systems.xml` sha256 `{es_sha}` · `core_audit.json` "
-        f"(schema {audit_schema}) sha256 `{audit_sha}`."
-    )
-    lines.append("")
+    lines: list[str] = [
+        "# Coverage matrix — GENERATED, do not edit",
+        "",
+        "Regenerate with `mise run matrix`. Facts come from",
+        "`atlas/data/core_audit.json` for the libretro half and from the packaged cards for the standalone",
+        "one; the row set comes from RetroDECK's bundled `es_systems.xml`, so an emulator nothing covers yet",
+        "appears automatically as the work list. Cells: ✔ verified (with the arrangement",
+        "version the knowledge was proven against), ✖ present but not verified, ? availability unknown there",
+        "(EmuDeck ships its own emulator set — unresearched; bare-RetroArch cores are user-installed), — not",
+        "applicable. Per-game capable: yes = at least one mode is proven by source, binary, or observation; no =",
+        "absence is proven; ? = not established. This is capability, not the active mode on one machine. The row",
+        "set is RetroDECK's shipped matrix. Verdicts and evidence levels are defined in",
+        "`docs/research/core-audit.md`. Those columns describe the libretro half; the",
+        "standalone half is one column per question, filled from the packaged cards.",
+        "",
+        (
+            f"Source identity: `es_systems.xml` sha256 `{es_sha}` · `core_audit.json` "
+            f"(schema {audit_schema}) sha256 `{audit_sha}`."
+        ),
+        "",
+    ]
 
     def entry_for(key: str, kind: str):
         entry = audit.get(key)
@@ -335,18 +336,17 @@ def main() -> None:
         name: sum(1 for key in standalone if key in cards[name]) for name, _, _ in QUESTIONS
     }
     audited_lib = sum(1 for k in libretro if entry_for(k, "libretro"))
-    lines.append(
-        f"**Status:** libretro {audited_lib}/{len(libretro)} audited · standalone "
-        + " · ".join(f"{name} {answered[name]}/{len(standalone)}" for name, _, _ in QUESTIONS)
+    lines.extend(
+        [
+            f"**Status:** libretro {audited_lib}/{len(libretro)} audited · standalone "
+            + " · ".join(f"{name} {answered[name]}/{len(standalone)}" for name, _, _ in QUESTIONS),
+            "",
+            "## libretro cores",
+            "",
+            "| emulator | systems | verdict | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        ]
     )
-    lines.append("")
-
-    lines.append("## libretro cores")
-    lines.append("")
-    lines.append(
-        "| emulator | systems | verdict | per-game capable | RetroDECK | EmuDeck | RetroArch (bare) | note |"
-    )
-    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
     for key in sorted(libretro, key=lambda k: (entry_for(k, "libretro") is None, k)):
         entry = entry_for(key, "libretro")
         verdict = entry.get("verdict", "?") if entry else "unaudited"
@@ -355,19 +355,22 @@ def main() -> None:
             f"| `{key}` | {systems_summary(libretro[key])} | {verdict} | {per_game_cell(entry)} | "
             f"{cells} | {note_cell(entry)} |"
         )
-    lines.append("")
-
-    lines.append("## standalone emulators")
-    lines.append("")
-    lines.append(
-        "One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of "
-        "the m systems this row serves; ✖ nothing answers it yet. A ✔ includes cards whose "
-        "answer is a stated, cited no — the savestate family can state \"this emulator has no "
-        "savestates\" (`no_savestates`, #284), and that is an answer, not a gap. There is no "
-        "verdict column here: `core_audit.json` is the libretro save audit and holds no "
-        "standalone entry, so the answer to \"is this covered\" is the cards themselves."
+    lines.extend(
+        [
+            "",
+            "## standalone emulators",
+            "",
+            (
+                "One column per question. ✔ a packaged card answers it; ✔ n/m the card answers for n of "
+                "the m systems this row serves; ✖ nothing answers it yet. A ✔ includes cards whose "
+                "answer is a stated, cited no — the savestate family can state \"this emulator has no "
+                "savestates\" (`no_savestates`, #284), and that is an answer, not a gap. There is no "
+                "verdict column here: `core_audit.json` is the libretro save audit and holds no "
+                "standalone entry, so the answer to \"is this covered\" is the cards themselves."
+            ),
+            "",
+        ]
     )
-    lines.append("")
     header = " | ".join(name for name, _, _ in QUESTIONS)
     lines.append(f"| emulator | systems | {header} |")
     lines.append("| --- | --- | " + " | ".join("---" for _ in QUESTIONS) + " |")

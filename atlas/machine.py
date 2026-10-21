@@ -92,7 +92,7 @@ import sys
 import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, TypeAlias, runtime_checkable
+from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, runtime_checkable
 
 from . import lha, ps2_bios, squashfs, whdload
 
@@ -164,7 +164,7 @@ _APPIMAGE_ENTRY_FAILURE_OF: Mapping[str, AppImageEntryFailure] = {word: word for
 # bytes hold nothing the pattern matches ("no-stamp"), or more than one place
 # does ("ambiguous") — a stamp the read would have to pick between is one it
 # refuses rather than guesses.
-AppImageStampStatus: TypeAlias = Literal["ok", "no-stamp", "ambiguous"] | AppImageEntryFailure
+type AppImageStampStatus = Literal["ok", "no-stamp", "ambiguous"] | AppImageEntryFailure
 APPIMAGE_STAMP_OK: AppImageStampStatus = "ok"
 APPIMAGE_NO_STAMP: AppImageStampStatus = "no-stamp"
 APPIMAGE_AMBIGUOUS: AppImageStampStatus = "ambiguous"
@@ -228,7 +228,7 @@ CoreUnansweredStatus = Literal[
     "timed-out",
     "unusable",
 ]
-CoreReadStatus: TypeAlias = Literal["answered"] | CoreUnansweredStatus
+CoreReadStatus = Literal["answered"] | CoreUnansweredStatus
 # The one status that is not a failure, and the only one carrying a CoreInfo:
 # a line naming a ``library_name`` came back. Spelled as a bare constant rather
 # than with a sentence under it because it belongs to no published vocabulary —

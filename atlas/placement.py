@@ -60,7 +60,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Iterable, Literal, Mapping, Sequence, TypeAlias, TypeVar
+from typing import Iterable, Literal, Mapping, Sequence, TypeVar
 
 from .find_rules import (
     CAVEAT_FIND_RULES_UNREADABLE,
@@ -369,10 +369,10 @@ def _freeze(mapping: Mapping[str, _FrozenValue]) -> Mapping[str, _FrozenValue]:
 # contractual, because it is the emitter's stated order. The mapping is what a
 # list cannot be read out of step with: where two facts are said about each of
 # several files, each is keyed by the file rather than indexed beside it.
-DataValue: TypeAlias = "str | Sequence[str] | Mapping[str, str]"
+DataValue = str | Sequence[str] | Mapping[str, str]
 # The same values once a frozen dataclass holds them: sequences are tuples and
 # mappings are read-only.
-FrozenDataValue: TypeAlias = "str | tuple[str, ...] | Mapping[str, str]"
+type FrozenDataValue = str | tuple[str, ...] | Mapping[str, str]
 
 
 def _frozen_value(value: "str | Sequence[str] | Mapping[str, str]") -> "FrozenDataValue":

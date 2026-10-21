@@ -101,9 +101,8 @@ def _runtime_archive(provided: Path | None, cache_dir: Path) -> Path:
             cache_dir.mkdir(parents=True, exist_ok=True)
             # The URL is a constant of this script — release, name and scheme
             # are pinned above, and the checksum below vouches for the bytes.
-            with urllib.request.urlopen(RUNTIME_URL) as response:
-                with archive.open("wb") as out:
-                    shutil.copyfileobj(response, out)
+            with urllib.request.urlopen(RUNTIME_URL) as response, archive.open("wb") as out:
+                shutil.copyfileobj(response, out)
     actual = _sha256(archive)
     if actual != RUNTIME_SHA256:
         raise SystemExit(

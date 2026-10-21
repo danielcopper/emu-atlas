@@ -20726,6 +20726,7 @@ class _CatalogueQueries:
     def _catalogue_answer(
         self, system: str, *, content_path: str | None = None
     ) -> tuple[CatalogueAnswer, str | None]:
+        del system, content_path  # with no catalogue, every system and file is refused alike
         return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
 
     def _launchable_answer(
