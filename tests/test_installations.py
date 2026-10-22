@@ -3455,9 +3455,9 @@ class TestDuckstationPerGameSettingsLayer:
 
     A running game installs ``gamesettings/<serial>.ini`` as the top layer of
     the settings interface (UpdateGameSettingsLayer, system.cpp:1407-1441 at
-    64655818e), so every key read through that interface can be answered
+    1f6de046b), so every key read through that interface can be answered
     differently for one game. Two families of keys are: the memory-card ones
-    (Settings::Load, settings.cpp:391-401) and the three BIOS image names
+    (Settings::Load, settings.cpp:392-402) and the three BIOS image names
     (BIOS::GetBIOSImage on Host::GetStringSettingValue, bios.cpp:321-338 with
     host.cpp:124-128). The ``[Folders]`` keys are not — EmuFolders::LoadConfig
     is handed the base layer at every call site — which is why the savestate,
@@ -3524,7 +3524,7 @@ class TestDuckstationPerGameSettingsLayer:
 
     def test_the_save_answer_says_an_absolute_card_path_leaves_the_directory(self):
         # The strongest half of the statement: GetSharedMemoryCardPath takes an
-        # absolute value verbatim (settings.cpp:1785-1797), so the card need
+        # absolute value verbatim (settings.cpp:1788-1800), so the card need
         # not be in the directory this answer names.
         rd = self._machine(self.ONE_OVERRIDE, dirs=[DUCKSTATION_GAME_SETTINGS])
         stated = self._caveat(
@@ -4036,7 +4036,7 @@ class TestMoreStandaloneSaves:
         assert len(stated) == 2  # the NonPersistent slot's own, and the answer's
 
     def test_duckstation_an_unknown_type_falls_to_the_compiled_default(self):
-        # ParseMemoryCardTypeName -> .value_or(default) (settings.cpp:391-398):
+        # ParseMemoryCardTypeName -> .value_or(default) (settings.cpp:392-399):
         # an unparseable value is the default, stated in the reading.
         p = self._answer(
             "psx",

@@ -123,7 +123,7 @@ class TestOneSettingBecomesADirectory:
         )
 
     def test_a_degenerate_relative_spelling_composes_the_way_the_combine_does(self):
-        # The compose is Path::Combine (settings.cpp:1958-1959 at 64655818e),
+        # The compose is Path::Combine (settings.cpp:1961-1962 at 1f6de046b),
         # which collapses the separator run and strips the trailing separator
         # (#325) — os.path.join would have preserved both.
         values = {("BIOS", "SearchDirectory"): "images//ps1/"}
@@ -139,7 +139,7 @@ class TestOneSettingBecomesADirectory:
 
     def test_a_case_variant_spelling_is_the_same_key(self):
         # CSimpleIniA matches sections and keys ASCII case-insensitively
-        # (ini_settings_interface.h:65 at 64655818e), so [bios] searchdirectory
+        # (ini_settings_interface.h:65 at 1f6de046b), so [bios] searchdirectory
         # governs exactly as the canonical spelling would (#295).
         values = {("bios", "searchdirectory"): "images/ps1"}
         assert duckstation.load_path(values, self.ROOT, "BIOS", "SearchDirectory", "bios") == (
@@ -193,7 +193,7 @@ class TestThePerGameLayerStatedBesideAnAnswer:
             directory=self.DIR,
             keys=self.KEYS,
             governs="which card each slot holds",
-            read_through="settings.cpp:391-401",
+            read_through="settings.cpp:392-402",
         )
 
     def test_files_there_are_counted(self):
@@ -248,7 +248,7 @@ class TestThePerGameLayerStatedBesideAnAnswer:
             directory="/app/gamesettings",
             keys=self.KEYS,
             governs="which card each slot holds",
-            read_through="settings.cpp:391-401",
+            read_through="settings.cpp:392-402",
             sandbox_value="/app/gamesettings",
         )
         assert "only the emulator's sandbox can spell" in stated.message

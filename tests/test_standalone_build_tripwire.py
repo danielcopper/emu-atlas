@@ -11,11 +11,15 @@ moving.
 So where the emulator is deployed, this asks the binary what it is. The
 difference from ``tests/test_core_firmware_tripwire.py`` is the seam: a
 libretro core answers through ``retro_get_system_info``, while a standalone
-emulator answers through the string its ``--version`` prints. Where that
-string is a constant of the build, as Vita3K's is, it can be read off the
-binary as raw bytes with nothing run at all — and raw bytes rather than
-``strings`` tokens because the NUL the pattern ends on is what makes a hit the
-whole constant, which a token pass cannot promise.
+emulator states its build in a string constant of its own, and each pinned
+build states that constant as its ``stamp``. What the constant says is the
+emulator's choice — Vita3K's version string names the commit, DuckStation's
+legacy build carries no commit hash and states its commit's date instead — so
+the test reads nothing out of it: it searches the binary for exactly the
+stamp, as raw bytes with nothing run at all, bounded by a NUL on each side.
+Raw bytes rather than ``strings`` tokens, because the two NULs are what make a
+hit the whole constant rather than the head or the tail of a longer one, which
+a token pass cannot promise.
 
 **What this cannot see.** Only an arrangement that deploys an extracted build
 can be read. EmuDeck downloads the ``continuous`` AppImage and moves the
@@ -24,14 +28,15 @@ downloaded file itself to ``~/Applications/Vita3K/Vita3K``, extracting nothing
 folder being ``$HOME/Applications`` per vars.sh:4-5), so what sits there is
 the AppImage: its tag moves with every upstream commit, which no card can pin,
 and the build itself sits inside that archive, which this test does not open.
-The app-of-its-own road ``test_anchor_tripwire.py`` walks does not apply
-either, because the settings table names no flatpak for this emulator. What
-the stamp cannot do is go stale while the revision moves, since the count and
-the hash in it both come from HEAD — read as the build was configured, so a
-rebuild without a reconfigure keeps the stamp it was given and the stamp names
-the commit that configure saw. But the reading is still a floor rather than a
-proof: it establishes which build is deployed, not that any line the card
-cites still says what the card says.
+EmuDeck installs DuckStation as an AppImage too (emuDeckDuckStation.sh:5-6
+at acc45fc). The app-of-its-own road ``test_anchor_tripwire.py`` walks does
+not apply either, because the settings table names no flatpak for either
+emulator. What the stamp cannot do is go stale while the revision
+moves, since both stamps pinned today are read from HEAD — Vita3K's count and
+hash as the build is configured, DuckStation's committer date as its version
+file is written — so the stamp names the commit the build was made from. But
+the reading is still a floor rather than a proof: it establishes which build
+is deployed, not that any line the card cites still says what the card says.
 
 Skipped where the components tree is not deployed, like the tripwires beside
 it.
@@ -40,7 +45,6 @@ it.
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -58,26 +62,9 @@ COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
 )
 
-# The shape of the version string Vita3K's build carries, matched as bytes up
-# to its NUL so a hit is the whole constant rather than a prefix of something
-# longer: `<app name> <version> <commit count>-<revision>`, the name and the
-# version being set outright (vita3k/CMakeLists.txt:1-6) and the revision
-# taking one of three shapes (vita3k/CMakeLists.txt:52-63) — the bare short
-# hash where the owner is Vita3K and the branch is master or a detached HEAD,
-# `<hash>-<owner>/<branch>` for any other git tree, which the optional suffix
-# admits, and `Development version` with a count of 0 where git answered
-# nothing, which is the one shape this pattern does not match and which the
-# comparison then names as a build carrying no stamp.
-_VITA3K_STAMP = rb"Vita3K v\d+\.\d+\.\d+ \d+-[0-9a-f]+(?:-[^\x00]*)?\x00"
-
-# One pattern per pinned card. The table is the mechanism, so a card that pins
-# a build and has no pattern here is named by the test below rather than
-# skipped: a pin nobody can read is the silence this file exists to break.
-VERSION_STAMPS: Mapping[str, bytes] = {"VITA3K": _VITA3K_STAMP}
-
 # The cards that pin no build today. A new card either pins its build — and
-# gets a pattern above — or is added here on purpose; pinning the cards below
-# is open work, not a finding that they cannot be pinned.
+# states the stamp its binary carries — or is added here on purpose; pinning
+# the cards below is open work, not a finding that they cannot be pinned.
 UNPINNED = frozenset(
     {
         "DOLPHIN",
@@ -86,21 +73,21 @@ UNPINNED = frozenset(
         "XEMU",
         "CEMU",
         "AZAHAR",
-        "DUCKSTATION",
         "PCSX2",
         "MELONDS",
         "RPCS3",
     }
 )
 
-NO_STAMP = "carries no version stamp of the shape this test reads"
+NO_STAMP = "carries none of them as a whole NUL-delimited constant"
 
 DEMO = "DEMO"
 DEMO_RELEASE = "1234"
 DEMO_REVISION = "abc1234"
+DEMO_STAMP = "Demo v1.0.0 1234-abc1234"
 DEMO_CITATION = "[V] a citation"
 DEMO_PROVENANCE = "Demo build 1234, commit abc1234"
-BLOCK_SHAPE = "exactly release/revision/citation/provenance"
+BLOCK_SHAPE = "exactly release/revision/stamp/citation/provenance"
 BLANK = "non-blank string"
 
 
@@ -109,6 +96,7 @@ def _demo_build(**changed: object) -> dict[str, object]:
     block: dict[str, object] = {
         "release": DEMO_RELEASE,
         "revision": DEMO_REVISION,
+        "stamp": DEMO_STAMP,
         "citation": DEMO_CITATION,
         "provenance": DEMO_PROVENANCE,
     }
@@ -130,29 +118,33 @@ def pinned_builds() -> tuple[tuple[StandaloneSaveCard, StandaloneBuild], ...]:
     return tuple((card, build) for card in pinned_cards() for build in card.builds)
 
 
-def cards_without_a_pattern(cards: tuple[StandaloneSaveCard, ...]) -> list[str]:
-    """The pinned cards :data:`VERSION_STAMPS` can read no stamp for."""
-    return [
-        card.token
-        for card in cards
-        if card.builds and card.token not in VERSION_STAMPS
-    ]
+def deployed_build(card: StandaloneSaveCard, binary: bytes) -> StandaloneBuild | None:
+    """The pinned build whose stamp *binary* holds as one whole constant, or ``None``.
+
+    The stamp is searched for with a NUL on each side, so a hit is the entire
+    string constant: a stamp that is only the head of a longer constant (a
+    fork's ``-owner/branch`` suffix after a hash) or only its tail is a
+    different string, and the build that carries it is not the pinned one.
+    """
+    return next(
+        (build for build in card.builds if b"\x00" + build.stamp.encode() + b"\x00" in binary),
+        None,
+    )
 
 
 def stamp_disagreements(
-    cards: tuple[StandaloneSaveCard, ...], stamps: Mapping[str, str | None]
+    cards: tuple[StandaloneSaveCard, ...], binaries: Mapping[str, bytes]
 ) -> list[str]:
-    """The pinned cards none of whose revisions the deployed stamp carries.
+    """The pinned cards none of whose stamps the deployed binary carries.
 
-    *stamps* maps a card's token to the version string that emulator's deployed
-    binary carries, ``None`` where the binary is there and carries no such
-    string. An emulator that is not deployed at all is simply absent from the
+    *binaries* maps a card's token to the bytes of that emulator's deployed
+    binary. An emulator that is not deployed at all is simply absent from the
     mapping and is not judged — this machine's emulator set is an accident of
     one installation, and the cards are not.
 
-    A card pinning more than one build passes where the stamp carries any of
-    them: each is a build the card's resolver answers by its own rule, and the
-    deployed one only has to be among them.
+    A card pinning more than one build passes where the binary carries any of
+    their stamps: each is a build the card's resolver answers by its own rule,
+    and the deployed one only has to be among them.
 
     Factored out of the assertion so the comparison can be exercised without a
     deployed emulator: a guard nobody has watched fail is a guard nobody knows
@@ -160,16 +152,13 @@ def stamp_disagreements(
     """
     wrong: list[str] = []
     for card in cards:
-        if not card.builds or card.token not in stamps:
+        if not card.builds or card.token not in binaries:
             continue
-        reported = stamps[card.token]
-        revisions = [build.revision for build in card.builds]
-        if reported is None:
-            wrong.append(f"{card.token}: the deployed build {NO_STAMP}")
-        elif not any(revision in reported for revision in revisions):
+        if deployed_build(card, binaries[card.token]) is None:
+            stamps = [build.stamp for build in card.builds]
             wrong.append(
-                f"{card.token}: the card pins {revisions!r} and the deployed build states "
-                f"{reported!r}"
+                f"{card.token}: the card pins the stamps {stamps!r} and the deployed binary "
+                f"{NO_STAMP}"
             )
     return wrong
 
@@ -218,38 +207,22 @@ def _component_version_of(token: str) -> Path:
     return COMPONENTS / Path(_stated_binary(token)).parts[0] / "component_version"
 
 
-def _pattern_of(token: str) -> bytes:
-    """The stamp pattern for one pinned card, refused by name where there is none."""
-    pattern = VERSION_STAMPS.get(token)
-    if pattern is None:
-        raise ValueError(
-            f"{token} pins a build and VERSION_STAMPS holds no pattern for it, so nothing "
-            "here knows which string to read its stamp out of"
-        )
-    return pattern
+def deployed_binaries() -> dict[str, bytes]:
+    """The bytes of each pinned emulator's binary deployed here."""
+    return {
+        card.token: binary.read_bytes()
+        for card in pinned_cards()
+        if (binary := _binary_of(card.token)).is_file()
+    }
 
 
-def deployed_stamps() -> dict[str, str | None]:
-    """What each pinned emulator deployed here states as its own build."""
-    stamps: dict[str, str | None] = {}
-    for card in pinned_cards():
-        binary = _binary_of(card.token)
-        if not binary.is_file():
-            continue
-        found = re.search(_pattern_of(card.token), binary.read_bytes())
-        stamps[card.token] = (
-            None if found is None else found.group().rstrip(b"\x00").decode("ascii")
-        )
-    return stamps
-
-
-def _stamps_or_skip() -> dict[str, str | None]:
+def _binaries_or_skip() -> dict[str, bytes]:
     if not COMPONENTS.is_dir():
         pytest.skip(f"nothing is deployed at {COMPONENTS}")
-    stamps = deployed_stamps()
-    if not stamps:
+    binaries = deployed_binaries()
+    if not binaries:
         pytest.skip("no emulator a pinned card describes is deployed here")
-    return stamps
+    return binaries
 
 
 def _synthetic(builds: object, *, key: str = "builds") -> str:
@@ -264,61 +237,66 @@ def _synthetic(builds: object, *, key: str = "builds") -> str:
 
 
 class TestTheCheckItself:
-    """The comparison, over stamps written here — no machine involved."""
+    """The comparison, over binaries written here — no machine involved."""
 
     @pytest.mark.parametrize(
         ("card", "build"),
         pinned_builds(),
         ids=[f"{card.token}-{build.release}" for card, build in pinned_builds()],
     )
-    def test_a_stamp_carrying_any_pinned_revision_passes(
+    def test_a_binary_carrying_any_pinned_stamp_passes(
         self, card: StandaloneSaveCard, build: StandaloneBuild
     ):
-        stamps = {card.token: f"Demo v9.9.9 {build.release}-{build.revision}"}
-        assert stamp_disagreements(pinned_cards(), stamps) == []
+        binaries = {card.token: b"junk\x00" + build.stamp.encode() + b"\x00junk"}
+        assert stamp_disagreements(pinned_cards(), binaries) == []
 
-    def test_a_card_whose_revision_is_absent_is_named(self):
+    def test_a_card_whose_stamp_is_absent_is_named(self):
         cards = pinned_cards()
-        named = stamp_disagreements(cards, {card.token: "Demo v9.9.9 1-deadbeef" for card in cards})
+        named = stamp_disagreements(
+            cards, {card.token: b"\x00Demo v9.9.9 1-deadbeef\x00" for card in cards}
+        )
         assert sorted(entry.split(":")[0] for entry in named) == sorted(
             card.token for card in cards
         )
 
     def test_a_build_that_states_no_stamp_is_named(self):
         one = pinned_cards()[0]
-        named = stamp_disagreements(pinned_cards(), {one.token: None})
-        assert named == [f"{one.token}: the deployed build {NO_STAMP}"]
+        named = stamp_disagreements(pinned_cards(), {one.token: b"\x00no version here\x00"})
+        stamps = [build.stamp for build in one.builds]
+        assert named == [
+            f"{one.token}: the card pins the stamps {stamps!r} and the deployed binary {NO_STAMP}"
+        ]
 
     def test_an_emulator_that_is_not_deployed_is_not_judged(self):
         assert stamp_disagreements(pinned_cards(), {}) == []
 
 
-class TestThePatternTable:
-    """Every pinned card is one this file can actually read a stamp for."""
+class TestTheStampSearch:
+    """A hit is the whole constant: neither the head nor the tail of a longer one."""
 
-    def test_every_pinned_card_has_a_pattern(self):
-        assert cards_without_a_pattern(pinned_cards()) == [], (
-            "a card pins a build and VERSION_STAMPS holds no pattern for it — the pin would "
-            "then be held against nothing at all, which is what an absent pin already is"
-        )
+    @staticmethod
+    def _card() -> StandaloneSaveCard:
+        return load_standalone_saves(_synthetic([_demo_build()]))[0]
 
-    def test_a_pinned_card_with_no_pattern_is_named(self):
-        cards = load_standalone_saves(_synthetic([_demo_build()]))
-        assert cards_without_a_pattern(cards) == [DEMO]
+    def test_the_whole_constant_is_found(self):
+        binary = b"junk\x00" + DEMO_STAMP.encode() + b"\x00junk"
+        assert deployed_build(self._card(), binary) == self._card().builds[0]
 
-    def test_the_pattern_matches_a_plain_stamp(self):
-        found = re.search(_VITA3K_STAMP, b"junk\x00Vita3K v0.2.1 1234-abcdef12\x00junk")
-        assert found is not None
+    def test_the_head_of_a_longer_constant_is_not_found(self):
+        # A fork's build of the same commit appends `-owner/branch` to
+        # Vita3K's revision: the same leading characters, another build.
+        binary = b"\x00" + DEMO_STAMP.encode() + b"-someone/topic\x00"
+        assert deployed_build(self._card(), binary) is None
 
-    def test_the_pattern_matches_a_stamp_from_a_fork(self):
-        found = re.search(_VITA3K_STAMP, b"\x00Vita3K v0.2.1 1234-abcdef12-someone/topic\x00")
-        assert found is not None
+    def test_the_tail_of_a_longer_constant_is_not_found(self):
+        binary = b"\x00Not" + DEMO_STAMP.encode() + b"\x00"
+        assert deployed_build(self._card(), binary) is None
 
-    def test_a_stamp_without_its_nul_is_not_matched(self):
-        # The NUL is what makes a hit the whole constant: without it the
-        # pattern would accept a prefix of a longer string and read a
-        # truncated revision out of it.
-        assert re.search(_VITA3K_STAMP, b"Vita3K v0.2.1 1234-abcdef12") is None
+    def test_a_stamp_without_its_closing_nul_is_not_found(self):
+        # The closing NUL is what ends the constant: without it the bytes
+        # could run on into a longer string the search never saw the end of.
+        binary = b"\x00" + DEMO_STAMP.encode()
+        assert deployed_build(self._card(), binary) is None
 
 
 class TestTheCardsThatPinNothing:
@@ -326,8 +304,8 @@ class TestTheCardsThatPinNothing:
 
     def test_the_cards_with_no_build_are_exactly_the_listed_ones(self):
         assert {card.token for card in load_standalone_saves() if not card.builds} == UNPINNED, (
-            "which cards pin no build has changed — a new card either pins its build and gets "
-            "a pattern in VERSION_STAMPS, or joins UNPINNED on purpose, and a card that left "
+            "which cards pin no build has changed — a new card either pins its build and states "
+            "the stamp its binary carries, or joins UNPINNED on purpose, and a card that left "
             "the set stopped being held against anything"
         )
 
@@ -335,11 +313,23 @@ class TestTheCardsThatPinNothing:
 class TestTheLoaderReadsTheBlock:
     """What the packaged card states, and what the loader refuses."""
 
+    @staticmethod
+    def _pinned(token: str) -> StandaloneSaveCard:
+        return next(card for card in pinned_cards() if card.token == token)
+
     def test_the_packaged_card_states_its_builds(self):
-        card = pinned_cards()[0]
-        assert [(build.release, build.revision) for build in card.builds] == [
-            ("3996", "cb1f592c"),
-            ("4103", "e6ac4272"),
+        card = self._pinned("VITA3K")
+        assert [(build.release, build.revision, build.stamp) for build in card.builds] == [
+            ("3996", "cb1f592c", "Vita3K v0.2.1 3996-cb1f592c"),
+            ("4103", "e6ac4272", "Vita3K v0.2.1 4103-e6ac4272"),
+        ]
+
+    def test_the_duckstation_card_pins_the_deployed_legacy_build(self):
+        # The legacy build carries no commit hash, so its stamp is the date
+        # its version file was written with: the commit's committer date.
+        card = self._pinned("DUCKSTATION")
+        assert [(build.release, build.revision, build.stamp) for build in card.builds] == [
+            ("preview", "1f6de046b", "2024-09-19T13:41:26+09:00"),
         ]
 
     @pytest.mark.parametrize(
@@ -352,24 +342,29 @@ class TestTheLoaderReadsTheBlock:
     ):
         # The commit stands three times in a build on purpose: `provenance` is
         # the prose an answer read under that build carries in its `sources`,
-        # the citation is where the release is tied to the commit, and
-        # `revision` is the pin this file checks. Three places is three chances
-        # to drift, so the agreement is a test rather than a habit — a build
-        # whose prose still named the old commit would tell a reader one build
-        # and the tripwire another.
+        # the citation is where the release and the stamp are tied to the
+        # commit, and `revision` is the commit the card's citations were read
+        # at. Three places is three chances to drift, so the agreement is a
+        # test rather than a habit — a build whose prose still named the old
+        # commit would tell a reader one build and the tripwire another.
         assert build.revision in build.provenance, (
-            f"{card.token} pins {build.revision!r} and that build's provenance names some "
-            "other commit — the sentence an answer carries and the pin held against the "
-            "deployed build must be the same commit"
+            f"{card.token} reads its citations at {build.revision!r} and that build's "
+            "provenance names some other commit — the sentence an answer carries and the "
+            "commit the card's citations were read at must be the same commit"
         )
         assert build.revision in build.citation, (
-            f"{card.token} pins {build.revision!r} and that build's citation names some "
-            "other commit — the reading that ties the release to a commit and the pin held "
-            "against the deployed build must be the same commit"
+            f"{card.token} reads its citations at {build.revision!r} and that build's citation "
+            "names some other commit — the reading that ties the release and the stamp to a "
+            "commit and the commit the card's citations were read at must be the same commit"
         )
         assert build.release in build.citation, (
             f"{card.token} pins release {build.release!r} and that build's citation ties some "
             "other release to the commit"
+        )
+        assert build.stamp in build.citation, (
+            f"{card.token} pins the stamp {build.stamp!r} and that build's citation ties some "
+            "other stamp to the commit — the string the tripwire searches for must be the one "
+            "the reading established"
         )
 
     def test_a_card_with_no_list_pins_nothing(self):
@@ -382,7 +377,7 @@ class TestTheLoaderReadsTheBlock:
         assert card.build_for("9999") is None
         assert card.build_for(None) is None
 
-    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    @pytest.mark.parametrize("key", ["release", "revision", "stamp", "citation", "provenance"])
     def test_a_block_missing_a_key_is_refused(self, key: str):
         table = _synthetic([_demo_build(**{key: None})])
         with pytest.raises(ValueError, match=BLOCK_SHAPE):
@@ -417,25 +412,26 @@ class TestTheLoaderReadsTheBlock:
         with pytest.raises(ValueError, match="'builds' list"):
             load_standalone_saves(table)
 
-    @pytest.mark.parametrize("key", ["release", "revision"])
+    @pytest.mark.parametrize("key", ["release", "revision", "stamp"])
     def test_two_builds_under_one_name_are_refused(self, key: str):
-        other = _demo_build(release="5678", revision="def5678")
+        other = _demo_build(release="5678", revision="def5678", stamp="Demo v1.0.0 5678-def5678")
         twin = {**other, key: _demo_build()[key]}
         table = _synthetic([_demo_build(), twin])
         with pytest.raises(ValueError, match=f"one {key} twice"):
             load_standalone_saves(table)
 
-    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    @pytest.mark.parametrize("key", ["release", "revision", "stamp", "citation", "provenance"])
     def test_an_empty_value_is_refused(self, key: str):
         table = _synthetic([_demo_build(**{key: ""})])
         with pytest.raises(ValueError, match=f"build.{key}"):
             load_standalone_saves(table)
 
-    @pytest.mark.parametrize("key", ["release", "revision", "citation", "provenance"])
+    @pytest.mark.parametrize("key", ["release", "revision", "stamp", "citation", "provenance"])
     def test_a_blank_value_is_refused(self, key: str):
-        # A revision of spaces is a substring of every version string there is,
-        # so it would pass the comparison against any build at all; a release
-        # of spaces names no deploy, and a citation or provenance of spaces is
+        # A stamp of spaces is a run any binary may hold between two NULs, so
+        # it could pass the search against a build it never described; a
+        # revision of spaces is a substring of every citation; a release of
+        # spaces names no deploy, and a citation or provenance of spaces is
         # one nobody can follow.
         table = _synthetic([_demo_build(**{key: " "})])
         with pytest.raises(ValueError, match=BLANK):
@@ -443,42 +439,45 @@ class TestTheLoaderReadsTheBlock:
 
 
 class TestEveryPinnedCardDescribesTheDeployedBuild:
-    """Machine-bound: what the binaries here actually state."""
+    """Machine-bound: what the binaries here actually carry."""
 
-    def test_every_deployed_card_carries_its_pinned_revision(self):
-        stamps = _stamps_or_skip()
-        assert stamp_disagreements(pinned_cards(), stamps) == []
+    def test_every_deployed_card_carries_one_of_its_pinned_stamps(self):
+        binaries = _binaries_or_skip()
+        assert stamp_disagreements(pinned_cards(), binaries) == []
 
     def test_the_probe_really_read_something(self):
-        # Without this, a probe that answered `None` for every emulator would
-        # make the check above vacuous in the one direction a skip does not
-        # cover.
-        stamps = _stamps_or_skip()
-        assert [token for token, stamp in stamps.items() if stamp], (
-            "every deployed emulator with a pinned card stated no version string — the probe "
-            "read nothing, so the check above proved nothing"
+        # The search is only worth its hit where the bytes it searched are the
+        # build itself: an ELF executable, not an empty file, a launcher
+        # script or an AppImage whose build sits compressed inside it, where
+        # no stamp could be found and the failure would name the wrong cause.
+        binaries = _binaries_or_skip()
+        not_elf = [token for token, data in binaries.items() if not data.startswith(b"\x7fELF")]
+        assert not_elf == [], (
+            "a deployed binary this probe read is not an ELF executable — the stamp search "
+            "would be held against something other than the build"
         )
 
     def test_the_component_version_agrees_with_the_stamp(self):
         # Two readings of one fact: the component recipe writes the tag of the
-        # release it downloaded, and the binary carries the commit count that
-        # release was built at. A mismatch means the deployed binary is not the
-        # release the tree beside it names.
-        stamps = _stamps_or_skip()
-        for token, stamp in stamps.items():
-            if stamp is None:
+        # release it downloaded, and the binary carries the stamp of one pinned
+        # build, which names the release it is. A mismatch means the deployed
+        # binary is not the release the tree beside it names.
+        binaries = _binaries_or_skip()
+        for card in pinned_cards():
+            if card.token not in binaries:
                 continue
-            version = _component_version_of(token)
+            found = deployed_build(card, binaries[card.token])
+            if found is None:
+                continue  # named by the stamp check above
+            version = _component_version_of(card.token)
             assert version.is_file(), (
-                f"{token}: the deployed build states {stamp!r} and its component tree names no "
-                f"release at all ({version.name} is absent) — the two readings of one release "
-                "cannot be crossed, so the binary is held against nothing here"
+                f"{card.token}: the deployed binary carries {found.stamp!r} and its component "
+                f"tree names no release at all ({version.name} is absent) — the two readings "
+                "of one release cannot be crossed, so the binary is held against nothing here"
             )
             named = version.read_text(encoding="utf-8").strip()
-            counted = re.search(r" (\d+)-", stamp)
-            assert counted is not None, f"{token}: {stamp!r} states no build count"
-            assert counted.group(1) == named, (
-                f"{token}: the deployed build states {stamp!r} and the component tree beside "
-                f"it names release {named!r} — the binary is not the release that tree was "
-                "assembled from"
+            assert named == found.release, (
+                f"{card.token}: the deployed binary carries {found.stamp!r}, the stamp of "
+                f"release {found.release!r}, and the component tree beside it names release "
+                f"{named!r} — the binary is not the release that tree was assembled from"
             )

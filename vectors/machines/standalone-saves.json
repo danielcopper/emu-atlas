@@ -1843,7 +1843,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -1948,7 +1948,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e",
+                "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 1f6de046b",
                 "rom_stem": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')"
               }
             }
@@ -1980,7 +1980,7 @@
     },
     {
       "name": "duckstation-a-file-title-card-is-sanitized-the-way-this-build-sanitizes",
-      "rationale": "FileSystemCharacterIsSane splits on the platform (file_system.cpp:69-97 at 64655818e), and the arm a Linux build compiles rejects two characters: '/' while slashes are being stripped, and '*' because they make globbing annoying. Everything else this stem carries survives — ':' is inside a further #ifdef __APPLE__, and the angle brackets and the control bytes belong to the _WIN32 arm above. atlas used to replace control bytes too, which is Windows behaviour claimed of a Linux build; the characters that do get replaced become '_'.",
+      "rationale": "FileSystemCharacterIsSane splits on the platform (file_system.cpp:69-97 at 1f6de046b), and the arm a Linux build compiles rejects two characters: '/' while slashes are being stripped, and '*' because they make globbing annoying. Everything else this stem carries survives — ':' is inside a further #ifdef __APPLE__, and the angle brackets and the control bytes belong to the _WIN32 arm above. atlas used to replace control bytes too, which is Windows behaviour claimed of a Linux build; the characters that do get replaced become '_'.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2047,7 +2047,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e",
+                "citation": "system.cpp:3744-3762 and file_system.cpp:142-163 at 1f6de046b",
                 "rom_stem": "the content file's own name without its extension, sanitized the way Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')"
               }
             }
@@ -2156,7 +2156,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -2199,7 +2199,7 @@
     },
     {
       "name": "retrodeck-duckstations-dataroot-is-the-config-side-its-sandbox-pins",
-      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot — and no ambiguity stated, because nothing is ambiguous. What is stated is the missing settings.ini itself, emulator-config-missing on the config side, because the defaults decided this answer rather than a reading of the file.",
+      "rationale": "Nothing on this machine holds a DuckStation settings.ini, and that used to leave the DataRoot an open question: the emulator picks it from whether XDG_CONFIG_HOME is set (qthost.cpp:562-582), so the answer named the environment-unset side — the data one — and said the environment decides. It does not decide here. Every emulator RetroDECK ships runs inside RetroDECK's own flatpak, and flatpak force-pins XDG_CONFIG_HOME to the per-app config directory after applying every override (flatpak-context.c:3158-3187 at 1.16.6), so the set branch is the only branch such a launch can take. The compiled defaults now hang off the config side, where this launch really composes them: slot pair PerGameTitle/None (settings.h:511-512), memcards below that DataRoot — and no ambiguity stated, because nothing is ambiguous. What is stated is the missing settings.ini itself, emulator-config-missing on the config side, because the defaults decided this answer rather than a reading of the file.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2272,7 +2272,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -2381,7 +2381,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -2419,7 +2419,7 @@
     },
     {
       "name": "emudeck-duckstation-without-a-settings-ini-leaves-the-dataroot-to-the-environment",
-      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:510-511), memcards below that DataRoot. Beside the ambiguity, emulator-config-missing names the settings.ini on that side, the file whose absence put the defaults in force. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
+      "rationale": "The half of the DataRoot probe a sandbox does not settle. EmuDeck runs this emulator as an AppImage in the host session, where XDG_CONFIG_HOME may be set or not — nothing on disk records which — and with no settings.ini on either candidate there is no file to break the tie either. So the answer states the ambiguity and hangs the compiled defaults off the environment-unset side rather than guessing: slot pair PerGameTitle/None (settings.h:511-512), memcards below that DataRoot. Beside the ambiguity, emulator-config-missing names the settings.ini on that side, the file whose absence put the defaults in force. Inside a flatpak the same emulator has nothing to be ambiguous about, which is what the RetroDECK vector of this pair pins.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2503,7 +2503,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -9998,7 +9998,7 @@
     },
     {
       "name": "duckstation-a-shared-card-at-an-unlocatable-path-keeps-its-slot-and-is-not-discarded",
-      "rationale": "Slot 1 holds the shared card at an absolute Card1Path only the emulator's sandbox can read — GetSharedMemoryCardPath takes an absolute value verbatim (settings.cpp:1785-1797 at stenzek/duckstation@64655818e) — and slot 2 holds none. The emulator writes to that card, so the answer does not say saves are discarded: the granularity value is shared-card, and the card carries no group only because atlas has no directory to state one in; sandbox-path-untranslated names the key and the path. dir is the memory-card directory, a stand-in rather than where the card lies.",
+      "rationale": "Slot 1 holds the shared card at an absolute Card1Path only the emulator's sandbox can read — GetSharedMemoryCardPath takes an absolute value verbatim (settings.cpp:1788-1800 at RetroDECK/Duckstation@1f6de046b) — and slot 2 holds none. The emulator writes to that card, so the answer does not say saves are discarded: the granularity value is shared-card, and the card carries no group only because atlas has no directory to state one in; sandbox-path-untranslated names the key and the path. dir is the memory-card directory, a stand-in rather than where the card lies.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -10857,7 +10857,7 @@
     },
     {
       "name": "duckstation-a-case-variant-spelling-of-the-card-keys-governs",
-      "rationale": "settings.ini goes through CSimpleIniA (ini_settings_interface.h:65 at 64655818e), so [memorycards] card1type, card1path and directory are the canonical keys to the running emulator. The Shared slot, its relative card name and the configured memory-card directory all govern; an exact-case lookup would have answered the per-game default below the compiled memcards directory instead (#295). The readings quote the spelling the file carries, because that line is the one a user must edit.",
+      "rationale": "settings.ini goes through CSimpleIniA (ini_settings_interface.h:65 at 1f6de046b), so [memorycards] card1type, card1path and directory are the canonical keys to the running emulator. The Shared slot, its relative card name and the configured memory-card directory all govern; an exact-case lookup would have answered the per-game default below the compiled memcards directory instead (#295). The readings quote the spelling the file carries, because that line is the one a user must edit.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12182,7 +12182,7 @@
     },
     {
       "name": "duckstation-a-per-game-settings-file-is-stated-beside-the-card-answer",
-      "rationale": "A running game installs gamesettings/<serial>.ini as the TOP layer of the settings interface (UpdateGameSettingsLayer, system.cpp:1407-1441 at stenzek/duckstation@64655818e), and Settings::Load reads Card1Type, Card2Type, Card1Path, Card2Path and UsePlaylistTitle through that interface rather than through the base one (settings.cpp:391-401 on host.cpp:42-45). So the slot modes AND the card files can be answered differently for one game, and which game runs is not a fact atlas holds. Whether any such file exists at all IS a listing, so the answer keeps the global reading and counts them. The strongest half of what it says is the escape: GetSharedMemoryCardPath takes an absolute CardNPath verbatim (settings.cpp:1785-1797), so a per-game card need not sit in the directory this answer names — while [MemoryCards] Directory itself cannot move, because EmuFolders::LoadConfig is handed the base layer at every call site there is (settings.cpp:1964-1981, qthost.cpp:470).",
+      "rationale": "A running game installs gamesettings/<serial>.ini as the TOP layer of the settings interface (UpdateGameSettingsLayer, system.cpp:1407-1441 at RetroDECK/Duckstation@1f6de046b), and Settings::Load reads Card1Type, Card2Type, Card1Path, Card2Path and UsePlaylistTitle through that interface rather than through the base one (settings.cpp:392-402 on host.cpp:42-45). So the slot modes AND the card files can be answered differently for one game, and which game runs is not a fact atlas holds. Whether any such file exists at all IS a listing, so the answer keeps the global reading and counts them. The strongest half of what it says is the escape: GetSharedMemoryCardPath takes an absolute CardNPath verbatim (settings.cpp:1788-1800), so a per-game card need not sit in the directory this answer names — while [MemoryCards] Directory itself cannot move, because EmuFolders::LoadConfig is handed the base layer at every call site there is (settings.cpp:1967-1984, qthost.cpp:470).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12268,7 +12268,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -12392,7 +12392,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -12430,7 +12430,7 @@
     },
     {
       "name": "duckstation-a-sandbox-only-gamesettings-directory-leaves-the-layer-unread",
-      "rationale": "[Folders] GameSettings is a configured value like every other folder of this emulator (settings.cpp:1972 through LoadPathFromSettings :1952-1962), so it can name a path only the emulator's own sandbox can spell. The listing this caveat rests on cannot be made from here, which is the unread state and never the silent one — silence would say no game overrides this answer, which is precisely what was not established. The cause rides beside the consequence: sandbox-path-untranslated names the path, per-game-layer-unread names what went unchecked because of it.",
+      "rationale": "[Folders] GameSettings is a configured value like every other folder of this emulator (settings.cpp:1975 through LoadPathFromSettings :1955-1965), so it can name a path only the emulator's own sandbox can spell. The listing this caveat rests on cannot be made from here, which is the unread state and never the silent one — silence would say no game overrides this answer, which is precisely what was not established. The cause rides beside the consequence: sandbox-path-untranslated names the path, per-game-layer-unread names what went unchecked because of it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -12519,7 +12519,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -12628,7 +12628,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -13727,7 +13727,7 @@
     },
     {
       "name": "duckstation-a-degenerate-card-path-names-the-file-the-emulator-opens",
-      "rationale": "Card1Path spelled with a separator run and a trailing separator. GetSharedMemoryCardPath composes a relative value below the memory-card directory through Path::Combine (settings.cpp:1791-1792 at 64655818e), which collapses the run and strips the trailing separator (file_system.cpp:859-874) — so the answer names cards/alpha.mcd below the default memcards, the file the emulator opens, not a directory-shaped spelling of it that os.path.join would have preserved.",
+      "rationale": "Card1Path spelled with a separator run and a trailing separator. GetSharedMemoryCardPath composes a relative value below the memory-card directory through Path::Combine (settings.cpp:1794-1795 at 1f6de046b), which collapses the run and strips the trailing separator (file_system.cpp:859-874) — so the answer names cards/alpha.mcd below the default memcards, the file the emulator opens, not a directory-shaped spelling of it that os.path.join would have preserved.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13817,7 +13817,7 @@
     },
     {
       "name": "duckstation-a-degenerate-card-directory-is-the-directory-the-emulator-opens",
-      "rationale": "The issue's own witness: [MemoryCards] Directory = memcards//sub/. The emulator reads the key through LoadPathFromSettings (EmuFolders::LoadConfig, settings.cpp:1974 with :1952-1962 at 64655818e), whose Path::Combine collapses the separator run and strips the trailing separator (file_system.cpp:859-874) — the emulator opens <DataRoot>/memcards/sub, and the answer spells the same string instead of <DataRoot>/memcards//sub/, the same inode under a spelling the emulator never uses. The slot is per-game deliberately: that is the mode whose group directory is the Directory compose itself, un-recomposed — a shared slot's directory passes through the card-name combine as well, which would clean the base even if the Directory compose did not.",
+      "rationale": "The issue's own witness: [MemoryCards] Directory = memcards//sub/. The emulator reads the key through LoadPathFromSettings (EmuFolders::LoadConfig, settings.cpp:1977 with :1955-1965 at 1f6de046b), whose Path::Combine collapses the separator run and strips the trailing separator (file_system.cpp:859-874) — the emulator opens <DataRoot>/memcards/sub, and the answer spells the same string instead of <DataRoot>/memcards//sub/, the same inode under a spelling the emulator never uses. The slot is per-game deliberately: that is the mode whose group directory is the Directory compose itself, un-recomposed — a shared slot's directory passes through the card-name combine as well, which would clean the base even if the Directory compose did not.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -13888,7 +13888,7 @@
                 "files_without_save_id": [
                   "shared_card_1.mcd"
                 ],
-                "citation": "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e",
+                "citation": "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b",
                 "save_id": "the game's title as DuckStation's database spells it, sanitized — a playlist or disc-set game may use the set's name instead, and an existing disc-title card outranks it",
                 "save_id_spelling": "path-segment"
               }
@@ -13926,7 +13926,7 @@
     },
     {
       "name": "duckstation-a-degenerate-absolute-directory-keeps-both-slots-in-one-group",
-      "rationale": "[MemoryCards] Directory absolute and spelled with a separator run and a trailing separator, slot 1 on a configured name and slot 2 on its default. Upstream composes the default name through the same Path::Combine as a configured one (GetSharedMemoryCardPath, settings.cpp:1790 and :1792 at 64655818e), so both cards land in one directory spelled one way. Composing the default with os.path.join instead kept the base's degenerate spelling for slot 2 only — two spellings of one directory, and the answer's file list, which aggregates only the groups sharing the first group's directory, silently dropped the second card.",
+      "rationale": "[MemoryCards] Directory absolute and spelled with a separator run and a trailing separator, slot 1 on a configured name and slot 2 on its default. Upstream composes the default name through the same Path::Combine as a configured one (GetSharedMemoryCardPath, settings.cpp:1793 and :1795 at 1f6de046b), so both cards land in one directory spelled one way. Composing the default with os.path.join instead kept the base's degenerate spelling for slot 2 only — two spellings of one directory, and the answer's file list, which aggregates only the groups sharing the first group's directory, silently dropped the second card.",
       "input": {
         "home": "/home/deck",
         "files": {

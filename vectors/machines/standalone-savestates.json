@@ -1107,7 +1107,7 @@
     },
     {
       "name": "retrodeck-duckstations-states-default-below-the-probed-dataroot",
-      "rationale": "DuckStation's [Folders] SaveStates key exists — RetroDECK's script calls the location hard-coded and the source disproves it (settings.cpp:1975 at 64655818e) — but RetroDECK leaves it unwritten and links the default location instead, so the compiled savestates below the probed DataRoot governs. The settings.ini on the config side pins which DataRoot spelling answered.",
+      "rationale": "DuckStation's [Folders] SaveStates key exists — RetroDECK's script calls the location hard-coded and the source disproves it (settings.cpp:1978 at 1f6de046b) — but RetroDECK leaves it unwritten and links the default location instead, so the compiled savestates below the probed DataRoot governs. The settings.ini on the config side pins which DataRoot spelling answered.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -1156,7 +1156,7 @@
                 "token": "DUCKSTATION",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/savestates",
                 "pattern": "<serial>_<slot>.sav",
-                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+                "citation": "system.cpp:5291-5305 at RetroDECK/Duckstation@1f6de046b"
               }
             }
           ]
@@ -1220,7 +1220,7 @@
                 "token": "DUCKSTATION",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/savestates",
                 "pattern": "<serial>_<slot>.sav",
-                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+                "citation": "system.cpp:5291-5305 at RetroDECK/Duckstation@1f6de046b"
               }
             }
           ]
@@ -1369,7 +1369,7 @@
                 "token": "DUCKSTATION",
                 "dir": "/home/deck/Emulation/saves/duckstation/states",
                 "pattern": "<serial>_<slot>.sav",
-                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+                "citation": "system.cpp:5291-5305 at RetroDECK/Duckstation@1f6de046b"
               }
             }
           ]
@@ -4518,7 +4518,7 @@
     },
     {
       "name": "duckstation-a-degenerate-states-value-lands-where-the-combine-lands",
-      "rationale": "[Folders] SaveStates spelled states//deep/ — a separator run and a trailing separator. LoadPathFromSettings (settings.cpp:1975 with :1952-1962 at 64655818e) composes the relative value below the DataRoot through Path::Combine, which collapses the run and strips the tail (file_system.cpp:859-874), so the emulator's states directory is <DataRoot>/states/deep and the answer spells exactly that.",
+      "rationale": "[Folders] SaveStates spelled states//deep/ — a separator run and a trailing separator. LoadPathFromSettings (settings.cpp:1978 with :1955-1965 at 1f6de046b) composes the relative value below the DataRoot through Path::Combine, which collapses the run and strips the tail (file_system.cpp:859-874), so the emulator's states directory is <DataRoot>/states/deep and the answer spells exactly that.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4571,7 +4571,7 @@
                 "token": "DUCKSTATION",
                 "dir": "/home/deck/.local/share/duckstation/states/deep",
                 "pattern": "<serial>_<slot>.sav",
-                "citation": "system.cpp:5288-5302 at stenzek/duckstation@64655818e"
+                "citation": "system.cpp:5291-5305 at RetroDECK/Duckstation@1f6de046b"
               }
             }
           ]

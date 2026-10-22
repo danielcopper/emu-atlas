@@ -6848,7 +6848,7 @@ class TestAnIdentifiedImageIsVerified:
 
         DuckStation's search returns nothing when its listing finished with no
         file of an accepted size, and the boot stops on that (bios.cpp:403-417,
-        system.cpp:2510-2512 and :1755-1761 at stenzek/duckstation@64655818e).
+        system.cpp:2510-2512 and :1755-1761 at RetroDECK/Duckstation@1f6de046b).
         Every other state either names the file the ranking reached — with
         what its bytes turned out to be, up to and including that they would
         not come back — or rests on a listing atlas could not finish, and

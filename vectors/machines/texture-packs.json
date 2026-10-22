@@ -2667,7 +2667,7 @@
     },
     {
       "name": "duckstation-a-case-variant-spelling-of-the-textures-key-governs",
-      "rationale": "DuckStation reads settings.ini through the same CSimpleIniA as PCSX2 (ini_settings_interface.h:65 and the vendored SimpleIni.h:3593-3607 at 64655818e), so [folders] textures is the [Folders] Textures key to the running emulator. The relative value joins the DataRoot exactly as the canonical spelling would (LoadPathFromSettings, settings.cpp:1955-1962) — an exact-case lookup would have answered the compiled textures default instead (#295).",
+      "rationale": "DuckStation reads settings.ini through the same CSimpleIniA as PCSX2 (ini_settings_interface.h:65 and the vendored SimpleIni.h:3593-3607 at 1f6de046b), so [folders] textures is the [Folders] Textures key to the running emulator. The relative value joins the DataRoot exactly as the canonical spelling would (LoadPathFromSettings, settings.cpp:1958-1965) — an exact-case lookup would have answered the compiled textures default instead (#295).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -2838,7 +2838,7 @@
     },
     {
       "name": "duckstation-a-degenerate-textures-value-composes-the-emulators-spelling",
-      "rationale": "[Folders] Textures spelled textures//packs/ — a separator run and a trailing separator. The key is a LoadPathFromSettings read (settings.cpp:1978 with :1952-1962 at 64655818e), whose Path::Combine collapses the run and strips the tail (file_system.cpp:859-874), so the emulator reads packs from <DataRoot>/textures/packs and the answer spells exactly that. The witness stands for every route through the shared load_path read — textures, cheats and the per-game settings directory compose a relative value through the same ported combine.",
+      "rationale": "[Folders] Textures spelled textures//packs/ — a separator run and a trailing separator. The key is a LoadPathFromSettings read (settings.cpp:1981 with :1955-1965 at 1f6de046b), whose Path::Combine collapses the run and strips the tail (file_system.cpp:859-874), so the emulator reads packs from <DataRoot>/textures/packs and the answer spells exactly that. The witness stands for every route through the shared load_path read — textures, cheats and the per-game settings directory compose a relative value through the same ported combine.",
       "input": {
         "home": "/home/deck",
         "files": {

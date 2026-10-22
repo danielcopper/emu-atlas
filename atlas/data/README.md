@@ -532,20 +532,22 @@ refuses a card whose token has no resolver registered.
 
 A card may also pin the builds its citations were read at, as an optional `builds` list. Each build states the `release`
 the deploy names for it — the tag RetroDECK's component recipe writes as `component_version` — the `revision`, the short
-commit hash the deployed binary spells in the version string its `--version` prints, the `citation` that ties the two,
-and the `provenance` an answer read under that build carries in its `sources`; the card-level provenance is what an
-answer carries where no pinned build applied. It is what makes a card checkable, for the reason the core-firmware
-entries carry the same kind of block: **the readings are a property of one build, not of an emulator.** So
-`tests/test_standalone_build_tripwire.py` reads that string off the deployed binary as raw bytes where the string is a
-constant of the build, as Vita3K's is — nothing has to be run then, and an emulator that composes its version at startup
-instead would need reading of another kind, which is why the pattern the stamp is read with is stated per card there —
-and fails a card none of whose pinned revisions the string carries. More than one build is a card whose emulator is in
-the field at builds that answer differently, and whose resolver reads which build runs: Vita3K's card pins 3996 and
-4103, whose rules for picking the user differ, and the resolver reads `component_version` to pick one — a release the
-card does not pin, or none read at all, answers what the builds share and states the rest as not established. The rest
-pin none, which that test's `UNPINNED` set keeps deliberate rather than accidental, and pinning them is open work. The
-list is schema 3: it replaced schema 2's single `build` block, which the loader now refuses by name rather than read as
-a card that pins nothing, and an empty list is refused for the same reason.
+commit hash the card's citations were read at, the `stamp`, the string constant the build itself carries to say which
+build it is, the `citation` that ties the three, and the `provenance` an answer read under that build carries in its
+`sources`; the card-level provenance is what an answer carries where no pinned build applied. What the stamp says is the
+emulator's choice: Vita3K's version string names the commit, while DuckStation's legacy build carries no commit hash and
+states its commit's date instead, so the stamp is stated beside the revision rather than derived from it. It is what
+makes a card checkable, for the reason the core-firmware entries carry the same kind of block: **the readings are a
+property of one build, not of an emulator.** So `tests/test_standalone_build_tripwire.py` searches the deployed binary
+for exactly the stamp, as raw bytes with a NUL on each side so a hit is the whole constant — nothing has to be run, and
+an emulator that composes its version at startup instead would need reading of another kind — and fails a card none of
+whose pinned stamps the binary carries. More than one build is a card whose emulator is in the field at builds that
+answer differently, and whose resolver reads which build runs: Vita3K's card pins 3996 and 4103, whose rules for picking
+the user differ, and the resolver reads `component_version` to pick one — a release the card does not pin, or none read
+at all, answers what the builds share and states the rest as not established. DuckStation's card pins the one build
+RetroDECK ships, `preview`. The rest pin none, which that test's `UNPINNED` set keeps deliberate rather than accidental,
+and pinning them is open work. The list is schema 3: it replaced schema 2's single `build` block, which the loader now
+refuses by name rather than read as a card that pins nothing, and an empty list is refused for the same reason.
 
 ### `citations` — the evidence a shared reading speaks
 
@@ -597,7 +599,7 @@ unit templated below it — `usr/save/<save_id>`, granularity `per-game-director
 emulator reads it (`use_custom_storage` routes `sdmc_directory`, `\default` companions honored — ReadSetting,
 config.cpp:1442-1450), the per-title unit `Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with
 compile-time all-zero ids (archive.h:22-24), and the extdata tree stated beside it as its own group. DuckStation (the
-"Legacy" build RetroDECK froze from the 2024-09 rolling release; citations at stenzek/duckstation@64655818e): two
+"Legacy" build RetroDECK froze from the 2024-09 rolling release; citations at RetroDECK/Duckstation@1f6de046b): two
 memory-card slots, six modes each — the Dolphin GC shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd`
 below `[MemoryCards] Directory` keyed by serial, sanitized title, or the content file's own stem (which the resolver
 fills itself), a shared card at its configured or default path, and the DataRoot probed on both spellings the launch
@@ -1696,7 +1698,7 @@ Shape:
 
 ```json
 {
-  "_meta": { "generated_from": "...", "revision": "64655818e", "generated_at": "...", "images": 104 },
+  "_meta": { "generated_from": "...", "revision": "1f6de046b", "generated_at": "...", "images": 104 },
   "sizes": { "ps1": 524288, "ps2": 4194304, "ps3": 4089584 },
   "openbios": { "signature": "OpenBIOS", "offset": 120 },
   "images": [{ "name": "...", "region": "ntsc-u", "md5": "...", "priority": 10, "fast_boot_patch": "type1" }]
@@ -1828,10 +1830,10 @@ it — one script, because they are the same artifact read out of two forks of o
 shape and the output:
 
 ```sh
-git clone https://github.com/stenzek/duckstation ~/src/duckstation
+git clone https://github.com/RetroDECK/Duckstation ~/src/duckstation
 git clone https://github.com/libretro/swanstation ~/src/swanstation
 
-python scripts/generate_bios_table.py --emulator duckstation --source ~/src/duckstation --revision 64655818e
+python scripts/generate_bios_table.py --emulator duckstation --source ~/src/duckstation --revision 1f6de046b
 python scripts/generate_bios_table.py --emulator swanstation --source ~/src/swanstation --revision 4d309c0
 ```
 

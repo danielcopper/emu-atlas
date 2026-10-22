@@ -57,11 +57,11 @@ fact at a pinned upstream revision, and a core with no entry answers `unestablis
 the names it declares. Because the fact is a property of one build, `tests/test_core_firmware_tripwire.py` asks each
 deployed core for its own version string and fails when the entry's pinned revision is not in it — an upgrade that
 changes the route turns red instead of being described by stale source. Where a standalone save card pins a revision it
-states the same kind of block, `build`, and `tests/test_standalone_build_tripwire.py` holds that pin against the version
-string the deployed binary carries: a standalone emulator states its build through the string its `--version` prints
-rather than through a libretro entry point, and where that string is a constant of the build, as Vita3K's is, the test
-reads it off the binary as raw bytes instead of running it, which is why the pattern the stamp is read with is stated
-per card there.
+states the same kind of block, `build`, and `tests/test_standalone_build_tripwire.py` holds that pin against the
+deployed binary: a standalone emulator states its build through a string constant of its own rather than through a
+libretro entry point, so each pinned build states that constant as its `stamp` — Vita3K's version string, which names
+the commit, or DuckStation's commit date, since its legacy build carries no commit hash — and the test searches the
+binary for exactly that stamp as raw bytes, a NUL on each side, instead of running it.
 
 ## The generated contract reference
 
@@ -114,7 +114,8 @@ measures them — so a clean Sonar page does not mean a green gate.
 
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
   resolve against the _main checkout_ while you work in a worktree — trust `mise run test`, not stale diagnostics. The
-  shell cwd resets between Bash calls: start commands with an explicit `cd` into the worktree.
+  shell cwd resets between Bash calls: use absolute paths into the worktree (`mise -C <wt>`, `git -C <wt>`,
+  `<wt>/.venv/bin/…`).
 - The `machines` vector family (schema 5) models whole machines as plain data. `vectors/README.md` is the one
   description of its format — every input key, the question each query key asks, and how an expected block is asserted —
   so read it before writing or editing a vector; `tests/test_vectors_readme.py` fails when the validator accepts an
