@@ -72,11 +72,17 @@ from .placement import (
     checked_cwd,
 )
 
+# A module-level TypeVar rather than the class's own type parameter, for the
+# exported constructor's sake: the ``__init__`` the dataclass generates is
+# annotated with the name ``AnswerT``, and ``typing.get_type_hints`` resolves
+# that name in this module's globals, where a class type parameter is not — so
+# with one, introspecting the constructor's hints raises ``NameError``. The
+# class's own hints would still resolve.
 AnswerT = TypeVar("AnswerT")
 
 
 @dataclass(frozen=True, slots=True)
-class InstallationAnswer(Generic[AnswerT]):
+class InstallationAnswer(Generic[AnswerT]):  # NOSONAR S6792: __init__'s hints resolve AnswerT here
     """One installation's answer, and the handle that gave it.
 
     The pair travels together because the answer alone is ambiguous the moment

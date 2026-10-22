@@ -78,7 +78,7 @@ import tomllib
 import re
 from dataclasses import dataclass, field, replace
 from glob import escape as _glob_escape
-from typing import Any, Iterable, Literal, Mapping, Protocol, Sequence, TypeAlias, TypeVar, cast
+from typing import Any, Iterable, Literal, Mapping, Protocol, Sequence, TypeVar, cast
 
 from ._data import packaged_text
 from .bios_table import BiosCandidate, BiosImage, BiosPick, BiosTable, packaged_bios_table
@@ -5352,7 +5352,7 @@ def _requirements_of(cores: tuple[CoreFirmware, ...]) -> tuple[FirmwareRequireme
 # hashable as it stands, so each is spelled out — the mapping as its sorted
 # sequence as its own tuple, because its ORDER is part of the contract and two
 # caveats naming the same files in different orders are not the same statement.
-_FlatValue: TypeAlias = "str | tuple[str, ...] | tuple[tuple[str, str], ...]"
+type _FlatValue = str | tuple[str, ...] | tuple[tuple[str, str], ...]
 _CaveatKey = tuple[str, tuple[tuple[str, _FlatValue], ...]]
 
 
@@ -8454,7 +8454,7 @@ def _named_content(
 # (``None`` where atlas would not follow the path at all), which of the three
 # outcomes above opening it came to, what that says about this core's
 # configuration, and what the look at the machine saw.
-_NamedRead: TypeAlias = "tuple[FirmwareRequirement | None, str, tuple[Caveat, ...], tuple[Caveat, ...]]"
+type _NamedRead = tuple[FirmwareRequirement | None, str, tuple[Caveat, ...], tuple[Caveat, ...]]
 
 
 def _named_image(
