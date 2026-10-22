@@ -388,6 +388,7 @@ from .placement import (
     build_savestate_placement,
     build_soft_patch_candidates,
     checked_appendconfig,
+    checked_content_path,
     checked_cwd,
     cwd_templated,
     file_set_holes,
@@ -17064,7 +17065,10 @@ def _firmware_core_options(
     themselves: the game and folder ``.opt`` layers are keyed by content, so
     what governs here is the per-core ``.opt`` (unless ``global_core_options``
     switched it off) and then the global options file, which is exactly the
-    tail of RetroArch's own priority order.
+    tail of RetroArch's own priority order. A firmware question that names the
+    game's content (#661) reads those two layers too, and whether RetroArch
+    reads them at all is the global cfg's ``game_specific_options``, carried
+    here; the override ``.cfg`` layers stay unread either way.
     """
     layers: list[_CfgLayer] = (
         [(CfgSource(CFG_LAYER_GLOBAL, cfg_label), global_text)] if global_text is not None else []
@@ -17082,6 +17086,7 @@ def _firmware_core_options(
         per_core_options=gates.per_core_options,
         core_dir=core_dir,
         caveats=(*override_caveats, *gates.caveats),
+        game_specific_options=gates.game_specific_options,
     )
 
 
@@ -17203,7 +17208,12 @@ class _FirmwareQueries:
 
     @one_question
     def firmware_for_core(
-        self, core_so: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        core_so: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer:
         """Does *core_so* need firmware, where does each file go, and is it there?
 
@@ -17211,26 +17221,49 @@ class _FirmwareQueries:
         path; a value that is not absolute raises ``ValueError``. No core's
         firmware depends on it, so it changes nothing here — it is taken so a
         launcher can pass it on every firmware question.
+
+        ``content_path`` names the game the launch is for — the path the launch
+        is handed, an ``.m3u`` or a single image. Where the core's firmware is
+        a group whose option the console region selects, the group then states
+        the region the core decides for that game and where it came from
+        (:attr:`atlas.firmware.FirmwareAlternatives.region`); every other
+        answer is the same with or without it.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         return _resolve_for_core(
-            self._machine, self._firmware_context(cwd=cwd), core_so=core_so, verify=verify
+            self._machine,
+            self._firmware_context(cwd=cwd),
+            core_so=core_so,
+            verify=verify,
+            content_path=content_path,
         )
 
     @one_question
     def firmware_for_system(
-        self, system: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        system: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer:
         """Which emulators can run *system*, and what does each of them want?
 
         ``cwd`` is the working folder the launch will use, an absolute host
         path: it completes a standalone emulator's relative configured path
         (xemu's), is ignored where no answer depends on it, and a value that
-        is not absolute raises ``ValueError``.
+        is not absolute raises ``ValueError``. ``content_path`` names the game
+        the launch is for, as :meth:`firmware_for_core` takes it.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         return _resolve_for_system(
-            self._machine, self._firmware_context(cwd=cwd), system=system, verify=verify
+            self._machine,
+            self._firmware_context(cwd=cwd),
+            system=system,
+            verify=verify,
+            content_path=content_path,
         )
 
     @one_question
@@ -22346,7 +22379,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     @one_question
     def firmware_for_system(
-        self, system: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        system: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer:
         """Which emulators RetroDECK offers for *system*, and what each of them wants.
 
@@ -22360,14 +22398,17 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
         The catalogue is the one :meth:`emulators_for` answers from, assembled
         from this query's own snapshot: marker and both catalogue layers are
-        read once here and handed on, never re-read. ``cwd`` is taken as the
-        shared firmware questions take it.
+        read once here and handed on, never re-read. ``cwd`` and
+        ``content_path`` are taken as the shared firmware questions take them.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         config, marker_issues = self._read_marker()
         if _not_set_up(marker_issues) is not None:
             context = self._stated(self._firmware_context_from(config, marker_issues), cwd=cwd)
-            return _resolve_for_system(self._machine, context, system=system, verify=verify)
+            return _resolve_for_system(
+                self._machine, context, system=system, verify=verify, content_path=content_path
+            )
         root = self._config_path(config, "rd_home_path", "")[0]
         by_system, read, exclusive, catalogue_invalid = self._read_catalogue(root)
         catalogue = Catalogue(
@@ -22381,7 +22422,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # The override files follow the same rule: read once, by the context.
         context = self._stated(self._firmware_context_from(config, marker_issues), cwd=cwd)
         answer = _resolve_for_system(
-            self._machine, context, system=system, catalogue=catalogue, verify=verify
+            self._machine,
+            context,
+            system=system,
+            catalogue=catalogue,
+            verify=verify,
+            content_path=content_path,
         )
         # The catalogue-status statements ride only answers the catalogue
         # informed: an own spelling is answered from the cores, so the
@@ -25073,7 +25119,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
     @one_question
     def firmware_for_system(
-        self, system: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        system: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer:
         """Which emulators this EmuDeck's ES-DE offers for *system*, and what each wants.
 
@@ -25093,10 +25144,11 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         unreadable bundled layer is. And on every catalogue-informed answer
         the marker cross-check rides adjacent to the catalogue-status
         statement, in the same order every catalogue answer pins (sealed,
-        then mismatch). ``cwd`` is taken as the shared firmware questions take
-        it.
+        then mismatch). ``cwd`` and ``content_path`` are taken as the shared
+        firmware questions take them.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         settings, marker_issues = self._read_marker()
         cfg = self._machine.read_text(self._companion_cfg_path())
         context = self._stated(self._firmware_context_from(settings, marker_issues, cfg), cwd=cwd)
@@ -25107,7 +25159,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             # catalogue could inform the answer — the resolver returns the
             # same empty answer either way, so the ES-DE sources are not read
             # for an answer that would discard them.
-            return _resolve_for_system(self._machine, context, system=system, verify=verify)
+            return _resolve_for_system(
+                self._machine, context, system=system, verify=verify, content_path=content_path
+            )
         mismatch = self._frontend_marker_mismatch(settings, present)
         by_system, complete, shadow_broken, exclusive, catalogue_invalid = (
             self._read_esde_catalogue()
@@ -25125,7 +25179,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 hole=None if complete else self._catalogue_sealed_caveat(system),
             )
         answer = _resolve_for_system(
-            self._machine, context, system=system, catalogue=catalogue, verify=verify
+            self._machine,
+            context,
+            system=system,
+            catalogue=catalogue,
+            verify=verify,
+            content_path=content_path,
         )
         # The catalogue-status statements and the cross-check ride only answers
         # the catalogue informed: an own spelling is answered from the cores
@@ -25840,11 +25899,21 @@ class Installation(Protocol):
     def rom_locations(self) -> RomLocationsAnswer: ...
 
     def firmware_for_core(
-        self, core_so: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        core_so: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer: ...
 
     def firmware_for_system(
-        self, system: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        system: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> FirmwareAnswer: ...
 
     def firmware_inventory(self, *, verify: bool = False, cwd: str | None = None) -> FirmwareAnswer: ...

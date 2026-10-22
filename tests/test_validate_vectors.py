@@ -617,6 +617,32 @@ INPUT_PS2_BIOS_HEADER_CASES = [
          "serial must carry no NUL", id="header-serial-nul"),
 ]
 
+A_DISC = "/roms/psx/Game.cue"
+A_DISC_IDENTITY = {"license": "Licensed  by", "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1", "boot_found": True,
+                   "edc_valid": True}
+
+INPUT_DISC_IDENTITY_CASES = [
+    case(_with(_vector(), disc_identities=[]), "input.disc_identities must be an object", id="disc-not-object"),
+    case(_with(_vector(), disc_identities={A_DISC: "not-a-disc"}), "must name a declared file",
+         id="disc-on-undeclared-file"),
+    case(_with(_vector(), files={A_DISC: {"status": "unreadable"}}, disc_identities={A_DISC: "not-a-disc"}),
+         "sits on an unreadable file", id="disc-on-unreadable-file"),
+    case(_with(_vector(), files={"/roms/psx/Game.chd": A_BLOB}, disc_identities={"/roms/psx/Game.chd": "missing"}),
+         "has a suffix no reader opens", id="disc-on-unread-suffix"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: "format-not-read"}), "state must be one of",
+         id="disc-state-unknown"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {"license": ""}}),
+         "must be a state or an object with exactly", id="disc-fields"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {**A_DISC_IDENTITY, "system_cnf": 7}}),
+         "system_cnf a string or null", id="disc-field-type"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {**A_DISC_IDENTITY, "edc_valid": "yes"}}),
+         "must be booleans", id="disc-boolean"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {**A_DISC_IDENTITY, "license": "x" * 73}}),
+         "license must be at most 72 characters", id="disc-license-length"),
+    case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {**A_DISC_IDENTITY, "system_cnf": "€"}}),
+         "one byte per character (latin-1)", id="disc-not-latin1"),
+]
+
 AN_IMAGE = "/Applications/ES-DE.AppImage"
 A_BINARY = "usr/bin/es-de"
 
@@ -740,6 +766,15 @@ FIRMWARE_QUERY_CASES = [
     case(_vector({"firmware": _firmware()}, installed=True,
                  firmware_query={"kind": "inventory", "cwd": "launch"}),
          "input.firmware_query.cwd must be an absolute path", id="firmware-query-cwd-relative"),
+    case(_vector({"firmware": _firmware()}, installed=True,
+                 firmware_query={"kind": "core", "core_so": CORE_SO, "content_path": ""}),
+         "input.firmware_query.content_path must be a non-empty string", id="firmware-query-content-empty"),
+    case(_vector({"firmware": _firmware()}, installed=True,
+                 firmware_query={"kind": "inventory", "content_path": A_DISC}),
+         "takes neither core_so nor system nor content_path", id="firmware-query-inventory-with-content"),
+    case(_vector({"firmware": _firmware()}, installed=True,
+                 firmware_query={"kind": "core", "core_so": CORE_SO, "content_path": "roms/Game.cue"}),
+         "input.firmware_query.content_path must be an absolute path", id="firmware-query-content-relative"),
 ]
 
 IDENTIFY_QUERY_CASES = [
@@ -1616,6 +1651,36 @@ ALTERNATIVES_CASES = [
          id="alternatives-unchecked-option-on-a-hash-checked-run"),
 ]
 
+def _content_firmware(group: dict[str, Any], **overrides: Any) -> Vector:
+    """A firmware answer to a question that named content, its one requirement *group*."""
+    return _vector(
+        {"firmware": _firmware(cores=[_core(requirements=[group], **overrides)])},
+        installed=True,
+        firmware_query={"kind": "core", "core_so": CORE_SO, "content_path": A_DISC},
+    )
+
+
+DECIDED_ALTERNATIVES_CASES = [
+    # Without content the group is the one key it always was.
+    case(_base_firmware(cores=[_core(requirements=[{"alternatives": [_alternative()], "region": None,
+                                                    "region_source": None}])]),
+         "an alternatives entry must be exactly the fields", id="decided-group-without-content"),
+    # With content both keys ride every group, null where nothing was decided.
+    case(_content_firmware({"alternatives": [_alternative()]}),
+         "an alternatives entry must be exactly the fields", id="decided-group-keys-missing"),
+    case(_content_firmware({"alternatives": [_alternative()], "region": "ntsc-u", "region_source": None}),
+         "null together or stated together", id="decided-group-half-stated"),
+    case(_content_firmware({"alternatives": [_alternative()], "region": "sécam", "region_source": "license"}),
+         "a group's region must be one of", id="decided-group-unknown-region"),
+    case(_content_firmware({"alternatives": [_alternative()], "region": "ntsc-u", "region_source": "guess"}),
+         "a group's region_source must be one of", id="decided-group-unknown-source"),
+    # A decided region is the verdict's selector: its option failed, so the
+    # summary may not stay open.
+    case(_content_firmware({"alternatives": [_alternative()], "region": "ntsc-u", "region_source": "license"},
+                           requirements_met=None),
+         "requirements_met must be", id="decided-group-gates-the-summary-by-its-option"),
+]
+
 UNCLAIMED_CASES = [
     case(_base_firmware(unclaimed=[{"path": f"{BIOS}/x.bin", "identity": None}]),
          "each unclaimed file must be exactly the fields", id="unclaimed-missing-field"),
@@ -1701,6 +1766,7 @@ ALL_CASES = [
     *INPUT_FILE_CASES,
     *INPUT_PATH_CASES,
     *INPUT_PS2_BIOS_HEADER_CASES,
+    *INPUT_DISC_IDENTITY_CASES,
     *INPUT_APPIMAGE_STAMP_CASES,
     *INPUT_CORE_CASES,
     *QUERY_CASES,
@@ -1724,6 +1790,7 @@ ALL_CASES = [
     *FIRMWARE_CORE_CASES,
     *REQUIREMENT_CASES,
     *ALTERNATIVES_CASES,
+    *DECIDED_ALTERNATIVES_CASES,
     *UNCLAIMED_CASES,
     *IDENTIFICATION_CASES,
 ]

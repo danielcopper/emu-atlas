@@ -762,6 +762,23 @@ REASON_EMULATOR_BUILD_UNESTABLISHED = "emulator-build-unestablished"
 # regions that group carries no option for.
 REASON_REGION_DECIDED_BY_DISC = "region-decided-by-disc"
 REASON_DATA_ROOT_DECIDED_BY_LAUNCH = "data-root-decided-by-launch"
+# A question named the game's content and its disc still decided no region,
+# so the group stays stated per region. They take the place of
+# ``region-decided-by-disc`` on that group and keep its ``regions``,
+# ``unstated``, ``dir`` and ``core_so`` / ``token``, adding ``content_path``,
+# the path the question named. ``disc-format-unread`` is an image of a format
+# atlas does not read (``disc`` names the image — the path itself, or the first
+# entry of its playlist — and ``extension`` its suffix); ``disc-unread`` is an
+# image atlas reads that did not yield a region (``disc``, and ``status`` from
+# :data:`atlas.psx_region.DISC_UNREAD_STATUSES`); ``content-unopenable`` is
+# content the emulator itself does not open (``extension``), a fact about the
+# emulator rather than about atlas's read; ``region-property-unread`` is
+# DuckStation's ``custom_properties.ini`` there and not read, which may name a
+# region the launch takes over the disc's (``path`` names the file).
+REASON_DISC_FORMAT_UNREAD = "disc-format-unread"
+REASON_DISC_UNREAD = "disc-unread"
+REASON_CONTENT_UNOPENABLE = "content-unopenable"
+REASON_REGION_PROPERTY_UNREAD = "region-property-unread"
 # What sits in an emulated slot (Dolphin's EXI devices): ``slot`` names the
 # slot letter, and ``value`` the raw configured device the card cannot read.
 # ``slot-holds-agp-device`` is the GBA cartridge adapter whose cartridge save
@@ -878,6 +895,10 @@ CORE_MODE_UNESTABLISHED_REASONS = (
     REASON_EMULATOR_BUILD_UNESTABLISHED,
     REASON_REGION_DECIDED_BY_DISC,
     REASON_DATA_ROOT_DECIDED_BY_LAUNCH,
+    REASON_DISC_FORMAT_UNREAD,
+    REASON_DISC_UNREAD,
+    REASON_CONTENT_UNOPENABLE,
+    REASON_REGION_PROPERTY_UNREAD,
     REASON_SLOT_HOLDS_AGP_DEVICE,
     REASON_SLOT_DEVICE_UNINTERPRETED,
     REASON_SESSION_OVERRIDE_SET,
@@ -1166,6 +1187,18 @@ def checked_cwd(cwd: str | None) -> str | None:
     if cwd is not None and not os.path.isabs(cwd):
         raise ValueError(f"cwd must be an absolute path, got {cwd!r}")
     return cwd
+
+
+def checked_content_path(content_path: str | None) -> str | None:
+    """*content_path* as a firmware question takes it: an absolute host path, or ``None`` for not given.
+
+    It names the game a launch is handed, and a relative one names nothing
+    without a working folder of its own — the caller's mistake, refused at the
+    call the way ``launch_command`` refuses it.
+    """
+    if content_path is not None and not os.path.isabs(content_path):
+        raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
+    return content_path
 
 
 def cwd_templated(directory: str) -> bool:
@@ -1896,6 +1929,28 @@ SETTINGS_FILE_NOT_READ_CODES = (
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
 )
 
+# The console regions a PlayStation emulator decides a launch into — the words
+# the region-scoped requirements carry, and the value of a group's ``region``
+# where a question named the game's content (atlas.psx_region decides it).
+ConsoleRegion = Literal["ntsc-u", "ntsc-j", "pal"]
+REGION_NTSC_U: ConsoleRegion = "ntsc-u"
+"""The North American console — the region all three emulators boot where the disc places none."""
+REGION_NTSC_J: ConsoleRegion = "ntsc-j"
+"""The Japanese console."""
+REGION_PAL: ConsoleRegion = "pal"
+"""The European console."""
+DISC_REGIONS = (REGION_NTSC_U, REGION_NTSC_J, REGION_PAL)
+
+# DuckStation takes a game's console region from a per-path ``Region`` entry
+# of its ``custom_properties.ini`` before it reads the disc — but only where
+# its game list holds that path (game_list.cpp:1602-1608 at
+# RetroDECK/Duckstation@1f6de046b), and the game list is a binary cache atlas
+# does not read. So a region taken from that file is stated with this beside
+# it, carrying ``token``, ``content_path`` and the ``region`` the entry names.
+# A file that is there and could not be read is not this: no region is taken
+# from it, and ``region-property-unread`` says so.
+CAVEAT_REGION_PROPERTY_UNCONFIRMED = "region-property-unconfirmed"
+
 # Every file a BIOS search kept and hashed, keyed by path, beside what the
 # emulator's own table made of each one's bytes. Built by
 # :func:`atlas.firmware._duckstation_candidate_listing`, one module over with
@@ -1946,6 +2001,7 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # keyed by its path, so the vocabulary closes the mapped words rather
         # than the mapping as a whole.
         (CAVEAT_FIRMWARE_SEARCH_CANDIDATES, "readings"): FIRMWARE_SEARCH_READINGS,
+        (CAVEAT_REGION_PROPERTY_UNCONFIRMED, "region"): DISC_REGIONS,
         # Which find-rules layer the frontend could not have read: the one the
         # verdict hangs on, or the custom one ES-DE skips beside it.
         (CAVEAT_FIND_RULES_UNREADABLE, "layer"): FIND_RULES_LAYERS,

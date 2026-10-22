@@ -18,7 +18,7 @@ import json
 import re
 from dataclasses import replace
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 from xml.etree import ElementTree as ET
 
 import pytest
@@ -148,6 +148,7 @@ from atlas.machine import (
     AppImageStampResult,
     CoreInfo,
     CoreReading,
+    DiscIdentityResult,
     FixtureFileSpec,
     FixtureMachine,
     GlobResult,
@@ -193,6 +194,8 @@ from atlas.systems import known_systems
 
 import atlas.firmware
 from atlas import duckstation
+from atlas.contract import firmware_contract
+from atlas.firmware import _game_content  # pyright: ignore[reportPrivateUsage] - the content's coordinates
 
 INFO_DIR = "/cores"
 BIOS_DIR = "/bios"
@@ -5970,6 +5973,10 @@ class _CountingMachine:
         self._count("read_ps2_bios_header")
         return self._inner.read_ps2_bios_header(path)
 
+    def read_disc_identity(self, path: str) -> DiscIdentityResult:
+        self._count("read_disc_identity")
+        return self._inner.read_disc_identity(path)
+
     def list_archive(self, path: str) -> ArchiveListResult:
         self._count("list_archive")
         return self._inner.list_archive(path)
@@ -6512,6 +6519,93 @@ class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
                 core_so=None, label="DuckStation", declaration="packaged",
                 requirements=(scoped,), caveats=(provenance,),
             )
+
+
+class TestAGroupAskedAboutOneGame:
+    """A question naming the game's content decides the group's region, and the verdict follows it (#661)."""
+
+    def _group(self, **fields) -> FirmwareAlternatives:
+        return FirmwareAlternatives(
+            options=(
+                _region_option("scph5501.bin", ("ntsc-u",), found="file"),
+                _region_option("scph5502.bin", ("pal",)),
+            ),
+            **fields,
+        )
+
+    def test_the_verdict_is_the_option_whose_regions_hold_the_region(self):
+        assert self._group(region="ntsc-u", region_source="license", for_content=True).satisfied is True
+        assert self._group(region="pal", region_source="serial", for_content=True).satisfied is False
+
+    def test_a_region_no_option_holds_has_no_verdict(self):
+        assert self._group(region="ntsc-j", region_source="license", for_content=True).satisfied is None
+
+    def test_an_undecided_group_keeps_the_lift(self):
+        assert self._group(for_content=True).satisfied is None
+
+    def test_a_decided_region_weighs_only_its_own_option_in_the_core_s_lists(self):
+        def core(group: FirmwareAlternatives) -> CoreFirmware:
+            return CoreFirmware(
+                core_so="x_libretro.so", label=None, declaration=DECLARATION_READ, requirements=(group,), caveats=()
+            )
+
+        failed = core(self._group(region="pal", region_source="serial", for_content=True))
+        assert [o.file_name for o in failed.unmet] == ["scph5502.bin"]
+        assert failed.requirements_met is False
+        unjudged = replace(_region_option("scph5502.bin", ("pal",), found="file"), checked=None, found="inaccessible")
+        open_region = core(
+            FirmwareAlternatives(
+                options=(_region_option("scph5501.bin", ("ntsc-u",)), unjudged),
+                region="pal",
+                region_source="license",
+                for_content=True,
+            )
+        )
+        assert open_region.undetermined == (unjudged,)
+        assert open_region.unmet == ()
+        assert open_region.requirements_met is None
+
+    @pytest.mark.parametrize(
+        ("fields", "message"),
+        [
+            ({"region": "ntsc-u", "for_content": True}, "stated together"),
+            ({"region_source": "license", "for_content": True}, "stated together"),
+            ({"region": "ntsc-u", "region_source": "license"}, "only a question that named content"),
+            ({"region": "ntsc", "region_source": "license", "for_content": True}, "region must be one of"),
+            ({"region": "pal", "region_source": "guess", "for_content": True}, "region_source must be one of"),
+        ],
+    )
+    def test_a_region_is_stated_whole_and_only_for_content(self, fields, message):
+        with pytest.raises(ValueError, match=message):
+            self._group(**fields)
+
+    def test_the_serialized_group_carries_the_two_keys_only_for_content(self):
+        core = CoreFirmware(
+            core_so="x_libretro.so", label=None, declaration=DECLARATION_READ, requirements=(), caveats=()
+        )
+
+        def entry(group: FirmwareAlternatives) -> dict[str, Any]:
+            answer = FirmwareAnswer(
+                root="/bios",
+                cores=(replace(core, requirements=(group,)),),
+                unclaimed=(),
+                hash_checked=False,
+                sources=(),
+                caveats=(),
+            )
+            return firmware_contract(answer)["cores"][0]["requirements"][0]
+
+        assert set(entry(self._group())) == {"alternatives"}
+        undecided = entry(self._group(for_content=True))
+        assert (undecided["region"], undecided["region_source"]) == (None, None)
+        decided = entry(self._group(region="pal", region_source="setting", for_content=True))
+        assert (decided["region"], decided["region_source"]) == ("pal", "setting")
+
+    def test_a_playlist_names_the_options_files_after_itself(self):
+        content = _game_content("/roms/psx/Game/Game.m3u")
+        assert content is not None
+        assert (content.path, content.dir_name, content.rom_stem) == ("/roms/psx/Game/Game.m3u", "Game", "Game")
+        assert _game_content(None) is None
 
 
 class TestAPartialReaderOfAGroupIsNotMisled:

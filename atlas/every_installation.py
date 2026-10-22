@@ -69,6 +69,7 @@ from .placement import (
     TexturePlacement,
     Unresolved,
     checked_appendconfig,
+    checked_content_path,
     checked_cwd,
 )
 
@@ -304,31 +305,51 @@ class EveryInstallation:
         return self._ask(lambda installation: installation.launch_command(system, content_path, label=label))
 
     def firmware_for_core(
-        self, core_so: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        core_so: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
         """What this core wants, and where, under each installation's firmware root.
 
         ``cwd`` is taken as :meth:`firmware_for_system` takes it; no core's
-        firmware depends on it.
+        firmware depends on it. ``content_path`` is handed to every handle, and
+        checked here as ``cwd`` is: a relative one raises even with no
+        installation to ask.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         return self._ask(
-            lambda installation: installation.firmware_for_core(core_so, verify=verify, cwd=cwd)
+            lambda installation: installation.firmware_for_core(
+                core_so, verify=verify, cwd=cwd, content_path=content_path
+            )
         )
 
     def firmware_for_system(
-        self, system: str, *, verify: bool = False, cwd: str | None = None
+        self,
+        system: str,
+        *,
+        verify: bool = False,
+        cwd: str | None = None,
+        content_path: str | None = None,
     ) -> tuple[InstallationAnswer[FirmwareAnswer], ...]:
         """Which cores run this system under each installation, and what each wants.
 
         ``cwd`` is the launch's working folder, an absolute host path: it
         completes a standalone emulator's relative configured path (xemu's),
         is checked here — so a value that is not absolute raises even with no
-        installation to ask — and is handed to every handle.
+        installation to ask — and is handed to every handle. ``content_path``
+        names the game the launch is for, must be absolute, and is checked and
+        handed on the same way.
         """
         checked_cwd(cwd)
+        checked_content_path(content_path)
         return self._ask(
-            lambda installation: installation.firmware_for_system(system, verify=verify, cwd=cwd)
+            lambda installation: installation.firmware_for_system(
+                system, verify=verify, cwd=cwd, content_path=content_path
+            )
         )
 
     def firmware_inventory(

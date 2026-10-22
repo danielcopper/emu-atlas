@@ -127,6 +127,20 @@ must not be one declared `unreadable` — its bytes are what cannot be read, so 
 any test. A declared file with no entry here answers **missing**, which the firmware folder route states as
 `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as no BIOS.
 
+**`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img` or `.iso`) →
+what reading its first data track yields: `{"license": …, "system_cnf": …, "boot_found": …, "edc_valid": …}`, where
+`license` is the start of sector 4's user data, at most 72 characters and padded with NUL to that length, `system_cnf`
+the text of `SYSTEM.CNF` or `null` where the disc has none — the sector Beetle reads is that text, cut or NUL-padded to
+2048 bytes — `boot_found` whether the executable DuckStation's `BOOT` parse names exists on the disc, and `edc_valid`
+whether every sector Beetle's route reads passes its checksum; every character is one byte (latin-1). Or one of the
+states `"missing"` (a file the image names is not there — the image's own absence is an undeclared path), `"unreadable"`
+or `"not-a-disc"` (a cue sheet the parser refuses, or one whose first track is audio). It is modeled at the seam for the
+reason `ps2_bios_headers` is: the real read walks a disc image no fixture should carry. A path with any other suffix
+answers `format-not-read` from its suffix alone, so it is never declared here, and the file must not be one declared
+`unreadable`. A declared image with no entry answers **missing**, so a vector that forgot the key cannot prove a region
+nobody modeled. A `.m3u` is never declared here either: each emulator reads its own playlist from `files` as text, and
+the entry it names is what this read is asked about.
+
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
 `/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
 `lzh`, because a listing here describes that file's bytes and those are the three formats a machine opens; a declared
@@ -200,6 +214,10 @@ catalogue entry by its `label`; without one the frontend's own choice answers.
 `rom_locations_query` asks every system the `systems` answer lists at once and, like `systems_query`, carries nothing
 but an optional `installation`: each entry of its answer is the `rom_location` answer for that system, and the answer's
 own `caveats` are the `systems` answer's.
+
+`firmware_query` may carry an absolute `content_path` with `kind` `core` or `system`: the game the launch is for, whose
+disc decides the region of a group the console region selects. An `inventory` query takes none, because it asks about no
+launch.
 
 `launchable_query` carries `system` and `content_path`, both required — a verdict without a file has no extension to
 judge, and one without a system has no accept-list to judge it by — and takes no `label`.

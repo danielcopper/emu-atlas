@@ -1310,58 +1310,69 @@ others the constructor closes — `firmware-search-candidates`'s `readings` and 
 `core-mode-unestablished.reason` — why the card's selection rule could not decide. The sentence that used to sit here is
 in `message`, and what it embedded is a key of its own (named in the third column):
 
-| reason                                | what could not be decided                                                                                                | what the sentence embedded |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
-| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it                                                     | —                          |
-| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                                                       | —                          |
-| `no-user-directory`                   | no user directory was found at all                                                                                       | —                          |
-| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them                                                 | —                          |
-| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                                                           | —                          |
-| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                                                        | —                          |
-| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                                                           | —                          |
-| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                                                                   | —                          |
-| `configured-user-has-no-tree`         | nothing here answers to the configured id                                                                                | —                          |
-| `no-user-preselected`                 | the configuration preselects no user                                                                                     | —                          |
-| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                                                      | —                          |
-| `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                                                  | —                          |
-| `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds                                  | —                          |
-| `first-listed-user-opened`            | the configuration records no user the listing holds, and the emulator opens the smallest listed id itself                | —                          |
-| `first-user-created`                  | the listing holds no user, and the emulator creates the first one at start                                               | —                          |
-| `emulator-build-unestablished`        | which rule picks the user turns on the emulator's build, and the build here is not one atlas reads                       | `build`                    |
-| `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | `unstated`[^rd]            |
-| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                                                                | —                          |
-| `slot-holds-agp-device`               | the slot's GBA cartridge adapter reads a `.sav` this host could not examine, so whether it holds a save is unestablished | `slot`                     |
-| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                                                  | `slot`, `value`            |
-| `session-override-set`                | a per-session override (a movie or netplay session) is set                                                               | `key`                      |
-| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                                                       | —                          |
-| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                                                        | —                          |
-| `virtual-sd-disabled`                 | the emulated SD card is switched off                                                                                     | —                          |
-| `content-class-unnamed`               | the answer splits on the content's class and no content was named                                                        | —                          |
-| `content-class-unrecorded`            | the content's extension is outside every class the card records                                                          | `extension`                |
-| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                                                                    | `extension`                |
-| `archive-unread`                      | the loaded archive's member list did not come back                                                                       | `status`                   |
-| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one                                             | `volumes`                  |
-| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states                                                | `member`                   |
-| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted                                       | `entries`                  |
-| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist                                           | `classes`                  |
-| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it                                         | `extension`                |
-| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots                                        | —                          |
-| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on                                                | `savepath`, `savedir`      |
-| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                                                            | —                          |
-| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                                                      | `container`                |
-| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all                                         | `model`                    |
-| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                                                             | —                          |
-| `savepath-untranslatable`             | the configured save path has no host spelling                                                                            | `path`                     |
-| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover                                                    | `options` (an object)      |
-| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                                                        | `members`                  |
-| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read                                         | —                          |
-| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal                                       | `members`                  |
+| reason                                | what could not be decided                                                                                                | what the sentence embedded               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| `active-user-unrecorded`              | which user account the emulator runs as — nothing on disk records it                                                     | —                                        |
+| `user-listing-unestablished`          | the user tree could not be listed, so which users exist is unknown                                                       | —                                        |
+| `no-user-directory`                   | no user directory was found at all                                                                                       | —                                        |
+| `no-listed-user-account`              | directories were found and the emulator's own listing keeps none of them                                                 | —                                        |
+| `listed-user-account-unestablished`   | whether the listing would keep any of them was not established                                                           | —                                        |
+| `configured-user-tree-named`          | the configured user is listed here, and its tree is the one named                                                        | —                                        |
+| `configured-user-setup-unestablished` | whether the configured user is set up here was not established                                                           | —                                        |
+| `configured-user-not-set-up`          | its directory exists and no file lists it as that user                                                                   | —                                        |
+| `configured-user-has-no-tree`         | nothing here answers to the configured id                                                                                | —                                        |
+| `no-user-preselected`                 | the configuration preselects no user                                                                                     | —                                        |
+| `configured-user-id-unread`           | the id is stated in a construct atlas does not read                                                                      | —                                        |
+| `configured-user-reach-unestablished` | whether the emulator's own listing reaches the user a launch would open                                                  | —                                        |
+| `unset-user-id-is-listed`             | nothing is recorded — or an empty value is — and that empty id is one the listing holds                                  | —                                        |
+| `first-listed-user-opened`            | the configuration records no user the listing holds, and the emulator opens the smallest listed id itself                | —                                        |
+| `first-user-created`                  | the listing holds no user, and the emulator creates the first one at start                                               | —                                        |
+| `emulator-build-unestablished`        | which rule picks the user turns on the emulator's build, and the build here is not one atlas reads                       | `build`                                  |
+| `region-decided-by-disc`              | which console region boots is the running disc's                                                                         | `unstated`[^rd]                          |
+| `disc-format-unread`                  | a question named the game's content and its image is of a format atlas does not read                                     | `content_path`, `disc`, `extension`[^rd] |
+| `disc-unread`                         | a question named the game's content and its image, read or not, decided no region                                        | `content_path`, `disc`, `status`[^rd]    |
+| `content-unopenable`                  | a question named the game's content and the emulator itself does not open it                                             | `content_path`, `extension`[^rd]         |
+| `region-property-unread`              | a question named the game's content and DuckStation's `custom_properties.ini`, which can name its region, would not read | `content_path`, `path`[^rd]              |
+| `data-root-decided-by-launch`         | the emulator's root is picked from the launch environment                                                                | —                                        |
+| `slot-holds-agp-device`               | the slot's GBA cartridge adapter reads a `.sav` this host could not examine, so whether it holds a save is unestablished | `slot`                                   |
+| `slot-device-uninterpreted`           | the configured slot device is one this card cannot read                                                                  | `slot`, `value`                          |
+| `session-override-set`                | a per-session override (a movie or netplay session) is set                                                               | `key`                                    |
+| `hdd-path-unset`                      | no hard-disk image is configured, so there is no disk to save onto                                                       | —                                        |
+| `mlc-launch-flag-outranks-config`     | an `--mlc` launch flag outranks the configuration                                                                        | —                                        |
+| `virtual-sd-disabled`                 | the emulated SD card is switched off                                                                                     | —                                        |
+| `content-class-unnamed`               | the answer splits on the content's class and no content was named                                                        | —                                        |
+| `content-class-unrecorded`            | the content's extension is outside every class the card records                                                          | `extension`                              |
+| `archive-format-unread`               | the loaded archive is in a format atlas reads none of                                                                    | `extension`                              |
+| `archive-unread`                      | the loaded archive's member list did not come back                                                                       | `status`                                 |
+| `archive-content-ambiguous`           | the archive holds two WHDLoad volumes and the core's listing order picks one                                             | `volumes`                                |
+| `archive-member-pinned`               | the launch path pins one member inside an archive, a shape no mode states                                                | `member`                                 |
+| `archive-content-unrecognised`        | nothing inside the archive is a class, and its listing order picks what is mounted                                       | `entries`                                |
+| `archive-content-mixed`               | the archive holds several classes and the core plays them all off one playlist                                           | `classes`                                |
+| `hd-image-unread`                     | the hard-disk image's own filesystem decides the boot, and nothing here reads it                                         | `extension`                              |
+| `hd-boot-absent`                      | the volume carries neither a startup script of its own nor a slave, so none boots                                        | —                                        |
+| `whdload-savepath-unrecorded`         | WHDLoad is pointed somewhere other than the volume the modes are built on                                                | `savepath`, `savedir`                    |
+| `whdload-prefs-unread`                | WHDLoad's prefs are there and this machine did not yield them                                                            | —                                        |
+| `volume-boots-itself`                 | the mounted volume runs its own startup script, and it is read-only                                                      | `container`                              |
+| `emulated-model-unrecorded`           | the emulated machine is outside the class's modes, or is not decided here at all                                         | `model`                                  |
+| `savepath-config-unreadable`          | the emulator's own save-path configuration could not be read                                                             | —                                        |
+| `savepath-untranslatable`             | the configured save path has no host spelling                                                                            | `path`                                   |
+| `card-index-outside-recorded-names`   | card-image index options select files the recorded names do not cover                                                    | `options` (an object)                    |
+| `ini-presence-unestablished`          | whether an ini on the search path exists could not be established                                                        | `members`                                |
+| `ini-search-path-unlistable`          | a search directory could not be listed, so a higher ini may shadow what was read                                         | —                                        |
+| `ini-outranked-by-cascade`            | inis on the search path outrank the one read, and which applies is binary-internal                                       | `members`                                |
 
 [^rd]: `regions` and `dir` ride this reason and always did — they were keys of their own before this round, not facts
     lifted out of the sentence. `unstated` is the one that was: where the caveat explains a core's firmware group, it
     names the regions of the core's route that group carries no option for, in the route's order, and is `[]` where the
     group states every region; the sentence still names them. The DuckStation ranking also states this reason, naming
-    the regions its candidates span, so no region is unstated there and it carries no `unstated`.
+    the regions its candidates span, so no region is unstated there and it carries no `unstated`. The four reasons a
+    question naming the game's content can end on — `disc-format-unread`, `disc-unread`, `content-unopenable`,
+    `region-property-unread` — take `region-decided-by-disc`'s place on that group and carry the same `regions`,
+    `unstated` and `dir`, the subject as `core_so` or, for DuckStation, `token`, plus `content_path` (the path the
+    question named). `disc` is the image the region would be read from — that path, or its playlist's first entry — on
+    the two disc reasons; `status` is one of `missing`, `unreadable`, `not-a-disc`, `sector-invalid` (a sector Beetle
+    reads fails its checksum) and `boot-line-absent` (Beetle's `SYSTEM.CNF` holds no `BOOT`); `extension` is a suffix
+    without its dot; `path` is the properties file that would not read.
 
 Five keys ride the sixteen per-user reasons independently of which one it is, so read them by presence rather than by
 reason: `users` is always there and names the users whose trees the per-user groups point at — where none was found it
@@ -3514,6 +3525,40 @@ options answer instead — with the override's own spellings stated beside their
 The word itself moves no verdict: `requirements_met` answers to the requirement list, and a word about how a file is
 found can neither satisfy a requirement nor fail one. What the group in that list does is the ordinary thing an
 alternatives group does — it folds into `requirements_met` the way DuckStation's always has.
+
+**Asking about one game.** `firmware_for_system` and `firmware_for_core` take an optional `content_path`: the absolute
+path the launch is handed, an `.m3u` or a single image; a relative one raises `ValueError`, as `launch_command` raises,
+and the CLI's `--content` refuses it as a usage error. With it, every group the console region selects — SwanStation's,
+both Beetle PSX builds', and DuckStation's once a region key names an image — asks the emulator's own region rule about
+that game's disc and states the answer beside its options: `region` (`ntsc-u`, `ntsc-j`, `pal`) and `region_source` —
+where it came from: the region `setting`, DuckStation's per-path `custom-property`, the disc's `license` string, its
+`serial`, or the `emulator-default` NTSC-U all three boot where the disc places none. The group's `satisfied` is then
+the one option's whose `regions` hold that region:
+
+```python
+answer = inst.firmware_for_system("psx", verify=True, content_path="/roms/psx/Game.m3u")
+core = next(c for c in answer.cores if c.core_so == "swanstation_libretro.so")
+group = core.requirements[-1]
+group.region, group.region_source        # ('ntsc-u', 'license')
+group.satisfied                          # the NTSC-U option's verdict
+```
+
+An `.m3u` is read the way each emulator reads it, and its first entry is the disc all three decide from. Each rule is
+ported, not shared — DuckStation and SwanStation read the licence string first and the serial second, DuckStation
+requiring the executable the serial names to exist and matching its prefix by "starts with", SwanStation matching the
+leading letters exactly; Beetle reads `SYSTEM.CNF` first, with its own four-character grammar, and the licence second —
+so the three can disagree about one disc, and each answers as its emulator boots. This version reads `.cue` sheets and
+bare `.bin`/`.img`/`.iso` images whose first track is raw Mode 2. Where the region was not decided the group keeps its
+per-region answer, `region` and `region_source` are `null`, and `core-mode-unestablished` says why with one of four
+reasons in place of `region-decided-by-disc`: `disc-format-unread` (an image atlas does not read, CHD among them for
+now), `disc-unread` (an image that was read and decided nothing, with its `status`), `content-unopenable` (content the
+emulator itself does not open — Beetle opens no bare `.bin`), or `region-property-unread` (DuckStation's
+`custom_properties.ini` is there and would not read, and it can name the region). A region pinned by a setting is
+unchanged: a SwanStation option that pins one, in any options file RetroArch reads for that game, still makes the entry
+a single requirement, while DuckStation's `[Console] Region` states `region_source: "setting"` on its group. A region
+from DuckStation's `custom_properties.ini` rides `region-property-unconfirmed`: the emulator applies it only where its
+game list holds the path, and that list is a binary cache atlas does not read. Without `content_path` every answer is
+what it was, and the group carries neither key; DuckStation with no region key set has no group, and stays as it is.
 
 ### What a listed folder holds
 

@@ -76,6 +76,7 @@ def fixture_machine(inp) -> FixtureMachine:
         appimages=inp.get("appimages"),
         appimage_stamps=inp.get("appimage_stamps"),
         ps2_bios_headers=inp.get("ps2_bios_headers"),
+        disc_identities=inp.get("disc_identities"),
         archives=inp.get("archives"),
         whdload_slaves=inp.get("whdload_slaves"),
     )
@@ -253,11 +254,16 @@ def _firmware(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     verify = query.get("verify", False)
     cwd = query.get("cwd")
+    content_path = query.get("content_path")
     kind = query["kind"]
     if kind == "core":
-        answer = install.firmware_for_core(core_so=query["core_so"], verify=verify, cwd=cwd)
+        answer = install.firmware_for_core(
+            core_so=query["core_so"], verify=verify, cwd=cwd, content_path=content_path
+        )
     elif kind == "system":
-        answer = install.firmware_for_system(system=query["system"], verify=verify, cwd=cwd)
+        answer = install.firmware_for_system(
+            system=query["system"], verify=verify, cwd=cwd, content_path=content_path
+        )
     else:
         answer = install.firmware_inventory(verify=verify, cwd=cwd)
     return firmware_contract(answer)

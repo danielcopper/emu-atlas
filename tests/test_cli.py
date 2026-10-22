@@ -66,7 +66,11 @@ def _flag(name: str, value) -> list[str]:
 
 def _firmware_argv(query) -> list[str]:
     """The CLI spelling of the firmware question, whose kind names the command."""
-    flags = (["--verify"] if query.get("verify") else []) + _flag("--cwd", query.get("cwd"))
+    flags = (
+        (["--verify"] if query.get("verify") else [])
+        + _flag("--cwd", query.get("cwd"))
+        + _flag("--content", query.get("content_path"))
+    )
     kind = query["kind"]
     if kind == "core":
         return ["firmware-for-core", "--core", query["core_so"]] + flags
