@@ -127,8 +127,8 @@ configured name, boots** — known or not, right region or not.
 Nothing returned means the launch stops: `Failed to load %s BIOS.` and `Shutdown()` (`src/core/system.cpp:667-673`).
 
 **[V] The table is SwanStation's own and cannot be borrowed.** Of the 27 rows, 24 carry an md5 that
-`atlas/data/duckstation_bios.json` (104 rows at `stenzek/duckstation@64655818e`) also carries under the same region, and
-3 do not: the `Auto` rows `c53ca590…` (PSP), `c02a6fbb…` and `81bbe60b…` (PS3). Counting rule: a regex over the
+`atlas/data/duckstation_bios.json` (104 rows at `RetroDECK/Duckstation@1f6de046b`) also carries under the same region,
+and 3 do not: the `Auto` rows `c53ca590…` (PSP), `c02a6fbb…` and `81bbe60b…` (PS3). Counting rule: a regex over the
 `s_image_infos` initialiser pairing each `ConsoleRegion::<R>` with its `MakeHashFromString("<md5>")`, matched against
 `images[].md5` of the packaged DuckStation table; the array's own declared length (`s_image_infos[27]`) agrees with the
 27 rows the regex finds, and no row matched an md5 under a different region. The three it does not share are consistent

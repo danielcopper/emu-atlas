@@ -9802,10 +9802,11 @@ def _azahar_savefile_placement(
 
 
 # DuckStation's slot vocabulary, in the emulator's own declaration order
-# (settings.cpp:1743-1745 at stenzek/duckstation@64655818e — the last commit
-# before RetroDECK's 2024-09-19 "Legacy" freeze). Matching is case-insensitive
-# the way ParseMemoryCardTypeName matches, and an unparseable value falls back
-# to the compiled default the way ``.value_or`` does (settings.cpp:391-398).
+# (settings.cpp:1746-1748 at RetroDECK/Duckstation@1f6de046b — the commit
+# RetroDECK's 2024-09-19 "Legacy" release was built from). Matching is
+# case-insensitive the way ParseMemoryCardTypeName matches, and an unparseable
+# value falls back to the compiled default the way ``.value_or`` does
+# (settings.cpp:392-399).
 _DUCKSTATION_TYPE_NAMES = (
     "None",
     "Shared",
@@ -9814,14 +9815,14 @@ _DUCKSTATION_TYPE_NAMES = (
     "PerGameFileTitle",
     "NonPersistent",
 )
-_DUCKSTATION_TYPE_DEFAULTS = ("PerGameTitle", "None")  # settings.h:510-511
+_DUCKSTATION_TYPE_DEFAULTS = ("PerGameTitle", "None")  # settings.h:511-512
 
 
 def _duckstation_sanitized(name: str) -> str:
     """``Path::SanitizeFileName``'s Linux branch: ``/`` and ``*`` become ``_``.
 
     ``FileSystemCharacterIsSane`` splits on the platform
-    (file_system.cpp:69-97 at 64655818e). The ``#else`` arm the shipped Linux
+    (file_system.cpp:69-97 at 1f6de046b). The ``#else`` arm the shipped Linux
     build compiles rejects exactly two characters: ``/`` when slashes are
     being stripped (:82-83, and ``SanitizeFileName`` defaults ``strip_slashes``
     to true) and ``*`` (:86-87, "drop asterisks too, they make globbing
@@ -9914,9 +9915,9 @@ def _duckstation_shared_slot(
 ) -> _DuckSlot:
     """The shared card: ``CardXPath`` — absolute or Directory-relative — else the default name.
 
-    The three arms are ``GetSharedMemoryCardPath``'s own (settings.cpp:1785-1797
-    at 64655818e): an empty value combines the default name below the
-    memory-card directory (:1790), a relative one combines there too (:1792),
+    The three arms are ``GetSharedMemoryCardPath``'s own (settings.cpp:1788-1800
+    at 1f6de046b): an empty value combines the default name below the
+    memory-card directory (:1793), a relative one combines there too (:1795),
     and only a value upstream's ``Path::IsAbsolute`` accepts stands alone — no
     ``RealPath`` follows any of them, unlike the folder reader. Both combines
     are :func:`atlas.qt_ini.path_combine`, not ``os.path.join``, because the
@@ -9941,7 +9942,7 @@ def _duckstation_shared_slot(
             f'settings.ini: [MemoryCards] {path_spelled} = "{raw_path}"'
             if raw_path
             else f"Card{n}Path is unset — the default shared_card_{n}.mcd below the memory-card "
-            "directory governs (settings.cpp:1785-1797)"
+            "directory governs (settings.cpp:1788-1800)"
         ),
         None,
     )
@@ -10003,11 +10004,11 @@ def _duckstation_per_game_slot(
             "the content file's own name without its extension, sanitized the way "
             "Path::SanitizeFileName sanitizes on Linux ('/' and '*' become '_')"
         )
-        citation = "system.cpp:3744-3762 and file_system.cpp:142-163 at 64655818e"
+        citation = "system.cpp:3744-3762 and file_system.cpp:142-163 at 1f6de046b"
     elif mode == "PerGame":
         name = f"{TEMPLATE_SAVE_ID}_{n}.mcd"
         fill = "the disc's serial, as DuckStation reads it off the running game"
-        citation = "system.cpp:3663-3685 and settings.cpp:1799-1802 at 64655818e"
+        citation = "system.cpp:3663-3685 and settings.cpp:1802-1805 at 1f6de046b"
     else:
         name = f"{TEMPLATE_SAVE_ID}_{n}.mcd"
         raw_playlist, playlist_spelled = _simpleini_value(values, "MemoryCards", "UsePlaylistTitle")
@@ -10019,7 +10020,7 @@ def _duckstation_per_game_slot(
                     f'settings.ini: [MemoryCards] {playlist_spelled} = "{raw_playlist}"'
                     if raw_playlist is not None
                     else "UsePlaylistTitle is unset — the default true governs "
-                    "(settings.cpp:401)"
+                    "(settings.cpp:402)"
                 ),
                 None,
             )
@@ -10029,7 +10030,7 @@ def _duckstation_per_game_slot(
             "disc-set game may use the set's name instead, and an existing disc-title card "
             "outranks it"
         )
-        citation = "system.cpp:3688-3742 and settings.cpp:1799-1802 at 64655818e"
+        citation = "system.cpp:3688-3742 and settings.cpp:1802-1805 at 1f6de046b"
     message = (
         f"slot {n} names its card by {fill}; a running game without that fact falls back to "
         f"the shared card ({shared_fallback})"
@@ -10103,11 +10104,11 @@ def _duckstation_slot(
         provenance = (
             f'settings.ini sets {type_spelled} to "{raw}", a value ParseMemoryCardTypeName '
             f"does not know — the compiled default {mode} governs (.value_or, "
-            "settings.cpp:391-398)"
+            "settings.cpp:392-399)"
         )
     else:
         provenance = (
-            f"Card{n}Type is unset — the compiled default {mode} governs (settings.h:510-511)"
+            f"Card{n}Type is unset — the compiled default {mode} governs (settings.h:511-512)"
         )
     type_reading = OptionReading(f"Card{n}Type", raw, provenance, None)
     if mode == "None":
@@ -10178,7 +10179,7 @@ def _duckstation_needs(groups: tuple[FileGroup, ...]) -> tuple[str, ...]:
 # The section-qualified keys DuckStation's save answer depends on, and what a
 # per-game value does to them. All five, unconditionally: a game ini can change
 # the slot MODES themselves, so even a machine whose slots are both ``None``
-# today can be answered differently for one game (settings.cpp:391-401).
+# today can be answered differently for one game (settings.cpp:392-402).
 _DUCKSTATION_SAVE_LAYER_KEYS = (
     "[MemoryCards] Card1Type",
     "[MemoryCards] Card2Type",
@@ -10191,15 +10192,15 @@ _DUCKSTATION_SAVE_LAYER_KEYS = (
 _DUCKSTATION_SAVE_LAYER_GOVERNS = (
     "A per-game value there decides which card each slot holds and which file it reads, and an "
     "absolute CardNPath is used verbatim rather than joined below the memory-card directory "
-    "(GetSharedMemoryCardPath, settings.cpp:1785-1797), so a card named there need not sit in "
+    "(GetSharedMemoryCardPath, settings.cpp:1788-1800), so a card named there need not sit in "
     "the directory this answer states. The directory itself is fixed: [MemoryCards] Directory "
-    "is read from the base settings alone (EmuFolders::LoadConfig, settings.cpp:1964-1981), "
+    "is read from the base settings alone (EmuFolders::LoadConfig, settings.cpp:1967-1984), "
     "and no per-game file moves it."
 )
 # The door those five come through: Settings::Load is handed the LAYERED
 # interface, because Host::GetSettingsInterface returns the layered object
 # itself rather than its base layer.
-_DUCKSTATION_SAVE_LAYER_READ = "Settings::Load, settings.cpp:391-401, on host.cpp:42-45"
+_DUCKSTATION_SAVE_LAYER_READ = "Settings::Load, settings.cpp:392-402, on host.cpp:42-45"
 
 
 def _duckstation_game_settings_caveats(
@@ -10312,12 +10313,12 @@ def _duckstation_savefile_placement(
             f'settings.ini: [MemoryCards] {dir_spelled} = "{raw_dir}"'
             if raw_dir
             else "Directory is unset — the default memcards below the DataRoot governs "
-            "(settings.cpp:1943, :1974)"
+            "(settings.cpp:1946, :1977)"
         ),
         None,
     )
     # The directory is a LoadPathFromSettings read (EmuFolders::LoadConfig,
-    # settings.cpp:1974 with :1952-1962 at 64655818e): unset and empty alike
+    # settings.cpp:1977 with :1955-1965 at 1f6de046b): unset and empty alike
     # fall to the compiled default, and a relative value combines below the
     # DataRoot — through the emulator's own combine, whose degenerate-spelling
     # behaviour and RealPath tail :func:`atlas.duckstation.load_path` states.
@@ -10399,7 +10400,7 @@ def _duckstation_savefile_placement(
             alternatives=(),
             provenance=(
                 f"standalone save card '{card.token}': the slot pair from settings.ini "
-                "(settings.cpp:391-401 at 64655818e)"
+                "(settings.cpp:392-402 at 1f6de046b)"
             ),
         ),
     )
@@ -13454,8 +13455,9 @@ def _vita3k_key_provenance(
 # writes that release's tag beside the binary (vita3k/component_recipe.json:57
 # at main-20261003-0649, :27 at main-20260529-1747; $SOURCE_VERSION is the
 # release downloaded, automation-tools/alchemist/alchemist.sh:56,67). The tag is
-# the build's commit count, the number its stamp carries before the revision,
-# which tests/test_standalone_build_tripwire.py holds against the binary. An
+# the build's commit count, the number its stamp carries before the revision;
+# tests/test_standalone_build_tripwire.py holds it against the release of the
+# build whose stamp the binary carries. An
 # arrangement with no deploy tree — EmuDeck runs the AppImage it downloaded
 # without opening it — states no build here at all.
 _VITA3K_COMPONENT_VERSION = "/app/retrodeck/components/vita3k/component_version"
@@ -14497,8 +14499,8 @@ def _duckstation_savestate_placement(
 
     The same two-base DataRoot probe the save answer performs, then the one
     key: default ``savestates`` below the DataRoot, an empty value falling to
-    the default and a relative one joining the root (settings.cpp:1944,
-    :1955-1962, :1975 at 64655818e — upstream then resolves the path with
+    the default and a relative one joining the root (settings.cpp:1947,
+    :1958-1965, :1978 at 1f6de046b — upstream then resolves the path with
     ``Path::RealPath``, which is what makes RetroDECK's symlink at the
     default location work; this answer states the link as ``physical_dir``
     instead of silently resolving it). The ini goes through the same
@@ -14520,8 +14522,8 @@ def _duckstation_savestate_placement(
     if not raw:
         # Unset and empty answer alike HERE and only here: DuckStation's own
         # LoadPathFromSettings folds an empty value back to the compiled
-        # default (`if (value.empty()) value = def;`, settings.cpp:1955-1957
-        # at 64655818e). PCSX2's does not — its empty value survives and
+        # default (`if (value.empty()) value = def;`, settings.cpp:1958-1960
+        # at 1f6de046b). PCSX2's does not — its empty value survives and
         # Path::Combine lands the directory on the DataRoot itself
         # (:func:`_pcsx2_folder_below_dataroot`) — so this branch must not be
         # "fixed" to match the sibling resolver.
@@ -14531,14 +14533,14 @@ def _duckstation_savestate_placement(
             f"DataRoot governs ({setting.citation})"
         )
     elif not os.path.isabs(raw):
-        # The emulator's own combine (settings.cpp:1958-1959), not
+        # The emulator's own combine (settings.cpp:1961-1962), not
         # os.path.join: what that changes for a degenerate spelling, and what
         # of the RealPath tail an answer mirrors, is stated once at
         # :func:`atlas.duckstation.load_path`.
         directory = qt_ini.path_combine(data_root, raw)
         reading = (
             f'settings.ini: [{setting.section}] {spelled} = "{raw}" — a relative value '
-            "joins the DataRoot (LoadPathFromSettings, settings.cpp:1955-1962)"
+            "joins the DataRoot (LoadPathFromSettings, settings.cpp:1958-1965)"
         )
     else:
         host = sandbox.host(setting.key, raw)

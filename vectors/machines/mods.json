@@ -1375,7 +1375,7 @@
     },
     {
       "name": "duckstation-a-case-variant-spelling-of-the-cheats-key-governs",
-      "rationale": "The cheat tree comes from the same settings.ini read through the same CSimpleIniA (ini_settings_interface.h:65 at 64655818e), so [folders] cheats is the [Folders] Cheats key to the running emulator, and the relative value joins the DataRoot (LoadPathFromSettings, settings.cpp:1955-1962). An exact-case lookup would have answered the compiled cheats default while the emulator loads from the configured tree (#295).",
+      "rationale": "The cheat tree comes from the same settings.ini read through the same CSimpleIniA (ini_settings_interface.h:65 at 1f6de046b), so [folders] cheats is the [Folders] Cheats key to the running emulator, and the relative value joins the DataRoot (LoadPathFromSettings, settings.cpp:1958-1965). An exact-case lookup would have answered the compiled cheats default while the emulator loads from the configured tree (#295).",
       "input": {
         "home": "/home/deck",
         "files": {

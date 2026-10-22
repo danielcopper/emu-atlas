@@ -81,7 +81,7 @@ class TestTheBooleanTwoEmulatorsShare:
 
 class TestTheCombineThatIsNotOsPathJoin:
     """``Path::Combine`` at PCSX2 v2.6.3 (common/FileSystem.cpp:847-862) and at
-    stenzek/duckstation@64655818e (file_system.cpp:859-874), one port for both.
+    RetroDECK/Duckstation@1f6de046b (file_system.cpp:859-874), one port for both.
 
     The whole reason this exists rather than :func:`os.path.join` is the first
     test below. Every configured file name either emulator composes goes

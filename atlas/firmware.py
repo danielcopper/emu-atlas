@@ -2033,7 +2033,7 @@ class FirmwareRequirement:
     enforces it). DuckStation is what the field exists for: exactly one of its
     per-region BIOS keys is read per launch, selected by the console region
     the running disc sets (``GetBIOSImage``, bios.cpp:321-338 and
-    system.cpp:1613-1648, :2510 at 64655818e), so two named images were never
+    system.cpp:1613-1648, :2510 at 1f6de046b), so two named images were never
     two files one launch needs.
     """
 
@@ -2279,7 +2279,7 @@ class FirmwareAlternatives:
     A conjunction is what a requirement list means, and DuckStation's
     per-region BIOS keys are not one: ``GetBIOSImage`` reads exactly one of
     them per launch, switched on the console region (bios.cpp:321-338 at
-    64655818e), which under the shipped Auto setting is the running disc's own
+    1f6de046b), which under the shipped Auto setting is the running disc's own
     region (system.cpp:1613-1648, :2510) — a run-time fact no configuration
     records. So the alternatives are stated as one entry: each option carries
     the :attr:`~FirmwareRequirement.regions` whose launch it serves, the
@@ -2751,7 +2751,7 @@ class CoreFirmware:
     and kept nothing of a size the emulator accepts — an empty directory,
     nothing at its path, a file in its place — the search returns nothing and
     the boot stops (bios.cpp:403-417, system.cpp:2510-2512 and :1755-1761 at
-    stenzek/duckstation@64655818e), and there is no file to state as a
+    RetroDECK/Duckstation@1f6de046b), and there is no file to state as a
     requirement, because a directory is not a file's destination. That holds
     only where the DataRoot is established: where the launch decides it
     (``core-mode-unestablished``), the searched directory is one of two
@@ -7088,7 +7088,7 @@ def _duckstation_named_image(
     of its own (``Path::Combine(EmuFolders::Bios, bios_name)``, bios.cpp:350),
     which is why a name is what belongs in the setting. DuckStation's combine
     is PCSX2's to the token outside an unported ``_WIN32`` arm
-    (file_system.cpp:859-874 at stenzek/duckstation@64655818e), so the compose
+    (file_system.cpp:859-874 at RetroDECK/Duckstation@1f6de046b), so the compose
     goes through the one ported :func:`atlas.qt_ini.path_combine` — an
     absolute value joins *below* the directory, where ``os.path.join`` would
     let it replace the directory and name a file this emulator never opens
@@ -7216,7 +7216,7 @@ def _duckstation_named_content(
     Two readings in upstream's order, and only the second costs a content
     check. ``LoadImageFromFile`` refuses a file whose size is none of the three
     it accepts before reading a byte of it (bios.cpp:183-190 at
-    stenzek/duckstation@64655818e) — the same gate the search applies to a
+    RetroDECK/Duckstation@1f6de046b) — the same gate the search applies to a
     listing (:378) — so a named file of another size is one this launch boots
     nothing from, and that is answered whether or not ``verify`` was passed.
 
@@ -7341,7 +7341,7 @@ def _table_identity(
     Every route to a table comes through here, and each fork says why in its
     own way. In DuckStation a region key hands its composed path to the very
     ``LoadImageFromFile`` the search calls per candidate (bios.cpp:350 and
-    :385 at stenzek/duckstation@64655818e), and the hash and the lookup are
+    :385 at RetroDECK/Duckstation@1f6de046b), and the hash and the lookup are
     inside that one function (:198, :203) — so both of its routes really do
     consult the table. In SwanStation they are not: its ``LoadImageFromFile``
     (bios.cpp:81-105 at libretro/swanstation@4d309c05f) reads and nothing
@@ -7594,7 +7594,7 @@ _DUCKSTATION_BIOS_LAYER_GOVERNS = (
     "its console region: the name is combined with that directory and loaded outright, where "
     "an empty value leaves the region to the content search (bios.cpp:321-351). The search "
     "directory itself is fixed: [BIOS] SearchDirectory is read from the base settings alone "
-    "(EmuFolders::LoadConfig, settings.cpp:1964-1981), and no per-game file moves it."
+    "(EmuFolders::LoadConfig, settings.cpp:1967-1984), and no per-game file moves it."
 )
 # The door those three come through, and it is not the memory-card keys' door:
 # Host::GetStringSettingValue reads the layered interface, unlike the

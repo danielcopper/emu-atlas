@@ -17766,7 +17766,7 @@
                     "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -18036,7 +18036,7 @@
                     "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -18206,7 +18206,7 @@
                     "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -19174,7 +19174,7 @@
                     "image": "SCPH-5502, 5552 (v3.0 01-06-97 E)",
                     "region": "pal",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -19206,7 +19206,7 @@
     },
     {
       "name": "duckstation-a-named-image-whose-bytes-will-not-come-back-is-unread",
-      "rationale": "PathNTSCU names an image of a size this emulator accepts, and its bytes will not come back. The read that failed is atlas's own, which is no evidence the launch cannot read it, so the option answers 'unread' rather than a verdict: the comparison LoadImageFromFile makes (bios.cpp:198, :203 at 64655818e) never happened, satisfied is null, and firmware-unreadable states the failure under the code every route uses for it. The identity stays null because this emulator's table is keyed by content, so without the bytes there is no row to pin — the same value beside a libretro declaration keeps the identity its table pins for the declared name. The image sits in a subdirectory the search does not scan, so the failure stated here is the named key's alone: a file inside the search directory would be a candidate too, and the scan would state its own.",
+      "rationale": "PathNTSCU names an image of a size this emulator accepts, and its bytes will not come back. The read that failed is atlas's own, which is no evidence the launch cannot read it, so the option answers 'unread' rather than a verdict: the comparison LoadImageFromFile makes (bios.cpp:198, :203 at 1f6de046b) never happened, satisfied is null, and firmware-unreadable states the failure under the code every route uses for it. The identity stays null because this emulator's table is keyed by content, so without the bytes there is no row to pin — the same value beside a libretro declaration keeps the identity its table pins for the declared name. The image sits in a subdirectory the search does not scan, so the failure stated here is the named key's alone: a file inside the search directory would be a candidate too, and the scan would state its own.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -19340,7 +19340,7 @@
     },
     {
       "name": "duckstation-an-absolute-bios-image-name-joins-below-the-search-directory",
-      "rationale": "The #320 witness, one machine for all three spellings of a region key. PathNTSCU is absolute — DuckStation composes every named image with Path::Combine(EmuFolders::Bios, bios_name) (bios.cpp:350 at stenzek/duckstation@64655818e), which swallows the value's leading separator and lands it BELOW the search directory, where atlas's os.path.join used to let the value replace the directory and name a file this emulator never opens. A file really sits at the composed path, which is where the requirement states it and nowhere else — and its size is none of the three this emulator loads, so LoadImageFromFile refuses it before reading a byte (bios.cpp:183-190): the option answers 'refused' with satisfied false and no identity, and firmware-image-refused carries the 32 bytes read beside the three sizes accepted. The join is what the path witnesses, and the refusal is what the size does. PathNTSCJ carries a relative sub-path — the half the two joins agree on — composed below the same directory and missing there. PathPAL is empty, so the search speaks for the one region left to it and identifies the PAL image it finds.",
+      "rationale": "The #320 witness, one machine for all three spellings of a region key. PathNTSCU is absolute — DuckStation composes every named image with Path::Combine(EmuFolders::Bios, bios_name) (bios.cpp:350 at RetroDECK/Duckstation@1f6de046b), which swallows the value's leading separator and lands it BELOW the search directory, where atlas's os.path.join used to let the value replace the directory and name a file this emulator never opens. A file really sits at the composed path, which is where the requirement states it and nowhere else — and its size is none of the three this emulator loads, so LoadImageFromFile refuses it before reading a byte (bios.cpp:183-190): the option answers 'refused' with satisfied false and no identity, and firmware-image-refused carries the 32 bytes read beside the three sizes accepted. The join is what the path witnesses, and the refusal is what the size does. PathNTSCJ carries a relative sub-path — the half the two joins agree on — composed below the same directory and missing there. PathPAL is empty, so the search speaks for the one region left to it and identifies the PAL image it finds.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -19504,7 +19504,7 @@
                     "image": "SCPH-5502, 5552 (v3.0 01-06-97 E)",
                     "region": "pal",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -19536,7 +19536,7 @@
     },
     {
       "name": "duckstation-an-image-name-of-separators-alone-is-the-search-directory-itself",
-      "rationale": "The join's edge, pinned because it follows from the same reading and would otherwise be a place to guess. PathAppendString collapses every run of separators to one and swallows what follows the combine's own (file_system.cpp:129-130 at stenzek/duckstation@64655818e), and Path::Combine strips what is trailing afterwards (:870-871), so PathNTSCU = \"/\" composes to the search directory itself — a directory where this launch wants a file, stated as obstructed rather than missing, with the requirement's file_name following the composed path rather than the raw value's empty basename. The search still speaks for the two regions the named key did not take.",
+      "rationale": "The join's edge, pinned because it follows from the same reading and would otherwise be a place to guess. PathAppendString collapses every run of separators to one and swallows what follows the combine's own (file_system.cpp:129-130 at RetroDECK/Duckstation@1f6de046b), and Path::Combine strips what is trailing afterwards (:870-871), so PathNTSCU = \"/\" composes to the search directory itself — a directory where this launch wants a file, stated as obstructed rather than missing, with the requirement's file_name following the composed path rather than the raw value's empty basename. The search still speaks for the two regions the named key did not take.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -19668,7 +19668,7 @@
                     "image": "SCPH-5502, 5552 (v3.0 01-06-97 E)",
                     "region": "pal",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -19957,7 +19957,7 @@
     },
     {
       "name": "duckstation-three-named-images-are-three-alternatives-not-three-needs",
-      "rationale": "All three region keys name an image, so no region is left to the search and the search never runs — no content question, no search caveats, verify not needed. One launch reads exactly one of the keys (GetBIOSImage switches on the console region, bios.cpp:321-338 at 64655818e), so the answer is one alternatives group of three options with disjoint single regions: the ntsc-u image is missing and the other two are present, and a structured reader concludes only a US console's launch lacks its file — never that three files are needed.",
+      "rationale": "All three region keys name an image, so no region is left to the search and the search never runs — no content question, no search caveats, verify not needed. One launch reads exactly one of the keys (GetBIOSImage switches on the console region, bios.cpp:321-338 at 1f6de046b), so the answer is one alternatives group of three options with disjoint single regions: the ntsc-u image is missing and the other two are present, and a structured reader concludes only a US console's launch lacks its file — never that three files are needed.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -20333,7 +20333,7 @@
                     "image": "SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -20875,7 +20875,7 @@
     },
     {
       "name": "duckstation-a-case-variant-spelling-of-the-bios-keys-governs",
-      "rationale": "[bios] searchdirectory and pathntscu are the [BIOS] SearchDirectory and PathNTSCU keys to the running emulator (CSimpleIniA, ini_settings_interface.h:65 at 64655818e): the search runs in the configured directory and the named NTSC-U image scopes the alternatives exactly as the canonical spellings would. An exact-case lookup would have searched the compiled default below the DataRoot and found nothing (#295). The named key and the search speak for the same file here, and they agree about it: upstream loads a named image through the same function it loads a found one with, so both options carry the table's row and 'verified'.",
+      "rationale": "[bios] searchdirectory and pathntscu are the [BIOS] SearchDirectory and PathNTSCU keys to the running emulator (CSimpleIniA, ini_settings_interface.h:65 at 1f6de046b): the search runs in the configured directory and the named NTSC-U image scopes the alternatives exactly as the canonical spellings would. An exact-case lookup would have searched the compiled default below the DataRoot and found nothing (#295). The named key and the search speak for the same file here, and they agree about it: upstream loads a named image through the same function it loads a found one with, so both options carry the table's row and 'verified'.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -21017,7 +21017,7 @@
                     "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {
@@ -21144,7 +21144,7 @@
     },
     {
       "name": "duckstation-a-per-game-settings-file-is-stated-beside-the-bios-answer",
-      "rationale": "The BIOS answer is reachable from the per-game layer even though the search directory is not, and both halves belong in one statement. BIOS::GetBIOSImage reads PathNTSCJ, PathPAL and PathNTSCU through Host::GetStringSettingValue (bios.cpp:321-338), and that function reads the LAYERED interface (host.cpp:124-128) — unlike the Host::GetBase*SettingValue family beside it. So a per-game file can name a different image inside the search directory, and which image is loaded stops being a property of settings.ini alone. [BIOS] SearchDirectory itself goes through EmuFolders::LoadConfig, which is handed the base layer at every call site (settings.cpp:1964-1981), so the directory cannot move — the asymmetry is the useful part. Reachability is traced, not assumed: BootSystem installs the layer at system.cpp:1684 -> :4066 before SetBootMode at :1755 reaches LoadBIOS.",
+      "rationale": "The BIOS answer is reachable from the per-game layer even though the search directory is not, and both halves belong in one statement. BIOS::GetBIOSImage reads PathNTSCJ, PathPAL and PathNTSCU through Host::GetStringSettingValue (bios.cpp:321-338), and that function reads the LAYERED interface (host.cpp:124-128) — unlike the Host::GetBase*SettingValue family beside it. So a per-game file can name a different image inside the search directory, and which image is loaded stops being a property of settings.ini alone. [BIOS] SearchDirectory itself goes through EmuFolders::LoadConfig, which is handed the base layer at every call site (settings.cpp:1967-1984), so the directory cannot move — the asymmetry is the useful part. Reachability is traced, not assumed: BootSystem installs the layer at system.cpp:1684 -> :4066 before SetBootMode at :1755 reaches LoadBIOS.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -25207,7 +25207,7 @@
                     "image": "SCPH-1001, 5003, DTL-H1201, H3001 (v2.2 12-04-95 A)",
                     "region": "ntsc-u",
                     "token": "DUCKSTATION",
-                    "table": "64655818e"
+                    "table": "1f6de046b"
                   }
                 },
                 {

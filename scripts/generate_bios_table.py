@@ -28,10 +28,10 @@ The input is one local git checkout passed as an argument — inside your home
 directory, which is the only place this tool will read from — and nothing here
 touches the network. Clone it first, then run the generator against it:
 
-    git clone https://github.com/stenzek/duckstation ~/src/duckstation
+    git clone https://github.com/RetroDECK/Duckstation ~/src/duckstation
 
     python scripts/generate_bios_table.py --emulator duckstation \\
-        --source ~/src/duckstation --revision 64655818e
+        --source ~/src/duckstation --revision 1f6de046b
 
     python scripts/generate_bios_table.py --emulator swanstation \\
         --source ~/src/swanstation --revision 4d309c0
@@ -128,7 +128,7 @@ class Emulator:
 
 EMULATORS = {
     "duckstation": Emulator(
-        repository="stenzek/duckstation",
+        repository="RetroDECK/Duckstation",
         output="duckstation_bios.json",
         entry=DUCKSTATION_ENTRY,
         count=None,

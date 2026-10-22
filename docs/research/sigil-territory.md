@@ -1222,7 +1222,7 @@ the title-keyed card (I4) and the texture directory, which holds no save (I7).
   `atlas/data/core_oddities.json:3721`; sigil's `src/cnf_parser.c:101-103`.
 - **I3** PlayStation: the serial in DuckStation's per-game card name — sigil only: atlas states the hole, not the
   serial's spelling; DuckStation takes its database's serial for a disc the database knows and the executable name,
-  rewritten as SwanStation rewrites it, otherwise (stenzek/duckstation 64655818e `src/core/system.cpp:872-887`,
+  rewritten as SwanStation rewrites it, otherwise (RetroDECK/Duckstation 1f6de046b `src/core/system.cpp:872-887`,
   `:4032-4041`). Sources: atlas's `atlas/installations.py:7955`; sigil's `src/cnf_parser.c:101-103`.
 - **I4** PlayStation: DuckStation's title-keyed card name — atlas only: atlas spells this hole `<save_id>` too, and no
   sigil field fills it. Sources: atlas's `atlas/installations.py:7974`; sigil: none (`include/sigil.h:115-136`: the
