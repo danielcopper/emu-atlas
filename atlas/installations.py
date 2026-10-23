@@ -52,6 +52,7 @@ from .content_path import (
     content_basename,
     content_file_name,
     content_system_dir,
+    is_compressed_extension,
     split_content_path,
 )
 from .content_tree_wiring import WiringRow, lookup_content_tree_wiring
@@ -161,6 +162,7 @@ from .firmware import firmware_inventory as _resolve_inventory
 from .firmware import identify_firmware as _resolve_identification
 from .machine import (
     ARCHIVE_MISSING,
+    claimed_extensions,
     FileStamp,
     StampingMachine,
     BoundedReadingMachine,
@@ -979,6 +981,26 @@ class _Sandbox:
             return _CfgPath(key, raw, None, app_relative=True)
         expanded = expand_home(raw, home=self.expansion_home)
         return self.host(key, expanded) if expanded is not None else None
+
+
+def _cache_directory_in(sandbox: _Sandbox, values: Mapping[str, str]) -> tuple[str | None, bool]:
+    """A cfg snapshot's ``cache_directory`` on this host, and whether it reads as one.
+
+    Empty or unset is ``(None, True)``: RetroArch then writes an entry it
+    extracts beside the archive (task_content.c:729-733, archive_file.c:111-116
+    @ a79435a). Unlike most directory keys this one has no ``"default"``
+    spelling (configuration.c:1692 declares it without a default), so that
+    word, a relative value and an application-relative one are all a set
+    directory atlas cannot place: ``(None, False)``.
+    """
+    raw = values.get("cache_directory")
+    if not raw:
+        return None, True
+    resolved = sandbox.cfg_path("cache_directory", raw)
+    path = None if resolved is None else resolved.path
+    if path is None or not os.path.isabs(path):
+        return None, False
+    return path, True
 
 
 def _core_directory_in(sandbox: _Sandbox, values: Mapping[str, str]) -> str | None:
@@ -17392,10 +17414,13 @@ def _retroarch_firmware_context(
     )
     caveats.extend(core_caveats)
     sources.extend(core_sources)
+    cache_directory, cache_directory_read = _cache_directory_in(sandbox, parsed)
 
     return FirmwareContext(
         root=root,
         cores=cores,
+        cache_directory=cache_directory,
+        cache_directory_read=cache_directory_read,
         hashes=load_hashes(),
         core_options=_firmware_core_options(
             sandbox,
@@ -20221,34 +20246,6 @@ class _EntryCoreReader:
         return info
 
 
-def _loader_archive_token(extension: str) -> bool:
-    """Whether RetroArch's loader treats this extension as a compressed container.
-
-    ``path_is_compressed_file`` replicated exactly (file_path.c:294-320 @
-    a79435a): ``zip``, ``zst`` and ``apk`` case-folded per character — and
-    ``7z`` folding only its first position, so a ``.7Z`` is *not* compressed
-    to this loader. The quirk is upstream's, and smoothing it over would
-    state a behaviour the shipped binary does not have.
-    """
-    rest = extension[1:] if extension.startswith(".") else extension
-    if len(rest) == 2 and rest[0] == "7":
-        return rest[1] == "z"
-    return rest.lower() in ("zip", "zst", "apk")
-
-
-def _core_claims(info: CoreInfo | None) -> frozenset[str] | None:
-    """The core's ``valid_extensions``, split and folded the way RetroArch matches them.
-
-    Lowercase because every comparison RetroArch makes against this list is
-    case-insensitive (``string_list_find_elem``'s ``|32`` folding and the
-    archive filter's ``tolower``, string_list.c:342-390 @ a79435a). ``None``
-    is a core nobody read, never an empty claim.
-    """
-    if info is None or info.valid_extensions is None:
-        return None
-    return frozenset(token.lower() for token in info.valid_extensions.split("|") if token)
-
-
 def _entry_reading(
     entry: EmulatorEntry,
     *,
@@ -20308,7 +20305,7 @@ def _libretro_entry_reading(
 ) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
     """The libretro half of :func:`_entry_reading` — claims, and RetroArch's archive hands."""
     bare = extension[1:].lower() if extension.startswith(".") and len(extension) > 1 else None
-    claims = _core_claims(info)
+    claims = claimed_extensions(info)
     if claims is None:
         return (
             _ENTRY_UNESTABLISHED,
@@ -20333,7 +20330,7 @@ def _libretro_entry_reading(
             ),
             (),
         )
-    if _loader_archive_token(extension):
+    if is_compressed_extension(extension):
         if info is not None and info.block_extract:
             return (
                 _ENTRY_REFUSES,
@@ -20403,7 +20400,7 @@ def _standalone_entry_reading(
     archive_note = (
         " (an archive container, and this loader opens none — no RetroArch stands in front of "
         "a standalone to pick a file out of it)"
-        if _loader_archive_token(extension) and not card.archives
+        if is_compressed_extension(extension) and not card.archives
         else ""
     )
     return (

@@ -622,6 +622,9 @@ A_CHD = "/roms/psx/Game.chd"
 A_DISC_IDENTITY = {"license": "Licensed  by", "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1", "boot_found": True,
                    "edc_valid": True}
 A_CHD_SPEC = {"codecs": ["cdlz", "cdzl"], "requires_parent": False, "identity": A_DISC_IDENTITY}
+A_PBP = "/roms/psx/Game.pbp"
+A_PBP_SPEC = {"duckstation_refuses": False, "encrypted": False, "identity": A_DISC_IDENTITY}
+A_ZIP = "/roms/psx/Game.zip"
 
 INPUT_DISC_IDENTITY_CASES = [
     case(_with(_vector(), disc_identities=[]), "input.disc_identities must be an object", id="disc-not-object"),
@@ -629,7 +632,7 @@ INPUT_DISC_IDENTITY_CASES = [
          id="disc-on-undeclared-file"),
     case(_with(_vector(), files={A_DISC: {"status": "unreadable"}}, disc_identities={A_DISC: "not-a-disc"}),
          "sits on an unreadable file", id="disc-on-unreadable-file"),
-    case(_with(_vector(), files={"/roms/psx/Game.pbp": A_BLOB}, disc_identities={"/roms/psx/Game.pbp": "missing"}),
+    case(_with(_vector(), files={"/roms/psx/Game.ecm": A_BLOB}, disc_identities={"/roms/psx/Game.ecm": "missing"}),
          "has a suffix no reader opens", id="disc-on-unread-suffix"),
     case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: "format-not-read"}), "state must be one of",
          id="disc-state-unknown"),
@@ -661,6 +664,36 @@ INPUT_DISC_IDENTITY_CASES = [
     case(_with(_vector(), files={A_CHD: A_BLOB},
                disc_identities={A_CHD: {**A_CHD_SPEC, "identity": {**A_DISC_IDENTITY, "edc_valid": 1}}}),
          "must be booleans", id="chd-identity-facts"),
+    case(_with(_vector(), files={A_PBP: A_BLOB}, disc_identities={A_PBP: "not-a-disc"}), "its only state",
+         id="pbp-state"),
+    case(_with(_vector(), files={A_PBP: A_BLOB}, disc_identities={A_PBP: A_DISC_IDENTITY}), "is a PBP",
+         id="pbp-bare-facts"),
+    case(_with(_vector(), files={A_PBP: A_BLOB}, disc_identities={A_PBP: {**A_PBP_SPEC, "encrypted": 0}}),
+         "must be booleans", id="pbp-flag"),
+    case(_with(_vector(), files={A_PBP: A_BLOB}, disc_identities={A_PBP: {**A_PBP_SPEC, "identity": "missing"}}),
+         "read state must be one of", id="pbp-read-state"),
+    case(_with(_vector(), files={A_PBP: A_BLOB},
+               disc_identities={A_PBP: {**A_PBP_SPEC, "identity": {**A_DISC_IDENTITY, "boot_found": 1}}}),
+         "must be booleans", id="pbp-identity-facts"),
+    case(_with(_vector(), files={A_ZIP: A_BLOB}, archives={A_ZIP: ["Other.cue"]},
+               disc_identities={f"{A_ZIP}#Game.cue": "missing"}),
+         "must name an entry `archives` lists", id="entry-unlisted"),
+    case(_with(_vector(), files={A_ZIP: A_BLOB}, disc_identities={f"{A_ZIP}#Game.cue": "missing"}),
+         "must name an entry `archives` lists", id="entry-on-undeclared-archive"),
+    case(_with(_vector(), files={A_ZIP: A_BLOB}, archives={A_ZIP: ["Game.txt"]},
+               disc_identities={f"{A_ZIP}#Game.txt": "missing"}),
+         "has a suffix no reader opens", id="entry-unread-suffix"),
+]
+
+INPUT_ARCHIVE_TEXT_CASES = [
+    case(_with(_vector(), archive_texts=[]), "input.archive_texts must be an object", id="texts-not-object"),
+    case(_with(_vector(), archive_texts={"/roms/psx/Game.m3u": ""}), "must be spelled <archive>#<entry>",
+         id="text-not-an-entry"),
+    case(_with(_vector(), files={A_ZIP: A_BLOB}, archives={A_ZIP: []}, archive_texts={f"{A_ZIP}#Game.m3u": ""}),
+         "must name an entry `archives` lists", id="text-unlisted"),
+    case(_with(_vector(), files={A_ZIP: A_BLOB}, archives={A_ZIP: ["Game.m3u"]},
+               archive_texts={f"{A_ZIP}#Game.m3u": 1}),
+         "must be a string", id="text-not-a-string"),
 ]
 
 AN_IMAGE = "/Applications/ES-DE.AppImage"
@@ -1788,6 +1821,7 @@ ALL_CASES = [
     *INPUT_PATH_CASES,
     *INPUT_PS2_BIOS_HEADER_CASES,
     *INPUT_DISC_IDENTITY_CASES,
+    *INPUT_ARCHIVE_TEXT_CASES,
     *INPUT_APPIMAGE_STAMP_CASES,
     *INPUT_CORE_CASES,
     *QUERY_CASES,

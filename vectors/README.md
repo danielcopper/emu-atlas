@@ -127,19 +127,20 @@ must not be one declared `unreadable` — its bytes are what cannot be read, so 
 any test. A declared file with no entry here answers **missing**, which the firmware folder route states as
 `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as no BIOS.
 
-**`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img`, `.iso` or
-`.chd`) → what reading its first data track yields: `{"license": …, "system_cnf": …, "boot_found": …, "edc_valid": …}`,
-where `license` is the start of sector 4's user data, at most 72 characters and padded with NUL to that length,
-`system_cnf` the text of `SYSTEM.CNF` or `null` where the disc has none — the sector Beetle reads is that text, cut or
-NUL-padded to 2048 bytes — `boot_found` whether the executable DuckStation's `BOOT` parse names exists on the disc, and
-`edc_valid` whether every sector Beetle's route reads passes its checksum; every character is one byte (latin-1). Or one
-of the states `"missing"` (a file the image names is not there — the image's own absence is an undeclared path),
-`"unreadable"` or `"not-a-disc"` (a cue sheet the parser refuses, or one whose first track is audio). It is modeled at
-the seam for the reason `ps2_bios_headers` is: the real read walks a disc image no fixture should carry. A path with any
-other suffix answers `format-not-read` from its suffix alone, so it is never declared here, and the file must not be one
-declared `unreadable`. A declared image with no entry answers **missing**, so a vector that forgot the key cannot prove
-a region nobody modeled. A `.m3u` is never declared here either: each emulator reads its own playlist from `files` as
-text, and the entry it names is what this read is asked about.
+**`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img`, `.iso`, `.chd`
+or `.pbp`) → what reading its first data track yields:
+`{"license": …, "system_cnf": …, "boot_found": …, "edc_valid": …}`, where `license` is the start of sector 4's user
+data, at most 72 characters and padded with NUL to that length, `system_cnf` the text of `SYSTEM.CNF` or `null` where
+the disc has none — the sector Beetle reads is that text, cut or NUL-padded to 2048 bytes — `boot_found` whether the
+executable DuckStation's `BOOT` parse names exists on the disc, and `edc_valid` whether every sector Beetle's route
+reads passes its checksum; every character is one byte (latin-1). Or one of the states `"missing"` (a file the image
+names is not there — the image's own absence is an undeclared path), `"unreadable"` or `"not-a-disc"` (a cue sheet the
+parser refuses, or one whose first track is audio). It is modeled at the seam for the reason `ps2_bios_headers` is: the
+real read walks a disc image no fixture should carry. A path with any other suffix answers `format-not-read` from its
+suffix alone, so it is never declared here, and the file must not be one declared `unreadable`. A declared image with no
+entry answers **missing**, so a vector that forgot the key cannot prove a region nobody modeled. A `.m3u` is never
+declared here either: each emulator reads its own playlist from `files` as text, and the entry it names is what this
+read is asked about.
 
 A `.chd` takes its own two shapes. Where its header was not read, a state alone: `"unreadable"`, `"not-a-disc"` (no CHD
 header libchdr opens) or `"format-not-read"` (a CHD of a version before 5). Where it was,
@@ -154,10 +155,31 @@ missing file, because no path names the parent, so a CHD is never `"missing"`. W
 all follows from the two header facts and that state, never from the identity: SwanStation and Beetle PSX open no CHD
 that names a parent, found or not, and SwanStation none with a `cdzs` codec.
 
+A `.pbp` takes two shapes of its own. `"unreadable"` alone, where its bytes did not come back for either reader; else
+`{"duckstation_refuses": …, "encrypted": …, "identity": …}`: `duckstation_refuses` whether DuckStation's and
+SwanStation's open refuses the file before its disc — over its `PARAM.SFO` or an encrypted image — `encrypted` whether
+Beetle PSX finds an encrypted image, which it decrypts and atlas does not read, and `identity` the four facts as the
+readers that reach the disc read it, or the state that read ended in — `"unreadable"`, `"not-a-disc"`,
+`"format-not-read"` (no reader reaches the disc, or two read it apart) or `"codec-unavailable"` (the runtime lacks
+`zlib`). A PBP is one file, so it is never `"missing"`. Which emulator opens it follows from the two facts, never from
+the identity.
+
+An **archive entry** is declared here too, under RetroArch's own spelling for content inside an archive:
+`"<archive>#<entry>"`, the archive a path `archives` declares and the entry one its listing names. The value takes the
+shapes the entry's own suffix takes, and answers the read of the entry where RetroArch writes it before the core opens
+it — so a `.cue` entry is `"missing"` where the file it names is not beside where it was written.
+
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
-`/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or
-`lzh`, because a listing here describes that file's bytes and those are the three formats a machine opens; a declared
+`/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `apk`,
+`lha` or `lzh`, because a listing here describes that file's bytes and those are the formats a machine opens; a declared
 file with no entry answers **not an archive**, so a vector that forgot the key cannot pass a file off as one that lists.
+The same listing answers both reads of an archive: PUAE's walk of a mounted container, and the listing of a zip
+RetroArch extracts for a libretro core, in which the members are the entry names as the archive stores them and in its
+order.
+
+**`archive_texts`** — `"<archive>#<entry>"` → the text of that archive entry, for an entry read as text: an `.m3u`
+RetroArch extracts for a libretro core. The entry must be one `archives` lists in that archive; a listed entry with no
+text here answers **missing**.
 
 A **directory** is a container too, and it is never declared here: a machine lists one as itself and its members follow
 from the paths in `files`. That holds whatever the directory is called — a directory named `Game.zip` is a directory,

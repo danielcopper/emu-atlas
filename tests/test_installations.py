@@ -8529,11 +8529,17 @@ class _CountingMachine:
     def read_ps2_bios_header(self, path):
         return self._inner.read_ps2_bios_header(path)
 
-    def read_disc_identity(self, path):
-        return self._inner.read_disc_identity(path)
+    def read_disc_identity(self, path, *, extracted=None):
+        return self._inner.read_disc_identity(path, extracted=extracted)
 
     def list_archive(self, path):
         return self._inner.list_archive(path)
+
+    def list_disc_archive(self, path):
+        return self._inner.list_disc_archive(path)
+
+    def read_archive_text(self, archive, entry, limit):
+        return self._inner.read_archive_text(archive, entry, limit)
 
     def read_whdload_slave(self, path):
         return self._inner.read_whdload_slave(path)
