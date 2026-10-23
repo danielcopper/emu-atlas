@@ -957,16 +957,17 @@ restoring one game's copy overwrites every other game's state in them. A tool ma
 that is the caller's decision, which is exactly why atlas names them rather than filtering for you.
 
 **`unknown` is a role, and it is the one that is not a licence.** It means the file is on the machine and nothing atlas
-read says what kind of data it is. Two ways to get there: no rule card covers this core, or the card covers it and names
-neither this file nor its directory's contents. A third exists in the resolver and you will not meet it today — two of
-the card's groups speaking for the same directory without naming files, so no one role follows — because no shipped card
-states two; it is a guard against a card that one day might, not a case to write code for. What it does _not_ mean is
-that a name was unavailable: a card that states a directory's role and refuses its file names — ScummVM's slot files, a
-WHDLoad drawer — has said what lies there, and what is found there carries that role. It is a value rather than a
-missing field on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a settings file the
-user had chosen on that device over the other device's, because while the directory was still empty the declared answer
-had named the roles and the observed one that replaced it named none. So the line above keeps `unknown` groups, and that
-is a decision you should make deliberately rather than inherit:
+read says what kind of data it is. Three ways to get there: no rule card covers this core, the card covers it and names
+neither this file nor its directory's contents, or two parts of the answer name the one file with different roles (see
+"each file is in one group" below). A fourth exists in the resolver and you will not meet it today — two of the card's
+groups speaking for the same directory without naming files, so no one role follows — because no shipped card states
+two; it is a guard against a card that one day might, not a case to write code for. What it does _not_ mean is that a
+name was unavailable: a card that states a directory's role and refuses its file names — ScummVM's slot files, a WHDLoad
+drawer — has said what lies there, and what is found there carries that role. It is a value rather than a missing field
+on purpose. A save sync once read "no role stated" as "ordinary progress" and copied a settings file the user had chosen
+on that device over the other device's, because while the directory was still empty the declared answer had named the
+roles and the observed one that replaced it named none. So the line above keeps `unknown` groups, and that is a decision
+you should make deliberately rather than inherit:
 
 ```python
 mine    = [g for g in placement.file_set.groups if g.role != atlas.ROLE_SETTINGS]
@@ -1084,7 +1085,26 @@ picks up the `.png` thumbnail RetroArch writes beside a state, which any decompo
 belongs to. Empty means _not decomposed_, never _no files_. What changed is the savefile observation: an answer that
 found files has a group for every one of them. Where `groups` is populated, `files` is still exactly the names lying in
 `dir`: every group under the first group's directory, and for a declared set in the card's own order. So a card that
-splits one list into two by role moves no name out of `files`.
+splits one list into two by role moves no name out of `files`. A part under another root that resolves into `dir` itself
+lies there too: Flycast's shared VMUs and console flash stay in the system directory's `dc`, and with the save directory
+set to that same `dc` their names are in `files` beside the per-game VMU's.
+
+**Each file is in one group.** A directory and name appear in at most one entry of `groups`, and the type refuses a
+repeat. The settings an answer is read from can still meet one file twice — Dolphin's slot A raw card configured onto
+the path slot B's cartridge save lies at, xemu's disk image and EEPROM on one path, two DuckStation or PCSX2 slots on
+one card, MAME asked about content named `default` (its per-game `<rom_stem>.cfg` is then the shared `default.cfg`) —
+and the answer states the file once. Where every claim agreed, as two slots on one card do, that is all. Where they
+disagreed, the one group keeps a field only where every claim stated the same value — `role` is otherwise `unknown`,
+`size_fixed` is `None`, and `granularity` is `shared-file`, because a file that is not one game's alone is never synced
+as one game's — and a `file-set-claims-merged` caveat names the file (`data["dir"]`, `data["file"]`) with what the
+claims said: `roles`, `granularities` and `size_fixed`, each value once in the order the claims came, `size_fixed`
+spelled `true`, `false` or `null`. A list with one value is a field they agreed on. One name in two directories is two
+files and stays two groups: Kronos writes `<rom_stem>.ram` under both `kronos/saturn` and `kronos/stv`. A directory
+whose names are not established is one group the same way: two PCSX2 slots naming one folder card, or Dolphin's
+`GCIFolderAPath` and `GCIFolderBPath` naming one folder, state each directory once, with its `file-names-unestablished`
+once beside it and no collision named. The granularity block follows the merge too: Genesis Plus GX content named
+`4Mbit_cart` makes the per-game `<rom_stem>.brm` the shared `4Mbit_cart.brm`, and that answer's `granularity.value` and
+every alternative naming its mode say `shared-file`, the word of the one group the answer states.
 
 **An observation's groups are what was found, and they describe one directory.** A declared set lists the parts a card
 states, including the ones no file has been written for yet, in the order the card states them; an observed set lists
@@ -1227,6 +1247,7 @@ all.
 | `file-set-spans-roots`                     | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                             |
 | `file-names-unestablished`                 | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                         |
 | `save-id-candidates`                       | the title directories the NAND holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                   |
+| `file-set-claims-merged`                   | two parts of the answer named one file and disagreed; it is one group, `data` lists what each said                        |
 | `file-set-directories-unread`              | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                          |
 | `file-set-across-systems`                  | no system was named; the set holds for every system in `data["systems"]` and for no other                                 |
 | `core-unqueryable`                         | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                                   |

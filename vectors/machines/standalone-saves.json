@@ -20827,6 +20827,719 @@
           }
         }
       }
+    },
+    {
+      "name": "dolphin-a-raw-card-on-the-cartridge-saves-path-is-one-entry-with-the-collision-named",
+      "rationale": "Slot A's raw card is configured onto the path slot B's GBA cartridge save lies at, so the two slots name one file — a memory card whose size is fixed beside a battery whose size is not established. The answer states that file once: the role and size the two claims disagree on become unknown and null, the granularity they share stands, and file-set-claims-merged names the collision with what each claim said. The card's other two region files stay the memory card's alone.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 1\nMemcardAPath = /mnt/sd/retrodeck/roms/gba/Cartridge.USA.sav\nSlotB = 9\nAgpCartBPath = /mnt/sd/retrodeck/roms/gba/Cartridge.USA.gba\n",
+          "/mnt/sd/retrodeck/roms/gba/Cartridge.USA.gba": "rom",
+          "/mnt/sd/retrodeck/roms/gba/Cartridge.USA.sav": {
+            "md5": "0829f71740aab1ab98b33eae21dee122",
+            "sha1": "0631457264ff7f8d5fb1edc2c0211992a67c73e6",
+            "size": 8192
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/roms/gba",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Cartridge.USA.sav",
+              "Cartridge.EUR.sav",
+              "Cartridge.JAP.sav"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  "Cartridge.USA.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "unknown",
+                "size_fixed": null
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  "Cartridge.EUR.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "files": [
+                  "Cartridge.JAP.sav"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-set-claims-merged",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/roms/gba",
+                "file": "Cartridge.USA.sav",
+                "roles": [
+                  "memory-card",
+                  "battery"
+                ],
+                "granularities": [
+                  "shared-file"
+                ],
+                "size_fixed": [
+                  "true",
+                  "null"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "card+agp",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "MemcardAPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Cartridge.USA.sav",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "9",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "AgpCartBPath",
+                "value": "/mnt/sd/retrodeck/roms/gba/Cartridge.USA.gba",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "folder+agp",
+                "options": {
+                  "SlotA": "8"
+                },
+                "values": [
+                  "per-game-files",
+                  "shared-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "duckstation-two-shared-slots-on-one-card-file-are-one-entry",
+      "rationale": "Both slots hold the shared card and both name the same file. The two claims agree in every field, so the answer states the card once and names nothing: no claim was lost.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psx</name>\n    <fullname>Sony PlayStation</fullname>\n    <path>%ROMPATH%/psx</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"DuckStation (Legacy) (Standalone)\">%EMULATOR_DUCKSTATION% -batch %ROM%</command>\n    <platform>psx</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini": "[MemoryCards]\nCard1Type = Shared\nCard2Type = Shared\nUsePlaylistTitle = true\nCard1Path = /mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_1.mcd\nCard2Path = /mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_1.mcd\nDirectory = /mnt/sd/retrodeck/saves/psx/duckstation/memcards\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "psx"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "shared_card_1.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "files": [
+                  "shared_card_1.mcd"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "Shared+Shared",
+            "readings": [
+              {
+                "key": "Directory",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card1Path",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_1.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              },
+              {
+                "key": "Card2Path",
+                "value": "/mnt/sd/retrodeck/saves/psx/duckstation/memcards/shared_card_1.mcd",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/duckstation/settings.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-two-slots-on-one-card-file-are-one-entry",
+      "rationale": "Both console slots name the same card image. The claims agree in every field, so the card is one entry and no caveat: two slots of one emulator on one file lose nothing by being stated once.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = Mcd001.ps2\nSlot2_Enable = true\nSlot2_Filename = Mcd001.ps2\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "file+file",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Filename",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "xemu-the-disk-image-and-the-eeprom-on-one-path-are-one-entry-with-the-collision-named",
+      "rationale": "xemu.toml points hdd_path and eeprom_path at one file, so the disk image's battery claim and the EEPROM's settings claim meet on it. The answer states the file once with the role neither claim alone settles, unknown, and file-set-claims-merged lists both roles.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Ppsspp (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n  <system>\n    <name>xbox</name>\n    <path>%ROMPATH%/xbox</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Xemu (Standalone)\">%EMULATOR_XEMU% %ROM%</command>\n  </system>\n  <system>\n    <name>wiiu</name>\n    <path>%ROMPATH%/wiiu</path>\n    <extension>.iso .ISO</extension>\n    <command label=\"Cemu (Standalone)\">%EMULATOR_CEMU% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu/xemu.toml": "[sys.files]\nbootrom_path = '/mnt/sd/retrodeck/bios/mcpx_1.0.bin'\neeprom_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\nhdd_path = '/mnt/sd/retrodeck/bios/xbox_hdd.qcow2'\n"
+        },
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu": "/home/deck/.var/app/net.retrodeck.retrodeck/config/xemu"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/xbox/xemu",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "entry_savefile_query": {
+          "system": "xbox"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "xbox_hdd.qcow2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios",
+                "files": [
+                  "xbox_hdd.qcow2"
+                ],
+                "granularity": "shared-file",
+                "role": "unknown",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "save-inside-image",
+              "data": {
+                "token": "XEMU",
+                "image": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "layout": "UDATA/<title id>"
+              }
+            },
+            {
+              "code": "file-set-claims-merged",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/bios",
+                "file": "xbox_hdd.qcow2",
+                "roles": [
+                  "battery",
+                  "settings"
+                ],
+                "granularities": [
+                  "shared-file"
+                ],
+                "size_fixed": [
+                  "null"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "hdd",
+            "readings": [
+              {
+                "key": "hdd_path",
+                "value": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              },
+              {
+                "key": "eeprom_path",
+                "value": "/mnt/sd/retrodeck/bios/xbox_hdd.qcow2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/data/xemu/xemu/xemu.toml"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcsx2-two-slots-on-one-folder-card-are-one-entry",
+      "rationale": "Both slots name the same folder card. Its saves are refused by name either way, and the two claims about the directory agree in every field, so the answer states the folder once, with its file-names-unestablished once beside it and no collision named.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <fullname>Sony PlayStation 2</fullname>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.chd .CHD</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n    <platform>ps2</platform>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini": "[Folders]\nMemoryCards = /mnt/sd/retrodeck/saves/ps2/pcsx2/memcards\n[MemoryCards]\nSlot1_Enable = true\nSlot1_Filename = FolderCard\nSlot2_Enable = true\nSlot2_Filename = FolderCard\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "entry_savefile_query": {
+          "system": "ps2"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+          "root_kind": "emulator_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": false
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "PCSX2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
+                "role": "memory-card",
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+folder",
+            "readings": [
+              {
+                "key": "MemoryCards",
+                "value": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot1_Filename",
+                "value": "FolderCard",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Enable",
+                "value": "true",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              },
+              {
+                "key": "Slot2_Filename",
+                "value": "FolderCard",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/PCSX2/inis/PCSX2.ini"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "dolphin-two-slots-on-one-gci-folder-are-one-entry-per-region",
+      "rationale": "GCIFolderAPath and GCIFolderBPath name one folder, so both slots claim the same three region directories alike. The answer states each region's directory once, with one file-names-unestablished per directory, and names no collision: nothing was lost.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>gc</name>\n    <fullname>Nintendo GameCube</fullname>\n    <path>%ROMPATH%/gc</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>gc</platform>\n    <theme>gc</theme>\n  </system>\n  <system>\n    <name>wii</name>\n    <fullname>Nintendo Wii</fullname>\n    <path>%ROMPATH%/wii</path>\n    <extension>.rvz .RVZ</extension>\n    <command label=\"Dolphin (Standalone)\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <platform>wii</platform>\n    <theme>wii</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini": "[Core]\nSlotA = 8\nSlotB = 8\nGCIFolderAPath = /mnt/sd/retrodeck/saves/gc/folders/USA\nGCIFolderBPath = /mnt/sd/retrodeck/saves/gc/folders/USA\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/US",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/EU",
+          "/mnt/sd/retrodeck/saves/gc/dolphin/JP",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA": "/mnt/sd/retrodeck/saves/gc/dolphin/US",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR": "/mnt/sd/retrodeck/saves/gc/dolphin/EU",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP": "/mnt/sd/retrodeck/saves/gc/dolphin/JP"
+        },
+        "entry_savefile_query": {
+          "system": "gc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/gc/folders/<region>",
+          "root_kind": "emulator_directory",
+          "needs": [
+            "region"
+          ],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/USA",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": false
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/EUR",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": false
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/JAP",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": false
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "per-game-build-layer-unread",
+              "data": {
+                "token": "DOLPHIN",
+                "key": [
+                  "[Core] MemcardAPath",
+                  "[Core] MemcardBPath",
+                  "[Core] GCIFolderAPath",
+                  "[Core] GCIFolderBPath",
+                  "[Core] AgpCartAPath",
+                  "[Core] AgpCartBPath"
+                ],
+                "layer": "GlobalGame"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/USA",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/EUR",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "token": "DOLPHIN",
+                "dir": "/mnt/sd/retrodeck/saves/gc/folders/JAP",
+                "role": "memory-card",
+                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "folder+folder",
+            "readings": [
+              {
+                "key": "SlotA",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderAPath",
+                "value": "/mnt/sd/retrodeck/saves/gc/folders/USA",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "SlotB",
+                "value": "8",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              },
+              {
+                "key": "GCIFolderBPath",
+                "value": "/mnt/sd/retrodeck/saves/gc/folders/USA",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/dolphin-emu/Dolphin.ini"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card+folder",
+                "options": {
+                  "SlotA": "1"
+                },
+                "values": [
+                  "shared-file",
+                  "per-game-files"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

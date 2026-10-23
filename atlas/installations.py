@@ -245,6 +245,7 @@ from .placement import (
     CAVEAT_OPTION_ENTRY_RETIRED,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FILE_SET_ACROSS_SYSTEMS,
+    CAVEAT_FILE_SET_CLAIMS_MERGED,
     CAVEAT_FILE_SET_DIRECTORIES_UNREAD,
     CAVEAT_EMULATOR_CONFIG_MISSING,
     CAVEAT_EMULATOR_CONFIG_UNREAD,
@@ -365,6 +366,7 @@ from .placement import (
     DataValue,
     FileGroup,
     FileSet,
+    FileSetState,
     SizeFact,
     GRANULARITY_PER_GAME_DIRECTORY,
     GRANULARITY_PER_GAME_FILE,
@@ -3414,7 +3416,7 @@ def _apply_card(
             card=card,
             mode=mode,
             granularity=Granularity(
-                value=mode.granularity,
+                value=_content_groupings(mode, content)[0],
                 mode=MODE_ALWAYS,
                 readings=(),
                 alternatives=(),
@@ -3490,7 +3492,7 @@ def _apply_card(
     granularity = None
     if applied is not None and mode is not None:
         granularity = Granularity(
-            value=mode.granularity,
+            value=_content_groupings(mode, content)[0],
             mode=opt_value,
             readings=(
                 OptionReading(card.option_key, opt_value, opt_source, options_file),
@@ -3500,7 +3502,7 @@ def _apply_card(
                 ModeAlternative(
                     mode=value,
                     options=((card.option_key, value),),
-                    values=other.granularities,
+                    values=_content_groupings(other, content),
                 )
                 for value, other in card.modes.items()
                 if value != opt_value
@@ -3883,11 +3885,13 @@ def _apply_rule_card(
         )
     consulted = tuple(readings[key] for key in recorder.consulted) + choice.readings
     granularity = Granularity(
-        value=mode.granularity,
+        value=_content_groupings(mode, content)[0],
         mode=choice.mode,
         readings=consulted,
         alternatives=tuple(
-            ModeAlternative(mode=name, options=combo, values=card.modes[name].granularities)
+            ModeAlternative(
+                mode=name, options=combo, values=_content_groupings(card.modes[name], content)
+            )
             for name, combo in choice.alternatives
         ),
         provenance=(
@@ -4011,23 +4015,24 @@ def _card_file_set(
     content_dir_name: str | None,
     observable: bool,
     excluded: frozenset[str] = frozenset(),
-) -> FileSet:
+) -> tuple[FileSet, tuple[Caveat, ...]]:
     """What the card says lies in its own directory — declared, or observed there.
 
     A template file that cannot be filled leaves the set honestly unknown; with
     a hole in the names there is nothing to look for, and where the directory
     itself is a hole or a path this host cannot reach there is nowhere to look
-    (*observable* false), so the declaration stands unobserved.
+    (*observable* false), so the declaration stands unobserved. The caveats are
+    what stating each file once said (:func:`_one_entry_per_file`).
     """
     declared = _card_files(mode.files, rom_stem) if mode.files is not None else None
     if declared is None:
-        return UNKNOWN_FILE_SET
+        return UNKNOWN_FILE_SET, ()
     groups = _declared_groups(
         mode, directory=directory, rom_stem=rom_stem or "", content_dir_name=content_dir_name
     )
     if not observable or file_set_holes(declared):
-        return FileSet(
-            "declared",
+        return _grouped_file_set(
+            FILE_SET_DECLARED,
             declared,
             f"declared by rule card '{card.key}'",
             complete=mode.complete,
@@ -4039,11 +4044,15 @@ def _card_file_set(
     # candidate cannot exist here (issue #89): a stale file under an excluded
     # name is not part of what this configuration reads or writes.
     observe = _card_files(mode.observe, rom_stem) if mode.observe is not None else None
-    candidates = tuple(f for f in (observe if observe is not None else declared) if f not in excluded)
+    # Each name once: two groups declaring one file make it one candidate, and
+    # one file found, not two.
+    candidates = tuple(
+        dict.fromkeys(f for f in (observe if observe is not None else declared) if f not in excluded)
+    )
     present = tuple(f for f in candidates if machine.path_kind(os.path.join(directory, f)) == KIND_FILE)
     if present:
-        return FileSet(
-            "observed",
+        return _grouped_file_set(
+            FILE_SET_OBSERVED,
             present,
             f"observed on the machine: {directory}",
             complete=mode.complete,
@@ -4052,8 +4061,8 @@ def _card_file_set(
             # not worth less for having been confirmed.
             groups=_observed_groups(present, directory=directory, rom_stem=rom_stem, mode=mode),
         )
-    return FileSet(
-        "declared",
+    return _grouped_file_set(
+        FILE_SET_DECLARED,
         declared,
         f"declared by rule card '{card.key}' (none present yet)",
         complete=mode.complete,
@@ -4392,7 +4401,9 @@ def _core_system_root(
     return cast(_SystemRoot, _dc_replace(root, caveats=(*caveats, *root.caveats)))
 
 
-def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
+def _with_cross_parts(
+    file_set: FileSet, cross_parts: "_CrossParts"
+) -> tuple[FileSet, tuple[Caveat, ...]]:
     """The declared decomposition gains the parts under the other roots.
 
     The flat ``files`` stays the answer's own directory, as it always was. An
@@ -4401,16 +4412,28 @@ def _with_cross_parts(file_set: FileSet, cross_parts: "_CrossParts") -> FileSet:
     looked at, so appending its declared names would state files nobody saw
     inside an answer whose state says *seen*. The spans-roots caveat carries
     those parts for both, which is the carrier that survives an observation.
+
+    Another root can resolve to this answer's own directory: Flycast's shared
+    VMUs and console flash stay in ``<system>/dc``, and with
+    ``savefile_directory`` set to that directory and sorting off, the per-game
+    VMU lies there too. Those parts' names then lie in the answer's own
+    directory, so they join ``files`` — which is that directory's names — and
+    one of them meeting a name already there is stated once, the way every
+    route states a file (:func:`_one_entry_per_file`).
     """
     if cross_parts.groups and file_set.state == FILE_SET_DECLARED and file_set.groups:
-        return FileSet(
-            state=file_set.state,
-            files=file_set.files,
-            provenance=file_set.provenance,
+        own = file_set.groups[0].dir
+        here = tuple(
+            name for group in cross_parts.groups if group.dir == own for name in group.files or ()
+        )
+        return _grouped_file_set(
+            file_set.state,
+            (*file_set.files, *here),
+            file_set.provenance,
             complete=file_set.complete,
             groups=(*file_set.groups, *cross_parts.groups),
         )
-    return file_set
+    return file_set, ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -4488,8 +4511,9 @@ def _cross_root_parts(
             Caveat(
                 CAVEAT_FILE_SET_SPANS_ROOTS,
                 f"core {card.key!r}{suffix}: part of the save stays under {directory} — "
-                f"{', '.join(names)} — beyond this answer's own root; where the file set is "
-                "declared, the same part is in file_set.groups",
+                f"{', '.join(names)} — resolved from another root than this answer's own, "
+                "which can name the same directory; where the file set is declared, the same "
+                "part is in file_set.groups",
                 {
                     "core": card.key,
                     "mode": mode_value or "",
@@ -4582,7 +4606,7 @@ def _card_root_placement(
             )
         )
     observable = root.reachable and not root.needs
-    file_set = _card_file_set(
+    file_set, merge_caveats = _card_file_set(
         machine,
         card=card,
         mode=mode,
@@ -4592,6 +4616,7 @@ def _card_root_placement(
         observable=observable,
         excluded=excluded,
     )
+    all_caveats.extend(merge_caveats)
     # After the file set, because whether the card's other directories dropped
     # out of the answer is a fact about the set's state.
     if granularity is not None:
@@ -4788,16 +4813,13 @@ def _observed_file_set(
         # A groups-less statement leaves nothing to observe: the mode says no
         # separate save file exists, and a leftover from an earlier mode lying
         # in the directory must not be presented as this configuration's save.
-        return (
-            _file_set_of(
-                [],
-                directory=directory,
-                rom_stem=rom_stem,
-                content_dir_name=content_dir_name,
-                card=card,
-                mode=mode,
-            ),
-            (),
+        return _file_set_of(
+            [],
+            directory=directory,
+            rom_stem=rom_stem,
+            content_dir_name=content_dir_name,
+            card=card,
+            mode=mode,
         )
     content_file = content_file_name(content_path) if content_path else None
     pattern = os.path.join(_glob_escape(directory), _glob_escape(rom_stem) + ".*")
@@ -4817,17 +4839,15 @@ def _observed_file_set(
         # holding, the matches would be a partly-read directory presented as an
         # observed set, which a `complete` rule card could then close over.
         return UNKNOWN_FILE_SET, caveats
-    return (
-        _file_set_of(
-            matches,
-            directory=directory,
-            rom_stem=rom_stem,
-            content_dir_name=content_dir_name,
-            card=card,
-            mode=mode,
-        ),
-        caveats,
+    file_set, merge_caveats = _file_set_of(
+        matches,
+        directory=directory,
+        rom_stem=rom_stem,
+        content_dir_name=content_dir_name,
+        card=card,
+        mode=mode,
     )
+    return file_set, (*caveats, *merge_caveats)
 
 
 def _unlistable_caveat(path: str) -> Caveat:
@@ -4934,6 +4954,153 @@ def _card_group_size(granularity: str) -> bool | None:
     return False if granularity == GRANULARITY_PER_GAME_DIRECTORY else None
 
 
+# A group's ``size_fixed`` as ``file-set-claims-merged`` lists it: caveat data
+# holds words, and these are the words the group's own field serializes as.
+_SIZE_FIXED_WORDS: Mapping[bool | None, str] = MappingProxyType(
+    {True: "true", False: "false", None: "null"}
+)
+
+
+def _one_entry_per_file(
+    groups: Sequence[FileGroup],
+) -> tuple[tuple[FileGroup, ...], tuple[Caveat, ...]]:
+    """The groups with each file in one entry, and the collisions whose claims disagreed.
+
+    The readings a save answer is assembled from can name one file twice: two
+    slots of one emulator configured onto one path, a per-game name that comes
+    out equal to a shared one, a part under another root that resolves into
+    this answer's own directory. :class:`~atlas.placement.FileSet` refuses the
+    repeat, so every route that assembles groups passes them through here
+    first. Entries naming the same files in one directory become one, at the
+    first one's position; see :func:`_merged_entry` for what it states.
+
+    A group whose names are not established is one claim about a directory,
+    and two that state the same directory alike — two slots on one folder card
+    — are one entry the same way, with no caveat: nothing was lost. Two shapes
+    pass through untouched. Unnamed groups of one directory that differ in a
+    field are not decided, and no route builds them: every unnamed group two
+    slots can share states the same fields. And a group sharing some of its
+    names with another but not all of them is not one claim about one file:
+    no route builds one — every group that can meet another names a single
+    file — and what it should state is undecided, so the set refuses it rather
+    than this guessing.
+    """
+    claims: dict[tuple[object, ...], list[FileGroup]] = {}
+    for group in groups:
+        key: tuple[object, ...] = (
+            (group.dir, frozenset(group.files))
+            if group.files is not None
+            else (group.dir, None, group.granularity, group.role, group.size_fixed)
+        )
+        claims.setdefault(key, []).append(group)
+    merged: list[FileGroup] = []
+    caveats: list[Caveat] = []
+    for met in claims.values():
+        entry, said = _merged_entry(met)
+        merged.append(entry)
+        caveats.extend(said)
+    return tuple(merged), tuple(caveats)
+
+
+def _merged_entry(claims: Sequence[FileGroup]) -> tuple[FileGroup, tuple[Caveat, ...]]:
+    """One entry for the claims that met on one file, and a caveat per file where they disagreed.
+
+    A field stands where every claim stated the same value. Otherwise the role
+    is :data:`~atlas.placement.ROLE_UNKNOWN` and ``size_fixed`` is ``None``,
+    the values that say nothing settled them, and the granularity is
+    ``shared-file``: a file that is not one game's alone is never synced as
+    one game's. Claims that agree in every field are one entry and no caveat —
+    nothing was lost. The caveat's lists hold each value once, in the order
+    the claims came in.
+    """
+    first = claims[0]
+    roles = tuple(dict.fromkeys(claim.role for claim in claims))
+    granularities = tuple(dict.fromkeys(claim.granularity for claim in claims))
+    sizes = tuple(dict.fromkeys(claim.size_fixed for claim in claims))
+    if len(roles) == len(granularities) == len(sizes) == 1:
+        return first, ()
+    entry = FileGroup(
+        dir=first.dir,
+        files=first.files,
+        granularity=granularities[0] if len(granularities) == 1 else GRANULARITY_SHARED_FILE,
+        role=roles[0] if len(roles) == 1 else ROLE_UNKNOWN,
+        size_fixed=sizes[0] if len(sizes) == 1 else None,
+    )
+    size_words = tuple(_SIZE_FIXED_WORDS[size] for size in sizes)
+    return entry, tuple(
+        Caveat(
+            CAVEAT_FILE_SET_CLAIMS_MERGED,
+            f"{name} in {first.dir} is named by {len(claims)} parts of this answer that disagree "
+            f"(role {', '.join(roles)}; granularity {', '.join(granularities)}; size fixed "
+            f"{', '.join(size_words)}) — it is stated once, keeping only what every part said",
+            {
+                "dir": first.dir,
+                "file": name,
+                "roles": roles,
+                "granularities": granularities,
+                "size_fixed": size_words,
+            },
+        )
+        for name in first.files or ()
+    )
+
+
+def _content_groupings(mode: SaveMode, content: "_Content") -> tuple[str, ...]:
+    """Every distinct grouping a mode's answer states for this content, its first group's first.
+
+    :attr:`~atlas.oddities.SaveMode.granularities` is the card's list, and the
+    card cannot know the content: a content whose name makes two of the mode's
+    files one — Genesis Plus GX content named ``4Mbit_cart`` turns the per-game
+    ``<rom_stem>.brm`` into the shared ``4Mbit_cart.brm`` — is answered with one
+    ``shared-file`` group, and a granularity block that still said
+    ``per-game-file`` would contradict the groups beside it. So the mode's
+    groups are named for this content and stated once, by the same merge the
+    answer goes through (:func:`_one_entry_per_file`), and the groupings are
+    read off what is left. Each group's directory is spelled by its root and
+    subdirectory, which is all two groups of one mode differ by. Without a
+    content stem no name is filled, nothing can meet, and the card's list is
+    the answer's.
+    """
+    if mode.stated is not None or content.rom_stem is None:
+        return mode.granularities
+    merged, _ = _one_entry_per_file(
+        [
+            FileGroup(
+                dir=f"{group.root or mode.root}/{group.subdir or ''}",
+                files=_card_files(group.files, content.rom_stem) if group.files is not None else None,
+                granularity=group.granularity,
+                role=group.role,
+            )
+            for group in mode.groups
+        ]
+    )
+    # The mode's own grouping is its first named group's, the way the card
+    # reads it (SaveMode.primary), and an unnamed group is a grouping too.
+    first = next((group for group in merged if group.files is not None), merged[0])
+    return tuple(dict.fromkeys([first.granularity, *(group.granularity for group in merged)]))
+
+
+def _grouped_file_set(
+    state: FileSetState,
+    files: tuple[str, ...],
+    provenance: str,
+    *,
+    complete: bool,
+    groups: Sequence[FileGroup],
+) -> tuple[FileSet, tuple[Caveat, ...]]:
+    """A file set whose groups state each file once, with the caveats merging them gave.
+
+    ``files`` keeps each name once too, at its first place: it is the names
+    of the groups in the answer's own directory, so the merge that joins two
+    entries there joins their names in it as well.
+    """
+    merged, caveats = _one_entry_per_file(groups)
+    return (
+        FileSet(state, tuple(dict.fromkeys(files)), provenance, complete=complete, groups=merged),
+        caveats,
+    )
+
+
 def _observation_names(group: SaveGroup, rom_stem: str | None) -> frozenset[str]:
     """The names a card group would recognise in its own directory, resolved.
 
@@ -4994,7 +5161,12 @@ def _observed_groups(
     which is what the two states can each honestly say. Three passes, most
     specific first:
 
-    1. the named groups take the names they declare or watch for;
+    1. the named groups take the names they declare or watch for — each one
+       all of them, so a name two groups both declare (Genesis Plus GX's
+       per-game ``<rom_stem>.brm`` for content named ``4Mbit_cart``, beside
+       the shared ``4Mbit_cart.brm``) reaches
+       :func:`_one_entry_per_file` as two claims instead of going to whichever
+       group was asked first;
     2. the group that states this directory's role without its names — see
        :func:`_unnamed_here` — takes what is left, because the card did say
        what lies here and only refused to spell it;
@@ -5029,14 +5201,14 @@ def _observed_groups(
     the narrow one — these groups are what was found, where it was found — and
     the type's own docstring states it for callers.
     """
-    unclaimed = list(observed)
+    claimed: set[str] = set()
     groups: list[FileGroup] = []
     for group in mode.here if mode is not None and mode.stated is None else ():
         names = _observation_names(group, rom_stem)
-        mine = tuple(name for name in unclaimed if name in names)
+        mine = tuple(name for name in observed if name in names)
         if not mine:
             continue
-        unclaimed = [name for name in unclaimed if name not in names]
+        claimed.update(mine)
         groups.append(
             FileGroup(
                 dir=directory,
@@ -5046,6 +5218,7 @@ def _observed_groups(
                 size_fixed=_card_group_size(group.granularity),
             )
         )
+    unclaimed = [name for name in observed if name not in claimed]
     catchall = _unnamed_here(mode) if unclaimed else None
     if catchall is not None:
         groups.append(
@@ -5080,8 +5253,11 @@ def _file_set_of(
     content_dir_name: str | None,
     card: CoreCard | None,
     mode: SaveMode | None,
-) -> FileSet:
-    """What was found, else what the card declares, else nothing stated."""
+) -> tuple[FileSet, tuple[Caveat, ...]]:
+    """What was found, else what the card declares, else nothing stated.
+
+    The caveats are what stating each file once said (:func:`_one_entry_per_file`).
+    """
     declared = None
     if card is not None and mode is not None and mode.files is not None:
         declared = _card_files(mode.files, rom_stem)
@@ -5090,27 +5266,30 @@ def _file_set_of(
         complete = (
             mode is not None and mode.complete and declared is not None and set(observed) <= set(declared)
         )
-        return FileSet(
-            state=FILE_SET_OBSERVED,
-            files=observed,
-            provenance=f"observed on the machine: {directory}",
+        return _grouped_file_set(
+            FILE_SET_OBSERVED,
+            observed,
+            f"observed on the machine: {directory}",
             complete=complete,
             groups=_observed_groups(observed, directory=directory, rom_stem=rom_stem, mode=mode),
         )
     if declared is not None and card is not None:
-        return FileSet(
-            state=FILE_SET_DECLARED,
-            files=declared,
-            provenance=f"declared by rule card '{card.key}' (none present yet)",
+        return _grouped_file_set(
+            FILE_SET_DECLARED,
+            declared,
+            f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
             groups=_declared_groups(
                 mode, directory=directory, rom_stem=rom_stem, content_dir_name=content_dir_name
             ),
         )
-    return FileSet(
-        state=FILE_SET_UNKNOWN,
-        files=(),
-        provenance=f"no files present at {directory} — file set not stated (never guessed)",
+    return (
+        FileSet(
+            state=FILE_SET_UNKNOWN,
+            files=(),
+            provenance=f"no files present at {directory} — file set not stated (never guessed)",
+        ),
+        (),
     )
 
 
@@ -5246,7 +5425,22 @@ def _sized_file_set(
     """
     if declaration.file_set is not None:
         file_set = _standard_groups(file_set, declaration.frontend, directory=directory)
-    return _frontend_sizes(file_set, declaration.frontend or _card_frontend(mode, rom_stem), layers)
+    # The claim is applied to the set as merged (_one_entry_per_file), so a
+    # group that merged a RetroArch-written file with another part's claim
+    # would take RetroArch's claim over the null the merge stated. None can
+    # today: every file a card says RetroArch writes lies in the save
+    # directory itself, and no other group of its mode comes out with the
+    # same name there under any content name — a test walks every shipped
+    # mode under every content name that makes two of its files one, and
+    # fails on the first card that changes that. It compares each group's
+    # own root and subdirectory, so a group under another root that a
+    # configuration resolves into the save directory is outside its view.
+    return _frontend_sizes(
+        file_set,
+        declaration.frontend or _card_frontend(mode, rom_stem),
+        layers,
+        directory=directory,
+    )
 
 
 def _card_frontend(
@@ -5265,13 +5459,20 @@ def _card_frontend(
 
 
 def _frontend_sizes(
-    file_set: FileSet, frontend: tuple[tuple[str, SizeFact | None], ...], layers: Sequence[_CfgLayer]
+    file_set: FileSet,
+    frontend: tuple[tuple[str, SizeFact | None], ...],
+    layers: Sequence[_CfgLayer],
+    *,
+    directory: str,
 ) -> tuple[FileSet, tuple[Caveat, ...]]:
     """Whether each file RetroArch writes keeps its size, with what that rests on.
 
-    Applied to every group whose files are all ones the frontend writes,
-    declared or observed alike, so the same file answers the same way whether
-    or not it has been written yet. ``save_file_compression`` is read live,
+    Applied to every group in *directory*, the one RetroArch writes into, whose
+    files are all ones the frontend writes, declared or observed alike, so the
+    same file answers the same way whether or not it has been written yet. A
+    file is its directory and its name: a group under another root whose names
+    RetroArch also writes is a different file, and the claim is not its to
+    take. ``save_file_compression`` is read live,
     through the same chain as the save directory: where it is on, the file is an
     RZIP stream whose length follows its content, so the core's report no
     longer decides and every such group is false. Otherwise the claim is the
@@ -5281,7 +5482,7 @@ def _frontend_sizes(
     touched = [
         index
         for index, group in enumerate(file_set.groups)
-        if group.files and all(name in sizes for name in group.files)
+        if group.dir == directory and group.files and all(name in sizes for name in group.files)
     ]
     if not touched:
         return file_set, ()
@@ -5809,7 +6010,8 @@ def _standard_placement(
             )
         )
     all_caveats.extend(cross_parts.caveats)
-    file_set = _with_cross_parts(file_set, cross_parts)
+    file_set, merge_caveats = _with_cross_parts(file_set, cross_parts)
+    all_caveats.extend(merge_caveats)
     file_set, size_caveats = _sized_file_set(
         file_set,
         declaration,
@@ -8713,11 +8915,13 @@ def _dolphin_gc_answer(
     so the configuration this answer was read from — which the caller holds and
     this assembly does not.
     """
-    groups = tuple(g for slot in slots for g in slot.groups)
+    # Both slots can name one file — a raw card and a cartridge save on one
+    # path — and the answer states it once.
+    groups, merge_caveats = _one_entry_per_file([g for slot in slots for g in slot.groups])
     readings = tuple(
         _reading_with_file(r, ini_path) for slot in slots for r in slot.readings
     )
-    caveats = [*extra_caveats, *(c for slot in slots for c in slot.caveats)]
+    caveats = [*extra_caveats, *(c for slot in slots for c in slot.caveats), *merge_caveats]
     mode = "+".join(slot.mode for slot in slots)
     template = next((slot.template_dir for slot in slots if slot.template_dir), None)
     if groups:
@@ -9536,8 +9740,12 @@ def _xemu_savefile_placement(
         if eeprom
         else (None, ())
     )
-    groups = [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
-    caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats]
+    # The image and the EEPROM can be configured onto one path, and the
+    # answer states that file once.
+    groups, merge_caveats = _one_entry_per_file(
+        [*disk_groups, *([eeprom_group] if eeprom_group is not None else [])]
+    )
+    caveats = [*extra_caveats, *disk_caveats, *eeprom_caveats, *merge_caveats]
     if not groups:
         # Two different empties: the config named files and none has a spelling
         # on this host (the untranslatable-path refusal, first stated path
@@ -10528,11 +10736,15 @@ def _duckstation_savefile_placement(
         _duckstation_slot(slot, values, memcards_dir, sandbox, card, content_path)
         for slot in (0, 1)
     )
-    groups = tuple(slot.group for slot in slots if slot.group is not None)
+    # Two shared slots can name one card file, and the answer states it once.
+    groups, merge_caveats = _one_entry_per_file(
+        [slot.group for slot in slots if slot.group is not None]
+    )
     readings = [dir_reading]
     for slot in slots:
         readings.extend(slot.readings)
     caveats.extend(c for slot in slots for c in slot.caveats)
+    caveats.extend(merge_caveats)
     mode = "+".join(slot.mode for slot in slots)
     if groups:
         value = groups[0].granularity
@@ -10939,7 +11151,9 @@ def _pcsx2_slot_listing(
         if word == "tap-off":
             continue  # suppressed — the readings above are all it contributes
         modes.append(word)
-        caveats.extend(slot_caveats)
+        # Two slots on one folder card are one entry of the answer
+        # (_one_entry_per_file), and the card's caveat is stated once with it.
+        caveats.extend(c for c in slot_caveats if c not in caveats)
         if group is not None:
             groups.append(group)
     readings.extend(tap_readings[tap_port] for tap_port in sorted(tap_readings))
@@ -11007,7 +11221,9 @@ def _pcsx2_savefile_placement(
     )
     caveats.extend(listing.caveats)
     mode = listing.mode
-    groups = listing.groups
+    # Two slots can name one card file, and the answer states it once.
+    groups, merge_caveats = _one_entry_per_file(listing.groups)
+    caveats.extend(merge_caveats)
     readings = (dir_reading, *listing.readings)
     if groups:
         directory = groups[0].dir

@@ -1597,6 +1597,8 @@ class TestTheDataRegistryReading:
             ("appended-config-overridden", "layer"): "CFG_LAYER_OVERRIDE_KINDS",
             ("save-files-compressed", "layer"): "CFG_LAYER_KINDS",
             ("size-fixed-except-trailing-fill", "fill"): "SIZE_FILLS",
+            ("file-set-claims-merged", "roles"): "ROLES",
+            ("file-set-claims-merged", "granularities"): "GRANULARITIES",
             ("launch-command-beyond-limits", "limit"): "LAUNCH_COMMAND_LIMITS",
             ("launch-command-shell-syntax", "construct"): "SHELL_CONSTRUCTS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
