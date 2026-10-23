@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.27.0](https://github.com/danielcopper/emu-atlas/compare/v0.26.0...v0.27.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** a save answer states each file in one entry of file_set.groups. Where two settings or a content name made one file appear in two entries, the answer now states one entry and lists the name once in files. The fields the entries agreed on are kept; each field they disagreed on is stated as unknown (role), null (size_fixed) or shared-file (granularity), and the caveat file-set-claims-merged names the file and what each entry said. For such content, granularity.value and alternatives[].values follow the merged groups. Two entries stating one directory without file names and agreeing in every field (two PCSX2 slots on one folder card, Dolphin's GCI folder paths on one folder) are one entry, with their file-names-unestablished caveat once. Flycast with savefile_directory set to the system directory's dc and sorting off answers where it raised, with the shared VMUs and console flash in files. Every other answer is unchanged.
+* **firmware:** firmware answers asked with a content path naming a CHD read the disc where they answered disc-format-unread with extension "chd": a region-selected group now states its region and source, or answers disc-unread (statuses not-a-disc, unreadable, or the new codec-unavailable), or content-unopenable where the emulator does not open the CHD (SwanStation with cdzs; SwanStation and Beetle PSX with a parent; DuckStation with no parent found). A bin image whose directory has a sector unreadable or not in Mode 2 past the records the identity needs now reads where it answered disc-format-unread. Answers without a content path are unchanged.
+
+### Features
+
+* **firmware:** read a PlayStation disc's region from CHD images ([#687](https://github.com/danielcopper/emu-atlas/issues/687)) ([ac6ac81](https://github.com/danielcopper/emu-atlas/commit/ac6ac8172717767fc683744bc20a80e367d44c2b))
+* **saves:** state one group entry per directory and file name in a save answer ([#690](https://github.com/danielcopper/emu-atlas/issues/690)) ([fa0965e](https://github.com/danielcopper/emu-atlas/commit/fa0965ef2e7f2af4a9617f7e45b087f9786fdba1))
+
 ## [0.26.0](https://github.com/danielcopper/emu-atlas/compare/v0.25.0...v0.26.0) (2026-10-23)
 
 
