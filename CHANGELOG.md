@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.26.0](https://github.com/danielcopper/emu-atlas/compare/v0.25.0...v0.26.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** every entry of `file_set.groups` in a save answer carries a new `size_fixed` field (true, false or null), and the answer RetroArch's standard rule gives now carries groups, one per `.srm`/`.rtc` it writes, where it carried none. Existing save answers for mGBA's Game Boy Advance saves and Genesis Plus GX's cartridge saves also gain a `size-fixed-except-trailing-fill` caveat. A consumer that compares serialized answers, or reads an empty `groups` as "the standard rule", sees all of it.
+* **data:** the caveat data that cites DuckStation's source names the deployed build: the citation of filenames-content-conditional in DuckStation save answers reads "at 1f6de046b" and that commit's line ranges where it read "at 64655818e", the citation of file-names-unestablished in DuckStation savestate answers reads "system.cpp:5291-5305 at RetroDECK/Duckstation@1f6de046b" where it read "system.cpp:5288-5302 at stenzek/duckstation@64655818e", and the table of firmware-image-identified in DuckStation firmware answers reads 1f6de046b where it read 64655818e.
+* **firmware:** firmware answers carry a new caveat code, firmware-core-substitute (data: core, substitute, systems), on every PUAE and PUAE 2021 block, on every question. Asked about amiga, amiga600 or amiga1200, those blocks now answer system_firmware core-supplies-an-alternative and need optional on the four kickstarts the .info marks required, whatever the BIOS folder holds, where they answered null and required; their requirements_met there no longer depends on any kickstart, so with none in place it is true where it was false. Every core declaring firmware under systemname Amiga now reads system_firmware cannot-run-without-firmware, with a system-firmware-world-knowledge caveat for amiga, wherever it is not excused (PUAE and PUAE 2021 on amigacd32, cdtv and a question naming no system; any other such core, uae4arm where installed, on every question), where it read null; requirements_met and need flags there are unchanged.
+* atlas requires Python 3.12 or newer; 3.11 is no longer supported.
+
+### Features
+
+* **firmware:** answer a PlayStation BIOS group for one game, by the region its emulator reads from the disc ([#684](https://github.com/danielcopper/emu-atlas/issues/684)) ([f578cb2](https://github.com/danielcopper/emu-atlas/commit/f578cb2f2929a5e82a235f2de04564b36ac76f62))
+* **saves:** state whether a save file's size is fixed ([#686](https://github.com/danielcopper/emu-atlas/issues/686)) ([61acb4a](https://github.com/danielcopper/emu-atlas/commit/61acb4a2751678f34099203a9ee64c0e08108513))
+
+
+### Bug Fixes
+
+* **data:** pin DuckStation's deployed build and re-read its citations there ([#682](https://github.com/danielcopper/emu-atlas/issues/682)) ([d6d1e12](https://github.com/danielcopper/emu-atlas/commit/d6d1e124ac5ae54166d0558d97a47dfa517fd222))
+* **firmware:** state that PUAE boots its built-in AROS kickstart where the declared images are missing ([#676](https://github.com/danielcopper/emu-atlas/issues/676)) ([98d57ba](https://github.com/danielcopper/emu-atlas/commit/98d57bae9b10ab79e16d1b94fdf1271213525598)), closes [#657](https://github.com/danielcopper/emu-atlas/issues/657)
+* **vectors:** refuse the PS2 BIOS header strings the fixture machine refuses ([#678](https://github.com/danielcopper/emu-atlas/issues/678)) ([46bdf45](https://github.com/danielcopper/emu-atlas/commit/46bdf454c80d8865355e5969d611a65b13ec2474)), closes [#669](https://github.com/danielcopper/emu-atlas/issues/669)
+
+
+### Build System
+
+* require Python 3.12, and test 3.12, 3.13 and 3.14 ([#673](https://github.com/danielcopper/emu-atlas/issues/673)) ([e68dcf0](https://github.com/danielcopper/emu-atlas/commit/e68dcf01489a26bd41b5df73943623bf4953a693)), closes [#672](https://github.com/danielcopper/emu-atlas/issues/672)
+
 ## [0.25.0](https://github.com/danielcopper/emu-atlas/compare/v0.24.0...v0.25.0) (2026-10-21)
 
 
