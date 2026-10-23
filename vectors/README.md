@@ -127,19 +127,32 @@ must not be one declared `unreadable` — its bytes are what cannot be read, so 
 any test. A declared file with no entry here answers **missing**, which the firmware folder route states as
 `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as no BIOS.
 
-**`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img` or `.iso`) →
-what reading its first data track yields: `{"license": …, "system_cnf": …, "boot_found": …, "edc_valid": …}`, where
-`license` is the start of sector 4's user data, at most 72 characters and padded with NUL to that length, `system_cnf`
-the text of `SYSTEM.CNF` or `null` where the disc has none — the sector Beetle reads is that text, cut or NUL-padded to
-2048 bytes — `boot_found` whether the executable DuckStation's `BOOT` parse names exists on the disc, and `edc_valid`
-whether every sector Beetle's route reads passes its checksum; every character is one byte (latin-1). Or one of the
-states `"missing"` (a file the image names is not there — the image's own absence is an undeclared path), `"unreadable"`
-or `"not-a-disc"` (a cue sheet the parser refuses, or one whose first track is audio). It is modeled at the seam for the
-reason `ps2_bios_headers` is: the real read walks a disc image no fixture should carry. A path with any other suffix
-answers `format-not-read` from its suffix alone, so it is never declared here, and the file must not be one declared
-`unreadable`. A declared image with no entry answers **missing**, so a vector that forgot the key cannot prove a region
-nobody modeled. A `.m3u` is never declared here either: each emulator reads its own playlist from `files` as text, and
-the entry it names is what this read is asked about.
+**`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img`, `.iso` or
+`.chd`) → what reading its first data track yields: `{"license": …, "system_cnf": …, "boot_found": …, "edc_valid": …}`,
+where `license` is the start of sector 4's user data, at most 72 characters and padded with NUL to that length,
+`system_cnf` the text of `SYSTEM.CNF` or `null` where the disc has none — the sector Beetle reads is that text, cut or
+NUL-padded to 2048 bytes — `boot_found` whether the executable DuckStation's `BOOT` parse names exists on the disc, and
+`edc_valid` whether every sector Beetle's route reads passes its checksum; every character is one byte (latin-1). Or one
+of the states `"missing"` (a file the image names is not there — the image's own absence is an undeclared path),
+`"unreadable"` or `"not-a-disc"` (a cue sheet the parser refuses, or one whose first track is audio). It is modeled at
+the seam for the reason `ps2_bios_headers` is: the real read walks a disc image no fixture should carry. A path with any
+other suffix answers `format-not-read` from its suffix alone, so it is never declared here, and the file must not be one
+declared `unreadable`. A declared image with no entry answers **missing**, so a vector that forgot the key cannot prove
+a region nobody modeled. A `.m3u` is never declared here either: each emulator reads its own playlist from `files` as
+text, and the entry it names is what this read is asked about.
+
+A `.chd` takes its own two shapes. Where its header was not read, a state alone: `"unreadable"`, `"not-a-disc"` (no CHD
+header libchdr opens) or `"format-not-read"` (a CHD of a version before 5). Where it was,
+`{"codecs": […], "requires_parent": …, "identity": …}`: `codecs` the tags of the header's non-empty codec slots in slot
+order (at most four, each four one-byte characters, such as `"cdlz"`), which each emulator's own open compares with the
+codecs its libchdr carries; `requires_parent` whether the header names a parent CHD; and `identity` either the four
+facts above or the state a read past the header ended in — `"unreadable"`, `"not-a-disc"`, `"format-not-read"` (a hunk
+in a codec atlas does not read, or a track 1 the emulators read apart), `"codec-unavailable"` (a codec atlas reads and
+the running Python lacks) or `"parent-not-found"`, which only a header naming a parent can answer: the parent
+DuckStation looks for among the files of the CHD's folder is not there. That is a fact about the parent rather than a
+missing file, because no path names the parent, so a CHD is never `"missing"`. Whether an emulator opens the image at
+all follows from the two header facts and that state, never from the identity: SwanStation and Beetle PSX open no CHD
+that names a parent, found or not, and SwanStation none with a `cdzs` codec.
 
 **`archives`** — archive path → the member list a walk of it answers (`["Game.info", "Game/Game.slave"]`, relative and
 `/`-separated), or `"unreadable"` / `"not-archive"`. The path must be a declared file whose name ends in `zip`, `lha` or

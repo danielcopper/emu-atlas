@@ -92,9 +92,9 @@ import sys
 import zipfile
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, runtime_checkable
+from typing import BinaryIO, Callable, Iterable, Literal, Mapping, NamedTuple, Protocol, runtime_checkable
 
-from . import lha, ps2_bios, psx_disc, squashfs, whdload
+from . import lha, ps2_bios, psx_chd, psx_disc, squashfs, whdload
 
 _CORE_PROBE_TIMEOUT_SECONDS = 15
 SYMLINK_HOPS = 40
@@ -189,13 +189,23 @@ PS2_BIOS_NOT_A_BIOS: Ps2BiosHeaderStatus = "not-a-bios"
 # sheet the parser refuses, or one whose first track is audio. "missing" and
 # "unreadable" keep the plain read's meaning, and they speak for every file the
 # read needs — a cue sheet's data file that is not there is a disc that is
-# missing, whatever the sheet itself is.
-DiscIdentityStatus = Literal["ok", "missing", "unreadable", "format-not-read", "not-a-disc"]
+# missing, whatever the sheet itself is; "unreadable" also answers a read that
+# would pass a bound atlas reads within: a length the image states, a chain of
+# copies or of metadata entries, a parent's folder too large to search, or the
+# work one read may spend. A CHD adds two: "codec-unavailable" is a CHD atlas reads whose hunk
+# needs a codec this runtime lacks, and "parent-not-found" one that names a
+# parent DuckStation's search of its folder does not find (atlas.psx_chd) — not
+# a file that is missing, since no path names the parent.
+DiscIdentityStatus = Literal[
+    "ok", "missing", "unreadable", "format-not-read", "not-a-disc", "codec-unavailable", "parent-not-found"
+]
 DISC_OK: DiscIdentityStatus = "ok"
 DISC_MISSING: DiscIdentityStatus = "missing"
 DISC_UNREADABLE: DiscIdentityStatus = "unreadable"
 DISC_FORMAT_NOT_READ: DiscIdentityStatus = "format-not-read"
 DISC_NOT_A_DISC: DiscIdentityStatus = "not-a-disc"
+DISC_CODEC_UNAVAILABLE: DiscIdentityStatus = "codec-unavailable"
+DISC_PARENT_NOT_FOUND: DiscIdentityStatus = "parent-not-found"
 
 # Listing an archive has one way to fail beyond a plain file read:
 # "not-archive" is a file that was opened and is not an archive of a kind
@@ -384,17 +394,22 @@ class DiscIdentityResult:
 
     The statuses are documented on :data:`DiscIdentityStatus`; the identity is
     :class:`atlas.psx_disc.DiscIdentity`, the bytes the emulators decide a
-    region from.
+    region from. ``chd`` is set for a CHD whose header was read, whatever the
+    read found after it: an emulator's own open decides on those facts before
+    any hunk is read, so they stand where the identity does not.
     """
 
     status: DiscIdentityStatus
     identity: psx_disc.DiscIdentity | None = None
+    chd: psx_chd.ChdFacts | None = None
 
     def __post_init__(self) -> None:
         if (self.identity is None) == (self.status == DISC_OK):
             raise ValueError(
                 f"DiscIdentityResult: identity must be set exactly when status is 'ok' (got {self.status!r})"
             )
+        if self.status == DISC_PARENT_NOT_FOUND and (self.chd is None or not self.chd.requires_parent):
+            raise ValueError("DiscIdentityResult: a parent goes unfound only for a CHD whose header names one")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1089,6 +1104,28 @@ def _stamp_in(data: bytes, pattern: re.Pattern[bytes]) -> AppImageStampResult:
         return AppImageStampResult(APPIMAGE_NO_STAMP)
 
 
+
+def _open_binary(path: str) -> BinaryIO:
+    return open(path, "rb")
+
+
+def _regular_files(directory: str) -> list[str]:
+    """The regular files of *directory* in directory order, a symlink followed — the files a CHD's parent is
+    looked for among.
+
+    DuckStation's listing (``FindFiles``, file_system.cpp:2247-2376 at
+    RetroDECK/Duckstation@1f6de046b) also lists a FIFO, a socket or a device
+    and then opens it; such a file is left out here, because opening a FIFO
+    waits for a writer that may never come. A folder that does not list
+    answers no files, as ``opendir`` failing does there.
+    """
+    try:
+        with os.scandir(directory) as entries:
+            return [entry.path for entry in entries if entry.is_file()]
+    except OSError:
+        return []
+
+
 class RealMachine:
     """The production machine: the real filesystem, plus a core prober where one is possible.
 
@@ -1231,13 +1268,16 @@ class RealMachine:
     def read_disc_identity(self, path: str) -> DiscIdentityResult:
         """The bytes a PlayStation disc's emulators decide its region from — a status, and the identity where read.
 
-        *path* is the image itself — a ``.cue`` or a bare image, never a
-        playlist, which each emulator resolves by its own rules above this seam.
-        It must be a regular file, checked before anything is opened; every
-        file the read then opens — a cue sheet's data files — keeps the plain
-        read's two words, so a sheet whose data file is gone answers
-        ``missing``. The reader is :mod:`atlas.psx_disc`, and its two refusals
-        map to ``format-not-read`` and ``not-a-disc``.
+        *path* is the image itself — a ``.cue``, a bare image or a ``.chd``,
+        never a playlist, which each emulator resolves by its own rules above
+        this seam. It must be a regular file, checked before anything is
+        opened; every file the read then opens — a cue sheet's data files —
+        keeps the plain read's two words, so a sheet whose data file is gone
+        answers ``missing``. The readers are :mod:`atlas.psx_disc` and, for a
+        CHD, :mod:`atlas.psx_chd`; their refusals map to ``format-not-read``,
+        ``not-a-disc``, ``codec-unavailable``, ``unreadable`` and
+        ``parent-not-found``. A CHD's parent is looked for among the regular
+        files of its folder (:func:`_regular_files`).
         """
         try:
             st = os.stat(path)
@@ -1247,17 +1287,26 @@ class RealMachine:
             return DiscIdentityResult(DISC_UNREADABLE)
         if not _stat.S_ISREG(st.st_mode):
             return DiscIdentityResult(DISC_UNREADABLE)
+        facts: psx_chd.ChdFacts | None = None
         try:
-            identity = psx_disc.read_identity(path, lambda name: open(name, "rb"))
+            if os.path.splitext(path)[1].lower() == psx_chd.CHD_SUFFIX:
+                facts = psx_chd.read_facts(path, _open_binary)
+                identity = psx_chd.read_identity(path, _open_binary, _regular_files)
+            else:
+                identity = psx_disc.read_identity(path, _open_binary)
+        except psx_chd.ParentNotFound:
+            return DiscIdentityResult(DISC_PARENT_NOT_FOUND, chd=facts)
         except (FileNotFoundError, NotADirectoryError):
-            return DiscIdentityResult(DISC_MISSING)
+            return DiscIdentityResult(DISC_MISSING, chd=facts)
         except psx_disc.FormatNotRead:
-            return DiscIdentityResult(DISC_FORMAT_NOT_READ)
+            return DiscIdentityResult(DISC_FORMAT_NOT_READ, chd=facts)
         except psx_disc.NotADisc:
-            return DiscIdentityResult(DISC_NOT_A_DISC)
-        except OSError:
-            return DiscIdentityResult(DISC_UNREADABLE)
-        return DiscIdentityResult(DISC_OK, identity)
+            return DiscIdentityResult(DISC_NOT_A_DISC, chd=facts)
+        except psx_disc.CodecUnavailable:
+            return DiscIdentityResult(DISC_CODEC_UNAVAILABLE, chd=facts)
+        except (OSError, psx_disc.Unreadable):
+            return DiscIdentityResult(DISC_UNREADABLE, chd=facts)
+        return DiscIdentityResult(DISC_OK, identity, chd=facts)
 
     def list_archive(self, path: str) -> ArchiveListResult:
         """What one container holds — the read PUAE's own walk over a mounted volume makes.
@@ -2182,34 +2231,46 @@ def _fixture_ps2_bios_header(path: str, spec: Mapping[str, object]) -> ps2_bios.
     return ps2_bios.Ps2BiosHeader.from_strings(strings["romver"], strings["serial"])
 
 
-# The states a fixture disc identity may declare short of the identity: what
-# RealMachine can report about an image it opened. "missing" is among them
+# The states a fixture disc identity of a cue sheet or a bare image may declare
+# short of the identity: what RealMachine can report about an image it opened. "missing" is among them
 # because the read opens more than the declared file — a cue sheet's data file
 # that is not there answers it. "format-not-read" is not: whether a reader
 # opens a suffix is decided by the suffix, which the fixture answers from the
 # path itself, as the real reader does.
 _FIXTURE_DISC_STATES = ("missing", "unreadable", "not-a-disc")
 _FIXTURE_DISC_FIELDS = ("license", "system_cnf", "boot_found", "edc_valid")
-_FIXTURE_DISC_SUFFIXES = (psx_disc.CUE_SUFFIX, *psx_disc.BARE_IMAGE_SUFFIXES)
+_FIXTURE_DISC_SUFFIXES = (psx_disc.CUE_SUFFIX, *psx_disc.BARE_IMAGE_SUFFIXES, psx_chd.CHD_SUFFIX)
+# A CHD answers in one of two shapes. Where its header was not read, a state
+# alone — and "format-not-read" is among them, for a header of a version before
+# 5. Where it was, the facts an emulator's open decides on beside what the read
+# found after them: an identity, or one of the states a read past the header
+# can end in. A CHD names no file but its parent, so "missing" is in neither
+# list: a parent the search does not find is "parent-not-found", which only a
+# header that names a parent can answer.
+_FIXTURE_CHD_HEADER_STATES = ("unreadable", "not-a-disc", "format-not-read")
+_FIXTURE_CHD_FIELDS = ("codecs", "requires_parent", "identity")
+_FIXTURE_CHD_READ_STATES = ("unreadable", "not-a-disc", "format-not-read", "codec-unavailable", "parent-not-found")
 
 
 def disc_suffix_read(path: str) -> bool:
-    """Does :mod:`atlas.psx_disc` open an image by this path's suffix — the rule both machines and the validator share."""
+    """Does :mod:`atlas.psx_disc` or :mod:`atlas.psx_chd` open an image by this path's suffix — the rule both machines
+    and the validator share."""
     return os.path.splitext(path)[1].lower() in _FIXTURE_DISC_SUFFIXES
 
 
 def _validate_fixture_disc_identities(
     identities: Mapping[str, Mapping[str, object] | str],
     files: Mapping[str, tuple[ReadStatus, str | None]],
-) -> dict[str, psx_disc.DiscIdentity | str]:
-    """The declared disc identities, built once into the reader's own type.
+) -> dict[str, DiscIdentityResult]:
+    """The declared disc identities, built once into the answer the seam returns.
 
     An identity describes an image's bytes, so its path must be a declared
     file whose bytes can be read, and one whose suffix the reader opens — a
     declaration beside a suffix the reader refuses would assert a read the
-    machine it models never makes.
+    machine it models never makes. A ``.chd`` takes the shapes
+    :func:`_fixture_chd_result` reads.
     """
-    validated: dict[str, psx_disc.DiscIdentity | str] = {}
+    validated: dict[str, DiscIdentityResult] = {}
     for path, spec in identities.items():
         if path not in files:
             raise ValueError(f"disc identity {path!r}: an identity describes a file's bytes, and no file is declared there")
@@ -2223,13 +2284,50 @@ def _validate_fixture_disc_identities(
                 f"disc identity {path!r}: no reader opens this suffix, so the path answers 'format-not-read' "
                 "whatever is declared"
             )
-        if isinstance(spec, str):
-            if spec not in _FIXTURE_DISC_STATES:
-                raise ValueError(f"disc identity {path!r}: a state must be one of {_FIXTURE_DISC_STATES}, got {spec!r}")
-            validated[path] = spec
-            continue
-        validated[path] = _fixture_disc_identity(path, spec)
+        if os.path.splitext(path)[1].lower() == psx_chd.CHD_SUFFIX:
+            validated[path] = _fixture_chd_result(path, spec)
+        elif isinstance(spec, str):
+            validated[path] = DiscIdentityResult(_fixture_state(path, spec, _FIXTURE_DISC_STATES))
+        else:
+            validated[path] = DiscIdentityResult(DISC_OK, _fixture_disc_identity(path, spec))
     return validated
+
+
+def _fixture_state(path: str, spec: object, allowed: tuple[str, ...]) -> DiscIdentityStatus:
+    if not isinstance(spec, str) or spec not in allowed:
+        raise ValueError(f"disc identity {path!r}: a state must be one of {allowed}, got {spec!r}")
+    return spec  # type: ignore[return-value]  # one of the allowed literals, checked above
+
+
+def _fixture_chd_result(path: str, spec: Mapping[str, object] | str) -> DiscIdentityResult:
+    """A CHD's declaration: a state where its header was not read, else its facts and what the read found.
+
+    ``{"codecs": [...], "requires_parent": ..., "identity": ...}`` — the tags
+    of the header's codec slots, at most four of four characters each; whether
+    the header names a parent; and the four facts or a state of
+    :data:`_FIXTURE_CHD_READ_STATES`, ``parent-not-found`` only beside a
+    parent named.
+    """
+    if isinstance(spec, str):
+        return DiscIdentityResult(_fixture_state(path, spec, _FIXTURE_CHD_HEADER_STATES))
+    if set(spec) != set(_FIXTURE_CHD_FIELDS):
+        raise ValueError(f"disc identity {path!r}: a CHD is a state or an object with exactly {_FIXTURE_CHD_FIELDS}")
+    codecs, requires_parent, identity = spec["codecs"], spec["requires_parent"], spec["identity"]
+    if (
+        not isinstance(codecs, list)
+        or len(codecs) > 4
+        or not all(isinstance(tag, str) and len(tag) == 4 and max(map(ord, tag)) <= 0xFF for tag in codecs)
+    ):
+        raise ValueError(f"disc identity {path!r}: codecs are at most four tags of four one-byte characters")
+    if not isinstance(requires_parent, bool):
+        raise ValueError(f"disc identity {path!r}: requires_parent must be a boolean, got {requires_parent!r}")
+    facts = psx_chd.ChdFacts(tuple(codecs), requires_parent)
+    if isinstance(identity, Mapping):
+        return DiscIdentityResult(DISC_OK, _fixture_disc_identity(path, identity), chd=facts)
+    status = _fixture_state(path, identity, _FIXTURE_CHD_READ_STATES)
+    if status == DISC_PARENT_NOT_FOUND and not requires_parent:
+        raise ValueError(f"disc identity {path!r}: only a CHD that names a parent can fail to find one")
+    return DiscIdentityResult(status, chd=facts)
 
 
 def _fixture_disc_identity(path: str, spec: Mapping[str, object]) -> psx_disc.DiscIdentity:
@@ -2703,7 +2801,8 @@ class FixtureMachine:
         answers ``unreadable``, one that is not there ``missing``, a directory
         or an unreadable file ``unreadable``, and then the suffix decides
         whether any reader opens it (``format-not-read`` where none does). A
-        path declared in ``disc_identities`` answers its identity or its state;
+        path declared in ``disc_identities`` answers its identity or its state,
+        and a CHD the facts of its header beside them;
         a declared file with no entry answers ``missing`` — answering
         ``not-a-disc`` instead would let a vector that forgot the key prove a
         region nobody modeled.
@@ -2717,13 +2816,8 @@ class FixtureMachine:
             return DiscIdentityResult(DISC_UNREADABLE)
         if not disc_suffix_read(resolved):
             return DiscIdentityResult(DISC_FORMAT_NOT_READ)
-        spec = self._disc_identities.get(resolved)
-        if isinstance(spec, str):
-            status: DiscIdentityStatus = spec  # type: ignore[assignment]  # validated at construction
-            return DiscIdentityResult(status)
-        if spec is not None:
-            return DiscIdentityResult(DISC_OK, spec)
-        return DiscIdentityResult(DISC_MISSING)
+        declared = self._disc_identities.get(resolved)
+        return DiscIdentityResult(DISC_MISSING) if declared is None else declared
 
     def list_archive(self, path: str) -> ArchiveListResult:
         """The modeled container listing — the same one rule, over data instead of bytes.

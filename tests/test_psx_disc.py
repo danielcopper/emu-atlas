@@ -82,10 +82,12 @@ def disc(
     root_records: list[bytes] | None = None,
     corrupt: int | None = None,
     mode_at: dict[int, int] | None = None,
+    extra: dict[int, bytes] | None = None,
 ) -> bytes:
-    """A track 1 image: the licence at sector 4, the PVD at 16, a root directory at 18, files from 20 on."""
+    """A track 1 image: the licence at sector 4, the PVD at 16, a root directory at 18, files from 20 on, and any
+    *extra* sectors' data where they say."""
     files = {b"SYSTEM.CNF;1": SYSTEM_CNF, b"SLUS_000.01;1": b"PS-X EXE"} if files is None else files
-    sectors: dict[int, bytes] = {4: license}
+    sectors: dict[int, bytes] = {4: license, **(extra or {})}
     records = [record(b"\x00", ROOT_LBA, 2048, directory=True), record(b"\x01", ROOT_LBA, 2048, directory=True)]
     lba = 20
     for name, content in files.items():
@@ -225,7 +227,7 @@ class TestALayoutTheEmulatorsReadApartIsRefused:
             read(path)
 
     def test_a_suffix_no_reader_opens(self, tmp_path):
-        path = tmp_path / "Game.chd"
+        path = tmp_path / "Game.pbp"
         path.write_bytes(b"MComprHD")
         with pytest.raises(psx_disc.FormatNotRead, match="no reader here opens"):
             read(path)
@@ -233,6 +235,92 @@ class TestALayoutTheEmulatorsReadApartIsRefused:
     def test_an_image_ending_before_sector_4(self, tmp_path):
         path = write_game(tmp_path, disc()[: 3 * psx_disc.RAW_SECTOR_SIZE])
         with pytest.raises(psx_disc.FormatNotRead, match="past the end of track 1"):
+            read(path)
+
+
+def stated_longer(
+    image: bytes, *, file: int | None = None, root: int | None = None, root_directory: bool = True
+) -> bytes:
+    """*image* with SYSTEM.CNF's directory record, or the PVD's root record, stating another length."""
+    out = bytearray(image)
+    if file is not None:
+        old = record(b"SYSTEM.CNF;1", 20, len(SYSTEM_CNF))
+        at = out.index(old)
+        out[at : at + len(old)] = record(b"SYSTEM.CNF;1", 20, file)
+    if root is not None:
+        at = 16 * psx_disc.RAW_SECTOR_SIZE + 24 + 156
+        out[at : at + 34] = record(b"\x00", ROOT_LBA, root, directory=root_directory)
+    return bytes(out)
+
+
+class TestWhatTheDiscMakesUsRead:
+    """atlas's own bounds on what a disc's records make the read cover — past one the disc answers unreadable."""
+
+    def test_a_file_past_the_bound(self, tmp_path):
+        path = write_game(tmp_path, stated_longer(disc(), file=psx_disc.MAX_FILE_BYTES + 1))
+        with pytest.raises(psx_disc.Unreadable, match="a file of"):
+            read(path)
+        assert RealMachine().read_disc_identity(str(path)) == DiscIdentityResult(DISC_UNREADABLE)
+
+    def test_a_file_at_the_bound_is_read_as_far_as_the_track_goes(self, tmp_path):
+        path = write_game(tmp_path, stated_longer(disc(), file=psx_disc.MAX_FILE_BYTES))
+        with pytest.raises(psx_disc.FormatNotRead, match="past the end of track 1"):
+            read(path)
+
+    # A directory of four sectors under a bound of two: DIR at sector 10,
+    # its first sector naming the executable where WITH_EXE says so.
+    BOOT_IN_DIR = b"BOOT = cdrom:\\DIR\\SLUS_000.01;1\r\n"
+
+    def _dir_disc(self, *, with_exe: bool) -> bytes:
+        entry = record(b"SLUS_000.01;1", 21, 8) if with_exe else b""
+        return disc(
+            files={b"SYSTEM.CNF;1": self.BOOT_IN_DIR, b"SLUS_000.01;1": b"PS-X EXE"},
+            root_records=[record(b"DIR", 10, 4 * 2048, directory=True)],
+            extra={10: entry},
+        )
+
+    def test_a_walk_that_meets_its_match_before_the_bound_answers(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(psx_disc, "MAX_DIRECTORY_BYTES", 2 * 2048)
+        assert read(write_game(tmp_path, self._dir_disc(with_exe=True))).boot_found is True
+
+    def test_a_root_whose_match_comes_before_the_bound_answers(self, tmp_path, monkeypatch):
+        # A root stating four sectors under a bound of two, SYSTEM.CNF in its
+        # first: all three walks of the root stop there.
+        monkeypatch.setattr(psx_disc, "MAX_DIRECTORY_BYTES", 2 * 2048)
+        path = write_game(tmp_path, stated_longer(disc(), root=4 * 2048))
+        assert read(path).system_cnf == SYSTEM_CNF
+
+    def test_a_walk_that_reads_on_past_the_bound(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(psx_disc, "MAX_DIRECTORY_BYTES", 2 * 2048)
+        path = write_game(tmp_path, self._dir_disc(with_exe=False))
+        with pytest.raises(psx_disc.Unreadable, match="a directory of"):
+            read(path)
+
+    def test_swanstation_s_root_walk_holds_the_bound(self, tmp_path, monkeypatch):
+        # A root record without the directory flag: DuckStation's lookup
+        # stops before any walk, Beetle's scan ends at the empty entry, and
+        # SwanStation alone walks the root's four sectors in search of
+        # SYSTEM.CNF, which the disc does not hold.
+        monkeypatch.setattr(psx_disc, "MAX_DIRECTORY_BYTES", 2 * 2048)
+        path = write_game(tmp_path, stated_longer(disc(files={}), root=4 * 2048, root_directory=False))
+        with pytest.raises(psx_disc.Unreadable, match="a directory of"):
+            read(path)
+
+    def test_the_walks_stop_at_their_match(self, tmp_path):
+        # A root of two sectors whose second is no Mode 2 sector: every walk
+        # finds what it looks for in the first and never reads the second.
+        path = write_game(tmp_path, stated_longer(disc(mode_at={19: 1}), root=2 * 2048))
+        assert read(path).system_cnf == SYSTEM_CNF
+
+    def test_a_path_through_a_directory_that_names_itself(self, tmp_path, monkeypatch):
+        # The BOOT path walks A, which is the root again, a hundred times: each
+        # walk reads the root anew, and the reads end at the bound.
+        boot = b"BOOT = cdrom:\\" + b"A\\" * 100 + b"SLUS_000.01;1\r\n"
+        image = disc(files={b"SYSTEM.CNF;1": boot}, root_records=[record(b"A", ROOT_LBA, 2048, directory=True)])
+        path = write_game(tmp_path, image)
+        assert read(path).boot_found is False
+        monkeypatch.setattr(psx_disc, "MAX_SECTOR_READS", 64)
+        with pytest.raises(psx_disc.Unreadable, match="sector reads"):
             read(path)
 
 
@@ -359,7 +447,7 @@ class TestTheSeamMapsEveryOutcome:
         assert RealMachine().read_disc_identity(str(path)) == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
     def test_a_suffix_no_reader_opens_is_format_not_read(self, tmp_path):
-        path = tmp_path / "Game.chd"
+        path = tmp_path / "Game.pbp"
         path.write_bytes(b"MComprHD")
         assert RealMachine().read_disc_identity(str(path)) == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
@@ -383,7 +471,7 @@ class TestTheFixtureModelsTheAnswer:
     """FixtureMachine.read_disc_identity — the four facts in, the same outcomes out."""
 
     def _machine(self, **kwargs) -> FixtureMachine:
-        files = {GAME: CUE, "/roms/psx/Game.chd": "x", "/roms/psx/Locked.cue": {"status": "unreadable"}}
+        files = {GAME: CUE, "/roms/psx/Game.pbp": "x", "/roms/psx/Locked.cue": {"status": "unreadable"}}
         return FixtureMachine(files, **kwargs)
 
     def test_a_declared_identity_answers_what_the_reader_would_hold(self, tmp_path):
@@ -398,7 +486,7 @@ class TestTheFixtureModelsTheAnswer:
         assert self._machine().read_disc_identity(GAME) == DiscIdentityResult(DISC_MISSING)
 
     def test_a_suffix_no_reader_opens_answers_format_not_read(self):
-        assert self._machine().read_disc_identity("/roms/psx/Game.chd") == DiscIdentityResult(DISC_FORMAT_NOT_READ)
+        assert self._machine().read_disc_identity("/roms/psx/Game.pbp") == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
     def test_an_absent_file_a_directory_and_an_unreadable_file(self):
         machine = self._machine()
@@ -415,7 +503,7 @@ class TestTheFixtureModelsTheAnswer:
         [
             ({"/roms/psx/Nope.cue": FACTS}, "no file is declared there"),
             ({"/roms/psx/Locked.cue": FACTS}, "an unreadable file states no identity"),
-            ({"/roms/psx/Game.chd": FACTS}, "no reader opens this suffix"),
+            ({"/roms/psx/Game.pbp": FACTS}, "no reader opens this suffix"),
             ({GAME: "format-not-read"}, "a state must be one of"),
             ({GAME: {**FACTS, "serial": "x"}}, "exactly"),
             ({GAME: {**FACTS, "license": "x" * 73}}, "at most"),
