@@ -22099,6 +22099,628 @@
           }
         }
       }
+    },
+    {
+      "name": "mame-content-named-default-meets-the-shared-cfg-in-one-entry",
+      "rationale": "Content named default makes MAME's per-game <rom_stem>.cfg the emulator-wide default.cfg. Both claims are settings and neither states a size, but one says the file is this game's and the other every game's: the answer states it once as shared-file — a file that is not one game's alone is never synced as one game's — and names the collision.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>arcade</name><path>%ROMPATH%/arcade</path>\n    <command label=\"MAME - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mame_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/arcade/default.zip": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves/mame/nvram",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "arcade",
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/default.zip"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves/mame/nvram",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "default"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/nvram",
+                "files": [
+                  "default"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
+                "files": [
+                  "default.cfg"
+                ],
+                "granularity": "shared-file",
+                "role": "settings",
+                "size_fixed": null
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/mame/diff",
+                "files": null,
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "filenames-content-conditional",
+              "data": {
+                "core": "mame",
+                "mode": "frontend-paths",
+                "files": [
+                  "default"
+                ],
+                "files_established_for": "driver-named-content",
+                "citation": "machine.cpp:74 and :1116-1147 at libretro/mame a90e86e1"
+              }
+            },
+            {
+              "code": "file-set-claims-merged",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
+                "file": "default.cfg",
+                "roles": [
+                  "settings"
+                ],
+                "granularities": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "size_fixed": [
+                  "null"
+                ]
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "mame",
+                "dir": "/mnt/sd/retrodeck/saves/mame/diff",
+                "role": "disk-diff",
+                "citation": "romload.cpp:1111-1123 at libretro/mame a90e86e1 — the differencing image for a CHD hard disk is named after the disk image's own entry in the machine's ROM table inside the binary (romp->name() + \".dif\"), which is no read of this machine. Upstream says so on the line above it: 'TODO: use system name and/or software list name in the path - the current setup doesn't scale'. The same directory is used by a mounted hard disk image (harddriv.cpp:196-200)."
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "frontend-paths",
+            "readings": [
+              {
+                "key": "mame_mame_paths_enable",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-cd-game-named-after-the-shared-cartridge-ram-is-one-entry",
+      "rationale": "A CD game whose stem is 4Mbit_cart makes the per-game backup RAM file <rom_stem>.brm the shared cartridge RAM file 4Mbit_cart.brm. The two claims agree on the role and disagree on whose file it is: the answer states it once as shared-file and names the collision. The granularity block says the same: its value is the one group's word, and an alternative naming this mode lists the groupings its answer for this content states.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megacd</name><path>%ROMPATH%/megacd</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/megacd/4Mbit_cart.chd": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "genesis_plus_gx_system_bram = \"per game\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megacd",
+          "content_path": "/mnt/sd/retrodeck/roms/megacd/4Mbit_cart.chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "4Mbit_cart.brm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "4Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-set-claims-merged",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "file": "4Mbit_cart.brm",
+                "roles": [
+                  "battery"
+                ],
+                "granularities": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "size_fixed": [
+                  "null"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "cd-game-bram+cart-4meg",
+            "readings": [
+              {
+                "key": "genesis_plus_gx_system_bram",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_bram",
+                "value": "per cart",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_size",
+                "value": "4meg",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-bios-bram+cart-4meg",
+                "options": {
+                  "genesis_plus_gx_system_bram": "per bios"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-4meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_bram": "per game"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram",
+                "options": {
+                  "genesis_plus_gx_cart_size": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-128k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "128k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-256k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "256k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-512k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "512k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-1meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "1meg"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-2meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "2meg"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-cd-game-named-after-the-shared-cartridge-ram-found-on-disk-is-one-entry",
+      "rationale": "The same collision once the file exists: the observation found one file that two groups both declare, and the answer states it once with the collision named rather than handing it to whichever group was asked first.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megacd</name><path>%ROMPATH%/megacd</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/megacd/4Mbit_cart.chd": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "genesis_plus_gx_system_bram = \"per game\"\n",
+          "/mnt/sd/retrodeck/saves/4Mbit_cart.brm": "x"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megacd",
+          "content_path": "/mnt/sd/retrodeck/roms/megacd/4Mbit_cart.chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "4Mbit_cart.brm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "4Mbit_cart.brm"
+                ],
+                "granularity": "shared-file",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-set-claims-merged",
+              "data": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "file": "4Mbit_cart.brm",
+                "roles": [
+                  "battery"
+                ],
+                "granularities": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "size_fixed": [
+                  "null"
+                ]
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-file",
+            "mode": "cd-game-bram+cart-4meg",
+            "readings": [
+              {
+                "key": "genesis_plus_gx_system_bram",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_bram",
+                "value": "per cart",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_size",
+                "value": "4meg",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-bios-bram+cart-4meg",
+                "options": {
+                  "genesis_plus_gx_system_bram": "per bios"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-4meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_bram": "per game"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram",
+                "options": {
+                  "genesis_plus_gx_cart_size": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-128k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "128k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-256k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "256k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-512k",
+                "options": {
+                  "genesis_plus_gx_cart_size": "512k"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-1meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "1meg"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-2meg",
+                "options": {
+                  "genesis_plus_gx_cart_size": "2meg"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }
