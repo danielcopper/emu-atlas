@@ -1592,6 +1592,7 @@ class TestTheDataRegistryReading:
             ("file-names-unestablished", "save_id_spelling"): "SAVE_ID_SPELLINGS",
             ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
+            ("region-property-unconfirmed", "region"): "DISC_REGIONS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("appended-config-overridden", "layer"): "CFG_LAYER_OVERRIDE_KINDS",
             ("launch-command-beyond-limits", "limit"): "LAUNCH_COMMAND_LIMITS",

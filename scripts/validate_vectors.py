@@ -41,6 +41,7 @@ INPUT_FIELDS_OPTIONAL = {
     "appimages",
     "appimage_stamps",
     "ps2_bios_headers",
+    "disc_identities",
     "archives",
     "whdload_slaves",
     "savefile_query",
@@ -155,7 +156,7 @@ AGGREGATE_QUESTION_FIELDS = {
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
-FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify", "cwd"}
+FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify", "cwd", "content_path"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
 IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
 INSTALLATION_FIELDS = {"kind", "label", "kinds", "root", "health"}
@@ -283,6 +284,12 @@ KNOWN_SUPPLYING_DISTRIBUTIONS = {"retrodeck"}
 # region decides — discriminated by its single key, the way `unresolved` and
 # `no_savestates` are. Each option is a full requirement plus `regions`.
 FIRMWARE_ALTERNATIVES_FIELDS = {"alternatives"}
+# A question that names the game's content adds two keys to every such group:
+# the console region the emulator decides for that content and where it came
+# from, both null where nothing was decided. A question naming no content
+# carries neither — the shape every group had before (#661).
+FIRMWARE_DECIDED_ALTERNATIVES_FIELDS = FIRMWARE_ALTERNATIVES_FIELDS | {"region", "region_source"}
+KNOWN_REGION_SOURCES = {"setting", "custom-property", "license", "serial", "emulator-default"}
 FIRMWARE_ALTERNATIVE_OPTION_FIELDS = FIRMWARE_REQUIREMENT_FIELDS | {"regions"}
 # The console regions of the one emitting card (DuckStation's, the words its
 # region_keys spell) — a closed vocabulary, like the keyings above.
@@ -611,6 +618,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-name-spellings",
     "firmware-search-unverified",
     "firmware-search-candidates",
+    "region-property-unconfirmed",
     "firmware-scan-incomplete",
     "core-enumeration-incomplete",
     "save-dir-launch-dependent",
@@ -748,12 +756,15 @@ def _validate_query(name: str, query: Any, family: str = "savefile_query") -> No
 
 
 def _validate_firmware_query_fields(name: str, query: Any) -> None:
-    for key in ("installation", "kind", "core_so", "system", "cwd"):
+    for key in ("installation", "kind", "core_so", "system", "cwd", "content_path"):
         if key in query and (not isinstance(query[key], str) or not query[key]):
             fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
     if "verify" in query and not isinstance(query["verify"], bool):
         fail(f"{name}: input.firmware_query.verify must be a boolean")
     _validate_cwd(name, "firmware_query", query)
+    if "content_path" in query and not str(query["content_path"]).startswith("/"):
+        # The library refuses a relative one at the call, as launch_command does.
+        fail(f"{name}: input.firmware_query.content_path must be an absolute path, got {query['content_path']!r}")
     _validate_handle_selector(name, "firmware_query", query)
 
 
@@ -766,8 +777,8 @@ def _validate_firmware_query_kind(name: str, query: Any) -> None:
         fail(f"{name}: a 'core' firmware query needs input.firmware_query.core_so")
     if kind == "system" and "system" not in query:
         fail(f"{name}: a 'system' firmware query needs input.firmware_query.system")
-    if kind == "inventory" and ({"core_so", "system"} & set(query)):
-        fail(f"{name}: an 'inventory' firmware query takes neither core_so nor system")
+    if kind == "inventory" and ({"core_so", "system", "content_path"} & set(query)):
+        fail(f"{name}: an 'inventory' firmware query takes neither core_so nor system nor content_path")
 
 
 def _validate_firmware_query(name: str, query: Any) -> None:
@@ -1218,6 +1229,7 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_appimage_stamps(name, inp.get("appimage_stamps", {}), inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
+    _validate_input_disc_identities(name, inp.get("disc_identities", {}), inp["files"])
     _validate_input_archives(name, inp.get("archives", {}), inp["files"])
     _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp)
     _validate_input_queries(name, inp)
@@ -1357,6 +1369,53 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
         fail(f"{name}: ps2 bios header {path!r} serial must be at most {PS2_BIOS_SERIAL_LENGTH} characters")
     if "\x00" in spec["serial"]:
         fail(f"{name}: ps2 bios header {path!r} serial must carry no NUL, which a C string cannot hold")
+
+
+# The disc identity modeling vocabulary — mirrored from FixtureMachine
+# (atlas/machine.py): the states RealMachine can report about an image it
+# opened, short of the identity, and the four facts an identity states. The
+# path names a declared file, not an unreadable one, and one whose suffix the
+# reader opens — any other answers "format-not-read" from its suffix alone. A
+# declared image with no entry answers "missing", which keeps a vector that
+# forgot the key from proving a region nobody modeled.
+DISC_IDENTITY_STATES = {"missing", "unreadable", "not-a-disc"}
+DISC_IDENTITY_FIELDS = {"license", "system_cnf", "boot_found", "edc_valid"}
+DISC_IDENTITY_SUFFIXES = {".cue", ".bin", ".img", ".iso"}
+# The licence bytes the read keeps (atlas.psx_disc.LICENSE_LENGTH).
+DISC_LICENSE_LENGTH = 0x48
+
+
+def _validate_input_disc_identities(name: str, identities: Any, files: Any) -> None:
+    if not isinstance(identities, dict):
+        fail(f"{name}: input.disc_identities must be an object")
+    for path, spec in identities.items():
+        if not isinstance(path, str) or path not in files:
+            fail(f"{name}: disc identity {path!r} must name a declared file")
+        file_spec = files[path]
+        if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+            fail(f"{name}: disc identity {path!r} sits on an unreadable file, whose bytes yield no identity")
+        if os.path.splitext(path)[1].lower() not in DISC_IDENTITY_SUFFIXES:
+            fail(f"{name}: disc identity {path!r} has a suffix no reader opens, so it answers format-not-read")
+        _validate_disc_identity_spec(name, path, spec)
+
+
+def _validate_disc_identity_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec not in DISC_IDENTITY_STATES:
+            fail(f"{name}: disc identity {path!r} state must be one of {sorted(DISC_IDENTITY_STATES)}, got {spec!r}")
+        return
+    if not isinstance(spec, dict) or set(spec) != DISC_IDENTITY_FIELDS:
+        fail(f"{name}: disc identity {path!r} must be a state or an object with exactly {sorted(DISC_IDENTITY_FIELDS)}")
+    license_text, system_cnf = spec["license"], spec["system_cnf"]
+    if not isinstance(license_text, str) or not (system_cnf is None or isinstance(system_cnf, str)):
+        fail(f"{name}: disc identity {path!r} license must be a string and system_cnf a string or null")
+    if not isinstance(spec["boot_found"], bool) or not isinstance(spec["edc_valid"], bool):
+        fail(f"{name}: disc identity {path!r} boot_found and edc_valid must be booleans")
+    # The strings stand for bytes, one per character (latin-1).
+    if any(ord(char) > 0xFF for char in license_text + (system_cnf or "")):
+        fail(f"{name}: disc identity {path!r} text must be one byte per character (latin-1)")
+    if len(license_text) > DISC_LICENSE_LENGTH:
+        fail(f"{name}: disc identity {path!r} license must be at most {DISC_LICENSE_LENGTH} characters")
 
 
 # The archive modeling vocabulary — mirrored from FixtureMachine
@@ -2431,6 +2490,7 @@ def _validate_alternatives(
     hash_checked: bool,
     spelled: frozenset[str] = frozenset(),
     linked: frozenset[str] = frozenset(),
+    for_content: bool = False,
 ) -> None:
     """An alternatives group: one launch needs exactly one option, the region decides.
 
@@ -2444,7 +2504,10 @@ def _validate_alternatives(
     table keyed by content — what :func:`_refuse_unreachable_checked` needs to
     know to let it be ``unchecked`` with no identity.
     """
-    _require_exact(name, entry, FIRMWARE_ALTERNATIVES_FIELDS, "an alternatives entry")
+    fields = FIRMWARE_DECIDED_ALTERNATIVES_FIELDS if for_content else FIRMWARE_ALTERNATIVES_FIELDS
+    _require_exact(name, entry, fields, "an alternatives entry")
+    if for_content:
+        _validate_decided_region(name, entry)
     options = entry["alternatives"]
     if not isinstance(options, list) or not options:
         fail(f"{name}: an alternatives entry must carry a non-empty list of options")
@@ -2462,18 +2525,33 @@ def _validate_alternatives(
         )
         if option["core_so"] != core_so:
             fail(f"{name}: an alternatives option must name the core it is listed under")
-        regions = option["regions"]
-        if not isinstance(regions, list) or not regions:
-            fail(f"{name}: an alternatives option must state the regions whose launch it serves")
-        unknown = sorted(set(regions) - KNOWN_FIRMWARE_REGIONS)
-        if unknown:
-            fail(f"{name}: option regions must be from {sorted(KNOWN_FIRMWARE_REGIONS)}, got {unknown}")
-        if len(set(regions)) != len(regions):
-            fail(f"{name}: an option must not repeat a region within its own list")
-        overlap = claimed.intersection(regions)
-        if overlap:
-            fail(f"{name}: option regions must be disjoint across a group — {sorted(overlap)} is claimed twice")
-        claimed.update(regions)
+        _validate_option_regions(name, option["regions"], claimed)
+        claimed.update(option["regions"])
+
+
+def _validate_option_regions(name: str, regions: Any, claimed: set[str]) -> None:
+    """One option's regions: known, none repeated, none another option of the group already claimed."""
+    if not isinstance(regions, list) or not regions:
+        fail(f"{name}: an alternatives option must state the regions whose launch it serves")
+    unknown = sorted(set(regions) - KNOWN_FIRMWARE_REGIONS)
+    if unknown:
+        fail(f"{name}: option regions must be from {sorted(KNOWN_FIRMWARE_REGIONS)}, got {unknown}")
+    if len(set(regions)) != len(regions):
+        fail(f"{name}: an option must not repeat a region within its own list")
+    overlap = claimed.intersection(regions)
+    if overlap:
+        fail(f"{name}: option regions must be disjoint across a group — {sorted(overlap)} is claimed twice")
+
+
+def _validate_decided_region(name: str, entry: Any) -> None:
+    """A region and its source, from their vocabularies, stated together or not at all."""
+    region, source = entry["region"], entry["region_source"]
+    if (region is None) != (source is None):
+        fail(f"{name}: a group's region and region_source are null together or stated together")
+    if region is not None and region not in KNOWN_FIRMWARE_REGIONS:
+        fail(f"{name}: a group's region must be one of {sorted(KNOWN_FIRMWARE_REGIONS)}, got {region!r}")
+    if source is not None and source not in KNOWN_REGION_SOURCES:
+        fail(f"{name}: a group's region_source must be one of {sorted(KNOWN_REGION_SOURCES)}, got {source!r}")
 
 
 def _validate_core_identity(name: str, core: Any) -> None:
@@ -2491,7 +2569,9 @@ def _validate_core_identity(name: str, core: Any) -> None:
         fail(f"{name}: firmware core declaration must be one of {sorted(KNOWN_DECLARATION_STATES)}")
 
 
-def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked: bool) -> None:
+def _validate_core_requirements(
+    name: str, core: Any, *, root: str, hash_checked: bool, for_content: bool = False
+) -> None:
     requirements = core["requirements"]
     if not isinstance(requirements, list):
         fail(f"{name}: firmware core requirements must be a list")
@@ -2528,6 +2608,7 @@ def _validate_core_requirements(name: str, core: Any, *, root: str, hash_checked
                 hash_checked=hash_checked,
                 spelled=spelled,
                 linked=linked,
+                for_content=for_content,
             )
             continue
         if entry["core_so"] != core["core_so"]:
@@ -2562,14 +2643,20 @@ def _validate_core_refusals(name: str, core: Any) -> None:
             fail(f"{name}: a refusal's reason must be stated as a caveat on the same core")
 
 
-def _group_verdict(options: list[Any]) -> Any:
+def _group_verdict(group: Any) -> Any:
     """The three-valued lift an alternatives group answers with.
 
     ``True`` when every option is satisfied (met whichever region the disc
     sets), ``False`` when every option fails (no region boots), ``None`` for
     the mixed group — whether THIS launch is served depends on a run-time
-    fact atlas cannot read.
+    fact atlas cannot read. Where the group states a decided ``region`` that
+    fact is known, and the verdict is the one option's whose regions hold it,
+    ``None`` where no option does.
     """
+    options = group["alternatives"]
+    if group.get("region") is not None:
+        chosen = [option for option in options if group["region"] in option["regions"]]
+        return chosen[0]["satisfied"] if chosen else None
     verdicts = {option["satisfied"] for option in options}
     if verdicts == {True}:
         return True
@@ -2678,14 +2765,14 @@ def _declaration_verdict(core: Any) -> bool | None:
     if core["declaration"] == "packaged" and not core["requirements"]:
         return None
     plain = [r for r in core["requirements"] if "alternatives" not in r]
-    groups = [r["alternatives"] for r in core["requirements"] if "alternatives" in r]
+    groups = [r for r in core["requirements"] if "alternatives" in r]
     required = [r for r in plain if r["need"] == "required"]
     if any(r["satisfied"] is False for r in required) or any(
-        _group_verdict(options) is False for options in groups
+        _group_verdict(group) is False for group in groups
     ):
         return False
     if any(r["satisfied"] is None for r in required) or any(
-        _group_verdict(options) is None for options in groups
+        _group_verdict(group) is None for group in groups
     ):
         return None
     # A required file atlas refused to look at is not an all-clear.
@@ -2781,10 +2868,12 @@ def _validate_core_console_verdict(name: str, core: Any, met: Any) -> None:
         )
 
 
-def _validate_firmware_core(name: str, core: Any, *, root: str, hash_checked: bool) -> None:
+def _validate_firmware_core(
+    name: str, core: Any, *, root: str, hash_checked: bool, for_content: bool = False
+) -> None:
     _require_exact(name, core, FIRMWARE_CORE_FIELDS, "each firmware core")
     _validate_core_identity(name, core)
-    _validate_core_requirements(name, core, root=root, hash_checked=hash_checked)
+    _validate_core_requirements(name, core, root=root, hash_checked=hash_checked, for_content=for_content)
     # The one number a client renders: it may never be true out of
     # ignorance, and never with a required file that is not usable.
     met = core["requirements_met"]
@@ -2942,7 +3031,8 @@ def _validate_firmware_coverage(name: str, firmware: Any, cores: Any) -> None:
             )
 
 
-def _validate_firmware(name: str, firmware: Any) -> None:
+def _validate_firmware(name: str, firmware: Any, *, for_content: bool = False) -> None:
+    """A firmware answer; *for_content* says the question named the game's content (``firmware_query.content_path``)."""
     _require_exact(name, firmware, FIRMWARE_FIELDS, "firmware")
     root = firmware["root"]
     if root is not None and (not isinstance(root, str) or not root):
@@ -2962,7 +3052,7 @@ def _validate_firmware(name: str, firmware: Any) -> None:
         _validate_caveats(name, firmware["caveats"])
         return
     for core in cores:
-        _validate_firmware_core(name, core, root=root, hash_checked=hash_checked)
+        _validate_firmware_core(name, core, root=root, hash_checked=hash_checked, for_content=for_content)
     for entry in unclaimed:
         _validate_unclaimed(
             name, entry, root=root, hash_checked=hash_checked, linked=_linked_targets(firmware["caveats"])
@@ -3745,7 +3835,12 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
             lambda name, block: _validate_mod_outcome(name, block, "entry_mod_location"),
         ),
         _BlockCheck("soft_patch_candidates", _validate_soft_patch_outcome),
-        _BlockCheck("firmware", _validate_firmware),
+        _BlockCheck(
+            "firmware",
+            lambda name, block: _validate_firmware(
+                name, block, for_content="content_path" in inp.get("firmware_query", {})
+            ),
+        ),
         _BlockCheck(
             "identification",
             lambda name, block: _validate_identification(name, block, inp["identify_query"]),

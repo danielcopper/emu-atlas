@@ -453,9 +453,15 @@ def _requirement_entry_contract(
     A plain requirement stays exactly the fields it always was — ``regions``
     appears nowhere on it, because an unconditional entry has no scope to
     state.
+
+    A group answering a question that named the game's content carries two
+    more keys beside ``alternatives``: ``region``, the console region the
+    emulator decides for that content, and ``region_source``, where it came
+    from — both ``null`` where nothing was decided. A question that named no
+    content serializes the group exactly as before, without either key.
     """
     if isinstance(entry, FirmwareAlternatives):
-        return {
+        group: dict[str, Any] = {
             "alternatives": [
                 {
                     **_requirement_contract(option),
@@ -464,6 +470,10 @@ def _requirement_entry_contract(
                 for option in entry.options
             ]
         }
+        if entry.for_content:
+            group["region"] = entry.region
+            group["region_source"] = entry.region_source
+        return group
     return _requirement_contract(entry)
 
 
