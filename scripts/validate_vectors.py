@@ -1385,7 +1385,15 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
 # forgot the key from proving a region nobody modeled.
 DISC_IDENTITY_STATES = {"missing", "unreadable", "not-a-disc"}
 DISC_IDENTITY_FIELDS = {"license", "system_cnf", "boot_found", "edc_valid"}
-DISC_IDENTITY_SUFFIXES = {".cue", ".bin", ".img", ".iso"}
+DISC_IDENTITY_SUFFIXES = {".cue", ".bin", ".img", ".iso", ".chd"}
+# A CHD declares a state where its header was not read, and otherwise the
+# header's facts beside what the read found after them: the four facts, or a
+# state a read past the header can end in — "parent-not-found" only where the
+# header names a parent. A CHD names no file but its parent, so it is never
+# "missing".
+CHD_HEADER_STATES = {"unreadable", "not-a-disc", "format-not-read"}
+CHD_FIELDS = {"codecs", "requires_parent", "identity"}
+CHD_READ_STATES = {"unreadable", "not-a-disc", "format-not-read", "codec-unavailable", "parent-not-found"}
 # The licence bytes the read keeps (atlas.psx_disc.LICENSE_LENGTH).
 DISC_LICENSE_LENGTH = 0x48
 
@@ -1399,9 +1407,37 @@ def _validate_input_disc_identities(name: str, identities: Any, files: Any) -> N
         file_spec = files[path]
         if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
             fail(f"{name}: disc identity {path!r} sits on an unreadable file, whose bytes yield no identity")
-        if os.path.splitext(path)[1].lower() not in DISC_IDENTITY_SUFFIXES:
+        suffix = os.path.splitext(path)[1].lower()
+        if suffix not in DISC_IDENTITY_SUFFIXES:
             fail(f"{name}: disc identity {path!r} has a suffix no reader opens, so it answers format-not-read")
-        _validate_disc_identity_spec(name, path, spec)
+        if suffix == ".chd":
+            _validate_chd_spec(name, path, spec)
+        else:
+            _validate_disc_identity_spec(name, path, spec)
+
+
+def _validate_chd_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec not in CHD_HEADER_STATES:
+            fail(f"{name}: disc identity {path!r} state must be one of {sorted(CHD_HEADER_STATES)}, got {spec!r}")
+        return
+    if not isinstance(spec, dict) or set(spec) != CHD_FIELDS:
+        fail(f"{name}: disc identity {path!r} is a CHD: a state or an object with exactly {sorted(CHD_FIELDS)}")
+    codecs = spec["codecs"]
+    if not isinstance(codecs, list) or len(codecs) > 4 or not all(
+        isinstance(tag, str) and len(tag) == 4 and all(ord(char) <= 0xFF for char in tag) for tag in codecs
+    ):
+        fail(f"{name}: disc identity {path!r} codecs must be at most four tags of four one-byte characters")
+    if not isinstance(spec["requires_parent"], bool):
+        fail(f"{name}: disc identity {path!r} requires_parent must be a boolean")
+    identity = spec["identity"]
+    if isinstance(identity, str):
+        if identity not in CHD_READ_STATES:
+            fail(f"{name}: disc identity {path!r} read state must be one of {sorted(CHD_READ_STATES)}, got {identity!r}")
+        if identity == "parent-not-found" and not spec["requires_parent"]:
+            fail(f"{name}: disc identity {path!r} cannot miss a parent its header does not name")
+        return
+    _validate_disc_identity_spec(name, path, identity)
 
 
 def _validate_disc_identity_spec(name: str, path: str, spec: Any) -> None:

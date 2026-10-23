@@ -25,6 +25,7 @@ from atlas.placement import (
 )
 from atlas.psx_region import (
     DISC_UNREAD_BOOT_LINE_ABSENT,
+    DISC_UNREAD_CODEC_UNAVAILABLE,
     DISC_UNREAD_MISSING,
     DISC_UNREAD_NOT_A_DISC,
     DISC_UNREAD_SECTOR_INVALID,
@@ -290,7 +291,7 @@ class TestOneContentPath:
         reading = psx_region.read_disc_region(machine({"/roms/Game.exe": "x"}), emulator, "/roms/Game.exe")
         assert (reading.reason, reading.extension) == (REASON_DISC_FORMAT_UNREAD, "exe")
 
-    @pytest.mark.parametrize("suffix", ["chd", "pbp", "ecm", "mds"])
+    @pytest.mark.parametrize("suffix", ["pbp", "ecm", "mds"])
     def test_an_image_the_emulator_opens_and_atlas_does_not_read(self, suffix):
         path = f"/roms/Game.{suffix}"
         reading = psx_region.read_disc_region(machine({path: "x"}), EMULATOR_SWANSTATION, path)
@@ -314,6 +315,71 @@ class TestOneContentPath:
         identities = {GAME: {**FACTS, "edc_valid": False}}
         reading = psx_region.read_disc_region(machine({GAME: "x"}, identities), EMULATOR_BEETLE, GAME)
         assert reading == DiscRegionReading(reason=REASON_DISC_UNREAD, disc=GAME, status=DISC_UNREAD_SECTOR_INVALID)
+
+
+CHD = "/roms/Game.chd"
+
+
+def chd(codecs: list[str], *, parent: bool = False, read: Any = None) -> FixtureMachine:
+    spec = {"codecs": codecs, "requires_parent": parent, "identity": FACTS if read is None else read}
+    return machine({CHD: "x"}, {CHD: spec})
+
+
+class TestAChd:
+    """D3, D4, D17 and D18 of #661: a CHD read, refused by the emulator's own open, or not read by this runtime."""
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_chd_every_emulator_opens_is_read_and_decided(self, emulator):
+        reading = psx_region.read_disc_region(chd(["cdlz", "cdzl", "cdfl"]), emulator, CHD)
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_swanstation_does_not_open_a_cdzs_chd(self):
+        unopenable = DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=CHD, extension="chd")
+        assert psx_region.read_disc_region(chd(["cdzs"]), EMULATOR_SWANSTATION, CHD) == unopenable
+        # whether or not this runtime could have read it
+        assert psx_region.read_disc_region(chd(["cdzs"], read="codec-unavailable"), EMULATOR_SWANSTATION, CHD) == (
+            unopenable
+        )
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_BEETLE])
+    def test_duckstation_and_beetle_open_a_cdzs_chd(self, emulator):
+        assert psx_region.read_disc_region(chd(["cdzs"]), emulator, CHD).region == NTSC_U
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_BEETLE])
+    def test_a_codec_this_runtime_lacks(self, emulator):
+        reading = psx_region.read_disc_region(chd(["cdzs"], read="codec-unavailable"), emulator, CHD)
+        assert reading == DiscRegionReading(reason=REASON_DISC_UNREAD, disc=CHD, status=DISC_UNREAD_CODEC_UNAVAILABLE)
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    @pytest.mark.parametrize("read", [None, "parent-not-found"], ids=["parent-found", "parent-not-found"])
+    def test_swanstation_and_beetle_open_no_chd_that_names_a_parent(self, emulator, read):
+        reading = psx_region.read_disc_region(chd(["cdlz"], parent=True, read=read), emulator, CHD)
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=CHD, extension="chd")
+
+    def test_duckstation_reads_through_a_parent_it_finds(self):
+        reading = psx_region.read_disc_region(chd(["cdlz"], parent=True), EMULATOR_DUCKSTATION, CHD)
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_duckstation_does_not_open_a_chd_whose_parent_it_does_not_find(self):
+        reading = psx_region.read_disc_region(
+            chd(["cdlz"], parent=True, read="parent-not-found"), EMULATOR_DUCKSTATION, CHD
+        )
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=CHD, extension="chd")
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_codec_no_emulator_carries(self, emulator):
+        reading = psx_region.read_disc_region(chd(["cdxx"]), emulator, CHD)
+        assert reading.reason == REASON_CONTENT_UNOPENABLE
+
+    def test_a_hunk_in_a_codec_atlas_does_not_read(self):
+        reading = psx_region.read_disc_region(chd(["cdfl"], read="format-not-read"), EMULATOR_BEETLE, CHD)
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=CHD, extension="chd")
+
+    def test_a_chd_named_by_a_playlist(self):
+        files = {"/roms/Game.m3u": "Game.chd\n", CHD: "x"}
+        spec = {"codecs": ["cdzs"], "requires_parent": False, "identity": FACTS}
+        reading = psx_region.read_disc_region(machine(files, {CHD: spec}), EMULATOR_SWANSTATION, "/roms/Game.m3u")
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=CHD, extension="chd")
 
 
 class TestDuckStationSettings:

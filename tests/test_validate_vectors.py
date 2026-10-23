@@ -618,8 +618,10 @@ INPUT_PS2_BIOS_HEADER_CASES = [
 ]
 
 A_DISC = "/roms/psx/Game.cue"
+A_CHD = "/roms/psx/Game.chd"
 A_DISC_IDENTITY = {"license": "Licensed  by", "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1", "boot_found": True,
                    "edc_valid": True}
+A_CHD_SPEC = {"codecs": ["cdlz", "cdzl"], "requires_parent": False, "identity": A_DISC_IDENTITY}
 
 INPUT_DISC_IDENTITY_CASES = [
     case(_with(_vector(), disc_identities=[]), "input.disc_identities must be an object", id="disc-not-object"),
@@ -627,7 +629,7 @@ INPUT_DISC_IDENTITY_CASES = [
          id="disc-on-undeclared-file"),
     case(_with(_vector(), files={A_DISC: {"status": "unreadable"}}, disc_identities={A_DISC: "not-a-disc"}),
          "sits on an unreadable file", id="disc-on-unreadable-file"),
-    case(_with(_vector(), files={"/roms/psx/Game.chd": A_BLOB}, disc_identities={"/roms/psx/Game.chd": "missing"}),
+    case(_with(_vector(), files={"/roms/psx/Game.pbp": A_BLOB}, disc_identities={"/roms/psx/Game.pbp": "missing"}),
          "has a suffix no reader opens", id="disc-on-unread-suffix"),
     case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: "format-not-read"}), "state must be one of",
          id="disc-state-unknown"),
@@ -641,6 +643,24 @@ INPUT_DISC_IDENTITY_CASES = [
          "license must be at most 72 characters", id="disc-license-length"),
     case(_with(_vector(), files={A_DISC: ""}, disc_identities={A_DISC: {**A_DISC_IDENTITY, "system_cnf": "€"}}),
          "one byte per character (latin-1)", id="disc-not-latin1"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: "missing"}), "state must be one of",
+         id="chd-header-state"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: A_DISC_IDENTITY}), "is a CHD",
+         id="chd-bare-facts"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: {**A_CHD_SPEC, "codecs": ["cdlz", "zs"]}}),
+         "four tags of four", id="chd-codec-tag"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: {**A_CHD_SPEC, "codecs": ["cdlz"] * 5}}),
+         "four tags of four", id="chd-codec-count"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: {**A_CHD_SPEC, "requires_parent": 1}}),
+         "requires_parent must be a boolean", id="chd-parent-flag"),
+    case(_with(_vector(), files={A_CHD: A_BLOB}, disc_identities={A_CHD: {**A_CHD_SPEC, "identity": "missing"}}),
+         "read state must be one of", id="chd-read-state"),
+    case(_with(_vector(), files={A_CHD: A_BLOB},
+               disc_identities={A_CHD: {**A_CHD_SPEC, "identity": "parent-not-found"}}),
+         "cannot miss a parent", id="chd-unnamed-parent"),
+    case(_with(_vector(), files={A_CHD: A_BLOB},
+               disc_identities={A_CHD: {**A_CHD_SPEC, "identity": {**A_DISC_IDENTITY, "edc_valid": 1}}}),
+         "must be booleans", id="chd-identity-facts"),
 ]
 
 AN_IMAGE = "/Applications/ES-DE.AppImage"

@@ -47,17 +47,20 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from . import psx_disc, qt_ini
+from . import psx_chd, psx_disc, qt_ini
 from .machine import (
+    DISC_CODEC_UNAVAILABLE,
     DISC_FORMAT_NOT_READ,
     DISC_MISSING,
     DISC_NOT_A_DISC,
     DISC_OK,
+    DISC_PARENT_NOT_FOUND,
     DISC_UNREADABLE,
     READ_MISSING,
     READ_OK,
     READ_UNREADABLE,
     BoundedReadingMachine,
+    DiscIdentityResult,
     ReadResult,
 )
 from .placement import (
@@ -94,25 +97,35 @@ REGION_SOURCES = (
     REGION_SOURCE_EMULATOR_DEFAULT,
 )
 
-DiscUnreadStatus = Literal["missing", "unreadable", "not-a-disc", "sector-invalid", "boot-line-absent"]
+DiscUnreadStatus = Literal[
+    "missing", "unreadable", "not-a-disc", "codec-unavailable", "sector-invalid", "boot-line-absent"
+]
 DISC_UNREAD_MISSING: DiscUnreadStatus = "missing"
 """The image, or a file it names, is not there."""
 DISC_UNREAD_UNREADABLE: DiscUnreadStatus = "unreadable"
-"""The image, a file it names, or the playlist naming it is there and its bytes did not come back."""
+"""The image, a file it names, or the playlist naming it is there and its bytes did not come back — or the read would
+pass a bound atlas reads within: a length the image states, a chain of copies or of metadata entries, a parent's folder
+too large to search, or the work one read may spend."""
 DISC_UNREAD_NOT_A_DISC: DiscUnreadStatus = "not-a-disc"
-"""The image opens as no disc: a cue sheet the parser refuses, or one whose first track is audio."""
+"""The image opens as no disc: a cue sheet the parser refuses, a CHD whose header, map or tracks the emulators'
+reader refuses, or an image whose first track is audio."""
+DISC_UNREAD_CODEC_UNAVAILABLE: DiscUnreadStatus = "codec-unavailable"
+"""The CHD is stored with a codec atlas reads, and the running Python lacks it: no zstd provider for ``cdzs``, or no
+``lzma`` or ``zlib`` module for ``cdlz`` and ``cdzl``. Another runtime, or a zstd provider handed over through
+``register_zstd_provider``, reads the same file."""
 DISC_UNREAD_SECTOR_INVALID: DiscUnreadStatus = "sector-invalid"
 """A sector Beetle reads fails its checksum, and whether its correction recovers the sector is not established."""
 DISC_UNREAD_BOOT_LINE_ABSENT: DiscUnreadStatus = "boot-line-absent"
 """Beetle's ``SYSTEM.CNF`` read finds no ``BOOT``, which the core dereferences anyway (``libretro.cpp:1477``)."""
 # Why a disc that was named decided no region — the ``status`` a
-# ``disc-unread`` statement carries. The first three are the seam's words for
+# ``disc-unread`` statement carries. The first four are the seam's words for
 # the image; the last two are where one emulator's own rule cannot be followed
 # over a disc that was read.
 DISC_UNREAD_STATUSES = (
     DISC_UNREAD_MISSING,
     DISC_UNREAD_UNREADABLE,
     DISC_UNREAD_NOT_A_DISC,
+    DISC_UNREAD_CODEC_UNAVAILABLE,
     DISC_UNREAD_SECTOR_INVALID,
     DISC_UNREAD_BOOT_LINE_ABSENT,
 )
@@ -520,7 +533,42 @@ _SEAM_WORDS: dict[str, DiscUnreadStatus] = {
     DISC_MISSING: DISC_UNREAD_MISSING,
     DISC_UNREADABLE: DISC_UNREAD_UNREADABLE,
     DISC_NOT_A_DISC: DISC_UNREAD_NOT_A_DISC,
+    DISC_CODEC_UNAVAILABLE: DISC_UNREAD_CODEC_UNAVAILABLE,
 }
+# The codecs each emulator's libchdr carries (atlas.psx_chd cites the tables).
+_CHD_CODECS = {
+    EMULATOR_DUCKSTATION: psx_chd.DUCKSTATION_CODECS,
+    EMULATOR_SWANSTATION: psx_chd.SWANSTATION_CODECS,
+    EMULATOR_BEETLE: psx_chd.BEETLE_CODECS,
+}
+
+
+def _chd_unopenable(emulator: str, result: DiscIdentityResult) -> bool:
+    """Does *emulator*'s own open refuse the CHD the seam read the header of (D4 and D18 of #661)?
+
+    Every emulator refuses a header naming a codec its libchdr does not carry
+    (the tables :mod:`atlas.psx_chd` cites) — SwanStation's carries no
+    ``cdzs``. SwanStation and Beetle PSX open a CHD with no parent at all, so
+    one that names a parent is refused whether or not the parent is there:
+    SwanStation's open passes none (``src/common/cd_image_chd.cpp:92-99`` at
+    4d309c0) and libchdr answers that a parent is required. Beetle's does the
+    same (``mednafen/cdrom/CDAccess_CHD.cpp:55-57`` at d6383bf), and its
+    constructor goes on with no track (:223-225): the single-threaded reader
+    then refuses the empty table of contents, and the threaded one the core
+    uses unless the CD is precached only logs it (``cdromif.cpp:270-275``) —
+    the core runs with no disc, so the content is not opened either way.
+    DuckStation reads through a parent its search finds (D18), and refuses
+    the disc where the search finds none, the depth limit past included
+    (``src/util/cd_image_chd.cpp:124-129``, :216-221 at 1f6de046b).
+    """
+    facts = result.chd
+    if facts is None:
+        return False
+    if any(codec not in _CHD_CODECS[emulator] for codec in facts.codecs):
+        return True
+    if emulator != EMULATOR_DUCKSTATION:
+        return facts.requires_parent
+    return result.status == DISC_PARENT_NOT_FOUND
 
 
 def read_disc_region(machine: Machine, emulator: str, content_path: str) -> DiscRegionReading:
@@ -529,7 +577,9 @@ def read_disc_region(machine: Machine, emulator: str, content_path: str) -> Disc
     The playlist first, by the emulator's own reader; then whether the emulator
     opens the image at all (``content-unopenable`` where it does not); then
     whether atlas reads that image (``disc-format-unread`` where it does not);
-    then the seam's read of the disc, and the emulator's rule over it. Nothing
+    then the seam's read of the disc — for a CHD, whether the emulator's own
+    open takes the header the read found (``content-unopenable`` again where
+    it does not) — and the emulator's rule over it. Nothing
     configurable is consulted here — a setting that pins the region is the
     caller's to read first, because only the caller knows where that emulator's
     settings live.
@@ -545,6 +595,8 @@ def read_disc_region(machine: Machine, emulator: str, content_path: str) -> Disc
     if not machine_reads(first):
         return _format_unread(first)
     result = machine.read_disc_identity(first)
+    if _chd_unopenable(emulator, result):
+        return _unopenable(first)
     if result.status == DISC_FORMAT_NOT_READ:
         return _format_unread(first)
     if result.status != DISC_OK:
@@ -557,13 +609,14 @@ def read_disc_region(machine: Machine, emulator: str, content_path: str) -> Disc
 
 
 def machine_reads(path: str) -> bool:
-    """Is *path* an image the disc read opens — a cue sheet or a bare image, by suffix — for every emulator but Beetle?
+    """Is *path* an image the disc read opens — a cue sheet, a bare image or a CHD, by suffix — for every emulator
+    but Beetle?
 
     Beetle opens no bare image (its declared extensions name none), so for it
-    only a cue sheet reaches the read; :func:`read_disc_region` refuses the
-    others before asking.
+    only a cue sheet or a CHD reaches the read; :func:`read_disc_region`
+    refuses the others before asking.
     """
-    return _extension(path) in (psx_disc.CUE_SUFFIX, *psx_disc.BARE_IMAGE_SUFFIXES)
+    return _extension(path) in (psx_disc.CUE_SUFFIX, *psx_disc.BARE_IMAGE_SUFFIXES, psx_chd.CHD_SUFFIX)
 
 
 # ── DuckStation's two region settings ─────────────────────────────────────
