@@ -252,7 +252,9 @@ Two rules decide what belongs in a vector:
   identity, `fallback_dir` / `physical_dir`, file sets and their completeness, and health findings; `file_set.complete`
   is **reserved**: it is `false` in every vector because no shipped rule card can yet establish which files a core
   writes at all for the active mode, and a port that answers `true` anywhere is answering something atlas does not
-  claim;
+  claim; every entry of `file_set.groups` carries `size_fixed` — `true`, `false`, or `null` where the size was not
+  established — and the validator refuses a group without it, because a port that leaves the key out has answered a
+  question about the file's size by silence;
 - **prose is not** — `sources`, caveat `message` and the `*provenance` fields are for humans and change freely, so they
   are not serialized and not asserted.
 

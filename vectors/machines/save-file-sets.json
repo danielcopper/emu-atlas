@@ -60,9 +60,28 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
-          "caveats": [],
+          "caveats": [
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Golden Sun (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] src/platform/libretro/libretro.c:2084-2085 and :2336-2347, src/gba/savedata.c:296-321 and :479-497 at mgba c758314 — the save buffer is 128 KiB filled with 0xff, and SAVE_RAM answers all of it while the save type is still autodetected, then the size of the type the game is detected to use, so the file is written at that type's size: the autodetect buffer with its trailing 0xff trimmed. A later session that detects a smaller type than the file holds (EEPROM taken as 512 bytes until the game addresses past them, Flash512 against a 1 Mbit file) writes it shorter than its content, which is the write a fixed size lets a guard catch."
+              }
+            }
+          ],
           "granularity": {
             "value": "per-game-file",
             "mode": null,
@@ -129,7 +148,26 @@
               "Pokemon Crystal (USA).rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -205,9 +243,28 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
-          "caveats": [],
+          "caveats": [
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Golden Sun (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] src/platform/libretro/libretro.c:2084-2085 and :2336-2347, src/gba/savedata.c:296-321 and :479-497 at mgba c758314 — the save buffer is 128 KiB filled with 0xff, and SAVE_RAM answers all of it while the save type is still autodetected, then the size of the type the game is detected to use, so the file is written at that type's size: the autodetect buffer with its trailing 0xff trimmed. A later session that detects a smaller type than the file holds (EEPROM taken as 512 bytes until the game addresses past them, Flash512 against a 1 Mbit file) writes it shorter than its content, which is the write a fixed size lets a guard catch."
+              }
+            }
+          ],
           "granularity": {
             "value": "per-game-file",
             "mode": null,
@@ -275,7 +332,26 @@
               "Tetris (World).rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Tetris (World).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -466,7 +542,17 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -476,6 +562,14 @@
                 "verification": "drifted",
                 "core_verified": "0.11-dev c758314",
                 "core_live": "0.12-dev deadbee"
+              }
+            },
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Golden Sun (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] src/platform/libretro/libretro.c:2084-2085 and :2336-2347, src/gba/savedata.c:296-321 and :479-497 at mgba c758314 — the save buffer is 128 KiB filled with 0xff, and SAVE_RAM answers all of it while the save type is still autodetected, then the size of the type the game is detected to use, so the file is written at that type's size: the autodetect buffer with its trailing 0xff trimmed. A later session that detects a smaller type than the file holds (EEPROM taken as 512 bytes until the game addresses past them, Flash512 against a 1 Mbit file) writes it shorter than its content, which is the write a fixed size lets a guard catch."
               }
             }
           ],
@@ -547,7 +641,8 @@
                   "Chrono Trigger (USA).srm"
                 ],
                 "granularity": "per-game-file",
-                "role": "unknown"
+                "role": "unknown",
+                "size_fixed": null
               }
             ]
           },
@@ -690,9 +785,28 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
-          "caveats": [],
+          "caveats": [
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Golden Sun (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] src/platform/libretro/libretro.c:2084-2085 and :2336-2347, src/gba/savedata.c:296-321 and :479-497 at mgba c758314 — the save buffer is 128 KiB filled with 0xff, and SAVE_RAM answers all of it while the save type is still autodetected, then the size of the type the game is detected to use, so the file is written at that type's size: the autodetect buffer with its trailing 0xff trimmed. A later session that detects a smaller type than the file holds (EEPROM taken as 512 bytes until the game addresses past them, Flash512 against a 1 Mbit file) writes it shorter than its content, which is the write a fixed size lets a guard catch."
+              }
+            }
+          ],
           "granularity": {
             "value": "per-game-file",
             "mode": null,
@@ -823,7 +937,17 @@
               "Mystic Balloon.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Mystic Balloon.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -929,7 +1053,8 @@
                   "Phantasy Star IV (USA).srm"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": true
               }
             ]
           },
@@ -940,6 +1065,14 @@
                 "core": "genesis_plus_gx",
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
+              }
+            },
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Phantasy Star IV (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] libretro/libretro.c:3759-3784 at ekeeke/Genesis-Plus-GX 46a5521 — SAVE_RAM answers 0x10000 before emulation runs and, while it runs, the length up to the last byte that is not 0xff, so the file is the cartridge's 64 KiB SRAM less a trailing run of 0xff that moves with what the game has written."
               }
             }
           ],
@@ -1005,7 +1138,26 @@
               "Chrono Trigger (USA).rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Chrono Trigger (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Chrono Trigger (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -1148,7 +1300,17 @@
               "Sonic 3 & Knuckles.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Sonic 3 & Knuckles.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -1242,7 +1404,8 @@
                   "dkong"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
@@ -1250,7 +1413,8 @@
                   "dkong.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
@@ -1258,13 +1422,15 @@
                   "default.cfg"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/diff",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -1375,7 +1541,8 @@
                   "rtype.fs"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/fbneo",
@@ -1383,7 +1550,8 @@
                   "rtype.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/fbneo",
@@ -1391,7 +1559,8 @@
                   "rtype.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               }
             ]
           },
@@ -1501,7 +1670,8 @@
                   "simpsons.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -1611,7 +1781,8 @@
                   "rtype.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               }
             ]
           },
@@ -1716,7 +1887,26 @@
               "Zelda.rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Zelda.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Zelda.rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -1788,7 +1978,17 @@
               "Zelda.srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Zelda.srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
           },
           "caveats": [
             {
@@ -1881,7 +2081,26 @@
               "Tetris (World).rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Tetris (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Tetris (World).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -1973,7 +2192,26 @@
               "Donkey Kong (World).rtc"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Donkey Kong (World).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Donkey Kong (World).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -2064,7 +2302,17 @@
               "Golden Sun (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Golden Sun (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
           },
           "caveats": [
             {
@@ -2160,7 +2408,17 @@
               "Castlevania (USA).srm"
             ],
             "complete": false,
-            "groups": []
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Castlevania (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
           },
           "caveats": [],
           "granularity": {
@@ -2331,7 +2589,8 @@
                   "dkong.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2000/hi",
@@ -2339,7 +2598,8 @@
                   "dkong.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2000/cfg",
@@ -2347,7 +2607,8 @@
                   "dkong.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               }
             ]
           },
@@ -2447,7 +2708,8 @@
                   "dkong.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -2562,7 +2824,8 @@
                   "dkong.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/hi",
@@ -2570,7 +2833,8 @@
                   "dkong.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/cfg",
@@ -2578,7 +2842,8 @@
                   "dkong.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/cfg",
@@ -2586,19 +2851,22 @@
                   "default.cfg"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/memcard",
                 "files": null,
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/diff",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/comment",
@@ -2606,7 +2874,8 @@
                   "dkong.cmt"
                 ],
                 "granularity": "per-game-file",
-                "role": "notes"
+                "role": "notes",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/ini",
@@ -2614,13 +2883,15 @@
                   "mame.ini"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/ctrlr",
                 "files": null,
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               }
             ]
           },
@@ -2746,7 +3017,8 @@
                   "dkong.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/hi",
@@ -2754,7 +3026,8 @@
                   "dkong.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/cfg",
@@ -2762,19 +3035,22 @@
                   "dkong.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/memcard",
                 "files": null,
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/diff",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -2911,7 +3187,8 @@
                   "dkong.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/hi",
@@ -2919,7 +3196,8 @@
                   "dkong.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/cfg",
@@ -2927,19 +3205,22 @@
                   "dkong.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/memcard",
                 "files": null,
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/diff",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -3086,7 +3367,8 @@
                   "ssf2t.fs"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3094,7 +3376,8 @@
                   "ssf2t.hi"
                 ],
                 "granularity": "per-game-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               }
             ]
           },
@@ -3220,7 +3503,8 @@
                   "mslug.fs"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3319,7 +3603,8 @@
                   "Castlevania (USA).sav"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3406,7 +3691,8 @@
                   "Metal Slug 2nd Mission.ngf"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3489,7 +3775,8 @@
                   "Pocket Falcon Rally (World).flash"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3563,7 +3850,8 @@
                   "Neon Kite Legends (World).flash"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3639,7 +3927,8 @@
                   "mslug.nv"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3647,7 +3936,8 @@
                   "mslug.srm"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3655,7 +3945,8 @@
                   "mslug.mcr"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3663,7 +3954,8 @@
                   "mslug.brm"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3762,7 +4054,8 @@
                   "Golden Sun (USA).sav"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -3848,7 +4141,8 @@
                   "hiscores_continuous.sav"
                 ],
                 "granularity": "shared-file",
-                "role": "high-score"
+                "role": "high-score",
+                "size_fixed": null
               }
             ]
           },
@@ -3945,7 +4239,8 @@
                   "prbmsav7.dsg"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/Doom (USA)",
@@ -3953,7 +4248,8 @@
                   "prboom.cfg"
                 ],
                 "granularity": "per-game-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               }
             ]
           },
@@ -4055,13 +4351,15 @@
                   "config.cfg"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/baseq2/save",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4152,13 +4450,15 @@
                   "libretro.cfg"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/doom3/base/savegames",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4253,7 +4553,8 @@
                   "Game (Europe).dsv.bak"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4344,7 +4645,8 @@
                   "Game (Europe).dsv"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4429,7 +4731,8 @@
                   "Game (Europe).dsv.bak"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4517,7 +4820,8 @@
                   "Game (Europe).dsv.bak"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4623,7 +4927,8 @@
                       "Game (Europe).dsv.bak"
                     ],
                     "granularity": "per-game-files",
-                    "role": "battery"
+                    "role": "battery",
+                    "size_fixed": null
                   }
                 ]
               },
@@ -4740,7 +5045,8 @@
                   "scd_J.brm"
                 ],
                 "granularity": "shared-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -4748,7 +5054,8 @@
                   "4Mbit_cart.brm"
                 ],
                 "granularity": "shared-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -4952,7 +5259,8 @@
                   "s11.sav"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/id1",
@@ -4960,7 +5268,8 @@
                   "config.cfg"
                 ],
                 "granularity": "shared-file",
-                "role": "settings"
+                "role": "settings",
+                "size_fixed": null
               }
             ]
           },
@@ -5171,7 +5480,8 @@
                   "Game (Japan).srm"
                 ],
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -5774,7 +6084,8 @@
                 "dir": "/mnt/sd/retrodeck/saves",
                 "files": null,
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -5879,7 +6190,8 @@
                   "monkey1.s01"
                 ],
                 "granularity": "per-game-files",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -6014,7 +6326,8 @@
                   "<save_id>_1.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -6022,7 +6335,8 @@
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "size_fixed": null
               }
             ]
           },
@@ -7371,7 +7685,8 @@
                   "Phantasy Star IV (USA).srm"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": true
               }
             ]
           },
@@ -7391,6 +7706,14 @@
                 "option_key": "genesis_plus_gx_bram",
                 "value": "per game",
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            },
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Phantasy Star IV (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] libretro/libretro.c:3759-3784 at ekeeke/Genesis-Plus-GX 46a5521 — SAVE_RAM answers 0x10000 before emulation runs and, while it runs, the length up to the last byte that is not 0xff, so the file is the cartridge's 64 KiB SRAM less a trailing run of 0xff that moves with what the game has written."
               }
             }
           ],
@@ -8523,7 +8846,8 @@
                   "Ruff and Tumble (Europe)_save.adf.gz"
                 ],
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -8717,7 +9041,8 @@
                   "Banshee (Europe).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -8891,7 +9216,8 @@
                   "puae_libretro_cdtv.nvr"
                 ],
                 "granularity": "shared-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -9769,7 +10095,8 @@
                   "Banshee (Europe).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -9936,7 +10263,8 @@
                   "Banshee (Europe).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -10273,7 +10601,8 @@
                   "Turrican II (Europe)_save.adf.gz"
                 ],
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -10794,7 +11123,8 @@
                   "Banshee (Europe).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -11150,7 +11480,8 @@
                   "Banshee (Europe).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -11333,7 +11664,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -11539,7 +11871,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -11758,7 +12091,8 @@
                   "Alien Breed (1991)(Team 17)(HD).save"
                 ],
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -11965,7 +12299,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -12167,7 +12502,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -12362,7 +12698,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -12574,7 +12911,8 @@
                   "WHDSaves.hdf"
                 ],
                 "granularity": "shared-card",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -13301,7 +13639,8 @@
                   "Disk2_save.adf.gz"
                 ],
                 "granularity": "per-game-files",
-                "role": "disk-diff"
+                "role": "disk-diff",
+                "size_fixed": null
               }
             ]
           },
@@ -13663,7 +14002,8 @@
                   "Roadkill (Europe)(CD32).nvr"
                 ],
                 "granularity": "per-game-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -13838,7 +14178,8 @@
                   "puae_libretro_cdtv.nvr"
                 ],
                 "granularity": "shared-file",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": null
               }
             ]
           },
@@ -14016,7 +14357,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -14505,7 +14847,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -15427,7 +15770,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -15634,7 +15978,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -15840,7 +16185,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/The Chaos Engine",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -16047,7 +16393,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -16254,7 +16601,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -16456,7 +16804,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -16657,7 +17006,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -17004,7 +17354,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -17205,7 +17556,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -18124,7 +18476,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -18634,7 +18987,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Alien Breed",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -18839,7 +19193,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -19636,7 +19991,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Turrican",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -20769,7 +21125,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -20971,7 +21328,8 @@
                 "dir": "/mnt/sd/retrodeck/saves/WHDSaves/Ports of Call",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },
@@ -21193,6 +21551,550 @@
                 "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
               }
             ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "retroarch-compressing-its-saves-leaves-no-file-a-fixed-size",
+      "rationale": "save_file_compression is on in retroarch.cfg, so RetroArch writes the .srm and the .rtc it names as RZIP streams whose length follows their content. Gambatte reports a fixed size for both on a Game Boy cartridge, and the answer still says false for each, with one save-files-compressed caveat naming the key and the cfg it came from.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nsave_file_compression = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"Snes9x\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Crystal (USA).srm",
+              "Pokemon Crystal (USA).rtc"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": false
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": false
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "gambatte"
+              }
+            },
+            {
+              "code": "save-files-compressed",
+              "data": {
+                "key": "save_file_compression",
+                "layer": "global",
+                "file": "retroarch.cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-core-override-that-turns-compression-on-is-the-layer-named",
+      "rationale": "The global cfg leaves save_file_compression off and Gambatte's core override turns it on. RetroArch reads the override last, so the files it writes are compressed, and the caveat names the override as the layer and its file, the one a user would edit to undo it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nsave_file_compression = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"Snes9x\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/Gambatte/Gambatte.cfg": "save_file_compression = \"true\"\n",
+          "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Crystal (USA).srm",
+              "Pokemon Crystal (USA).rtc"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": false
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": false
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "gambatte"
+              }
+            },
+            {
+              "code": "save-files-compressed",
+              "data": {
+                "key": "save_file_compression",
+                "layer": "core-override",
+                "file": "config/Gambatte/Gambatte.cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-cartridge-clock-and-its-save-each-keep-their-size",
+      "rationale": "Gambatte fills both ids for a Game Boy cartridge, so the standard answer is two groups, one per file RetroArch writes: the .srm, sized by the RAM banks the header declares, and the .rtc, the clock's fixed structure. Both are fixed, and with compression at its default neither carries a caveat.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"Snes9x\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/gba/Golden Sun (USA).gba": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "gb",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Pokemon Crystal (USA).gbc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Pokemon Crystal (USA).srm",
+              "Pokemon Crystal (USA).rtc"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Pokemon Crystal (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "core-unaudited",
+              "data": {
+                "core": "gambatte"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": null,
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-written-cartridge-save-keeps-its-size-claim-once-observed",
+      "rationale": "The game has saved once, so the answer is an observation of the save directory rather than the card's declaration. The file it found is the one RetroArch writes through Genesis Plus GX's SRAM interface, and it answers exactly as it did before it existed: fixed, with the trailing-fill exception beside it, because the claim is about the file and not about whether it has been written yet.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megadrive</name><path>%ROMPATH%/megadrive</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/Phantasy Star IV (USA).srm": "sram"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megadrive",
+          "content_path": "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Phantasy Star IV (USA).srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Phantasy Star IV (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "size-fixed-except-trailing-fill",
+              "data": {
+                "file": "Phantasy Star IV (USA).srm",
+                "fill": "0xff",
+                "citation": "[V] libretro/libretro.c:3759-3784 at ekeeke/Genesis-Plus-GX 46a5521 — SAVE_RAM answers 0x10000 before emulation runs and, while it runs, the length up to the last byte that is not 0xff, so the file is the cartridge's 64 KiB SRAM less a trailing run of 0xff that moves with what the game has written."
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cartridge",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "compression-reaches-the-file-a-card-hands-the-frontend",
+      "rationale": "A rule card's .srm that the core hands RetroArch through the SRAM interface is still a file RetroArch writes, so save_file_compression applies to it as it does to the standard rule's: the group is false, the caveat names the key, and the trailing-fill exception is not stated, because a compressed file has no fixed size to make an exception to.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nsave_file_compression = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megadrive</name><path>%ROMPATH%/megadrive</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megadrive",
+          "content_path": "/mnt/sd/retrodeck/roms/megadrive/Phantasy Star IV (USA).md"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Phantasy Star IV (USA).srm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Phantasy Star IV (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": false
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-compressed",
+              "data": {
+                "key": "save_file_compression",
+                "layer": "global",
+                "file": "retroarch.cfg"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cartridge",
+            "readings": [],
             "alternatives": []
           }
         }
