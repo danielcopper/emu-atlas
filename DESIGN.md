@@ -331,8 +331,14 @@ findings:
   state. A directory whose file names follow from nothing atlas reads keeps its `file-names-unestablished` beside
   whichever of those two names it, because "the names are not derivable" and "nothing read this directory" are different
   facts about the same place. So the full map of places in **one structure** is the guarantee of a declared answer a
-  card decomposed — the standard rule states one list in one directory and no groups at all — and never an
-  observation's, where the walk is the groups plus the caveats.
+  card decomposed — the standard rule decomposes its one directory into one group per file RetroArch writes, so that
+  each carries its size claim — and never an observation's, where the walk is the groups plus the caveats.
+- **Whether a file keeps its size is per group, and unknown is a value.** `size_fixed` is true where the save hardware
+  or the format fixes the length, false where it follows the content — a folder save, and every file RetroArch writes
+  while it compresses them — and null where nobody read it. The claim for a file RetroArch writes is world knowledge:
+  the core's reported size, read per memory type at the revision `save_memory.json` pins, or on the card group the
+  frontend writes; RetroArch writes exactly that many bytes. What can still change it on the machine is read live, the
+  way the save directory is: `save_file_compression` through the same config chain.
 - **A hole is not an unknown.** `needs` lists holes someone else fills: `content_dir` from the content at hand,
   `library_name` when the core could not be queried, and `save_id` where a core names the save after the content's own
   platform-native id (Flycast's per-game VMUs are the disc's product number, read from the ROM — identifying content is

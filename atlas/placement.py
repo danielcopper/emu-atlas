@@ -697,6 +697,27 @@ CAVEAT_SAVESTATE_INSIDE_IMAGE = "savestate-inside-image"
 # still travels, with value "none": the option readings and alternatives in
 # it are how a caller sees which switch to flip to make saves exist again.
 CAVEAT_SAVE_WRITES_DISCARDED = "save-writes-discarded"
+# RetroArch compresses the save files it writes itself: ``save_file_compression``
+# is on, so the ``.srm``/``.rtc`` it writes through a core's memory ids goes out
+# as an RZIP stream (``save.c:645-656`` at RetroArch a79435a; the key is
+# ``settings_def_saving.h:98-99``, default false at ``config.def.h:1516``). A
+# compressed stream's length follows its content, so every group this answer
+# states for such a file carries ``size_fixed`` false whatever the core
+# reports. One per answer that holds such a group; ``data`` names the ``key``,
+# the cfg ``layer`` whose read stands and its ``file`` — the triple
+# ``appended-config-overridden`` carries, because the remedy is the same edit.
+CAVEAT_SAVE_FILES_COMPRESSED = "save-files-compressed"
+# A file whose ``size_fixed`` is true may still be written longer or shorter by
+# a trailing run of one fill byte, so its length is compared without that run.
+# Genesis Plus GX reports its SRAM only up to the last byte that is not
+# ``0xff``; mGBA reports a Game Boy Advance cartridge's save as 128 KiB of
+# ``0xff`` until the game first touches it, and then the size of the save type
+# it detected. A file shorter than its content once the fill is stripped has
+# still lost content — for mGBA, a session that detects a smaller save type
+# than the file holds writes it so, and that is the write a fixed size lets a
+# guard catch. One per affected file; ``data`` carries the ``file`` as the answer
+# spells it, the ``fill`` byte (:data:`SIZE_FILLS`) and the ``citation``.
+CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL = "size-fixed-except-trailing-fill"
 # A rule card fits this core, but which of its recorded modes is in force
 # could not be established — the selection rule needed something this
 # question did not carry (hatari's write-protect story splits on whether the
@@ -1322,6 +1343,50 @@ def _data_words(value: "DataValue") -> tuple[str, ...]:
     return tuple(value)
 
 
+# The byte a save may be padded with at its end, under
+# ``size-fixed-except-trailing-fill``'s ``data["fill"]``, spelled the way a
+# comparison strips it. Closed, because a client strips exactly the byte it is
+# told and nothing else.
+SizeFill = Literal["0xff", "0x00"]
+SIZE_FILL_FF: SizeFill = "0xff"
+"""Erased flash and unwritten SRAM: the fill a cartridge save is padded with."""
+SIZE_FILL_00: SizeFill = "0x00"
+"""Zeroed memory: the fill of a save whose emulator clears it rather than erasing it."""
+SIZE_FILLS = (SIZE_FILL_FF, SIZE_FILL_00)
+
+
+@dataclass(frozen=True, slots=True)
+class SizeFact:
+    """Whether one save file keeps its size, as world knowledge read at a pinned revision.
+
+    The packaged half of :attr:`FileGroup.size_fixed`: a save-memory record
+    states one per memory type and a rule card one per group RetroArch writes,
+    each with the citation the claim rests on. ``fill`` is the trailing byte a
+    fixed file may be written longer or shorter by (:data:`SIZE_FILLS`), and it
+    is only ever stated beside ``fixed`` true — a file whose size is not fixed
+    has no exception to state.
+    """
+
+    fixed: bool | None
+    citation: str
+    fill: str | None = None
+
+    def __post_init__(self) -> None:
+        # Typed, and still checked: the loaders hand over JSON, where a string
+        # "false" would otherwise pass for a claim and read as true.
+        if self.fixed is not None and type(self.fixed) is not bool:
+            raise ValueError(f"SizeFact: fixed must be true, false or null, got {self.fixed!r}")
+        if not self.citation:
+            raise ValueError("SizeFact: a size claim carries the citation it rests on")
+        if self.fill is not None and self.fill not in SIZE_FILLS:
+            raise ValueError(f"SizeFact: fill must be one of {SIZE_FILLS}, got {self.fill!r}")
+        if self.fill is not None and self.fixed is not True:
+            raise ValueError(
+                "SizeFact: a trailing fill is an exception to a fixed size, so it rides only on "
+                "fixed true"
+            )
+
+
 @dataclass(frozen=True, slots=True)
 class FileGroup:
     """One directory's worth of a save, with what it is and whom it belongs to.
@@ -1380,8 +1445,25 @@ class FileGroup:
     client decides by, and :data:`ROLE_UNKNOWN` where nothing atlas read says what the
     file is.
     """
+    size_fixed: bool | None = None
+    """Whether each file of this group keeps its size from one session to the next.
+
+    ``true`` where the save hardware or the format fixes it, so the file never
+    legitimately loses content — a file that may still grow or shrink by a
+    trailing run of fill carries ``size-fixed-except-trailing-fill`` beside it.
+    ``false`` where the size follows the content: a folder save, whose files the
+    game writes at whatever length it likes, and every file RetroArch writes
+    while ``save-files-compressed`` says it compresses them. ``null`` where it
+    was not established — never a claim that the size varies.
+    """
 
     def __post_init__(self) -> None:
+        # Typed, and still checked: a truthy string or a 1 would otherwise be
+        # serialized as a claim nobody made.
+        if self.size_fixed is not None and type(self.size_fixed) is not bool:
+            raise ValueError(
+                f"FileGroup: size_fixed must be true, false or None, got {self.size_fixed!r}"
+            )
         if self.granularity not in GRANULARITIES:
             raise ValueError(
                 f"FileGroup: granularity must be one of {GRANULARITIES}, got {self.granularity!r}"
@@ -2008,6 +2090,8 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         (CAVEAT_INVALID_SAVE_DIRECTORY, "layer"): CFG_LAYER_KINDS,
         # Only an override can win a key an appended file sets.
         (CAVEAT_APPENDED_CONFIG_OVERRIDDEN, "layer"): CFG_LAYER_OVERRIDE_KINDS,
+        (CAVEAT_SAVE_FILES_COMPRESSED, "layer"): CFG_LAYER_KINDS,
+        (CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL, "fill"): SIZE_FILLS,
         # Which reading of a launch command made it more than plain words.
         (CAVEAT_LAUNCH_COMMAND_SHELL_SYNTAX, "construct"): SHELL_CONSTRUCTS,
         # Which bound atlas puts on taking one command apart was reached.

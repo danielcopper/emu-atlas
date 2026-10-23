@@ -282,7 +282,9 @@ from .placement import (
     CAVEAT_SAVE_INSIDE_CONTENT,
     CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVE_ROOT_REVOKED,
+    CAVEAT_SAVE_FILES_COMPRESSED,
     CAVEAT_SAVE_WRITES_DISCARDED,
+    CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
     CAVEAT_SAVESTATE_INSIDE_IMAGE,
     CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
     CAVEAT_SORTED_DIR_MISSING,
@@ -363,6 +365,7 @@ from .placement import (
     DataValue,
     FileGroup,
     FileSet,
+    SizeFact,
     GRANULARITY_PER_GAME_DIRECTORY,
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
@@ -4472,7 +4475,13 @@ def _cross_root_parts(
         filled = _card_files(group.files or (), content.rom_stem)
         names = filled if filled is not None else group.files or ()
         groups_out.append(
-            FileGroup(dir=directory, files=names, granularity=group.granularity, role=group.role)
+            FileGroup(
+                dir=directory,
+                files=names,
+                granularity=group.granularity,
+                role=group.role,
+                size_fixed=_card_group_size(group.granularity),
+            )
         )
         holes.extend(base.needs)
         caveats.append(
@@ -4907,9 +4916,22 @@ def _declared_groups(
                 files=names,
                 granularity=group.granularity,
                 role=group.role,
+                size_fixed=_card_group_size(group.granularity),
             )
         )
     return tuple(groups)
+
+
+def _card_group_size(granularity: str) -> bool | None:
+    """What a card group says about its files' size before anything else is known.
+
+    A directory per game is a folder save: the game writes the files below it
+    at whatever length it likes, so no file there keeps a size — ``False``.
+    Every other card group is ``None`` here: a file RetroArch writes gets its
+    claim from :func:`_frontend_sizes`, and a file the core writes itself has
+    not been read for one yet.
+    """
+    return False if granularity == GRANULARITY_PER_GAME_DIRECTORY else None
 
 
 def _observation_names(group: SaveGroup, rom_stem: str | None) -> frozenset[str]:
@@ -5016,7 +5038,13 @@ def _observed_groups(
             continue
         unclaimed = [name for name in unclaimed if name not in names]
         groups.append(
-            FileGroup(dir=directory, files=mine, granularity=group.granularity, role=group.role)
+            FileGroup(
+                dir=directory,
+                files=mine,
+                granularity=group.granularity,
+                role=group.role,
+                size_fixed=_card_group_size(group.granularity),
+            )
         )
     catchall = _unnamed_here(mode) if unclaimed else None
     if catchall is not None:
@@ -5026,6 +5054,7 @@ def _observed_groups(
                 files=tuple(unclaimed),
                 granularity=catchall.granularity,
                 role=catchall.role,
+                size_fixed=_card_group_size(catchall.granularity),
             )
         )
         unclaimed = []
@@ -5168,6 +5197,141 @@ class _Declaration:
     file_set: FileSet | None = None
     granularity: Granularity | None = None
     caveats: tuple[Caveat, ...] = ()
+    # Each file the set names, with whether its size is fixed — in the set's
+    # order, ``None`` where the record states no claim that holds here.
+    frontend: tuple[tuple[str, SizeFact | None], ...] = ()
+
+
+# The key RetroArch's own compression of the files it writes is read from
+# (settings_def_saving.h:98-99 at RetroArch a79435a); its compiled default is
+# off (config.def.h:1516).
+_SAVE_FILE_COMPRESSION = "save_file_compression"
+
+
+def _standard_groups(
+    file_set: FileSet, frontend: tuple[tuple[str, SizeFact | None], ...], *, directory: str
+) -> FileSet:
+    """The standard rule's set decomposed: one group per file RetroArch writes.
+
+    Built here rather than with the declaration because a group carries its
+    directory, and the directory is only final once the filesystem has had its
+    say. Each file is this game's battery-backed data — the ``.rtc`` too, a
+    cartridge clock keeps its time on the same battery — and each is a group
+    of its own, because the size claim is per file and a group carries one.
+    """
+    if not frontend or file_set.groups:
+        return file_set
+    groups = tuple(
+        FileGroup(dir=directory, files=(name,), granularity=GRANULARITY_PER_GAME_FILE, role=ROLE_BATTERY)
+        for name, _ in frontend
+    )
+    return cast(FileSet, _dc_replace(file_set, groups=groups))
+
+
+def _sized_file_set(
+    file_set: FileSet,
+    declaration: _Declaration,
+    *,
+    mode: SaveMode | None,
+    rom_stem: str | None,
+    directory: str,
+    layers: Sequence[_CfgLayer],
+) -> tuple[FileSet, tuple[Caveat, ...]]:
+    """The answer's set with the standard rule's groups and every frontend-written file's size.
+
+    Where the standard rule declared the set it is the answer's set — a
+    declaration short-circuits the look at the directory — so its groups are
+    added here, in the directory that stands; a card's own groups are already
+    there. Either way the files RetroArch writes then get their size claim.
+    """
+    if declaration.file_set is not None:
+        file_set = _standard_groups(file_set, declaration.frontend, directory=directory)
+    return _frontend_sizes(file_set, declaration.frontend or _card_frontend(mode, rom_stem), layers)
+
+
+def _card_frontend(
+    mode: SaveMode | None, rom_stem: str | None
+) -> tuple[tuple[str, SizeFact | None], ...]:
+    """The files a rule card says RetroArch writes itself, with their size claims, resolved."""
+    if mode is None or mode.stated is not None:
+        return ()
+    found: list[tuple[str, SizeFact | None]] = []
+    for group in mode.groups:
+        if group.frontend is None or group.root is not None:
+            continue
+        names = _card_files(group.files or (), rom_stem) or ()
+        found.extend((name, group.frontend.size) for name in names)
+    return tuple(found)
+
+
+def _frontend_sizes(
+    file_set: FileSet, frontend: tuple[tuple[str, SizeFact | None], ...], layers: Sequence[_CfgLayer]
+) -> tuple[FileSet, tuple[Caveat, ...]]:
+    """Whether each file RetroArch writes keeps its size, with what that rests on.
+
+    Applied to every group whose files are all ones the frontend writes,
+    declared or observed alike, so the same file answers the same way whether
+    or not it has been written yet. ``save_file_compression`` is read live,
+    through the same chain as the save directory: where it is on, the file is an
+    RZIP stream whose length follows its content, so the core's report no
+    longer decides and every such group is false. Otherwise the claim is the
+    record's, and a fixed file that may move by trailing fill says so.
+    """
+    sizes = dict(frontend)
+    touched = [
+        index
+        for index, group in enumerate(file_set.groups)
+        if group.files and all(name in sizes for name in group.files)
+    ]
+    if not touched:
+        return file_set, ()
+    compressed, source, ignored = chain_bool_read(layers, _SAVE_FILE_COMPRESSION, default=False)
+    caveats = list(_ignored_caveats(ignored))
+    groups = list(file_set.groups)
+    for index in touched:
+        names = groups[index].files or ()
+        facts = [sizes[name] for name in names]
+        groups[index] = cast(
+            FileGroup,
+            _dc_replace(groups[index], size_fixed=False if compressed else _one_claim(facts)),
+        )
+        if not compressed:
+            caveats.extend(
+                _trailing_fill_caveat(name, fact)
+                for name, fact in zip(names, facts)
+                if fact is not None and fact.fill is not None
+            )
+    if compressed and source is not None:
+        caveats.insert(0, _compressed_caveat(source))
+    return cast(FileSet, _dc_replace(file_set, groups=tuple(groups))), tuple(caveats)
+
+
+def _one_claim(facts: Sequence[SizeFact | None]) -> bool | None:
+    """The size claim several files share, or ``None`` where any is unstated or they differ."""
+    claims = {fact.fixed if fact is not None else None for fact in facts}
+    return claims.pop() if len(claims) == 1 else None
+
+
+def _compressed_caveat(source: CfgSource) -> Caveat:
+    """``save-files-compressed`` — the key, and the layer whose read stands."""
+    return Caveat(
+        CAVEAT_SAVE_FILES_COMPRESSED,
+        f"{_SAVE_FILE_COMPRESSION} is on in {source.label}, so RetroArch writes its save files as "
+        "RZIP streams whose length follows their content (save.c:645-656) — none of them keeps a "
+        "fixed size, whatever the core reports",
+        {"key": _SAVE_FILE_COMPRESSION, "layer": source.kind, "file": source.file},
+    )
+
+
+def _trailing_fill_caveat(name: str, fact: SizeFact) -> Caveat:
+    """``size-fixed-except-trailing-fill`` for one file, with the claim's citation."""
+    return Caveat(
+        CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
+        f"{name} keeps its size except for a trailing run of {fact.fill}: the emulator may write it "
+        "longer or shorter by that fill, so compare its length without the trailing run — shorter "
+        "than that is content lost",
+        {"file": name, "fill": fact.fill or "", "citation": fact.citation},
+    )
 
 
 def _drift_caveat(
@@ -5366,6 +5530,10 @@ def _standard_declaration(
     files = _card_files(entry.file_templates, content.rom_stem)
     if files is None:
         return _Declaration()
+    frontend = tuple(
+        (name, record.size(query.system, memory_type))
+        for name, memory_type in zip(files, entry.memory_types)
+    )
     if entry.frontend_writes_nothing:
         return _no_frontend_files(
             record, entry, system=scope, core_version=core_version, extra=across
@@ -5395,6 +5563,7 @@ def _standard_declaration(
         ),
         caveats=across
         + _as_tuple(_drift_caveat(record, entry, system=scope, core_version=core_version)),
+        frontend=frontend,
     )
 
 
@@ -5641,6 +5810,15 @@ def _standard_placement(
         )
     all_caveats.extend(cross_parts.caveats)
     file_set = _with_cross_parts(file_set, cross_parts)
+    file_set, size_caveats = _sized_file_set(
+        file_set,
+        declaration,
+        mode=mode,
+        rom_stem=content.rom_stem,
+        directory=final_dir,
+        layers=chain.layers,
+    )
+    all_caveats.extend(size_caveats)
 
     return SavefilePlacement(
         dir=final_dir,
@@ -7546,6 +7724,7 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
         "agp_paths",  # the AgpCartA/BPath keys a GBA cartridge adapter reads
         "agp_save",  # how the adapter loads, sizes and writes back its .sav
         "split_path",  # how the cartridge path's extension is cut for that .sav
+        "card_size",  # how a raw card is read and written back at the size it was created at
     }
 )
 
@@ -8033,6 +8212,7 @@ def _dolphin_raw_slot(
                 files=(name,),
                 granularity=GRANULARITY_SHARED_FILE,
                 role=ROLE_MEMORY_CARD,
+                size_fixed=True,
             )
             for name in names
         ),
@@ -8091,6 +8271,7 @@ def _dolphin_folder_slot(
                 files=None,
                 granularity=GRANULARITY_PER_GAME_FILES,
                 role=ROLE_MEMORY_CARD,
+                size_fixed=False,
             )
             for d in dirs
         ),
@@ -8602,7 +8783,7 @@ def _dolphin_gc_answer(
             complete=False,
             groups=groups,
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=_card_sources(card, groups, f"{cite('card_size')} at {cite('build')}"),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -8724,6 +8905,7 @@ def _unnamed_tree_placement(
                     files=None,
                     granularity=GRANULARITY_PER_GAME_FILES,
                     role=ROLE_BATTERY,
+                    size_fixed=False,
                 ),
             ),
         ),
@@ -8774,6 +8956,7 @@ def _per_title_placement(
                     files=None,
                     granularity=GRANULARITY_PER_GAME_DIRECTORY,
                     role=ROLE_BATTERY,
+                    size_fixed=False,
                 ),
                 *extra_groups,
             ),
@@ -9797,6 +9980,7 @@ def _azahar_savefile_placement(
                 files=None,
                 granularity=GRANULARITY_PER_GAME_FILES,
                 role=ROLE_BATTERY,
+                size_fixed=False,
             ),
         ),
     )
@@ -9976,6 +10160,7 @@ def _duckstation_shared_slot(
             files=(os.path.basename(resolved),),
             granularity=GRANULARITY_SHARED_CARD,
             role=ROLE_MEMORY_CARD,
+            size_fixed=True,
         ),
         readings=(type_reading, path_reading),
     )
@@ -10073,6 +10258,7 @@ def _duckstation_per_game_slot(
             files=(name,),
             granularity=GRANULARITY_PER_GAME_FILE,
             role=ROLE_MEMORY_CARD,
+            size_fixed=True,
         ),
         readings=tuple(readings),
         caveats=(caveat,),
@@ -10391,7 +10577,7 @@ def _duckstation_savefile_placement(
             complete=False,
             groups=groups,
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=_card_sources(card, groups, _DUCKSTATION_CARD_SIZE),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -10640,7 +10826,11 @@ def _pcsx2_slot_group(
             },
         )
         group = FileGroup(
-            dir=full, files=None, granularity=GRANULARITY_PER_GAME_FILES, role=ROLE_MEMORY_CARD
+            dir=full,
+            files=None,
+            granularity=GRANULARITY_PER_GAME_FILES,
+            role=ROLE_MEMORY_CARD,
+            size_fixed=False,
         )
         return "folder", group, tuple(readings), (caveat,)
     group = FileGroup(
@@ -10648,6 +10838,7 @@ def _pcsx2_slot_group(
         files=(os.path.basename(full),),
         granularity=GRANULARITY_SHARED_CARD,
         role=ROLE_MEMORY_CARD,
+        size_fixed=True,
     )
     return "file", group, tuple(readings), ()
 
@@ -10870,7 +11061,7 @@ def _pcsx2_savefile_placement(
             complete=False,
             groups=groups,
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=_card_sources(card, groups, _PCSX2_CARD_SIZE),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -11580,6 +11771,7 @@ def _per_user_savedata_placement(
             files=None,
             granularity=GRANULARITY_PER_GAME_DIRECTORY,
             role=ROLE_BATTERY,
+            size_fixed=False,
         )
         # Where nothing was found the compiled default stands in — as the tree
         # the emulator starts with, never as a user seen on this machine, which
@@ -14225,6 +14417,37 @@ STANDALONE_SAVE_CITATION_SLOTS = {
     "DOLPHIN": _DOLPHIN_CITATION_SLOTS,
     "PRIMEHACK": _DOLPHIN_CITATION_SLOTS,
 }
+
+# Why a card image keeps its size, in the build each resolver below reads. In
+# code beside those resolvers' other citations rather than on their cards: the
+# card citation slots are the Dolphin family's, whose one reading serves two
+# source trees, and neither of these emulators shares its reading.
+_DUCKSTATION_CARD_SIZE = (
+    "src/core/memory_card_image.h:17, src/core/memory_card_image.cpp:99-111 and :124-136 at "
+    "RetroDECK/Duckstation 1f6de046b: a card is DATA_SIZE, 128 KiB; a file of any other size is "
+    "refused when loaded, and a save writes the whole card"
+)
+_PCSX2_CARD_SIZE = (
+    "pcsx2/SIO/Memcard/MemoryCardFile.cpp:289, :308-326 and :484-524 at PCSX2 v2.6.3: a file card "
+    "is created at its size, opened r+b and written in place at the addressed offset, so its length "
+    "never changes"
+)
+
+
+def _card_sources(
+    card: StandaloneSaveCard, groups: Sequence[FileGroup], citation: str
+) -> tuple[str, ...]:
+    """A card answer's sources: the card's provenance, and the evidence behind a fixed size.
+
+    A card image is written whole or in place at the size it was created at,
+    never cut short, so its group says ``size_fixed`` true; the line ranges
+    that say so ride the answer's sources, once, beside the card's provenance —
+    and only where a group states one.
+    """
+    sources = [f"standalone save card '{card.token}': {card.provenance}"]
+    if any(group.size_fixed for group in groups):
+        sources.append(f"a memory-card image keeps the size it was created at — {citation}")
+    return tuple(sources)
 
 
 def _standalone_savefile_placement(

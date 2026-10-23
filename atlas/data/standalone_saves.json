@@ -22,7 +22,8 @@
           "wii_dir": "CommonPaths.h:49",
           "agp_paths": "MainSettings.cpp:92-93",
           "agp_save": "EXI_DeviceAGP.cpp:34-45, :73-85, :107-166",
-          "split_path": "StringUtil.cpp:295-328"
+          "split_path": "StringUtil.cpp:295-328",
+          "card_size": "GCMemcardRaw.cpp:38-51, :121-153"
         }
       },
       "provenance": {
@@ -50,6 +51,7 @@
           "agp_paths": "MainSettings.cpp:71-72",
           "agp_save": "EXI_DeviceAGP.cpp:35-45, :73-85, :107-166",
           "split_path": "StringUtil.cpp:304-335",
+          "card_size": "GCMemcardRaw.cpp:39-52, :122-154",
           "installations": {
             "io.github.shiiion.primehack": {
               "build": "shiiion/dolphin 53f53e0",
@@ -64,7 +66,8 @@
               "wii_dir": "CommonPaths.h:49",
               "agp_paths": "MainSettings.cpp:92-93",
               "agp_save": "EXI_DeviceAGP.cpp:34-45, :73-85, :107-166",
-              "split_path": "StringUtil.cpp:295-328"
+              "split_path": "StringUtil.cpp:295-328",
+              "card_size": "GCMemcardRaw.cpp:38-51, :121-153"
             }
           }
         }

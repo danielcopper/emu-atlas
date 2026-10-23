@@ -210,7 +210,10 @@ PATCH_CONTINUATIONS = 9
 # that the tree is undivided.
 KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack", "title"}
 FILE_SET_FIELDS = {"state", "files", "complete", "groups"}
-FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role"}
+FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role", "size_fixed"}
+# The byte a fixed-size save may be padded with at its end
+# (size-fixed-except-trailing-fill's data["fill"]).
+KNOWN_SIZE_FILLS = {"0xff", "0x00"}
 # Named once because three rules read it: an entry's own check types the value,
 # wherever the entry appears, the catalogue answer's check reads the whole list of
 # them at once, and a firmware core carries the position of the catalogue row it was
@@ -627,6 +630,8 @@ KNOWN_CAVEAT_CODES = {
     "savestate-inside-image",
     "savestate-support-machine-dependent",
     "save-writes-discarded",
+    "save-files-compressed",
+    "size-fixed-except-trailing-fill",
     "core-mode-unestablished",
     "save-root-redirected",
     "save-root-revoked",
@@ -1622,6 +1627,8 @@ def _validate_caveats(name: str, caveats: Any) -> None:
                 f"of the documented objects of strings, got {data!r}"
             )
         _validate_save_id_fill(name, caveat["code"], data)
+        if caveat["code"] == "size-fixed-except-trailing-fill" and data.get("fill") not in KNOWN_SIZE_FILLS:
+            fail(f"{name}: size-fixed-except-trailing-fill.fill must be one of {sorted(KNOWN_SIZE_FILLS)}")
 
 
 def _validate_save_id_fill(name: str, code: str, data: dict[str, Any]) -> None:
@@ -1738,6 +1745,9 @@ def _validate_one_file_group(name: str, group: Any) -> None:
         fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
     if group["role"] not in KNOWN_ROLES:
         fail(f"{name}: file group role must be one of {sorted(KNOWN_ROLES)}")
+    if group["size_fixed"] is not None and not isinstance(group["size_fixed"], bool):
+        # null is "not established", never a third spelling of false.
+        fail(f"{name}: file group size_fixed must be true, false or null")
 
 
 def _validate_file_groups(name: str, file_set: Any) -> None:

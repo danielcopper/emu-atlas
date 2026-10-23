@@ -811,7 +811,8 @@
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/primehack/Wii/title/<save_id>/data",
                 "files": null,
                 "granularity": "per-game-directory",
-                "role": "battery"
+                "role": "battery",
+                "size_fixed": false
               }
             ]
           },

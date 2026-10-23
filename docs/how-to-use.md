@@ -913,10 +913,11 @@ Handing that back as one flat list would tell you the names and hide which of th
 belong to every game at once.
 
 `groups` is that decomposition. Where a **card** decomposed a declared answer it is **the complete list of places** —
-`dir` and `files` are one of them, the first. It is empty where nothing decomposed the answer, which the standard rule
-never does; and on an observed answer it is what was found in the directory that was read, which is not the same promise
-(see "an observation's groups" below). Each entry carries its own resolved `dir`, its own `files`, and two fields that
-answer two different questions:
+`dir` and `files` are one of them, the first. The standard rule decomposes too, one group per file RetroArch writes —
+the `.srm`, and the `.rtc` where the core fills it — so that each file carries its own size claim. On an observed answer
+it is what was found in the directory that was read, which is not the same promise (see "an observation's groups"
+below). Each entry carries its own resolved `dir`, its own `files`, two fields that answer two different questions, and
+whether its files keep their size:
 
 ```python
 for g in placement.file_set.groups:
@@ -924,6 +925,7 @@ for g in placement.file_set.groups:
     g.files        # ('default.cfg',)            — basenames within it, or None (see below)
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'per-game-directory' | 'shared-card' | 'shared-file'
     g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings' | 'notes' | 'unknown'
+    g.size_fixed   # does each file keep its size: True | False | None (not established)
 ```
 
 `per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
@@ -1001,6 +1003,27 @@ for. The reason travels beside the answer as a `file-names-unestablished` caveat
 `citation` behind the reading — that is where the sentence a person reads lives, but it is no longer the only place the
 directory appears, so one loop over `groups` is enough and there is no second structure to correlate.
 
+**`size_fixed` says whether a file keeps its size from one session to the next.** `True` where the save hardware or the
+format fixes it, so a file that comes back shorter than it was has lost content — a guard against a truncated write can
+compare lengths. `False` where the length follows the content: a folder save (a directory per game, Dolphin's GCI
+folder, a PCSX2 folder card, PPSSPP's `SAVEDATA` tree), and every file RetroArch writes while `save_file_compression` is
+on, which the answer states as `save-files-compressed` naming the key and the config layer and file that set it. `None`
+where nobody has read the size yet — never a claim that it varies, so treat it as you would a file you know nothing
+about. One exception rides beside a `True`: `size-fixed-except-trailing-fill` names a file the emulator may write longer
+or shorter by a trailing run of one fill byte — Genesis Plus GX reports its SRAM up to the last byte that is not `0xff`,
+and mGBA reports a Game Boy Advance save as 128 KiB of `0xff` until the game first touches it and then at the size of
+the save type it detected. Strip that trailing run of `data["fill"]` before comparing; what is still shorter has lost
+content, which for mGBA is a session that detected a smaller save type than the file holds:
+
+```python
+fills = {c.data["file"]: c.data["fill"] for c in placement.caveats
+         if c.code == atlas.CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL}
+for g in placement.file_set.groups:
+    if g.size_fixed is True and g.files:
+        for name in g.files:
+            guard_against_shrinking(g.dir, name, strip_trailing=fills.get(name))
+```
+
 **The granularity block is how you show "is the wanted option active, and where does it change".** `value` is the
 grouping in force and `mode` names the rule-card mode behind it (an option value like `"enabled"` where one option
 governs, the card's own mode name like `"per-game"` where a rule selects, `None` where no card speaks). **`mode` is for
@@ -1054,14 +1077,14 @@ adds no group to the answer reached — and so, beside a slot that carries one, 
 mode that keeps no such card from one whose card atlas cannot reach before the edit is written.
 
 **Reading nothing of this keeps today's answer.** `groups` is empty where nothing decomposed the answer: an `unknown`
-set has no files to decompose, the standard rule states one list in one directory, and a **savestate** answer is never
-decomposed in any state — that question has already said what its files are, this content's states under names the
-emulator itself chooses and the answer spells out (`<stem>.state`, the numbered slots, the auto slot), so a role beside
-them would only repeat the question; the set also picks up the `.png` thumbnail RetroArch writes beside a state, which
-any decomposition would part from the state it belongs to. Empty means _not decomposed_, never _no files_. What changed
-is the savefile observation: an answer that found files has a group for every one of them. Where `groups` is populated,
-`files` is still exactly the names lying in `dir`: every group under the first group's directory, and for a declared set
-in the card's own order. So a card that splits one list into two by role moves no name out of `files`.
+set has no files to decompose, and a **savestate** answer is never decomposed in any state — that question has already
+said what its files are, this content's states under names the emulator itself chooses and the answer spells out
+(`<stem>.state`, the numbered slots, the auto slot), so a role beside them would only repeat the question; the set also
+picks up the `.png` thumbnail RetroArch writes beside a state, which any decomposition would part from the state it
+belongs to. Empty means _not decomposed_, never _no files_. What changed is the savefile observation: an answer that
+found files has a group for every one of them. Where `groups` is populated, `files` is still exactly the names lying in
+`dir`: every group under the first group's directory, and for a declared set in the card's own order. So a card that
+splits one list into two by role moves no name out of `files`.
 
 **An observation's groups are what was found, and they describe one directory.** A declared set lists the parts a card
 states, including the ones no file has been written for yet, in the order the card states them; an observed set lists
@@ -1216,6 +1239,8 @@ all.
 | `save-inside-content`                      | no separate save file exists: the loaded content file itself takes the writes — your call                                 |
 | `save-inside-image`                        | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file                          |
 | `save-writes-discarded`                    | nothing keeps a save at all: the writes are discarded — the granularity block names the way out                           |
+| `save-files-compressed`                    | RetroArch compresses the files it writes (`data["key"]`, `layer`, `file`) — those groups' `size_fixed` is false           |
+| `size-fixed-except-trailing-fill`          | `data["file"]` keeps its size but may grow or shrink by a trailing run of `data["fill"]` alone — below                    |
 | `save-root-redirected`                     | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip                           |
 | `save-root-revoked`                        | a flatpak override revokes the tree the save root lives under — writes never land here on the host                        |
 | `save-root-unresolvable`                   | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them                    |

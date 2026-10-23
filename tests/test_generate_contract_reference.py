@@ -1595,6 +1595,8 @@ class TestTheDataRegistryReading:
             ("region-property-unconfirmed", "region"): "DISC_REGIONS",
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("appended-config-overridden", "layer"): "CFG_LAYER_OVERRIDE_KINDS",
+            ("save-files-compressed", "layer"): "CFG_LAYER_KINDS",
+            ("size-fixed-except-trailing-fill", "fill"): "SIZE_FILLS",
             ("launch-command-beyond-limits", "limit"): "LAUNCH_COMMAND_LIMITS",
             ("launch-command-shell-syntax", "construct"): "SHELL_CONSTRUCTS",
             ("system-firmware-world-knowledge", "evidence"): "STATED_EVIDENCE_WORDS",
@@ -1647,10 +1649,13 @@ class TestTheDataRegistryReading:
         monkeypatch.setattr(atlas, "A_SECOND_NAME_FOR_THE_LAYER_KINDS", layers, raising=False)
         monkeypatch.setattr(atlas, "__all__", [*atlas.__all__, "A_SECOND_NAME_FOR_THE_LAYER_KINDS"])
         failures = reference.ambiguous_vocabulary_names(reference.registered_enumerations())
-        assert len(failures) == 1
-        assert "invalid-save-directory.layer" in failures[0]
-        assert "A_SECOND_NAME_FOR_THE_LAYER_KINDS" in failures[0]
-        assert "CFG_LAYER_KINDS" in failures[0]
+        # One failure per registered pair the tuple closes: the layer kinds close
+        # invalid-save-directory.layer and save-files-compressed.layer.
+        assert len(failures) == 2
+        assert any("invalid-save-directory.layer" in failure for failure in failures)
+        for failure in failures:
+            assert "A_SECOND_NAME_FOR_THE_LAYER_KINDS" in failure
+            assert "CFG_LAYER_KINDS" in failure
 
 
 class TestTheTwoCorpusGates:
