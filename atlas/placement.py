@@ -580,8 +580,10 @@ CAVEAT_APPENDED_CONFIG_VISIBILITY_UNESTABLISHED = "appended-config-visibility-un
 # path under ``/run/user``), so the folder is read as the host's own path: the
 # host's directory test decides it, and a spelling only the sandbox has, such
 # as one under ``/run/user``, passes untested beside
-# ``sandbox-path-untranslated``. The same holds for the working directory a
-# relative folder of any layer is joined to (#647 D2): a ``cwd``, or the
+# ``sandbox-path-untranslated``. The same holds for RetroArch's working
+# directory wherever an answer reads it (#647 D2, #660): the directory a
+# relative save folder of any layer, a MAME tree, or the relative file a core
+# writes (the ``working_directory`` root) is opened from. A ``cwd``, or the
 # sandbox ``HOME`` RetroArch falls back to, that the model cannot tell is
 # taken as shown, read as the host's. One note per
 # answer, ``data`` naming the sandbox's ``app_id``. Only where atlas models the
@@ -594,9 +596,11 @@ CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED = "save-directory-visibility-unes
 # ``--cwd`` (``common/flatpak-run.c:3634-3635`` at flatpak 1.16.6), and
 # bubblewrap changes into the old working directory only where the sandbox maps
 # it, otherwise into ``$HOME``, otherwise ``/`` (``bubblewrap.c:3407-3426`` at
-# v0.12.0). The sandbox shows nothing at ``cwd``, so a relative save folder is
-# opened from the directory it fell back to. ``data``: ``app_id``, the ``cwd``
-# the caller named, and the ``working_directory`` the process runs in instead.
+# v0.12.0). The sandbox shows nothing at ``cwd``, so what RetroArch opens
+# relative to its working directory — a relative save folder, the
+# ``working_directory`` root, a MAME tree joined to it (#660) — is opened from
+# the directory it fell back to. ``data``: ``app_id``, the ``cwd`` the caller
+# named, and the ``working_directory`` the process runs in instead.
 CAVEAT_CWD_HIDDEN_IN_SANDBOX = "cwd-hidden-in-sandbox"
 # The entry runs a standalone emulator, which never reads RetroArch's
 # configuration, so the appended files the question was asked with change

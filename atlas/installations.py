@@ -2563,32 +2563,50 @@ def _visibility_note(app_id: str) -> Caveat:
 
 def _save_dir_visibility_note(app_id: str) -> Caveat:
     """The one #641 D1 note an answer carries where the view could not tell a folder the global cfg or an override
-    sets.
+    sets, or the working directory the answer reads (#647 D2, #660).
     """
     return Caveat(
         CAVEAT_SAVE_DIRECTORY_VISIBILITY_UNESTABLISHED,
         f"whether RetroArch in {app_id}'s sandbox sees the save folders the global cfg and the overrides "
-        "set, or the working directory a relative folder is opened from, was not established, so each was "
-        "tested as this host's own path — or, where only the sandbox can spell it, left untested",
+        "set, or the working directory it opens a relative save path from, was not established, so each was "
+        "read as this host's own path — or, where only the sandbox can spell it, left untested",
         {"app_id": app_id},
     )
 
 
 @dataclass(frozen=True, slots=True)
 class _LaunchDirectory:
-    """The working directory a relative save folder is opened from, and what the answer says about it (#647).
+    """The working directory RetroArch runs in, and what an answer that reads it says about it (#647, #660).
 
     ``unestablished`` is a working directory — the ``cwd``, or the sandbox's
     ``HOME`` it falls back to — whose visibility the sandbox model cannot
     tell, taken as shown; ``caveats`` the note where the sandbox does not show
-    the ``cwd`` and the process runs elsewhere. Either matters only to an
-    answer whose standing root, or a refusal it states, came from a relative
-    folder.
+    the ``cwd`` and the process runs elsewhere; ``app_id`` the sandbox, where
+    one is modelled. Either matters only to an answer that read the directory:
+    one whose standing root, or a refusal it states, came from a relative
+    folder, the ``working_directory`` root, a MAME tree joined to it.
     """
 
     directory: str
     caveats: tuple[Caveat, ...] = ()
     unestablished: bool = False
+    app_id: str | None = None
+
+    def notes(self) -> tuple[Caveat, ...]:
+        """What an answer that read this directory states: the hidden ``cwd``, or the unestablished visibility."""
+        if self.unestablished and self.app_id is not None:
+            return (*self.caveats, _save_dir_visibility_note(self.app_id))
+        return self.caveats
+
+
+def _unstated(notes: Sequence[Caveat], caveats: Sequence[Caveat]) -> tuple[Caveat, ...]:
+    """The launch's *notes* an answer's *caveats* do not carry yet — each note once per answer (#660).
+
+    The chain states them already where a relative save folder read the same
+    directory (:func:`_visibility_caveats`), so an answer that reads it a
+    second time adds only what is missing.
+    """
+    return tuple(note for note in notes if note not in caveats)
 
 
 def _launch_directory(view: "_SandboxLaunchView | None", cwd: str | None, home: str | None) -> _LaunchDirectory:
@@ -2612,21 +2630,22 @@ def _launch_directory(view: "_SandboxLaunchView | None", cwd: str | None, home: 
         return _LaunchDirectory(cwd)
     probe = view.is_directory(cwd)
     if probe == PROBE_HIT:
-        return _LaunchDirectory(cwd)
+        return _LaunchDirectory(cwd, app_id=view.app_id)
     if probe == PROBE_UNKNOWN:
-        return _LaunchDirectory(cwd, unestablished=True)
+        return _LaunchDirectory(cwd, unestablished=True, app_id=view.app_id)
     home_probe = view.is_directory(home) if home and home.startswith("/") else PROBE_MISS
     fallback = home if home_probe != PROBE_MISS and home else "/"
     return _LaunchDirectory(
         fallback,
         unestablished=home_probe == PROBE_UNKNOWN,
+        app_id=view.app_id,
         caveats=(
             Caveat(
                 CAVEAT_CWD_HIDDEN_IN_SANDBOX,
                 f"RetroArch in {view.app_id}'s sandbox cannot run in {cwd!r}: the sandbox shows no "
                 f"directory there, so bubblewrap starts it in {fallback!r} instead (flatpak-run.c:3634-3635 "
-                "at flatpak 1.16.6, bubblewrap.c:3407-3426 at v0.12.0), and a relative save folder is "
-                "opened from there",
+                "at flatpak 1.16.6, bubblewrap.c:3407-3426 at v0.12.0), and whatever it opens relative "
+                "to its working directory is opened from there",
                 {"app_id": view.app_id, "cwd": cwd, "working_directory": fallback},
             ),
         ),
@@ -3313,6 +3332,10 @@ class _CardApplication:
     granularity: Granularity | None = None
     caveats: tuple[Caveat, ...] = ()
     excluded_observations: frozenset[str] = frozenset()
+    # What the launch's working directory says about itself, where the card's
+    # rule read it (ModeChoice.reads_cwd); the answer adds what it does not
+    # state yet (:func:`_unstated`).
+    launch_notes: tuple[Caveat, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -3399,7 +3422,7 @@ def _apply_card(
     layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
-    cwd: str | None = None,
+    launch: _LaunchDirectory,
 ) -> _CardApplication:
     """Read the option that governs this card, live, and take the mode it selects.
 
@@ -3428,7 +3451,7 @@ def _apply_card(
             layers=layers,
             content=content,
             gates=gates,
-            cwd=cwd,
+            launch=launch,
         )
     if card.option_key is None:
         # The load refuses any other shape (_expect_selectable_modes), so the
@@ -3853,7 +3876,7 @@ def _apply_rule_card(
     layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
-    cwd: str | None = None,
+    launch: _LaunchDirectory,
 ) -> _CardApplication:
     """Hand the machine to the card's selection rule and take the mode it names.
 
@@ -3886,12 +3909,15 @@ def _apply_rule_card(
         layers=layers,
         content=content,
         retroarch_config_dir=retroarch_config_dir,
-        cwd=cwd,
+        # The directory the process runs in, which inside RetroDECK's sandbox
+        # need not be the caller's own (#660).
+        cwd=None if cwd_templated(launch.directory) else launch.directory,
     )
     choice = MODE_RULES[card.key](reading)
     caveats.extend(choice.caveats)
+    launch_notes = launch.notes() if choice.reads_cwd else ()
     if choice.mode is None:
-        return _CardApplication(caveats=tuple(caveats))
+        return _CardApplication(caveats=tuple(caveats), launch_notes=launch_notes)
     mode = card.modes.get(choice.mode)
     if mode is None:
         raise ValueError(
@@ -3925,7 +3951,13 @@ def _apply_rule_card(
             )
         ),
     )
-    return _CardApplication(card=card, mode=mode, granularity=granularity, caveats=tuple(caveats))
+    return _CardApplication(
+        card=card,
+        mode=mode,
+        granularity=granularity,
+        caveats=tuple(caveats),
+        launch_notes=launch_notes,
+    )
 
 
 def _fill_rule_templates(
@@ -4709,7 +4741,7 @@ def _system_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
-    cwd: str | None = None,
+    launch: _LaunchDirectory,
 ) -> SavefilePlacement:
     """The placement for a card whose core roots its saves in the system directory.
 
@@ -4755,7 +4787,7 @@ def _content_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
-    cwd: str | None = None,
+    launch: _LaunchDirectory,
 ) -> SavefilePlacement:
     """The placement for a card whose core writes into the content's own tree.
 
@@ -6162,6 +6194,10 @@ class _Chain:
     # The rider of a <cwd>-templated save root (#647), for the answers that
     # hang off that root to add (:func:`_rooted_rider`); never in ``caveats``.
     save_root_rider: tuple[Caveat, ...] = ()
+    # The working directory RetroArch runs in (#647 D2), for the answers past
+    # the chain that read it as well — the working_directory root, a MAME
+    # tree (#660) — so one launch states one directory.
+    launch: _LaunchDirectory = _LaunchDirectory(TEMPLATE_CWD)
 
     @property
     def effective_root(self) -> str:
@@ -6291,6 +6327,7 @@ def _read_chain(machine: Machine, query: _SaveQuery, keys: LayoutKeys) -> _Chain
         caveats=tuple(caveats),
         appended_unreachable=appended.unreachable,
         save_root_rider=saves_root.rider,
+        launch=launch,
     )
 
 
@@ -6308,7 +6345,7 @@ def _working_directory_placement(
     sources: tuple[str, ...],
     caveats: tuple[Caveat, ...],
     excluded: frozenset[str] = frozenset(),
-    cwd: str | None = None,
+    launch: _LaunchDirectory,
 ) -> SavefilePlacement:
     """The placement for a card whose core writes relative to the launch's cwd.
 
@@ -6320,7 +6357,10 @@ def _working_directory_placement(
     launcher, and the launcher knows its own working directory. The caveat
     carries the sentence, so the template is never mistaken for a directory
     atlas merely failed to fill. With *cwd* — the host path the caller names
-    — the root is that directory, read like any other root.
+    — the root is the directory RetroArch runs in for it (*launch*): that
+    path itself, or inside RetroDECK's sandbox the one bubblewrap starts the
+    process in where the sandbox does not show it (#647 D2, #660), with the
+    launch's notes. It is read like any other root.
 
     The unused parameters keep the three diverted routes one signature, which
     is what lets the router pick a route instead of a call shape.
@@ -6330,11 +6370,13 @@ def _working_directory_placement(
         f"rule card '{card.key}': the core writes relative to the launching process's "
         "working directory"
     )
-    caveats_out = caveats
-    if cwd is not None:
+    if not cwd_templated(launch.directory):
         root = _SystemRoot(
-            cwd, ROOT_WORKING_DIRECTORY, sources=(f"{source}, which the caller named",)
+            launch.directory,
+            ROOT_WORKING_DIRECTORY,
+            sources=(f"{source}, the one it runs in for the cwd the caller named",),
         )
+        caveats_out = (*caveats, *_unstated(launch.notes(), caveats))
     else:
         root = _SystemRoot(
             TEMPLATE_CWD,
@@ -6448,10 +6490,11 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             layers=layers,
             content=content,
             gates=chain.gates,
-            cwd=query.cwd,
+            launch=chain.launch,
         )
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
+        caveats.extend(_unstated(applied.launch_notes, caveats))
         if card is not None:
             caveats.extend(_optional(_options_unaudited(card, core.info)))
 
@@ -6474,7 +6517,7 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             sources=tuple(sources_extra),
             caveats=tuple(caveats),
             excluded=applied.excluded_observations,
-            cwd=query.cwd,
+            launch=chain.launch,
         )
 
     cross_parts = _CrossParts()

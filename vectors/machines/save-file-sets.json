@@ -4670,8 +4670,195 @@
       }
     },
     {
+      "name": "a-save-whose-directory-is-the-launchs-own-in-a-cwd-the-sandbox-hides-lands-in-its-home",
+      "rationale": "The DeSmuME 2015 save root asked with a working folder the host has and RetroDECK's sandbox masks: another app's ~/.var/app tree. flatpak passes no --chdir without an explicit --cwd (flatpak-run.c:3634-3635 at flatpak 1.16.6), and bubblewrap changes into the old working directory only where the sandbox shows it, otherwise into $HOME (bubblewrap.c:3407-3426 at v0.12.0). So RetroArch runs in the sandbox's home and the core's save lands there: the root is the home, the save lying there is observed while the one in the masked folder is not, and cwd-hidden-in-sandbox names the folder the sandbox did not show.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/org.other.App/Game (Europe).dsv": "save",
+          "/home/deck/Game (Europe).dsv": "save"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/org.other.App",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds",
+          "cwd": "/home/deck/.var/app/org.other.App"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/home/deck",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game (Europe).dsv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck",
+                "files": [
+                  "Game (Europe).dsv"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "desmume2015",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/.var/app/org.other.App",
+                "working_directory": "/home/deck"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-save-whose-directory-is-the-launchs-own-in-a-cwd-the-sandbox-cannot-tell-is-read-as-the-hosts",
+      "rationale": "The DeSmuME 2015 save root asked with a working folder under /run/user, where RetroDECK's sandbox keeps a private tree of its own that its model cannot tell from the host's: whether the sandbox shows the folder cannot be told. The folder is then taken as RetroArch's working directory read as the host's, the root is read there like any other, and save-directory-visibility-unestablished says the answer rests on that reading.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/run/user/1000/launcher/Game (Europe).dsv": "save"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/run/user/1000/launcher",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "nds",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Game (Europe).nds",
+          "cwd": "/run/user/1000/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/run/user/1000/launcher",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Game (Europe).dsv"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/run/user/1000/launcher",
+                "files": [
+                  "Game (Europe).dsv"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "desmume2015",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
       "name": "a-save-whose-directory-is-the-launchs-own-in-a-cwd-that-is-missing",
-      "rationale": "The DeSmuME 2015 save root asked with a working folder that does not exist on the machine. The answer is the ordinary one for an absolute root that is missing: dir is the caller's folder, no hole and no launch caveat remain, and what a missing directory already carries on this route is stated rather than a template.",
+      "rationale": "The DeSmuME 2015 save root asked with a working folder that does not exist on the machine. RetroDECK's RetroArch runs where bubblewrap starts it: flatpak passes no --chdir without an explicit --cwd (flatpak-run.c:3634-3635 at flatpak 1.16.6), and bubblewrap changes into the old working directory only where the sandbox shows it, otherwise into $HOME (bubblewrap.c:3407-3426 at v0.12.0). The sandbox shows nothing at the caller's folder, so the root is the sandbox's home, read like any other root, and cwd-hidden-in-sandbox names the folder the sandbox did not show.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4711,7 +4898,7 @@
           }
         ],
         "entry_savefile_location": {
-          "dir": "/home/deck/launch",
+          "dir": "/home/deck",
           "root_kind": "working_directory",
           "needs": [],
           "fallback_dir": null,
@@ -4725,7 +4912,7 @@
             "complete": false,
             "groups": [
               {
-                "dir": "/home/deck/launch",
+                "dir": "/home/deck",
                 "files": [
                   "Game (Europe).dsv",
                   "Game (Europe).dsv.bak"
@@ -4744,6 +4931,14 @@
                 "arrangement": "retrodeck",
                 "verification": "never-verified"
               }
+            },
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/launch",
+                "working_directory": "/home/deck"
+              }
             }
           ],
           "granularity": {
@@ -4757,7 +4952,7 @@
     },
     {
       "name": "a-save-whose-directory-is-the-launchs-own-behind-a-dead-link-cwd",
-      "rationale": "The DeSmuME 2015 save root asked with a working folder that is a symlink into nothing. The caller's folder is read like any other root, so the dead link is stated the way a dead link at any save root is stated.",
+      "rationale": "The DeSmuME 2015 save root asked with a working folder that is a symlink into nothing. Inside RetroDECK's sandbox the link leads nowhere either, so bubblewrap cannot change into it and starts RetroArch in the sandbox's home (bubblewrap.c:3407-3426 at v0.12.0): the root is that home, cwd-hidden-in-sandbox names the folder, and the dead link is not stated, because no write goes through it.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -4800,6 +4995,98 @@
           }
         ],
         "entry_savefile_location": {
+          "dir": "/home/deck",
+          "root_kind": "working_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Game (Europe).dsv",
+              "Game (Europe).dsv.bak"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/home/deck",
+                "files": [
+                  "Game (Europe).dsv",
+                  "Game (Europe).dsv.bak"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "desmume2015",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/launch",
+                "working_directory": "/home/deck"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "a-save-whose-directory-is-the-launchs-own-behind-a-dead-link-cwd-on-the-host",
+      "rationale": "The DeSmuME 2015 save root asked of a RetroArch running on the host, with a working folder that is a symlink into nothing. No sandbox stands between the launch and the folder, so the caller's folder is the root, read like any other: the dead link is stated the way a dead link at any save root is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/saves\"\nsort_savefiles_enable = \"false\"\nsort_savefiles_by_content_enable = \"false\"\nlibretro_directory = \"/home/deck/.config/retroarch/cores\"\n",
+          "/home/deck/roms/nds/Game (Europe).nds": "rom"
+        },
+        "dirs": [
+          "/home/deck/saves"
+        ],
+        "cores": {
+          "/home/deck/.config/retroarch/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/home/deck/roms/nds/Game (Europe).nds",
+          "core_so": "desmume2015_libretro.so",
+          "cwd": "/home/deck/launch"
+        },
+        "symlinks": {
+          "/home/deck/launch": "/mnt/gone/launch"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "savefile_location": {
           "dir": "/home/deck/launch",
           "root_kind": "working_directory",
           "needs": [],
@@ -4827,10 +5114,16 @@
           },
           "caveats": [
             {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            },
+            {
               "code": "unverified-version",
               "data": {
                 "core": "desmume2015",
-                "arrangement": "retrodeck",
+                "arrangement": "bare",
                 "verification": "never-verified"
               }
             },
@@ -6837,6 +7130,246 @@
       }
     },
     {
+      "name": "mame-handed-its-own-paths-in-a-cwd-the-sandbox-hides-lands-below-its-home",
+      "rationale": "mame_mame_paths_enable is on and mame_read_config off, so MAME's compiled-in save trees are relative paths the frontend process opens from its working directory. The caller names another app's ~/.var/app tree, which the host has and RetroDECK's sandbox masks, so bubblewrap starts RetroArch in the sandbox's home instead (bubblewrap.c:3407-3426 at v0.12.0): each tree is stated as save-root-redirected below that home, and cwd-hidden-in-sandbox names the folder the sandbox did not show.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/org.other.App/states/mame/nvram",
+          "/home/deck/.var/app/org.other.App/states/mame/cfg",
+          "/home/deck/.var/app/org.other.App/system/mame/diff",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so",
+          "cwd": "/home/deck/.var/app/org.other.App"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "nvram_directory",
+                "path": "/home/deck/states/mame/nvram",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "cfg_directory",
+                "path": "/home/deck/states/mame/cfg",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "diff_directory",
+                "path": "/home/deck/system/mame/diff",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/.var/app/org.other.App",
+                "working_directory": "/home/deck"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
+      "name": "mame-handed-its-own-paths-in-a-cwd-the-sandbox-cannot-tell-is-read-as-the-hosts",
+      "rationale": "mame_mame_paths_enable is on and mame_read_config off, so MAME's compiled-in save trees are relative paths the frontend process opens from its working directory. The caller names a folder under /run/user, where RetroDECK's sandbox keeps a private tree of its own that its model cannot tell from the host's, so whether the sandbox shows the folder cannot be told: each tree is stated below the folder read as the host's, and save-directory-visibility-unestablished says the answer rests on that reading.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/arcade/dkong.zip": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "mame_mame_paths_enable = \"enabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/run/user/1000/launcher/states/mame/nvram",
+          "/run/user/1000/launcher/states/mame/cfg",
+          "/run/user/1000/launcher/system/mame/diff",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mame_libretro.so": {
+            "library_name": "MAME",
+            "library_version": "0.282 (a90e86e1)",
+            "options": {
+              "mame_mame_paths_enable": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              },
+              "mame_read_config": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/arcade/dkong.zip",
+          "core_so": "mame_libretro.so",
+          "cwd": "/run/user/1000/launcher"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "unknown",
+            "files": [],
+            "complete": false,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "mame",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "nvram_directory",
+                "path": "/run/user/1000/launcher/states/mame/nvram",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "cfg_directory",
+                "path": "/run/user/1000/launcher/states/mame/cfg",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "save-root-redirected",
+              "data": {
+                "core": "mame",
+                "key": "diff_directory",
+                "path": "/run/user/1000/launcher/system/mame/diff",
+                "options_file": ""
+              }
+            },
+            {
+              "code": "save-directory-visibility-unestablished",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck"
+              }
+            }
+          ],
+          "granularity": null
+        }
+      }
+    },
+    {
       "name": "mames-own-ini-routes-two-trees-and-leaves-one-relative",
       "rationale": "Both switches are on, so MAME's inis govern and the rule reads them the way the emulator searches: $HOME/.mame first, then <system>/mame/ini, the driver's <stem>.ini outranking mame.ini. mame.ini routes the nvram tree absolutely and names a cfg tree the driver's dkong.ini overrides — both redirects are stated per tree with the file each value came from — while the diff tree stays at the compiled-in relative default and lands in save-root-unresolvable.",
       "input": {
@@ -7161,7 +7694,7 @@
     },
     {
       "name": "mames-own-ini-leaves-one-tree-relative-below-a-dead-link-cwd",
-      "rationale": "MAME's inis route the nvram and cfg trees absolutely and leave the diff tree at its relative compiled-in default; the caller names the working folder, here a symlink into nothing. The diff tree is stated below the folder as save-root-redirected, the same statement an absolute tree gets — which states the path without walking it, so the dead link changes nothing in the answer, exactly as it would not for an absolute tree.",
+      "rationale": "MAME's inis route the nvram and cfg trees absolutely and leave the diff tree at its relative compiled-in default; the caller names the working folder, here a symlink into nothing. Inside RetroDECK's sandbox the link leads nowhere, so bubblewrap starts RetroArch in the sandbox's home instead (bubblewrap.c:3407-3426 at v0.12.0): the diff tree is stated below that home as save-root-redirected, and cwd-hidden-in-sandbox names the folder the sandbox did not show.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7267,8 +7800,16 @@
               "data": {
                 "core": "mame",
                 "key": "diff_directory",
-                "path": "/home/deck/launch/system/mame/diff",
+                "path": "/home/deck/system/mame/diff",
                 "options_file": ""
+              }
+            },
+            {
+              "code": "cwd-hidden-in-sandbox",
+              "data": {
+                "app_id": "net.retrodeck.retrodeck",
+                "cwd": "/home/deck/launch",
+                "working_directory": "/home/deck"
               }
             }
           ],
@@ -7278,7 +7819,7 @@
     },
     {
       "name": "mames-own-ini-names-a-relative-tree-climbing-out-of-the-callers-cwd",
-      "rationale": "Both switches are on and mame.ini names the nvram tree as a relative path that climbs out of the working folder (../mame-nvram); the caller names that folder. The tree is stated as save-root-redirected at the folder joined with the value and normalised, so the path carries no .. segment; the cfg tree the inis route absolutely and the diff tree left at its relative default are stated as before.",
+      "rationale": "Both switches are on and mame.ini names the nvram tree as a relative path that climbs out of the working folder (../mame-nvram); the caller names that folder, which RetroDECK's sandbox shows, so RetroArch runs in it. The tree is stated as save-root-redirected at the folder joined with the value and normalised, so the path carries no .. segment; the cfg tree the inis route absolutely and the diff tree left at its relative default are stated as before.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7294,6 +7835,7 @@
           "/mnt/sd/retrodeck/saves",
           "/mnt/sd/retrodeck/bios",
           "/home/deck/mame-nvram",
+          "/home/deck/launch",
           "/mnt/sd/mame-cfg-dkong",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
         ],
