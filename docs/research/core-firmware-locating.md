@@ -11,9 +11,10 @@ Every claim carries an evidence level:
 - **[D]** derived — follows from verified facts by reading, but not directly observed
 - **[O]** open — not yet established
 
-Sources are cited as `file:line`. SwanStation refers to upstream at `4d309c05f` and Beetle PSX to `d6383bff` — each the
-revision the deployed build stamps itself with — and RetroArch to `a79435a`, the pin this repository already uses for
-RetroArch facts (see the header of [`retrodeck-save-placement.md`](retrodeck-save-placement.md)).
+Sources are cited as `file:line`. SwanStation refers to upstream at `4d309c05f`, Beetle PSX to `d6383bff` and PCEE2 to
+`WizzardSK/pcee2-libretro@340ce04` — each the revision the deployed build stamps itself with — and RetroArch to
+`a79435a`, the pin this repository already uses for RetroArch facts (see the header of
+[`retrodeck-save-placement.md`](retrodeck-save-placement.md)).
 
 ## The defect this exists for
 
@@ -30,17 +31,25 @@ The answer needed a word for the door, not a longer list of names. That word is 
 
 ## What was read, and at which revision
 
-**[V]** Two upstream trees and three deployed binaries. A core reports its own version through `retro_get_system_info`,
-and all three put a short commit hash in it, so the binary names the revision its source must be read at rather than the
-other way round. Each stamp below was read twice and independently: once from an unfiltered `strings -a` pass over the
-shipped file, and once through atlas's own core probe (`atlas.machine.CoreInfo.library_version`). The two agreed for all
-three.
+**[V]** Three upstream trees and four deployed binaries. A core reports its own version through `retro_get_system_info`,
+and three of the four put a short commit hash in it, so the binary names the revision its source must be read at rather
+than the other way round. Each of those stamps was read twice and independently: once from an unfiltered `strings -a`
+pass over the shipped file, and once through atlas's own core probe (`atlas.machine.CoreInfo.library_version`). The two
+agreed for all three.
 
-| deployed core                 | reported version   | source revision                         |
-| ----------------------------- | ------------------ | --------------------------------------- |
-| `swanstation_libretro.so`     | `1.0.0 4d309c0`    | `libretro/swanstation@4d309c05f`        |
-| `mednafen_psx_hw_libretro.so` | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff` |
-| `mednafen_psx_libretro.so`    | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff` |
+| deployed core                 | reported version   | source revision                            |
+| ----------------------------- | ------------------ | ------------------------------------------ |
+| `swanstation_libretro.so`     | `1.0.0 4d309c0`    | `libretro/swanstation@4d309c05f`           |
+| `mednafen_psx_hw_libretro.so` | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff`    |
+| `mednafen_psx_libretro.so`    | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff`    |
+| `pcee2_libretro.so`           | `v2.9.78`          | `WizzardSK/pcee2-libretro@340ce04` (stamp) |
+
+PCEE2's reported version names no commit of its own. It is `GIT_REV` (`pcee2-libretro/Libretro.cpp:1436`), which
+`cmake/Pcee2UpstreamVersion.cmake:49-50` replaces with the upstream PCSX2 release recorded in
+`pcee2-libretro/upstream.version` — `v2.9.78`, the same string across several pcee2 commits. The build carries its
+commit another way: `pcsx2/BuildVersion.cpp:14` stores `GIT_HASH`, filled by `git rev-parse HEAD` at build time
+(`cmake/Pcsx2Utils.cmake:85-88`), and the unfiltered `strings -a` pass over the deployed file holds
+`340ce04071716c52692d33194e0bbfef4514bb22` as a line of its own. That constant is the entry's `build.stamp`.
 
 The cores sit under RetroDECK's `components/retroarch/rd_extras/cores/`. SwanStation's own version string is composed at
 `src/libretro/libretro_host_interface.cpp:72` as `"1.0.0 " GIT_VERSION`, which is what makes the hash readable at all;
@@ -52,9 +61,10 @@ would be a guess.
 
 `tests/test_core_firmware_tripwire.py` is what keeps this honest after the fact. Where a core entered in
 `atlas/data/core_firmware.json` is deployed, it asks the binary for its version and fails when the entry's pinned
-revision is not in the answer. It is machine-bound, so an ordinary CI run skips it and the weekly canary is where an
-upgrade surfaces. It is a floor, not a proof: a revision can move without a version string moving, and a core whose
-version carries no hash could not be checked this way at all.
+revision is not in the answer. A core whose version carries no hash is held another way: where the entry states a
+`build.stamp`, the binary itself is searched for that constant, as raw bytes with a NUL on each side, and the entry
+fails where the binary does not carry it whole. It is machine-bound, so an ordinary CI run skips it and the weekly
+canary is where an upgrade surfaces. It is a floor, not a proof: a revision can move without a version string moving.
 
 ## SwanStation — a name first, content as the fallback
 
@@ -216,6 +226,53 @@ either shipped core, while `Checking if required firmware is present...`, which 
 `:182`, occurs in both; a negative reading needs the positive control beside it or it is only a failed grep. The
 tripwire above is what turns a future upgrade into a red test rather than a wrong entry.
 
+## PCEE2 — a name first, its own listing as the fallback
+
+Everything below is at `WizzardSK/pcee2-libretro@340ce04`, a libretro port of current PCSX2 rather than of LRPS2's fork.
+RetroDECK ships the core without its `.info`, so the folder it declares comes from atlas's packaged declaration
+(`atlas/data/core_declarations.json`) rather than from the machine.
+
+**[V] The folder is `<system>/pcsx2/bios`.** `InitializeConfig` sets `EmuFolders::DataRoot` to the frontend's system
+directory joined with `pcsx2` (`pcee2-libretro/Libretro.cpp:481-487`), and `EmuFolders::LoadConfig` resolves the BIOS
+folder under it with the default name `bios` (`pcsx2/Pcsx2Config.cpp:2334`, the default set at `:2306-2308`).
+
+**[V] The option's values come from a listing with no size filter.** `RegisterCoreOptions`, called from
+`retro_set_environment` at every core load (`Libretro.cpp:1418`), lists `<system>/pcsx2/bios` non-recursively with
+`FILESYSTEM_FIND_FILES` (`:669-671`) and keeps every file `IsBIOS` accepts (`:672-678`) as a value of `pcsx2_bios`,
+after a leading `auto` (`:663-664`) and at most 126 files beside it in the 128-slot value array (`:733-736`). Neither of
+its two listings (`:644`, `:670-671`) passes `FILESYSTEM_FIND_HIDDEN_FILES`, so `FindFiles` skips every name starting
+with `.` (`common/FileSystem.cpp:2319-2325`, and the libretro VFS walk at `common/FileSystemVFS.cpp:675-682`). `IsBIOS`
+is the ROMDIR walk `LoadBiosVersion` makes (`pcsx2/ps2/BiosTools.cpp:284-294`, `:80-197`), the same steps as LRPS2's at
+`14d19f8` apart from the stdio calls in place of libretro's file streams, so `atlas.ps2_bios` reads it for both.
+
+**[V] A name first.** A value other than `auto` is written to `Filenames/BIOS` (`Libretro.cpp:1023-1025`, read at
+content load from `retro_load_game` at `:2093`), `FullpathToBios` joins it onto the BIOS folder
+(`pcsx2/Pcsx2Config.cpp:2102-2108`), and `LoadBIOS` opens that path where it exists (`BiosTools.cpp:321-335`).
+
+**[V] The listing as the fallback.** With the option at `auto` nothing is written, and `SettingsOverride` takes the
+first file of the folder's listing that `IsBIOS` accepts, again with no size filter (`Libretro.cpp:640-657`). LRPS2
+keeps only 4–8 MiB; PCEE2's two listings keep any size.
+
+**[D] A stored name reaches the core only when the listing offered it.** By the RetroArch chain above, a stored value
+moves an option off its declared default only where it matches a value the core declared
+(`core_option_manager.c:1031-1053`, the guard at `:1037`). PCEE2's declared values are `auto` and the bare names of the
+unhidden files its listing accepted, so a stored name that is missing, fails the header test, is not a plain file, is
+hidden, or carries a separator reaches the core as `auto` — the listing. Derived from the chain and the registration,
+not from a watched launch. It is also why `LoadBIOS`'s own fallback, `FindBiosImage` with its 4–8 MiB bound
+(`BiosTools.cpp:258-282`, reached at `:322-333`), is not a path a launch through RetroArch takes: an offered name is a
+file the listing just accepted, and `auto` already found any image `FindBiosImage` could.
+
+**[V] `pcsx2/resources` is not firmware for this build.** libretro-core-info's `pcee2_libretro.info` declares it
+required; where it is missing, `InitializeConfig` logs a warning and goes on, because the shaders and fonts the core
+cannot start without are built into it (`Libretro.cpp:495-504`). The packaged declaration leaves it out and says why.
+
+**Where this lives.** Nothing about PCEE2's route fits the region shape SwanStation's entry states — one option names a
+file inside a folder, and the content door is a header read rather than a table — so its entry states the third
+`name_route` shape, a pointer at the folder declaration, and the folder's curated row in
+`atlas.firmware.FIRMWARE_DECLARED_DIRECTORY` states the option, the value `auto`, the absent size filter and the content
+read. LRPS2 has the same shape and is not entered yet: it answers `unestablished` until its own entry and the value
+check above are read for it.
+
 ## What a verdict here must cite
 
 An entry in `atlas/data/core_firmware.json` carries three fields always — `locating`, `build` and `provenance` — and two
@@ -226,14 +283,18 @@ that nothing here reads, or with any part of one left blank (`atlas/core_firmwar
   no entry already answers; an entry stating it would be a citation for having read nothing.
 - `locating.citation` — the `file:line` readings the word rests on, at a revision the entry names. Not a summary: the
   branch that picks the name, the branch that opens it, and the branch that does anything else.
-- `name_route` — the options or the names a launch opens, in **one of two shapes**, and the word decides which. Neither
-  is ever guessed at from what happens to parse: an entry states the key of the shape it means, and one stating both or
-  neither is refused.
+- `name_route` — the options or the names a launch opens, in **one of three shapes**, and the word decides which. None
+  is ever guessed at from what happens to parse: an entry states the key of the shape it means, and one stating several
+  or none is refused.
   - On `by-name-then-content` it is **required**, because a word naming two doors and describing neither leaves the
-    resolver guessing what this file exists to state. It carries `region_option` (the key that pins the console region,
-    its declared default, and every value it takes mapped to a region token — `null` for a value that pins none) and
-    `region_keys` (the key that names the image per region, with the default the core declares). Every region the option
-    can pin needs a key, or a launch it pins is one the route says nothing about.
+    resolver guessing what this file exists to state. It takes one of two shapes. The **folder** shape is
+    `declared_directory`, the declared folder spelled as the declaration spells it, for a core whose one option names a
+    file inside that folder and whose content door is the folder's own listing: the folder's curated row states the
+    option, the value that asks for the listing, the size filter and the content read, so the shape states nothing else
+    and `content_route` is refused beside it. The **option** shape carries `region_option` (the key that pins the
+    console region, its declared default, and every value it takes mapped to a region token — `null` for a value that
+    pins none) and `region_keys` (the key that names the image per region, with the default the core declares). Every
+    region the option can pin needs a key, or a launch it pins is one the route says nothing about.
   - On `by-name` it is **optional**, and it is the other shape: `override_option` (the key tried ahead of everything
     else, its declared default, and every value it takes mapped to the list that value selects — `null` for a value that
     selects none) and `regions` (per console region the ordered `spellings` that region's launch tries and the `sha1`
@@ -245,13 +306,14 @@ that nothing here reads, or with any part of one left blank (`atlas/core_firmwar
     the block describes a door that never opens.
   - Either way its citation covers the branch that decides the name and the branch that opens it, and marks as `[D]`
     anything resting on what the FRONTEND answers rather than on the core's own code.
-- `content_route` — required and refused the same way. It names the packaged table the search recognises a directory by
-  (a bare file name beside the others, never a path), the number of leading bytes the core hashes, and what it does with
-  an image no row holds. Its citation reads those out of the core's source; the table states the last two as the
-  generator read them, and the resolver holds the two against each other, so a table regenerated from another build
-  stops the answer rather than being read under a citation that no longer describes it.
+- `content_route` — required beside the option shape and refused everywhere else. It names the packaged table the search
+  recognises a directory by (a bare file name beside the others, never a path), the number of leading bytes the core
+  hashes, and what it does with an image no row holds. Its citation reads those out of the core's source; the table
+  states the last two as the generator read them, and the resolver holds the two against each other, so a table
+  regenerated from another build stops the answer rather than being read under a citation that no longer describes it.
 - `build.revision` and `build.citation` — the short hash the deployed binary reports and how that was read, so the
-  tripwire has something to compare and a later reader can repeat the measurement.
+  tripwire has something to compare and a later reader can repeat the measurement. `build.stamp` is added where the
+  version names no commit: the string constant the binary carries for the revision, which has to begin with it.
 - `provenance.source` — which tree at which commit, and what was done to reach the citations.
 
 Every string is refused blank as well as empty: a citation of spaces reads as filled in to anything that only checks for
@@ -259,7 +321,7 @@ emptiness.
 
 ## Scope
 
-Three cores are entered. Every other libretro core answers `unestablished`, and that is the honest state — not a backlog
+Four cores are entered. Every other libretro core answers `unestablished`, and that is the honest state — not a backlog
 with a deadline, and not a claim that the others are `by-name`. The standalone emulators atlas carries a firmware card
 for answer from the shape of that card instead, with no second table: a card that states a search describes a directory
 read with per-region keys in front of it, which is `by-name-then-content`, and a card that states `files` or
@@ -267,8 +329,8 @@ read with per-region keys in front of it, which is `by-name-then-content`, and a
 
 **The vocabulary carries only the words a producer exists for.** Three of them, and each is reachable: two rules put a
 word on an answer — the packaged entry a `.so` reaches, and the shape of a standalone card — and `unestablished` is what
-a core neither of them describes takes. Over the 215 `cores[]` blocks the vector corpus holds, the words come out 137
-`unestablished`, 43 `by-name` and 35 `by-name-then-content` (counting rule: the serialized `locating` of every core
+a core neither of them describes takes. Over the 310 `cores[]` blocks the vector corpus holds, the words come out 157
+`unestablished`, 70 `by-name` and 83 `by-name-then-content` (counting rule: the serialized `locating` of every core
 block in every `expected` tree under `vectors/machines/`, tallied by value).
 
 A value nothing produces would be a claim with no mechanism behind it, and a branch a consumer could write and never

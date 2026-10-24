@@ -1601,16 +1601,26 @@ Shape:
 - `build.revision` / `build.citation` — the short commit hash the deployed binary reports through
   `retro_get_system_info`, and how that was read. This is what makes the entry checkable: **the word is a property of
   one build, not of an emulator.** Beetle PSX is the case it was written for — upstream grew a SHA1 directory search
-  after the pinned commit, which would turn a `by-name` core into a `by-name-then-content` one.
-- `name_route` / `content_route` — what the doors read. `content_route` is **present on `by-name-then-content` and
-  refused on every other word**: a word that names two doors and describes neither would leave the resolver guessing
-  exactly what this file exists to replace. It names the packaged table the search recognises a directory by (a bare
-  file name beside the others, never a path), the number of leading bytes the core hashes, and what it does with an
-  image no row holds (`atlas.bios_table.UNKNOWN_POLICIES`).
-- `name_route` comes in **two shapes, one per word**, told apart by the key an entry states and never by what happens to
-  parse — an entry stating both keys or neither is refused.
-  - `by-name-then-content` takes the **option** shape, and must: `region_option` is the option that pins the console
-    region, with every value it takes mapped to a region token — `null` for a value that pins none, which is
+  after the pinned commit, which would turn a `by-name` core into a `by-name-then-content` one. `build.stamp` is
+  optional, for a core whose reported version names no commit: the string constant the binary carries for the revision,
+  beginning with it — PCEE2 reports the upstream PCSX2 release and carries its full commit hash as a constant of its
+  own.
+- `name_route` / `content_route` — what the doors read. `content_route` is **present on `by-name-then-content` beside
+  the option shape below and refused everywhere else**: a word that names two doors and describes neither would leave
+  the resolver guessing exactly what this file exists to replace. It names the packaged table the search recognises a
+  directory by (a bare file name beside the others, never a path), the number of leading bytes the core hashes, and what
+  it does with an image no row holds (`atlas.bios_table.UNKNOWN_POLICIES`).
+- `name_route` comes in **three shapes**, told apart by the key an entry states and never by what happens to parse — an
+  entry stating several keys or none is refused.
+  - `by-name-then-content` may take the **folder** shape instead of the option shape: `declared_directory` names a
+    folder the core declares, spelled as the declaration spells it, for a core whose one option names a file inside it
+    and whose content door is the folder's own listing. The folder's curated row in
+    `atlas.firmware.FIRMWARE_DECLARED_DIRECTORY` states the option, the value that asks for the listing, the size filter
+    and the content read, so this shape states nothing else, and a `content_route` beside it is refused — the core reads
+    headers, it looks nothing up in a table. PCEE2 is the case:
+    `"name_route": { "declared_directory": "pcsx2/bios", "citation": "..." }`.
+  - `by-name-then-content` otherwise takes the **option** shape, and must: `region_option` is the option that pins the
+    console region, with every value it takes mapped to a region token — `null` for a value that pins none, which is
     SwanStation's `Auto`, the running disc's own region — and `region_keys` is the option that names the image per
     region with the default the core declares, so the pair reads fully even on a machine whose options file has never
     mentioned either. Every region the option can pin needs a key, or a launch it pins is one the route says nothing
@@ -1656,12 +1666,67 @@ Shape:
 - Every string is refused **blank** as well as empty. A citation of spaces reads as filled in to anything that only
   checks for emptiness, and this file's entire value is that it does not guess.
 - **`tests/test_core_firmware_tripwire.py` is what keeps the file honest.** Where an entered core is deployed it asks
-  the binary for its version string and fails when the entry's pinned revision is not in it. Machine-bound, so an
-  ordinary CI run skips it and the weekly canary is where an upgrade surfaces. A floor, not a proof: a revision can move
-  without a version string moving.
+  the binary for its version string and fails when the entry's pinned revision is not in it — or, where the entry states
+  a `build.stamp`, searches the binary for that constant with a NUL on each side. Machine-bound, so an ordinary CI run
+  skips it and the weekly canary is where an upgrade surfaces. A floor, not a proof: a revision can move without a
+  version string moving.
 - The carded standalone emulators need no entry here. Their word comes from the shape of their own
   `standalone_firmware.json` card — a `search` card is `by-name-then-content`, a `files` or `config_files` card is
   `by-name` — because the shape already is the statement.
+
+## `core_declarations.json` — the declaration of a core shipped without its `.info`
+
+A libretro core declares its firmware in its `.info` and nowhere else on the machine. Where a distribution deploys the
+`.so` and not the `.info` — RetroDECK ships PCEE2 that way — the firmware route has nothing to read, and the core would
+answer `declaration: unreadable` with `core-info-unreadable`. An entry here stands in the missing file's place: the
+firmware the core opens, read from its source at a pinned revision, so the core answers `declaration: packaged` with
+`core-info-packaged {core_so}` leading its caveats. Read by `atlas.core_declarations.load_core_declarations`; the
+readings are in [`docs/research/core-firmware-locating.md`](../../docs/research/core-firmware-locating.md).
+
+```json
+{
+  "schema": 1,
+  "spec": "...",
+  "cores": {
+    "pcee2": {
+      "systemname": {
+        "name": "Sony PlayStation 2",
+        "citation": "libretro-core-info's pcee2_libretro.info at b03bfc4 ..."
+      },
+      "firmware": [
+        {
+          "path": "pcsx2/bios",
+          "description": "...",
+          "need": "required",
+          "citation": "pcee2-libretro/Libretro.cpp:481-487 ..."
+        }
+      ],
+      "left_out": [{ "path": "pcsx2/resources", "citation": "pcee2-libretro/Libretro.cpp:495-504 ..." }],
+      "build": { "revision": "340ce04", "stamp": "340ce04071716c52692d33194e0bbfef4514bb22", "citation": "..." },
+      "provenance": { "source": "github.com/WizzardSK/pcee2-libretro, branch libretro, at 340ce04... ..." }
+    }
+  }
+}
+```
+
+- Keyed by the `.so` short name, like `core_firmware.json`. An entry is read **only where the `.info` is missing**: one
+  that is there is the machine's own declaration and is read as it stands, and one that is there and cannot be read
+  stays `unreadable`. A core with no entry keeps `core-info-unreadable` — the entry is per core, never a default.
+- `systemname` — what a `.info` for the core states, so the slots are filed through the same map a read `.info` goes
+  through and a requirement's `system_source` is `systemname`. It is the one field taken from upstream's packaging
+  rather than from the core's source, and its citation says so: the published `.info` is not imported for its
+  requirements.
+- `firmware` — one slot per path, the way a `.info` slot declares it: relative to the system directory, `need`
+  `required` or `optional`, and a citation for both. Whether the core opens the path as a folder is the same curated
+  question it is for a read `.info` (`atlas.firmware.FIRMWARE_DECLARED_DIRECTORY`).
+- `left_out` — each path a published `.info` for the core declares and this build does not need, with the citation that
+  shows it. A published `.info` is deliberately not what is packaged: libretro-core-info's `pcee2_libretro.info`
+  declares `pcsx2/resources` required, and this build embeds what that folder was needed for.
+- `build` — the revision the citations were read at, and `stamp`, the string constant the deployed binary carries for
+  it, which begins with the revision. `tests/test_core_declarations_tripwire.py` searches the deployed binary for the
+  stamp as raw bytes with a NUL on each side, and fails where it is not carried whole.
+- Every string is refused blank as well as empty, a path is refused absolute, climbing or ending in a separator, and a
+  path is never both declared and left out.
 
 ## `duckstation_bios.json` and `swanstation_bios.json` — what a PlayStation BIOS _is_, by content
 

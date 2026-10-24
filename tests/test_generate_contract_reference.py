@@ -478,7 +478,7 @@ class TestTheProseTheAnswerTypesCarry:
             attributes=3, docstrings=2, commented=0
         )
         assert reference.attribute_prose([CoreDeclarations]) == reference.AttributeProse(
-            attributes=11, docstrings=0, commented=1
+            attributes=12, docstrings=0, commented=1
         )
 
     def test_an_attribute_that_says_nothing_is_still_counted(self) -> None:

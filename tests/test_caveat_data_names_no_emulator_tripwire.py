@@ -189,6 +189,7 @@ _CORE_FILE_ATTRIBUTES = (".core_so",)
 UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
     ("firmware.py", "_configured_image_caveat", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "_configured_image_missing", CORE_KEY): "core_short_name(core.stem)",
+    ("firmware.py", "_configured_image_not_offered", CORE_KEY): "core_short_name(core.stem)",
     ("firmware.py", "_override_image_missing", CORE_KEY): "core_short_name(core.stem)",
     # The ``.so`` short name off :func:`atlas.firmware._core_alternative_key`,
     # which is the spelling the system table names exempted cores by.
