@@ -107,6 +107,9 @@ BEETLE_ROOT_LIMIT = 1024 * 1024 * 10
 MAX_FILE_BYTES = 1 << 20
 MAX_DIRECTORY_BYTES = 16 << 20
 MAX_SECTOR_READS = 1 << 17
+# The most of a cue sheet read, as much as a playlist may hold
+# (atlas.psx_region): a sheet of 99 tracks fits a few KiB.
+MAX_CUE_BYTES = 4 << 20
 SYSTEM_CNF = b"SYSTEM.CNF"
 SYSTEM_CNF_RECORD = b"SYSTEM.CNF;1"
 FALLBACK_EXECUTABLE = b"PSX.EXE"
@@ -424,7 +427,10 @@ def _beside(path: str, name: bytes) -> str:
 def _track1_of_cue(path: str, opener: Opener) -> str:
     """The file holding track 1 of the cue sheet at *path*, once every file the sheet names has opened."""
     with opener(path) as handle:
-        tracks = parse_cue(handle.read())
+        data = handle.read(MAX_CUE_BYTES + 1)
+    if len(data) > MAX_CUE_BYTES:
+        raise Unreadable(f"a cue sheet of more than atlas's bound of {MAX_CUE_BYTES} bytes")
+    tracks = parse_cue(data)
     for full in dict.fromkeys(_beside(path, track.file) for track in tracks):
         opener(full).close()
     track = next(t for t in tracks if t.number == 1)
@@ -773,7 +779,8 @@ def read_identity(path: str, opener: Opener) -> DiscIdentity:
     untouched, so the caller keeps the plain read's difference between a file
     that is not there and one that will not open. Raises :class:`NotADisc`,
     :class:`FormatNotRead` and :class:`Unreadable` as documented on them and on
-    :func:`identity_of`. The suffix decides the reader
+    :func:`identity_of` — :class:`Unreadable` too for a cue sheet longer than
+    :data:`MAX_CUE_BYTES`. The suffix decides the reader
     the way both emulators that open these formats decide it, without regard to
     case (cd_image.cpp:81-89).
     """

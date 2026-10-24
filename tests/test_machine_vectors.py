@@ -77,6 +77,7 @@ def fixture_machine(inp) -> FixtureMachine:
         appimage_stamps=inp.get("appimage_stamps"),
         ps2_bios_headers=inp.get("ps2_bios_headers"),
         disc_identities=inp.get("disc_identities"),
+        archive_texts=inp.get("archive_texts"),
         archives=inp.get("archives"),
         whdload_slaves=inp.get("whdload_slaves"),
     )

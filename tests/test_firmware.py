@@ -149,6 +149,7 @@ from atlas.machine import (
     CoreInfo,
     CoreReading,
     DiscIdentityResult,
+    ExtractedEntry,
     FixtureFileSpec,
     FixtureMachine,
     GlobResult,
@@ -5973,13 +5974,21 @@ class _CountingMachine:
         self._count("read_ps2_bios_header")
         return self._inner.read_ps2_bios_header(path)
 
-    def read_disc_identity(self, path: str) -> DiscIdentityResult:
+    def read_disc_identity(self, path: str, *, extracted: ExtractedEntry | None = None) -> DiscIdentityResult:
         self._count("read_disc_identity")
-        return self._inner.read_disc_identity(path)
+        return self._inner.read_disc_identity(path, extracted=extracted)
 
     def list_archive(self, path: str) -> ArchiveListResult:
         self._count("list_archive")
         return self._inner.list_archive(path)
+
+    def list_disc_archive(self, path: str) -> ArchiveListResult:
+        self._count("list_disc_archive")
+        return self._inner.list_disc_archive(path)
+
+    def read_archive_text(self, archive: str, entry: str, limit: int) -> ReadResult | None:
+        self._count("read_archive_text")
+        return self._inner.read_archive_text(archive, entry, limit)
 
     def read_whdload_slave(self, path: str) -> WhdloadSlaveResult:
         self._count("read_whdload_slave")

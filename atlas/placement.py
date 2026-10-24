@@ -808,8 +808,9 @@ REASON_DATA_ROOT_DECIDED_BY_LAUNCH = "data-root-decided-by-launch"
 # ``region-decided-by-disc`` on that group and keep its ``regions``,
 # ``unstated``, ``dir`` and ``core_so`` / ``token``, adding ``content_path``,
 # the path the question named. ``disc-format-unread`` is an image of a format
-# atlas does not read (``disc`` names the image — the path itself, or the first
-# entry of its playlist — and ``extension`` its suffix); ``disc-unread`` is an
+# atlas does not read (``disc`` names the image — the path itself, the first
+# entry of its playlist, or the archive entry RetroArch extracts, spelled
+# ``<archive>#<entry>`` — and ``extension`` its suffix); ``disc-unread`` is an
 # image atlas reads that did not yield a region (``disc``, and ``status`` from
 # :data:`atlas.psx_region.DISC_UNREAD_STATUSES`); ``content-unopenable`` is
 # content the emulator itself does not open (``extension``), a fact about the

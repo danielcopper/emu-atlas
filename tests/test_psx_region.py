@@ -291,13 +291,13 @@ class TestOneContentPath:
         reading = psx_region.read_disc_region(machine({"/roms/Game.exe": "x"}), emulator, "/roms/Game.exe")
         assert (reading.reason, reading.extension) == (REASON_DISC_FORMAT_UNREAD, "exe")
 
-    @pytest.mark.parametrize("suffix", ["pbp", "ecm", "mds"])
+    @pytest.mark.parametrize("suffix", ["ecm", "mds"])
     def test_an_image_the_emulator_opens_and_atlas_does_not_read(self, suffix):
         path = f"/roms/Game.{suffix}"
         reading = psx_region.read_disc_region(machine({path: "x"}), EMULATOR_SWANSTATION, path)
         assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=path, extension=suffix)
 
-    @pytest.mark.parametrize("suffix", ["bin", "iso", "img", "zip"])
+    @pytest.mark.parametrize("suffix", ["bin", "iso", "img"])
     def test_content_beetle_does_not_open(self, suffix):
         path = f"/roms/Game.{suffix}"
         reading = psx_region.read_disc_region(machine({path: "x"}), EMULATOR_BEETLE, path)
@@ -407,3 +407,213 @@ class TestDuckStationSettings:
         assert psx_region.custom_property(text, "/roms/Game.cue", "Region") == "NTSC-U"
         assert psx_region.custom_property(text, "/roms/Game%20.cue", "Region") == "PAL"
         assert psx_region.custom_property(text, "/roms/Other.cue", "Region") is None
+
+
+PBP = "/roms/Game.pbp"
+
+
+def pbp(*, refuses: bool = False, encrypted: bool = False, read: Any = None) -> FixtureMachine:
+    spec = {"duckstation_refuses": refuses, "encrypted": encrypted, "identity": FACTS if read is None else read}
+    return machine({PBP: "x"}, {PBP: spec})
+
+
+class TestAPbp:
+    """D1 of #691: a PBP read by each emulator's reader, refused by DuckStation's and SwanStation's, or encrypted."""
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_pbp_every_reader_opens_is_read_and_decided(self, emulator):
+        assert psx_region.read_disc_region(pbp(), emulator, PBP) == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION])
+    def test_duckstation_and_swanstation_do_not_open_one_they_refuse(self, emulator):
+        reading = psx_region.read_disc_region(pbp(refuses=True), emulator, PBP)
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=PBP, extension="pbp")
+
+    def test_beetle_reads_one_duckstation_refuses(self):
+        assert psx_region.read_disc_region(pbp(refuses=True), EMULATOR_BEETLE, PBP).region == NTSC_U
+
+    def test_beetle_decrypts_an_encrypted_one_which_atlas_does_not_read(self):
+        # Whatever the other readers found: Beetle decrypts it.
+        reading = psx_region.read_disc_region(pbp(encrypted=True), EMULATOR_BEETLE, PBP)
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=PBP, extension="pbp")
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION])
+    def test_duckstation_and_swanstation_refuse_an_encrypted_one(self, emulator):
+        reading = psx_region.read_disc_region(pbp(refuses=True, encrypted=True, read="format-not-read"), emulator, PBP)
+        assert reading.reason == REASON_CONTENT_UNOPENABLE
+
+    def test_a_disc_structure_the_readers_refuse(self):
+        reading = psx_region.read_disc_region(pbp(read="not-a-disc"), EMULATOR_SWANSTATION, PBP)
+        assert reading == DiscRegionReading(reason=REASON_DISC_UNREAD, disc=PBP, status=DISC_UNREAD_NOT_A_DISC)
+
+    def test_a_pbp_named_by_a_playlist(self):
+        files = {"/roms/Game.m3u": "Game.pbp\n", PBP: "x"}
+        spec = {"duckstation_refuses": True, "encrypted": False, "identity": FACTS}
+        reading = psx_region.read_disc_region(machine(files, {PBP: spec}), EMULATOR_SWANSTATION, "/roms/Game.m3u")
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=PBP, extension="pbp")
+
+
+SWAN_CLAIMS = frozenset({"exe", "psexe", "cue", "bin", "img", "iso", "chd", "pbp", "ecm", "mds", "psf", "m3u"})
+BEETLE_CLAIMS = frozenset({"exe", "cue", "toc", "ccd", "m3u", "pbp", "chd"})
+ZIP = "/roms/Game.zip"
+
+
+class TestTheEntryRetroArchExtracts:
+    """extracted_entry: the claimed entries, sorted by strcasecmp, the first written (D2 of #691)."""
+
+    def test_the_first_claimed_entry_by_name(self):
+        assert psx_region.extracted_entry(["readme.txt", "Game.cue", "Game.bin"], SWAN_CLAIMS) == "Game.bin"
+        assert psx_region.extracted_entry(["readme.txt", "Game.cue", "Game.bin"], BEETLE_CLAIMS) == "Game.cue"
+
+    def test_the_sort_ignores_case_and_reads_the_whole_name(self):
+        # strcasecmp over "Game (Track 01).bin" and "Game.cue": a space sorts before a dot.
+        assert psx_region.extracted_entry(["Game.cue", "Game (Track 01).bin"], SWAN_CLAIMS) == "Game (Track 01).bin"
+        # A folder is part of the name: "b/a.chd" sorts after "A.CHD" and before "Game.cue".
+        assert psx_region.extracted_entry(["Game.cue", "b/a.chd", "A.CHD"], SWAN_CLAIMS) == "A.CHD"
+        assert psx_region.extracted_entry(["Game.cue", "b/a.chd"], SWAN_CLAIMS) == "b/a.chd"
+
+    def test_an_extension_is_claimed_without_case(self):
+        assert psx_region.extracted_entry(["GAME.PBP"], BEETLE_CLAIMS) == "GAME.PBP"
+
+    def test_directories_and_unclaimed_entries_are_passed_over(self):
+        assert psx_region.extracted_entry(["Game.cue/", "Game", "Game.txt"], BEETLE_CLAIMS) is None
+
+    def test_of_two_names_apart_only_by_case_the_archive_s_first_is_written(self):
+        assert psx_region.extracted_entry(["game.chd", "GAME.chd"], BEETLE_CLAIMS) == "game.chd"
+        assert psx_region.extracted_entry(["GAME.chd", "game.chd"], BEETLE_CLAIMS) == "GAME.chd"
+
+
+def archive(members: list[str], identities: Mapping[str, Any] | None = None, **extra: Any) -> FixtureMachine:
+    return FixtureMachine(
+        {ZIP: "x", **extra.pop("files", {})},
+        archives={ZIP: members},
+        disc_identities=identities or {},
+        **extra,
+    )
+
+
+def hands(claims: frozenset[str] | None, **kwargs: Any) -> psx_region.ArchiveHands:
+    return psx_region.ArchiveHands(claims=claims, **kwargs)
+
+
+class TestAnArchive:
+    """D2 of #691: an archive under SwanStation or Beetle PSX answers from the entry RetroArch extracts."""
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_chd_inside_is_read_as_a_chd(self, emulator):
+        spec = {"codecs": ["cdlz"], "requires_parent": False, "identity": FACTS}
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": spec})
+        claims = SWAN_CLAIMS if emulator == EMULATOR_SWANSTATION else BEETLE_CLAIMS
+        assert psx_region.read_disc_region(machine, emulator, ZIP, hands(claims)) == decided(
+            NTSC_U, REGION_SOURCE_LICENSE
+        )
+
+    def test_the_entry_s_own_format_decides_what_the_emulator_opens(self):
+        spec = {"codecs": ["cdzs"], "requires_parent": False, "identity": FACTS}
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": spec})
+        reading = psx_region.read_disc_region(machine, EMULATOR_SWANSTATION, ZIP, hands(SWAN_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=f"{ZIP}#Game.chd", extension="chd")
+
+    def test_swanstation_opens_the_first_bin_as_a_bare_image(self):
+        machine = archive(["Game.cue", "Game.bin"], {f"{ZIP}#Game.bin": FACTS})
+        reading = psx_region.read_disc_region(machine, EMULATOR_SWANSTATION, ZIP, hands(SWAN_CLAIMS))
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_a_cue_extracted_without_its_bin_is_content_the_core_cannot_open(self):
+        machine = archive(["Game.cue", "Game.bin"], {f"{ZIP}#Game.cue": "missing"})
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=f"{ZIP}#Game.cue", extension="cue")
+
+    def test_a_cue_whose_bin_lies_where_it_is_extracted_is_read(self):
+        machine = archive(["Game.cue"], {f"{ZIP}#Game.cue": FACTS})
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading.region == NTSC_U
+
+    def test_no_claimed_entry_extracts_nothing(self):
+        reading = psx_region.read_disc_region(archive(["readme.txt"]), EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=ZIP, extension="zip")
+
+    def test_an_entry_in_a_folder_lands_in_a_directory_that_does_not_exist(self):
+        spec = {"codecs": ["cdlz"], "requires_parent": False, "identity": FACTS}
+        machine = archive(["sub/Game.chd"], {f"{ZIP}#sub/Game.chd": spec})
+        beside = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert beside == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=f"{ZIP}#sub/Game.chd", extension="chd")
+        cached = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, cache_directory="/tmp"))
+        assert cached.region == NTSC_U
+
+    def test_a_core_that_takes_archives_raw(self):
+        reading = psx_region.read_disc_region(archive(["Game.chd"]), EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, block_extract=True))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=ZIP, extension="zip")
+
+    @pytest.mark.parametrize("name", ["/roms/Game.7z", "/roms/Game.zst", "/roms/Game.ZST"])
+    def test_an_archive_the_standard_library_cannot_read(self, name):
+        reading = psx_region.read_disc_region(machine({name: "x"}), EMULATOR_SWANSTATION, name, hands(SWAN_CLAIMS))
+        assert reading.reason == REASON_DISC_FORMAT_UNREAD
+
+    def test_a_7z_with_a_capital_z_is_no_archive_to_retroarch(self):
+        reading = psx_region.read_disc_region(machine({"/roms/Game.7Z": "x"}), EMULATOR_SWANSTATION, "/roms/Game.7Z")
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc="/roms/Game.7Z", extension="7z")
+
+    def test_an_apk_is_read_as_a_zip(self):
+        spec = {"codecs": ["cdlz"], "requires_parent": False, "identity": FACTS}
+        apk = "/roms/Game.apk"
+        machine = FixtureMachine({apk: "x"}, archives={apk: ["Game.chd"]}, disc_identities={f"{apk}#Game.chd": spec})
+        assert psx_region.read_disc_region(machine, EMULATOR_BEETLE, apk, hands(BEETLE_CLAIMS)).region == NTSC_U
+
+    def test_claims_nobody_read(self):
+        reading = psx_region.read_disc_region(archive(["Game.chd"]), EMULATOR_BEETLE, ZIP, hands(None))
+        assert (reading.disc, reading.extension) == (ZIP, "zip")
+        assert reading.region is None
+
+    def test_duckstation_opens_no_archive(self):
+        reading = psx_region.read_disc_region(archive(["Game.chd"]), EMULATOR_DUCKSTATION, ZIP, hands(SWAN_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=ZIP, extension="zip")
+
+    def test_an_archive_that_does_not_list(self):
+        absent = psx_region.read_disc_region(machine({}), EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert (absent.reason, absent.status) == (REASON_DISC_UNREAD, DISC_UNREAD_MISSING)
+        broken = FixtureMachine({ZIP: "x"}, archives={ZIP: "not-archive"})
+        assert psx_region.read_disc_region(broken, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS)).status == (
+            DISC_UNREAD_NOT_A_DISC
+        )
+        undeclared = psx_region.read_disc_region(machine({ZIP: "x"}), EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert undeclared.status == DISC_UNREAD_NOT_A_DISC
+
+    def test_a_cue_landing_in_a_cache_directory_atlas_cannot_place(self):
+        machine = archive(["Game.cue"], {f"{ZIP}#Game.cue": FACTS})
+        reading = psx_region.read_disc_region(
+            machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, cache_directory_read=False)
+        )
+        assert reading == DiscRegionReading(reason=REASON_DISC_UNREAD, disc=f"{ZIP}#Game.cue", status=DISC_UNREAD_UNREADABLE)
+
+    def test_a_boot_file_inside_is_a_format_atlas_does_not_read(self):
+        reading = psx_region.read_disc_region(archive(["Game.exe"]), EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=f"{ZIP}#Game.exe", extension="exe")
+
+
+class TestAPlaylistInsideAnArchive:
+    @pytest.mark.parametrize("emulator", [EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_its_discs_are_looked_for_beside_where_it_is_written(self, emulator):
+        machine = archive(
+            ["Game.m3u", "Game.cue"],
+            {GAME: FACTS},
+            files={GAME: "x"},
+            archive_texts={f"{ZIP}#Game.m3u": "Game.cue\n"},
+        )
+        claims = frozenset({"m3u"})
+        assert psx_region.read_disc_region(machine, emulator, ZIP, hands(claims)).region == NTSC_U
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_disc_left_inside_the_archive_is_content_the_core_cannot_open(self, emulator):
+        machine = archive(["Game.m3u", "Game.cue"], archive_texts={f"{ZIP}#Game.m3u": "Game.cue\n"})
+        reading = psx_region.read_disc_region(machine, emulator, ZIP, hands(frozenset({"m3u"})))
+        assert reading == DiscRegionReading(reason=REASON_CONTENT_UNOPENABLE, disc=f"{ZIP}#Game.m3u", extension="m3u")
+
+    def test_a_playlist_with_no_entry(self):
+        machine = archive(["Game.m3u"], archive_texts={f"{ZIP}#Game.m3u": "\n"})
+        reading = psx_region.read_disc_region(machine, EMULATOR_SWANSTATION, ZIP, hands(frozenset({"m3u"})))
+        assert reading.reason == REASON_CONTENT_UNOPENABLE
+
+    def test_a_playlist_text_not_declared_is_missing(self):
+        reading = psx_region.read_disc_region(archive(["Game.m3u"]), EMULATOR_BEETLE, ZIP, hands(frozenset({"m3u"})))
+        assert (reading.reason, reading.status) == (REASON_DISC_UNREAD, DISC_UNREAD_MISSING)

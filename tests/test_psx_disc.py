@@ -324,6 +324,16 @@ class TestWhatTheDiscMakesUsRead:
             read(path)
 
 
+class TestACueSheetPastItsBound:
+    def test_a_cue_sheet_longer_than_the_bound_is_unreadable(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(psx_disc, "MAX_CUE_BYTES", len(CUE) - 1)
+        path = write_game(tmp_path, disc())
+        with pytest.raises(psx_disc.Unreadable, match="cue sheet of more than"):
+            read(path)
+        monkeypatch.setattr(psx_disc, "MAX_CUE_BYTES", len(CUE))
+        assert read(write_game(tmp_path, disc())).license.startswith(US)
+
+
 class TestACueSheetThatOpensNoDisc:
     @pytest.mark.parametrize(
         "cue",
@@ -447,7 +457,7 @@ class TestTheSeamMapsEveryOutcome:
         assert RealMachine().read_disc_identity(str(path)) == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
     def test_a_suffix_no_reader_opens_is_format_not_read(self, tmp_path):
-        path = tmp_path / "Game.pbp"
+        path = tmp_path / "Game.ecm"
         path.write_bytes(b"MComprHD")
         assert RealMachine().read_disc_identity(str(path)) == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
@@ -471,7 +481,7 @@ class TestTheFixtureModelsTheAnswer:
     """FixtureMachine.read_disc_identity — the four facts in, the same outcomes out."""
 
     def _machine(self, **kwargs) -> FixtureMachine:
-        files = {GAME: CUE, "/roms/psx/Game.pbp": "x", "/roms/psx/Locked.cue": {"status": "unreadable"}}
+        files = {GAME: CUE, "/roms/psx/Game.ecm": "x", "/roms/psx/Locked.cue": {"status": "unreadable"}}
         return FixtureMachine(files, **kwargs)
 
     def test_a_declared_identity_answers_what_the_reader_would_hold(self, tmp_path):
@@ -486,7 +496,7 @@ class TestTheFixtureModelsTheAnswer:
         assert self._machine().read_disc_identity(GAME) == DiscIdentityResult(DISC_MISSING)
 
     def test_a_suffix_no_reader_opens_answers_format_not_read(self):
-        assert self._machine().read_disc_identity("/roms/psx/Game.pbp") == DiscIdentityResult(DISC_FORMAT_NOT_READ)
+        assert self._machine().read_disc_identity("/roms/psx/Game.ecm") == DiscIdentityResult(DISC_FORMAT_NOT_READ)
 
     def test_an_absent_file_a_directory_and_an_unreadable_file(self):
         machine = self._machine()
@@ -503,7 +513,7 @@ class TestTheFixtureModelsTheAnswer:
         [
             ({"/roms/psx/Nope.cue": FACTS}, "no file is declared there"),
             ({"/roms/psx/Locked.cue": FACTS}, "an unreadable file states no identity"),
-            ({"/roms/psx/Game.pbp": FACTS}, "no reader opens this suffix"),
+            ({"/roms/psx/Game.ecm": FACTS}, "no reader opens this suffix"),
             ({GAME: "format-not-read"}, "a state must be one of"),
             ({GAME: {**FACTS, "serial": "x"}}, "exactly"),
             ({GAME: {**FACTS, "license": "x" * 73}}, "at most"),

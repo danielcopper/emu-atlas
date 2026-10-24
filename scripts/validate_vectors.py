@@ -43,6 +43,7 @@ INPUT_FIELDS_OPTIONAL = {
     "ps2_bios_headers",
     "disc_identities",
     "archives",
+    "archive_texts",
     "whdload_slaves",
     "savefile_query",
     "aggregate_query",
@@ -1235,8 +1236,9 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_appimage_stamps(name, inp.get("appimage_stamps", {}), inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
-    _validate_input_disc_identities(name, inp.get("disc_identities", {}), inp["files"])
     _validate_input_archives(name, inp.get("archives", {}), inp["files"])
+    _validate_input_disc_identities(name, inp.get("disc_identities", {}), inp["files"], inp.get("archives", {}))
+    _validate_input_archive_texts(name, inp.get("archive_texts", {}), inp.get("archives", {}))
     _validate_input_whdload_slaves(name, inp.get("whdload_slaves", {}), inp)
     _validate_input_queries(name, inp)
 
@@ -1386,7 +1388,35 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
 # forgot the key from proving a region nobody modeled.
 DISC_IDENTITY_STATES = {"missing", "unreadable", "not-a-disc"}
 DISC_IDENTITY_FIELDS = {"license", "system_cnf", "boot_found", "edc_valid"}
-DISC_IDENTITY_SUFFIXES = {".cue", ".bin", ".img", ".iso", ".chd"}
+DISC_IDENTITY_SUFFIXES = {".cue", ".bin", ".img", ".iso", ".chd", ".pbp"}
+# A PBP: "unreadable" alone, or both readers' opening facts beside the four
+# facts or a state of the read of the disc.
+PBP_FIELDS = {"duckstation_refuses", "encrypted", "identity"}
+PBP_READ_STATES = {"unreadable", "not-a-disc", "format-not-read", "codec-unavailable"}
+# An archive entry is spelled the way RetroArch spells content inside an
+# archive (atlas.content_path.archive_delimiter): the archive, the first '#'
+# behind one of these suffixes, the entry.
+ARCHIVE_DELIMITED = (".zip", ".zst", ".apk")
+
+
+def _archive_entry_key(key: str) -> tuple[str, str] | None:
+    """``(archive, entry)`` for a key in ``<archive>#<entry>`` spelling, else ``None``."""
+    at = key.find("#")
+    while at != -1:
+        if at > 3 and key[at - 3 : at - 1] == ".7" and key[at - 1] in "zZ":
+            return key[:at], key[at + 1 :]
+        if at > 4 and key[at - 4 : at].lower() in ARCHIVE_DELIMITED:
+            return key[:at], key[at + 1 :]
+        at = key.find("#", at + 1)
+    return None
+
+
+def _validate_entry_key(name: str, what: str, key: str, archives: Any) -> None:
+    """A declaration about an archive entry stands on an entry the archive's declared listing names."""
+    archive, entry = _archive_entry_key(key) or ("", "")
+    listed = archives.get(archive) if isinstance(archives, dict) else None
+    if not isinstance(listed, list) or entry not in listed:
+        fail(f"{name}: {what} {key!r} must name an entry `archives` lists in that archive")
 # A CHD declares a state where its header was not read, and otherwise the
 # header's facts beside what the read found after them: the four facts, or a
 # state a read past the header can end in — "parent-not-found" only where the
@@ -1399,22 +1429,60 @@ CHD_READ_STATES = {"unreadable", "not-a-disc", "format-not-read", "codec-unavail
 DISC_LICENSE_LENGTH = 0x48
 
 
-def _validate_input_disc_identities(name: str, identities: Any, files: Any) -> None:
+def _validate_input_disc_identities(name: str, identities: Any, files: Any, archives: Any) -> None:
     if not isinstance(identities, dict):
         fail(f"{name}: input.disc_identities must be an object")
     for path, spec in identities.items():
-        if not isinstance(path, str) or path not in files:
-            fail(f"{name}: disc identity {path!r} must name a declared file")
-        file_spec = files[path]
-        if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
-            fail(f"{name}: disc identity {path!r} sits on an unreadable file, whose bytes yield no identity")
+        _validate_disc_identity_path(name, path, files, archives)
         suffix = os.path.splitext(path)[1].lower()
         if suffix not in DISC_IDENTITY_SUFFIXES:
             fail(f"{name}: disc identity {path!r} has a suffix no reader opens, so it answers format-not-read")
         if suffix == ".chd":
             _validate_chd_spec(name, path, spec)
+        elif suffix == ".pbp":
+            _validate_pbp_spec(name, path, spec)
         else:
             _validate_disc_identity_spec(name, path, spec)
+
+
+def _validate_disc_identity_path(name: str, path: Any, files: Any, archives: Any) -> None:
+    """An identity describes bytes the fixture holds: a readable declared file, or an entry a listing names."""
+    if isinstance(path, str) and _archive_entry_key(path) is not None:
+        _validate_entry_key(name, "disc identity", path, archives)
+        return
+    if not isinstance(path, str) or path not in files:
+        fail(f"{name}: disc identity {path!r} must name a declared file")
+    file_spec = files[path]
+    if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+        fail(f"{name}: disc identity {path!r} sits on an unreadable file, whose bytes yield no identity")
+
+
+def _validate_pbp_spec(name: str, path: str, spec: Any) -> None:
+    if isinstance(spec, str):
+        if spec != "unreadable":
+            fail(f"{name}: disc identity {path!r} is a PBP: its only state is 'unreadable', got {spec!r}")
+        return
+    if not isinstance(spec, dict) or set(spec) != PBP_FIELDS:
+        fail(f"{name}: disc identity {path!r} is a PBP: 'unreadable' or an object with exactly {sorted(PBP_FIELDS)}")
+    if not isinstance(spec["duckstation_refuses"], bool) or not isinstance(spec["encrypted"], bool):
+        fail(f"{name}: disc identity {path!r} duckstation_refuses and encrypted must be booleans")
+    identity = spec["identity"]
+    if isinstance(identity, str):
+        if identity not in PBP_READ_STATES:
+            fail(f"{name}: disc identity {path!r} read state must be one of {sorted(PBP_READ_STATES)}, got {identity!r}")
+        return
+    _validate_disc_identity_spec(name, path, identity)
+
+
+def _validate_input_archive_texts(name: str, texts: Any, archives: Any) -> None:
+    if not isinstance(texts, dict):
+        fail(f"{name}: input.archive_texts must be an object")
+    for key, text in texts.items():
+        if not isinstance(key, str) or _archive_entry_key(key) is None:
+            fail(f"{name}: archive text {key!r} must be spelled <archive>#<entry>")
+        _validate_entry_key(name, "archive text", key, archives)
+        if not isinstance(text, str):
+            fail(f"{name}: archive text {key!r} must be a string")
 
 
 def _validate_chd_spec(name: str, path: str, spec: Any) -> None:
@@ -1469,8 +1537,10 @@ def _validate_disc_identity_spec(name: str, path: str, spec: Any) -> None:
 ARCHIVE_STATES = {"unreadable", "not-archive"}
 # The suffixes a reader claims. One rule decides what a container is, and both
 # machines share it: an archive suffix is read by the archive reader, a
-# directory is listed as itself, anything else is not a container.
-ARCHIVE_SUFFIXES = {"zip", "lha", "lzh"}
+# directory is listed as itself, anything else is not a container. An `.apk`
+# is a zip, which only the listing of an archive RetroArch extracts reads
+# (Machine.list_disc_archive); PUAE's walk opens none.
+ARCHIVE_SUFFIXES = {"zip", "apk", "lha", "lzh"}
 # And the slave read's own two, which are all it adds: everything the
 # container can answer comes from the archive declaration, so the two reads
 # cannot contradict each other.
