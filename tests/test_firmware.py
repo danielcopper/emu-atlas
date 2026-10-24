@@ -1537,6 +1537,18 @@ class TestADeclarationStatesItsOwnShape:
             min_size=4 * 1024 * 1024,
             max_size=8 * 1024 * 1024,
             reader=READER_PS2_BIOS_HEADER,
+            # The citations LRPS2's caveats quote, spelled out so its wording
+            # is pinned here.
+            own_check=(
+                "the check the core makes itself (LoadBiosVersion, pcsx2/ps2/BiosTools.cpp:60-173 at 14d19f8)"
+            ),
+            listing_test="IsBIOS (main.cpp:1818)",
+            offers=(
+                "Where the folder holds several, the core offers them all as option values, up to 127 — the fill "
+                "loop stops one short of the 128-slot RETRO_NUM_CORE_OPTION_VALUES_MAX to leave room for the "
+                "terminator (main.cpp:1828, :1833) — and one is enough"
+            ),
+            lists_when="whenever it has not read a value yet",
             # The option whose value names the one file inside the folder a
             # launch opens (main.cpp:360-365 at 14d19f8) — the row states it,
             # so the resolver reads no core name of its own.
@@ -1552,7 +1564,16 @@ class TestADeclarationStatesItsOwnShape:
     def test_a_row_names_only_a_content_read_the_resolver_makes(self):
         """A row promising a read nobody implemented fails at construction, not at the first folder."""
         with pytest.raises(ValueError, match="reader"):
-            DeclaredDirectory(identities="pcsx2/bios/", min_size=1, max_size=2, reader="crc-table")
+            DeclaredDirectory(
+                identities="pcsx2/bios/",
+                min_size=1,
+                max_size=2,
+                reader="crc-table",
+                own_check="c",
+                listing_test="c",
+                offers="c",
+                lists_when="c",
+            )
 
     def test_the_packaged_images_under_the_prefix_are_of_a_size_the_row_accepts(self):
         """The 73 packaged identities are a subset of what the core accepts, and reachable by content."""

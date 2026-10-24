@@ -21,6 +21,7 @@ import atlas
 from atlas.core_firmware import (
     FIRMWARE_LOCATING,
     CoreFirmwareCard,
+    CoreFirmwareFolderRoute,
     CoreFirmwareNameRoute,
     CoreFirmwareSpellingRoute,
     FirmwareLocating,
@@ -42,6 +43,7 @@ from atlas.firmware import (
     FirmwareContext,
     FirmwareRequirement,
     InventoryCatalogue,
+    declared_directory_of,
     firmware_for_core,
     firmware_inventory,
     load_hashes,
@@ -380,6 +382,7 @@ class TestTheLoaderFailsClosed:
             "swanstation",
             "mednafen_psx_hw",
             "mednafen_psx",
+            "pcee2",
         }
         card = lookup_core_firmware("swanstation_libretro.so")
         assert card is not None
@@ -831,3 +834,102 @@ class TestTheWordIsStatedAtTwoSeamsAndNowhereElse:
             and node.left.attr == "core_so"
         ]
         assert len(compares) == 1
+
+
+class TestAFolderRouteIsStatedOrRefused:
+    """The third route shape: one option names a file inside a declared folder.
+
+    Its content door is the folder's own listing, read off the folder's curated
+    row, so the shape states the folder and nothing else — and a table beside
+    it would describe a lookup the core never makes.
+    """
+
+    ROUTE = {"declared_directory": "pcsx2/bios", "citation": "Libretro.cpp:1023"}
+
+    def _folder(self, **overrides: object) -> str:
+        entry: dict[str, object] = {
+            "locating": {"mode": "by-name-then-content", "citation": "Libretro.cpp:640"},
+            "name_route": self.ROUTE,
+        }
+        entry.update(overrides)
+        return _doc(**entry)
+
+    def test_the_folder_route_loads_without_a_content_route(self):
+        (card,) = load_core_firmware(self._folder())
+        assert isinstance(card.name_route, CoreFirmwareFolderRoute)
+        assert card.name_route.declared_directory == "pcsx2/bios"
+        assert card.content_route is None
+
+    def test_a_table_beside_the_folder_route_is_refused(self):
+        table = TestTheTwoDoorsAreStatedOrRefused.TABLE
+        with pytest.raises(ValueError, match="name_route alone"):
+            load_core_firmware(self._folder(content_route=table))
+
+    def test_the_folder_route_on_a_one_door_word_is_refused(self):
+        bad = self._folder(locating={"mode": "by-name", "citation": "Libretro.cpp:640"})
+        with pytest.raises(ValueError, match="opens names of its own"):
+            load_core_firmware(bad)
+
+    @pytest.mark.parametrize("declared", ["/pcsx2/bios", "pcsx2/bios/"])
+    def test_a_folder_not_spelled_the_way_a_declaration_spells_it_is_refused(self, declared: str):
+        bad = self._folder(name_route={"declared_directory": declared, "citation": "c"})
+        with pytest.raises(ValueError, match="relative, with no trailing separator"):
+            load_core_firmware(bad)
+
+    def test_a_stray_field_inside_the_folder_route_is_refused(self):
+        bad = self._folder(name_route={**self.ROUTE, "option": "pcsx2_bios"})
+        with pytest.raises(ValueError, match="declared_directory/citation"):
+            load_core_firmware(bad)
+
+    def test_a_route_stating_the_folder_and_another_shape_is_refused(self):
+        # With a table beside it, so the shape is the one thing left to refuse.
+        bad = self._folder(
+            name_route={**self.ROUTE, "region_option": {}},
+            content_route=TestTheTwoDoorsAreStatedOrRefused.TABLE,
+        )
+        with pytest.raises(ValueError, match="exactly one of"):
+            load_core_firmware(bad)
+
+    def test_every_packaged_folder_route_points_at_a_curated_row(self):
+        routed = [
+            card for card in core_firmware_cards() if isinstance(card.name_route, CoreFirmwareFolderRoute)
+        ]
+        assert routed, "no packaged entry states the folder route — this check would prove nothing"
+        for card in routed:
+            assert isinstance(card.name_route, CoreFirmwareFolderRoute)
+            row = declared_directory_of(f"{card.key}_libretro", card.name_route.declared_directory)
+            assert row is not None, card.key
+            assert row.option_key is not None, card.key
+
+    def test_a_folder_route_adds_no_entry_of_its_own(self):
+        # The folder declaration answers by itself; the route only states the word.
+        machine = FixtureMachine(
+            {f"{INFO_DIR}/pcee2_libretro.so": {"status": "invalid-text"}}, dirs=[f"{BIOS_DIR}/pcsx2/bios"]
+        )
+        (core,) = firmware_for_core(machine, _context(machine), core_so="pcee2_libretro.so").cores
+        assert core.locating == LOCATING_BY_NAME_THEN_CONTENT
+        (requirement,) = core.requirements
+        assert isinstance(requirement, FirmwareRequirement)
+        assert requirement.declared == "pcsx2/bios"
+
+
+class TestABuildMayStateItsStamp:
+    def test_a_stamp_beginning_with_the_revision_loads(self):
+        (card,) = load_core_firmware(
+            _doc(build={"revision": "abc1234", "stamp": "abc1234ffff", "citation": "a constant"})
+        )
+        assert card.build.stamp == "abc1234ffff"
+
+    def test_no_stamp_is_the_ordinary_case(self):
+        (card,) = load_core_firmware(_doc())
+        assert card.build.stamp is None
+
+    def test_a_stamp_that_is_not_the_revision_is_refused(self):
+        bad = _doc(build={"revision": "abc1234", "stamp": "deadbeef", "citation": "a constant"})
+        with pytest.raises(ValueError, match="spell one commit"):
+            load_core_firmware(bad)
+
+    def test_a_blank_stamp_is_refused(self):
+        bad = _doc(build={"revision": "abc1234", "stamp": "  ", "citation": "a constant"})
+        with pytest.raises(ValueError, match="non-blank"):
+            load_core_firmware(bad)

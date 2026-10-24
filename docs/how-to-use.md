@@ -3302,13 +3302,25 @@ derives its entries from the installed cores while the firmware answer comes bac
 catalogue answer only, since the firmware answer names no content — so match on the pair, never on the place in the
 list.
 
+A libretro core deployed **without its `.info`** answers `declaration: "unreadable"` with `core-info-unreadable` and no
+requirements — the core is here, and what it wants is unknown. For a core atlas has read the source of, a packaged
+declaration stands in the missing file's place (`atlas/data/core_declarations.json`): PCEE2, which RetroDECK ships
+without its `.info`, answers `declaration: "packaged"`, with `core-info-packaged` (`core_so`) leading its caveats and
+the folder `pcsx2/bios` as its requirement. Only a missing `.info` is answered that way — one that is there is read as
+it stands, one that is there and cannot be read stays `unreadable` — and only for a core with an entry, so every other
+core shipped without its `.info` keeps `core-info-unreadable`. Its requirements carry `system_source: "systemname"`: the
+entry states the `systemname` a `.info` for the core states, the one field taken from upstream's packaging rather than
+from the core's source.
+
 ### Two fields, two owners — `requirements` and `requirements_met`
 
 `requirements` is what the **emulator itself declared**, reproduced. Every entry and every `need` on it is the value
 that core's own `.info` carries, read live off the machine — a core that marks a file it cannot start without `optional`
-still reads `optional` here. A `need` moves in two places only, both to `optional` and both where something beside the
-row already states what the launch needs: a row one of the route's own spellings covers, beside the alternatives group
-that speaks for it, and every row filed under a system the packaged table excuses the core for on that question (below).
+still reads `optional` here. Under `declaration: "packaged"` it is the packaged card's or declaration's instead, read
+from the emulator's source, and the caveat beside it says so. A `need` moves in two places only, both to `optional` and
+both where something beside the row already states what the launch needs: a row one of the route's own spellings covers,
+beside the alternatives group that speaks for it, and every row filed under a system the packaged table excuses the core
+for on that question (below).
 
 One field inside an entry has two owners along the same line, and it is `description`: under a `read` declaration it is
 the packager's own `firmwareN_desc`, prose atlas passes through and never acts on, while under a `packaged` one there is
@@ -3573,6 +3585,12 @@ of every region list and which serves whichever region the disc turns out to be.
 of its two spellings, `firmware-configured-image-missing` says the configured value names no file and the per-region
 options answer instead — with the override's own spellings stated beside theirs, because the launch does try them first.
 
+**PCEE2 is `by-name-then-content` with a folder in place of a table.** Its one option, `pcsx2_bios`, names a file inside
+the `pcsx2/bios` folder it declares, and where it names none — the value `auto` — the core takes the first file of its
+own listing whose ROMDIR header passes its test, of any size. Both doors are the folder declaration's own, described in
+[What a listed folder holds](#what-a-listed-folder-holds), so no further entry rides beside it: the word says a missing
+named file is not the end, and the folder verdict is what answers then.
+
 The word itself moves no verdict: `requirements_met` answers to the requirement list, and a word about how a file is
 found can neither satisfy a requirement nor fail one. What the group in that list does is the ordinary thing an
 alternatives group does — it folds into `requirements_met` the way DuckStation's always has.
@@ -3734,6 +3752,25 @@ atlas looks is held to; a value naming a file that is itself a link out of the r
 ([A file reached through a link](#a-file-reached-through-a-link)). None of this moves where a download goes: a
 `needs`/identification answer still names the declared folder as the destination, because that is what the core declares
 and a setting does not change it.
+
+**PCEE2 reads the same option, and offers only what its listing accepts.** PCEE2 is a port of current PCSX2 that
+RetroDECK ships without its `.info`; its packaged declaration names the same folder, and its row differs from LRPS2's in
+three ways (`WizzardSK/pcee2-libretro@340ce04`). Its listing filters by **no size** — every file in the folder goes to
+the header check (`Libretro.cpp:640-657`, `:660-680`) — so "nothing to read" means an empty folder and a 2 MiB image the
+header check passes is an image. Its option has a value that names no file: `auto`, the default, asks for the listing
+and composes no path. And the option's values are `auto` plus the bare names of the files that listing accepts, filled
+at every core load, while RetroArch hands a core a stored value only where it matches one the core declared
+(`core_option_manager.c:1031-1053`, the guard at `:1037`, at `a79435a`) — so a stored name the listing would not produce
+never reaches the core, and the launch reads `auto` instead:
+
+| the option                                                    | the requirement                                       | stated by                                                                                                                        |
+| ------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| names a file that is there and passes the header check        | that file, as for LRPS2                               | `firmware-image-configured`                                                                                                      |
+| names a file that is there, without a content check           | that file, `checked: "unchecked"`, `satisfied` `null` | `firmware-image-configured` — whether the core offers it turns on its header, which nobody read                                  |
+| names a file that is there and fails the header check         | the folder                                            | `firmware-configured-image-not-offered` (`core`, `key`, `name`, `dir`)                                                           |
+| names a directory, a hidden name, or one carrying a separator | the folder                                            | `firmware-configured-image-not-offered` — the listing offers bare names of unhidden files only, so none of these is ever a value |
+| names a file that is not there                                | the folder                                            | `firmware-configured-image-missing`                                                                                              |
+| is `auto`, unset or empty                                     | the folder                                            | nothing                                                                                                                          |
 
 **Why is `satisfied` `None`?** Every route to it, in one place:
 
