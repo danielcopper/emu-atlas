@@ -3899,6 +3899,7 @@ def _apply_rule_card(
             "not state — the rule and the card shipped out of step"
         )
     mode = _fill_rule_templates(card.key, choice.mode, mode, choice.fills)
+    card = _fill_rule_sizes(card, choice.fills)
     unknown = [name for name, _ in choice.alternatives if name not in card.modes]
     if unknown:
         raise ValueError(
@@ -3942,6 +3943,25 @@ def _fill_rule_templates(
     where = f"card {card_key!r} mode {mode_name!r}"
     groups = tuple(_fill_rule_group(where, group, fills) for group in mode.groups)
     return cast(SaveMode, _dc_replace(mode, groups=groups))
+
+
+def _fill_rule_sizes(card: CoreCard, fills: Mapping[str, tuple[str, ...]]) -> CoreCard:
+    """The card's size claims under the names its rule just filled into the mode.
+
+    A claim is keyed by the template the card spells (PUAE's
+    ``<archive_member_stem>_save.adf``), and :func:`_fill_rule_templates` has
+    just replaced that template in the mode's groups with every value the rule
+    read, so the claim is stated once per filled name too. A template this
+    reading filled nothing for stays as it is: no group of the answer carries it.
+    """
+    sizes = dict(card.sizes)
+    for name, fact in card.sizes.items():
+        carried = [token for token in RULE_FILLED_TEMPLATES if token in name]
+        if len(carried) != 1 or not fills.get(carried[0]):
+            continue
+        for value in fills[carried[0]]:
+            sizes.setdefault(name.replace(carried[0], value), fact)
+    return card if sizes == dict(card.sizes) else cast(CoreCard, _dc_replace(card, sizes=sizes))
 
 
 def _carries_rule_template(group: SaveGroup) -> bool:
@@ -4050,7 +4070,11 @@ def _card_file_set(
     if declared is None:
         return UNKNOWN_FILE_SET, ()
     groups = _declared_groups(
-        mode, directory=directory, rom_stem=rom_stem or "", content_dir_name=content_dir_name
+        mode,
+        directory=directory,
+        rom_stem=rom_stem or "",
+        content_dir_name=content_dir_name,
+        sizes=card.sizes,
     )
     if not observable or file_set_holes(declared):
         return _grouped_file_set(
@@ -4081,7 +4105,9 @@ def _card_file_set(
             # Every candidate came from a group of this mode, so the found ones
             # keep the role and grouping that group states — the declaration is
             # not worth less for having been confirmed.
-            groups=_observed_groups(present, directory=directory, rom_stem=rom_stem, mode=mode),
+            groups=_observed_groups(
+                present, directory=directory, rom_stem=rom_stem, mode=mode, sizes=card.sizes
+            ),
         )
     return _grouped_file_set(
         FILE_SET_DECLARED,
@@ -4525,7 +4551,7 @@ def _cross_root_parts(
                 files=names,
                 granularity=group.granularity,
                 role=group.role,
-                size_fixed=_card_group_size(group.granularity),
+                size_fixed=_card_group_size(group, card.sizes),
             )
         )
         holes.extend(base.needs)
@@ -4918,8 +4944,18 @@ def _base_of(directory: str, subdir: str | None) -> str:
     return directory
 
 
+# A card that states no size for any file its core writes — every group then
+# answers by its granularity alone (:func:`_card_group_size`).
+_NO_SIZES: Mapping[str, SizeFact] = MappingProxyType({})
+
+
 def _declared_groups(
-    mode: SaveMode | None, *, directory: str, rom_stem: str, content_dir_name: str | None
+    mode: SaveMode | None,
+    *,
+    directory: str,
+    rom_stem: str,
+    content_dir_name: str | None,
+    sizes: Mapping[str, SizeFact] = _NO_SIZES,
 ) -> tuple[FileGroup, ...]:
     """The card's own decomposition of a declared set, each part in its directory.
 
@@ -4958,22 +4994,39 @@ def _declared_groups(
                 files=names,
                 granularity=group.granularity,
                 role=group.role,
-                size_fixed=_card_group_size(group.granularity),
+                size_fixed=_card_group_size(group, sizes),
             )
         )
     return tuple(groups)
 
 
-def _card_group_size(granularity: str) -> bool | None:
-    """What a card group says about its files' size before anything else is known.
+def _card_group_size(
+    group: SaveGroup, sizes: Mapping[str, SizeFact], templates: Sequence[str] | None = None
+) -> bool | None:
+    """What a card group says about its files' size, from the card alone.
 
     A directory per game is a folder save: the game writes the files below it
     at whatever length it likes, so no file there keeps a size — ``False``.
-    Every other card group is ``None`` here: a file RetroArch writes gets its
-    claim from :func:`_frontend_sizes`, and a file the core writes itself has
-    not been read for one yet.
+    Otherwise the claim is the one the card's ``sizes`` block states for every
+    file of the group, by template — the group's own list, or *templates*
+    where an observation found only some of its names — and ``None`` where
+    any of them is unstated or they differ. A file RetroArch writes is never
+    in that block; it gets its claim from :func:`_frontend_sizes`.
     """
-    return False if granularity == GRANULARITY_PER_GAME_DIRECTORY else None
+    if group.granularity == GRANULARITY_PER_GAME_DIRECTORY:
+        return False
+    named = group.files if templates is None else templates
+    if not named:
+        return None
+    return _one_claim([sizes.get(name) for name in named])
+
+
+def _observed_templates(group: SaveGroup, names: Sequence[str], rom_stem: str | None) -> tuple[str, ...]:
+    """The templates of *group* that resolve to one of the observed *names*."""
+    candidates = group.observe if group.observe is not None else group.files or ()
+    return tuple(
+        template for template in candidates if (_card_files((template,), rom_stem) or ("",))[0] in names
+    )
 
 
 # A group's ``size_fixed`` as ``file-set-claims-merged`` lists it: caveat data
@@ -5169,7 +5222,12 @@ def _unnamed_here(mode: SaveMode | None) -> SaveGroup | None:
 
 
 def _observed_groups(
-    observed: tuple[str, ...], *, directory: str, rom_stem: str | None, mode: SaveMode | None
+    observed: tuple[str, ...],
+    *,
+    directory: str,
+    rom_stem: str | None,
+    mode: SaveMode | None,
+    sizes: Mapping[str, SizeFact] = _NO_SIZES,
 ) -> tuple[FileGroup, ...]:
     """Every observed name in a group, carrying the role its declaration knows.
 
@@ -5237,7 +5295,7 @@ def _observed_groups(
                 files=mine,
                 granularity=group.granularity,
                 role=group.role,
-                size_fixed=_card_group_size(group.granularity),
+                size_fixed=_card_group_size(group, sizes, _observed_templates(group, mine, rom_stem)),
             )
         )
     unclaimed = [name for name in observed if name not in claimed]
@@ -5249,7 +5307,7 @@ def _observed_groups(
                 files=tuple(unclaimed),
                 granularity=catchall.granularity,
                 role=catchall.role,
-                size_fixed=_card_group_size(catchall.granularity),
+                size_fixed=_card_group_size(catchall, sizes),
             )
         )
         unclaimed = []
@@ -5293,7 +5351,13 @@ def _file_set_of(
             observed,
             f"observed on the machine: {directory}",
             complete=complete,
-            groups=_observed_groups(observed, directory=directory, rom_stem=rom_stem, mode=mode),
+            groups=_observed_groups(
+                observed,
+                directory=directory,
+                rom_stem=rom_stem,
+                mode=mode,
+                sizes=card.sizes if card is not None else _NO_SIZES,
+            ),
         )
     if declared is not None and card is not None:
         return _grouped_file_set(
@@ -5302,7 +5366,11 @@ def _file_set_of(
             f"declared by rule card '{card.key}' (none present yet)",
             complete=mode.complete if mode is not None else False,
             groups=_declared_groups(
-                mode, directory=directory, rom_stem=rom_stem, content_dir_name=content_dir_name
+                mode,
+                directory=directory,
+                rom_stem=rom_stem,
+                content_dir_name=content_dir_name,
+                sizes=card.sizes,
             ),
         )
     return (
@@ -8685,6 +8753,7 @@ def _dolphin_agp_slot(
                 files=(name,),
                 granularity=GRANULARITY_SHARED_FILE,
                 role=ROLE_BATTERY,
+                size_fixed=True,
             ),
         ),
         readings=readings,
@@ -9009,7 +9078,7 @@ def _dolphin_gc_answer(
             complete=False,
             groups=groups,
         ),
-        sources=_card_sources(card, groups, f"{cite('card_size')} at {cite('build')}"),
+        sources=_card_sources(card, _dolphin_size_evidence(slots, cite)),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -9023,6 +9092,26 @@ def _dolphin_gc_answer(
             ),
         ),
     )
+
+
+def _dolphin_size_evidence(
+    slots: tuple[_DolphinSlot, _DolphinSlot], cite: _Cite
+) -> tuple[tuple[Sequence[FileGroup], str], ...]:
+    """Each slot's groups with why their file keeps its size, for :func:`_card_sources`.
+
+    A raw card is written back at the size it was created at (``card_size``);
+    a GBA cartridge adapter's ``.sav`` is as large as the file was when the
+    game started and exactly that many bytes are written back (``agp_save``).
+    A folder card's files keep no size, so it brings no sentence.
+    """
+    sentences = {
+        "card": _card_image_size(f"{cite('card_size')} at {cite('build')}"),
+        "agp": (
+            "a GBA cartridge's .sav keeps the size it had when the game started — "
+            f"{cite('agp_save')} at {cite('build')}"
+        ),
+    }
+    return tuple((slot.groups, sentences[slot.mode]) for slot in slots if slot.mode in sentences)
 
 
 def _reading_with_file(reading: OptionReading, options_file: str | None) -> OptionReading:
@@ -9587,19 +9676,27 @@ def _xemu_group(
     role: str,
     token: str,
     cwd: str | None = None,
+    size_fixed: bool | None = None,
 ) -> tuple[FileGroup | None, tuple[Caveat, ...]]:
     """One ``[sys.files]`` value as a group: below the host path, *cwd*, or the ``<cwd>`` template.
 
     A relative value opens from the launch's working directory, so the caller's
     *cwd* — a host path, never translated — fills it; without one it stays the
-    template and the launch-dependence caveat says why.
+    template and the launch-dependence caveat says why. *size_fixed* is the
+    file's own claim: the EEPROM's is true, the disk image's not established.
     """
     if not os.path.isabs(value):
         head, name = os.path.split(value)
         anchor = cwd if cwd is not None else TEMPLATE_CWD
         directory = os.path.join(anchor, head) if head else anchor
         return (
-            FileGroup(dir=directory, files=(name,), granularity=GRANULARITY_SHARED_FILE, role=role),
+            FileGroup(
+                dir=directory,
+                files=(name,),
+                granularity=GRANULARITY_SHARED_FILE,
+                role=role,
+                size_fixed=size_fixed,
+            ),
             () if cwd is not None else (_xemu_launch_dependent_caveat(token, key, value),),
         )
     resolved = sandbox.host(key, value)
@@ -9613,7 +9710,16 @@ def _xemu_group(
             ),
         )
     directory, name = os.path.split(resolved.path)
-    return FileGroup(dir=directory, files=(name,), granularity=GRANULARITY_SHARED_FILE, role=role), ()
+    return (
+        FileGroup(
+            dir=directory,
+            files=(name,),
+            granularity=GRANULARITY_SHARED_FILE,
+            role=role,
+            size_fixed=size_fixed,
+        ),
+        (),
+    )
 
 
 def _xemu_document(
@@ -9758,7 +9864,15 @@ def _xemu_savefile_placement(
     readings = _xemu_readings(hdd, eeprom, stated_toml)
     disk_groups, disk_caveats = _xemu_disk_pieces(sandbox, card, hdd, cwd)
     eeprom_group, eeprom_caveats = (
-        _xemu_group(sandbox, "eeprom_path", eeprom, role=ROLE_SETTINGS, token=card.token, cwd=cwd)
+        _xemu_group(
+            sandbox,
+            "eeprom_path",
+            eeprom,
+            role=ROLE_SETTINGS,
+            token=card.token,
+            cwd=cwd,
+            size_fixed=True,
+        )
         if eeprom
         else (None, ())
     )
@@ -9830,7 +9944,9 @@ def _xemu_savefile_placement(
             complete=False,
             groups=tuple(groups),
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=_card_sources(
+            card, ((groups, f"the EEPROM keeps its 256 bytes — {_XEMU_EEPROM_SIZE}"),)
+        ),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -10811,7 +10927,7 @@ def _duckstation_savefile_placement(
             complete=False,
             groups=groups,
         ),
-        sources=_card_sources(card, groups, _DUCKSTATION_CARD_SIZE),
+        sources=_card_sources(card, ((groups, _card_image_size(_DUCKSTATION_CARD_SIZE)),)),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -11299,7 +11415,7 @@ def _pcsx2_savefile_placement(
             complete=False,
             groups=groups,
         ),
-        sources=_card_sources(card, groups, _PCSX2_CARD_SIZE),
+        sources=_card_sources(card, ((groups, _card_image_size(_PCSX2_CARD_SIZE)),)),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -11688,10 +11804,14 @@ def _melonds_savefile_placement(
                     files=files,
                     granularity=GRANULARITY_PER_GAME_FILE,
                     role=ROLE_BATTERY,
+                    size_fixed=True,
                 ),
             ),
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=(
+            f"standalone save card '{card.token}': {card.provenance}",
+            f"a game's .sav keeps the size its save type gives it — {_MELONDS_SAVE_SIZE}",
+        ),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -14656,10 +14776,11 @@ STANDALONE_SAVE_CITATION_SLOTS = {
     "PRIMEHACK": _DOLPHIN_CITATION_SLOTS,
 }
 
-# Why a card image keeps its size, in the build each resolver below reads. In
-# code beside those resolvers' other citations rather than on their cards: the
-# card citation slots are the Dolphin family's, whose one reading serves two
-# source trees, and neither of these emulators shares its reading.
+# Why a card image — or melonDS's .sav, or xemu's EEPROM — keeps its size, in
+# the build its resolver reads. In code beside those resolvers' other
+# citations rather than on their cards: the card citation slots are the
+# Dolphin family's, whose one reading serves two source trees, and none of
+# these emulators shares its reading.
 _DUCKSTATION_CARD_SIZE = (
     "src/core/memory_card_image.h:17, src/core/memory_card_image.cpp:99-111 and :124-136 at "
     "RetroDECK/Duckstation 1f6de046b: a card is DATA_SIZE, 128 KiB; a file of any other size is "
@@ -14670,22 +14791,42 @@ _PCSX2_CARD_SIZE = (
     "is created at its size, opened r+b and written in place at the addressed offset, so its length "
     "never changes"
 )
+_MELONDS_SAVE_SIZE = (
+    "src/NDSCart.cpp:402-428 and :1633-1645, src/frontend/qt_sdl/SaveManager.cpp:97-122 and "
+    ":166-193 at melonDS 1.1: a game's save is as long as its save type — the ROM list's, or a "
+    "fixed default — a shorter file is padded with 0xFF once when loaded, and every flush writes "
+    "the whole save; only an import from the menu writes the imported length until the next load "
+    "pads it again (NDSCart.cpp:490-497)"
+)
+_XEMU_EEPROM_SIZE = (
+    "hw/xbox/eeprom_generation.c:132-137, system/vl.c:2938-2945 and "
+    "hw/xbox/smbus_storage.c:90-128, :157 at xemu v0.8.135: the EEPROM is generated as 256 bytes, "
+    "a file of any other size is refused, and the device writes its 256 bytes back whole"
+)
+
+
+def _card_image_size(citation: str) -> str:
+    """The sources sentence for a memory-card image, with the line ranges behind it."""
+    return f"a memory-card image keeps the size it was created at — {citation}"
 
 
 def _card_sources(
-    card: StandaloneSaveCard, groups: Sequence[FileGroup], citation: str
+    card: StandaloneSaveCard, evidence: Sequence[tuple[Sequence[FileGroup], str]]
 ) -> tuple[str, ...]:
-    """A card answer's sources: the card's provenance, and the evidence behind a fixed size.
+    """A card answer's sources: the card's provenance, and the evidence behind each fixed size.
 
-    A card image is written whole or in place at the size it was created at,
-    never cut short, so its group says ``size_fixed`` true; the line ranges
-    that say so ride the answer's sources, once, beside the card's provenance —
-    and only where a group states one.
+    *evidence* pairs groups with the sentence and line ranges that say why
+    their files keep their size — a card image written whole or in place at
+    the size it was created at, a cartridge save written back at the size it
+    was loaded at. Each sentence rides the answer's sources once, beside the
+    card's provenance, and only where one of its groups states ``size_fixed``
+    true.
     """
     sources = [f"standalone save card '{card.token}': {card.provenance}"]
-    if any(group.size_fixed for group in groups):
-        sources.append(f"a memory-card image keeps the size it was created at — {citation}")
-    return tuple(sources)
+    sources.extend(
+        sentence for groups, sentence in evidence if any(group.size_fixed for group in groups)
+    )
+    return tuple(dict.fromkeys(sources))
 
 
 def _standalone_savefile_placement(

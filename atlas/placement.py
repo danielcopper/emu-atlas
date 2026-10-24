@@ -1478,8 +1478,9 @@ class FileGroup:
     legitimately loses content — a file that may still grow or shrink by a
     trailing run of fill carries ``size-fixed-except-trailing-fill`` beside it.
     ``false`` where the size follows the content: a folder save, whose files the
-    game writes at whatever length it likes, and every file RetroArch writes
-    while ``save-files-compressed`` says it compresses them. ``null`` where it
+    game writes at whatever length it likes, a file its emulator compresses
+    (PUAE's ``_save.adf.gz``), and every file RetroArch writes while
+    ``save-files-compressed`` says it compresses them. ``null`` where it
     was not established — never a claim that the size varies.
     """
 
