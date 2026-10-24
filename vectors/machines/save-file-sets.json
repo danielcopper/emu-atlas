@@ -5046,7 +5046,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -5055,7 +5055,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -6327,7 +6327,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -6336,7 +6336,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -8368,7 +8368,7 @@
                   "puae_floppy_write_redirect": "enabled"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-file"
                 ],
                 "caveats": []
               }
@@ -8545,7 +8545,7 @@
                   "puae_floppy_write_redirect": "enabled"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-file"
                 ],
                 "caveats": []
               }
@@ -8842,12 +8842,20 @@
               {
                 "dir": "/mnt/sd/retrodeck/saves",
                 "files": [
-                  "Ruff and Tumble (Europe)_save.adf",
+                  "Ruff and Tumble (Europe)_save.adf"
+                ],
+                "granularity": "per-game-file",
+                "role": "disk-diff",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
                   "Ruff and Tumble (Europe)_save.adf.gz"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": false
               }
             ]
           },
@@ -8875,7 +8883,7 @@
             }
           ],
           "granularity": {
-            "value": "per-game-files",
+            "value": "per-game-file",
             "mode": "floppy-redirected",
             "readings": [
               {
@@ -10468,7 +10476,7 @@
                   "puae_floppy_write_protection": "disabled"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-file"
                 ],
                 "caveats": []
               }
@@ -10597,12 +10605,20 @@
               {
                 "dir": "/mnt/sd/retrodeck/saves",
                 "files": [
-                  "Turrican II (Europe)_save.adf",
+                  "Turrican II (Europe)_save.adf"
+                ],
+                "granularity": "per-game-file",
+                "role": "disk-diff",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
                   "Turrican II (Europe)_save.adf.gz"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": false
               }
             ]
           },
@@ -10630,7 +10646,7 @@
             }
           ],
           "granularity": {
-            "value": "per-game-files",
+            "value": "per-game-file",
             "mode": "floppy-redirected",
             "readings": [
               {
@@ -11350,7 +11366,7 @@
                   "puae_floppy_write_redirect": "enabled"
                 },
                 "values": [
-                  "per-game-files"
+                  "per-game-file"
                 ],
                 "caveats": []
               }
@@ -13634,13 +13650,21 @@
                 "dir": "/mnt/sd/retrodeck/saves",
                 "files": [
                   "Disk1_save.adf",
-                  "Disk2_save.adf",
+                  "Disk2_save.adf"
+                ],
+                "granularity": "per-game-files",
+                "role": "disk-diff",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
                   "Disk1_save.adf.gz",
                   "Disk2_save.adf.gz"
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": false
               }
             ]
           },
@@ -22348,7 +22372,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -22374,7 +22398,7 @@
                   "shared-file"
                 ],
                 "size_fixed": [
-                  "null"
+                  "true"
                 ]
               }
             }
@@ -22580,7 +22604,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -22606,7 +22630,7 @@
                   "shared-file"
                 ],
                 "size_fixed": [
-                  "null"
+                  "true"
                 ]
               }
             }
@@ -22718,6 +22742,320 @@
                 "caveats": []
               }
             ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a-per-game-cartridge-ram-keeps-the-size-its-name-carries",
+      "rationale": "Genesis Plus GX writes both of a CD game's backup RAM files itself, so neither size comes from the frontend: the internal RAM is always 0x2000 bytes, and the cartridge RAM is as large as the cartridge size option, which is spelled into the file's name. So each name always holds one size, and both groups say size_fixed true from the card's sizes block (#681 D9, D11).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>megacd</name><path>%ROMPATH%/megacd</path>\n    <command label=\"Genesis Plus GX\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/genesis_plus_gx_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "genesis_plus_gx_system_bram = \"per game\"\ngenesis_plus_gx_cart_bram = \"per game\"\ngenesis_plus_gx_cart_size = \"512k\"\n",
+          "/mnt/sd/retrodeck/roms/megacd/Lunar - The Silver Star (USA).chd": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/genesis_plus_gx_libretro.so": {
+            "library_name": "Genesis Plus GX",
+            "library_version": "v1.7.4 46a5521",
+            "options": {
+              "genesis_plus_gx_system_bram": {
+                "default": "per bios",
+                "values": [
+                  "per bios",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_bram": {
+                "default": "per cart",
+                "values": [
+                  "per cart",
+                  "per game"
+                ]
+              },
+              "genesis_plus_gx_cart_size": {
+                "default": "4meg",
+                "values": [
+                  "disabled",
+                  "128k",
+                  "256k",
+                  "512k",
+                  "1meg",
+                  "2meg",
+                  "4meg"
+                ]
+              }
+            }
+          }
+        },
+        "entry_savefile_query": {
+          "system": "megacd",
+          "content_path": "/mnt/sd/retrodeck/roms/megacd/Lunar - The Silver Star (USA).chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Lunar - The Silver Star (USA).brm",
+              "Lunar - The Silver Star (USA)_512Kbit_cart.brm"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Lunar - The Silver Star (USA).brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Lunar - The Silver Star (USA)_512Kbit_cart.brm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "genesis_plus_gx",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "cd-game-bram+cart-512k-per-game",
+            "readings": [
+              {
+                "key": "genesis_plus_gx_system_bram",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_bram",
+                "value": "per game",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "genesis_plus_gx_cart_size",
+                "value": "512k",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "cd-bios-bram+cart-512k-per-game",
+                "options": {
+                  "genesis_plus_gx_system_bram": "per bios"
+                },
+                "values": [
+                  "shared-file",
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-512k",
+                "options": {
+                  "genesis_plus_gx_cart_bram": "per cart"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram",
+                "options": {
+                  "genesis_plus_gx_cart_size": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-128k-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_size": "128k"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-256k-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_size": "256k"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-1meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_size": "1meg"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-2meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_size": "2meg"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "cd-game-bram+cart-4meg-per-game",
+                "options": {
+                  "genesis_plus_gx_cart_size": "4meg"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "bsnes-jg-states-the-frontends-srm-and-its-own-rtc-as-two-groups",
+      "rationale": "bsnes-jg hands its cartridge RAM to RetroArch, which writes <rom_stem>.srm at the size the core reports, and writes the clock's <rom_stem>.rtc itself, 16 bytes every time. The two files have different writers, so the card states one group per file and each says its own size: the .srm from the frontend's claim, the .rtc from the card's sizes block (#681 D13).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\nglobal_core_options = \"true\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><path>%ROMPATH%/snes</path>\n    <command label=\"bsnes-jg\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/bsnes-jg_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/snes/Daikaijuu Monogatari II (Japan).sfc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/bsnes-jg_libretro.so": {
+            "library_name": "bsnes-jg",
+            "library_version": "2.0.2"
+          }
+        },
+        "entry_savefile_query": {
+          "system": "snes",
+          "content_path": "/mnt/sd/retrodeck/roms/snes/Daikaijuu Monogatari II (Japan).sfc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "entry_savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Daikaijuu Monogatari II (Japan).srm",
+              "Daikaijuu Monogatari II (Japan).rtc"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Daikaijuu Monogatari II (Japan).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Daikaijuu Monogatari II (Japan).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "bsnes-jg",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "per-game-file",
+            "mode": "always",
+            "readings": [],
+            "alternatives": []
           }
         }
       }

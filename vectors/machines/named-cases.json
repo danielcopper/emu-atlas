@@ -1424,7 +1424,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1433,7 +1433,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -1558,7 +1558,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1569,7 +1569,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1578,7 +1578,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -1738,7 +1738,7 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1747,7 +1747,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -1887,7 +1887,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -1896,7 +1896,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -2027,7 +2027,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "<content_dir>/dc",
@@ -2036,7 +2036,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -2162,7 +2162,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -2171,7 +2171,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -2297,7 +2297,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc",
@@ -2306,7 +2306,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -2436,7 +2436,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/var/db/bios/dc",
@@ -2445,7 +2445,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -2578,7 +2578,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -2589,7 +2589,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -2598,7 +2598,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3259,7 +3259,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -4019,7 +4019,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -4123,7 +4123,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -4506,7 +4506,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -4724,7 +4724,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -4942,7 +4942,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -5220,7 +5220,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -5605,7 +5605,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -5614,7 +5614,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -5623,7 +5623,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -6222,7 +6222,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -6231,7 +6231,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -6240,7 +6240,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -6435,7 +6435,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -7117,7 +7117,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -10965,7 +10965,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -15736,7 +15736,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -15745,7 +15745,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -15917,7 +15917,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -15926,7 +15926,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -16514,7 +16514,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -21192,7 +21192,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -21926,7 +21926,7 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn/kronos/stv",
@@ -21935,7 +21935,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn/kronos/stv",
@@ -21944,7 +21944,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -22059,7 +22059,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -22070,7 +22070,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -22079,7 +22079,7 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },

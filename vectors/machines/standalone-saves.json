@@ -834,7 +834,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -980,7 +980,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3041,7 +3041,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3116,7 +3116,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3203,7 +3203,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3289,7 +3289,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3383,7 +3383,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -3480,7 +3480,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -10649,7 +10649,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -10758,7 +10758,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -10859,7 +10859,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -10960,7 +10960,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -15813,7 +15813,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -16290,7 +16290,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -16391,7 +16391,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -16715,7 +16715,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -18248,7 +18248,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -20638,7 +20638,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -20716,7 +20716,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -20803,7 +20803,7 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": true
               }
             ]
           },
@@ -20888,7 +20888,7 @@
                 ],
                 "granularity": "shared-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": true
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/gba",
@@ -20939,8 +20939,7 @@
                   "shared-file"
                 ],
                 "size_fixed": [
-                  "true",
-                  "null"
+                  "true"
                 ]
               }
             }
@@ -21255,7 +21254,8 @@
                   "shared-file"
                 ],
                 "size_fixed": [
-                  "null"
+                  "null",
+                  "true"
                 ]
               }
             }
