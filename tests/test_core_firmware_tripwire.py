@@ -77,8 +77,22 @@ def stamp_disagreements(
     return wrong
 
 
+def reported_stamp(card: CoreFirmwareCard, binary: bytes, version: str | None) -> str | None:
+    """What one deployed core says it is: its pinned constant where the entry states one, its version otherwise.
+
+    An entry states ``build.stamp`` where the version names no commit (PCEE2
+    reports the upstream PCSX2 release). Its binary is then searched for the
+    stamp as raw bytes with a NUL on each side, so a hit is the whole constant;
+    a binary without it answers with its version, which the revision is not in.
+    """
+    stamp = card.build.stamp
+    if stamp is not None and b"\x00" + stamp.encode() + b"\x00" in binary:
+        return stamp
+    return version
+
+
 def deployed_stamps(directory: Path) -> dict[str, str | None]:
-    """What each entered core deployed here reports as its own version."""
+    """What each entered core deployed here reports as its own version, or carries as its stamp."""
     machine = RealMachine()
     stamps: dict[str, str | None] = {}
     for card in core_firmware_cards():
@@ -86,7 +100,9 @@ def deployed_stamps(directory: Path) -> dict[str, str | None]:
         if not path.is_file():
             continue
         info = machine.query_core(str(path))
-        stamps[card.key] = None if info is None else info.library_version
+        version = None if info is None else info.library_version
+        binary = path.read_bytes() if card.build.stamp is not None else b""
+        stamps[card.key] = reported_stamp(card, binary, version)
     return stamps
 
 
@@ -123,6 +139,35 @@ class TestTheCheckItself:
 
     def test_a_core_that_is_not_deployed_is_not_judged(self):
         assert stamp_disagreements(self._cards(), {}) == []
+
+    def _stamped(self) -> CoreFirmwareCard:
+        card = next((card for card in self._cards() if card.build.stamp is not None), None)
+        assert card is not None, "no entry states a stamp — the checks below would prove nothing"
+        return card
+
+    def test_a_binary_carrying_the_stamp_reports_it(self):
+        card = self._stamped()
+        assert card.build.stamp is not None
+        binary = b"junk\x00" + card.build.stamp.encode() + b"\x00junk"
+        reported = reported_stamp(card, binary, "v9.9.9")
+        assert reported == card.build.stamp
+        assert stamp_disagreements((card,), {card.key: reported}) == []
+
+    def test_a_binary_without_the_stamp_reports_its_version_and_is_named(self):
+        card = self._stamped()
+        reported = reported_stamp(card, b"\x00deadbeef\x00", "v9.9.9")
+        assert reported == "v9.9.9"
+        assert [line.split(":")[0] for line in stamp_disagreements((card,), {card.key: reported})] == [card.key]
+
+    def test_a_stamp_inside_a_longer_constant_is_not_the_stamp(self):
+        card = self._stamped()
+        assert card.build.stamp is not None
+        binary = b"\x00" + card.build.stamp.encode() + b"-dirty\x00"
+        assert reported_stamp(card, binary, "v9.9.9") == "v9.9.9"
+
+    def test_an_entry_without_a_stamp_reports_its_version(self):
+        card = next(card for card in self._cards() if card.build.stamp is None)
+        assert reported_stamp(card, b"", f"1.0 {card.build.revision}") == f"1.0 {card.build.revision}"
 
 
 class TestEveryEntryDescribesTheDeployedBuild:
