@@ -313,6 +313,12 @@ cannot tell carries too. These notes ride only where the standing root, or a ref
 relative value. The joined folder is then tested as any absolute one, through the same view. Without a `cwd` it is the
 `<cwd>` template, which no view is asked about and which passes, the launch deciding it. Where atlas does not model the
 sandbox, these folders are tested as the host's with no note: it would ride every such answer and tell a client nothing.
+The same process reads the same directory for two more answers (#660): DeSmuME 2015's `working_directory` root and the
+MAME core's relative trees under `mame_mame_paths_enable`. Both take the directory RetroArch runs in, so where the
+sandbox shows nothing at `cwd` the root is the sandbox's `HOME` and a tree is joined below it, beside
+`cwd-hidden-in-sandbox`, and where the view cannot tell, at `cwd` read as the host's, beside
+`save-directory-visibility-unestablished`; a MAME answer carries them only where a tree was joined, and an answer whose
+save folder read the same directory first states each once.
 
 ### One merge, two reads — what "later files win" does not mean
 
