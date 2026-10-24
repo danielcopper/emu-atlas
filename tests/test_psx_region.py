@@ -617,3 +617,114 @@ class TestAPlaylistInsideAnArchive:
     def test_a_playlist_text_not_declared_is_missing(self):
         reading = psx_region.read_disc_region(archive(["Game.m3u"]), EMULATOR_BEETLE, ZIP, hands(frozenset({"m3u"})))
         assert (reading.reason, reading.status) == (REASON_DISC_UNREAD, DISC_UNREAD_MISSING)
+
+
+TOC = "/roms/Game.toc"
+CHD_SPEC = {"codecs": ["cdlz"], "requires_parent": False, "identity": FACTS}
+
+
+def beside_a_toc(**extra: Any) -> FixtureMachine:
+    """Every content shape Beetle PSX opens, under one stem, with ``Game.toc`` beside them."""
+    files = {GAME: "x", CHD: "x", PBP: "x", "/roms/Game.m3u": "Game.cue\n", "/roms/Game.exe": "x", TOC: "x"}
+    pbp_spec = {"duckstation_refuses": False, "encrypted": False, "identity": FACTS}
+    return FixtureMachine(
+        {**files, **extra.pop("files", {})},
+        disc_identities={GAME: FACTS, CHD: CHD_SPEC, PBP: pbp_spec},
+        **extra,
+    )
+
+
+class TestTheTocBeetleOpensBesideTheContent:
+    """#692: Beetle PSX loads ``<directory>/<stem>.toc`` in place of the content wherever one is there."""
+
+    @pytest.mark.parametrize("content", [GAME, CHD, PBP, "/roms/Game.m3u", "/roms/Game.exe"])
+    def test_whatever_the_content_beetle_loads_the_toc(self, content):
+        reading = psx_region.read_disc_region(beside_a_toc(), EMULATOR_BEETLE, content)
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=TOC, extension="toc")
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_SWANSTATION, EMULATOR_DUCKSTATION])
+    @pytest.mark.parametrize("content", [GAME, CHD, "/roms/Game.m3u"])
+    def test_swanstation_and_duckstation_read_the_content_beside_the_same_toc(self, emulator, content):
+        reading = psx_region.read_disc_region(beside_a_toc(), emulator, content)
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_only_the_last_extension_is_dropped(self):
+        files = {"/roms/Game.v1.cue": "x", "/roms/Game.v1.toc": "x"}
+        reading = psx_region.read_disc_region(
+            machine(files, {"/roms/Game.v1.cue": FACTS}), EMULATOR_BEETLE, "/roms/Game.v1.cue"
+        )
+        assert reading.disc == "/roms/Game.v1.toc"
+        other_stem = psx_region.read_disc_region(machine({GAME: "x", "/roms/Game.v1.toc": "x"}, {GAME: FACTS}), EMULATOR_BEETLE, GAME)
+        assert other_stem == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_a_name_without_an_extension_keeps_its_whole_name(self):
+        reading = psx_region.read_disc_region(machine({"/roms/Game": "x", TOC: "x"}), EMULATOR_BEETLE, "/roms/Game")
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=TOC, extension="toc")
+
+    def test_a_directory_of_that_name_opens_for_reading_too(self):
+        reading = psx_region.read_disc_region(
+            FixtureMachine({GAME: "x"}, dirs=[TOC], disc_identities={GAME: FACTS}), EMULATOR_BEETLE, GAME
+        )
+        assert reading.disc == TOC
+
+    @pytest.mark.parametrize(
+        "extra",
+        [
+            {"files": {"/roms/Game.TOC": "x"}},
+            {"inaccessible": [TOC]},
+            {"symlinks": {TOC: "/roms/gone.toc"}},
+        ],
+        ids=["another-case", "inaccessible", "dangling-link"],
+    )
+    def test_a_toc_the_open_does_not_reach_changes_nothing(self, extra):
+        files = {GAME: "x", **extra.pop("files", {})}
+        reading = psx_region.read_disc_region(
+            FixtureMachine(files, disc_identities={GAME: FACTS}, **extra), EMULATOR_BEETLE, GAME
+        )
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+
+class TestTheTocBesideAnExtractedEntry:
+    """#692 over D2 of #691: Beetle PSX looks for the ``.toc`` beside the path the entry is written to."""
+
+    def test_beside_the_archive(self):
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": CHD_SPEC}, files={TOC: "x"})
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=TOC, extension="toc")
+
+    def test_in_the_cache_directory_and_not_beside_the_archive(self):
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": CHD_SPEC}, files={TOC: "x", "/cache/Game.toc": "x"})
+        cached = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, cache_directory="/cache"))
+        assert cached.disc == "/cache/Game.toc"
+        elsewhere = archive(["Game.chd"], {f"{ZIP}#Game.chd": CHD_SPEC}, files={TOC: "x"})
+        reading = psx_region.read_disc_region(elsewhere, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, cache_directory="/cache"))
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    def test_beside_an_extracted_playlist(self):
+        machine = archive(
+            ["Game.m3u"], {GAME: FACTS}, files={GAME: "x", TOC: "x"}, archive_texts={f"{ZIP}#Game.m3u": "Game.cue\n"}
+        )
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(frozenset({"m3u"})))
+        assert reading.disc == TOC
+
+    def test_a_toc_entry_is_named_inside_its_archive(self):
+        # Extracted, the entry is the .toc it would look for, whatever is already there.
+        machine = archive(["Game.toc"], files={TOC: "x"})
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS))
+        assert reading == DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=f"{ZIP}#Game.toc", extension="toc")
+
+    def test_swanstation_reads_the_entry_beside_the_same_toc(self):
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": CHD_SPEC}, files={TOC: "x"})
+        reading = psx_region.read_disc_region(machine, EMULATOR_SWANSTATION, ZIP, hands(SWAN_CLAIMS))
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)
+
+    @pytest.mark.parametrize("entry", ["Game.chd", "Game.pbp", "Game.exe"])
+    def test_in_a_cache_directory_atlas_cannot_place_beetle_s_entry_is_not_read(self, entry):
+        machine = archive([entry], {f"{ZIP}#Game.chd": CHD_SPEC} if entry == "Game.chd" else {})
+        reading = psx_region.read_disc_region(machine, EMULATOR_BEETLE, ZIP, hands(BEETLE_CLAIMS, cache_directory_read=False))
+        assert reading == DiscRegionReading(reason=REASON_DISC_UNREAD, disc=f"{ZIP}#{entry}", status=DISC_UNREAD_UNREADABLE)
+
+    def test_in_a_cache_directory_atlas_cannot_place_swanstation_s_chd_is_read(self):
+        machine = archive(["Game.chd"], {f"{ZIP}#Game.chd": CHD_SPEC})
+        reading = psx_region.read_disc_region(machine, EMULATOR_SWANSTATION, ZIP, hands(SWAN_CLAIMS, cache_directory_read=False))
+        assert reading == decided(NTSC_U, REGION_SOURCE_LICENSE)

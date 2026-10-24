@@ -809,10 +809,15 @@ REASON_DATA_ROOT_DECIDED_BY_LAUNCH = "data-root-decided-by-launch"
 # ``unstated``, ``dir`` and ``core_so`` / ``token``, adding ``content_path``,
 # the path the question named. ``disc-format-unread`` is an image of a format
 # atlas does not read (``disc`` names the image — the path itself, the first
-# entry of its playlist, or the archive entry RetroArch extracts, spelled
-# ``<archive>#<entry>`` — and ``extension`` its suffix); ``disc-unread`` is an
-# image atlas reads that did not yield a region (``disc``, and ``status`` from
-# :data:`atlas.psx_region.DISC_UNREAD_STATUSES`); ``content-unopenable`` is
+# entry of its playlist, the archive entry RetroArch extracts, spelled
+# ``<archive>#<entry>``, or the ``.toc`` Beetle PSX loads beside the content
+# — and ``extension`` its suffix); ``disc-unread`` is an image no region came
+# from (``disc``, and ``status`` from
+# :data:`atlas.psx_region.DISC_UNREAD_STATUSES`): one atlas read that did not
+# yield a region, or an entry extracted into a ``cache_directory`` atlas
+# cannot locate, left unread because what the core looks for beside it — a
+# cue sheet's or a playlist's files, and under Beetle PSX the ``.toc`` —
+# cannot be found; ``content-unopenable`` is
 # content the emulator itself does not open (``extension``), a fact about the
 # emulator rather than about atlas's read; ``region-property-unread`` is
 # DuckStation's ``custom_properties.ini`` there and not read, which may name a
