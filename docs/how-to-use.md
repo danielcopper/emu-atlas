@@ -1415,12 +1415,12 @@ in `message`, and what it embedded is a key of its own (named in the third colum
     question naming the game's content can end on — `disc-format-unread`, `disc-unread`, `content-unopenable`,
     `region-property-unread` — take `region-decided-by-disc`'s place on that group and carry the same `regions`,
     `unstated` and `dir`, the subject as `core_so` or, for DuckStation, `token`, plus `content_path` (the path the
-    question named). `disc` is the image the region would be read from — that path, its playlist's first entry, or the
-    archive entry RetroArch extracts, spelled `<archive>#<entry>` — on the two disc reasons; `status` is one of
-    `missing`, `unreadable`, `not-a-disc`, `codec-unavailable` (a CHD codec, or the `zlib` a PBP's blocks need, the
-    running Python lacks), `sector-invalid` (a sector Beetle reads fails its checksum) and `boot-line-absent` (Beetle's
-    `SYSTEM.CNF` holds no `BOOT`); `extension` is a suffix without its dot; `path` is the properties file that would not
-    read.
+    question named). `disc` is the image the region would be read from — that path, its playlist's first entry, the
+    archive entry RetroArch extracts, spelled `<archive>#<entry>`, or the `.toc` Beetle PSX loads beside the content —
+    on the two disc reasons; `status` is one of `missing`, `unreadable`, `not-a-disc`, `codec-unavailable` (a CHD codec,
+    or the `zlib` a PBP's blocks need, the running Python lacks), `sector-invalid` (a sector Beetle reads fails its
+    checksum) and `boot-line-absent` (Beetle's `SYSTEM.CNF` holds no `BOOT`); `extension` is a suffix without its dot;
+    `path` is the properties file that would not read.
 
 Five keys ride the sixteen per-user reasons independently of which one it is, so read them by presence rather than by
 reason: `users` is always there and names the users whose trees the per-user groups point at — where none was found it
@@ -3604,14 +3604,22 @@ so the three can disagree about one disc, and each answers as its emulator boots
 — its `valid_extensions`, read off the installed core — written to RetroArch's `cache_directory` or, where that is
 empty, beside the archive, and read as content of its own format. A cue sheet extracted without the file it names, and
 an `.m3u` without its first disc, is content the core cannot open; a `.7z` or `.zst` is a format atlas does not read;
-and DuckStation opens no archive at all. A CHD in `cdzs` needs a zstd provider — the one `register_zstd_provider` hands
-over, or `compression.zstd` / `backports.zstd` — and where the running Python has none, or lacks `lzma` or `zlib` for
-the other two, the answer says `disc-unread` with status `codec-unavailable`: the same file reads elsewhere. A CHD that
-names a parent is read through the parent DuckStation finds among the files of its folder; SwanStation and Beetle PSX
-open no such CHD, and SwanStation none in `cdzs`. Where the region was not decided the group keeps its per-region
-answer, `region` and `region_source` are `null`, and `core-mode-unestablished` says why with one of four reasons in
-place of `region-decided-by-disc`: `disc-format-unread` (an image atlas does not read, a CHD with `cdfl` hunks and an
-encrypted PBP under Beetle among them), `disc-unread` (an image that was read and decided nothing, with its `status`),
+and DuckStation opens no archive at all. Beetle PSX loads the `.toc` of the content's name from beside it, wherever one
+is there, in place of whatever it is handed — a cue sheet, a CHD, a PBP, an `.m3u`, or the entry an archive is extracted
+to, looked for where it is written — and atlas does not read the cdrdao `.toc` format, so there its answer is
+`disc-format-unread` naming that file. Where `cache_directory` is set to a place atlas cannot locate (`default` or a
+relative path), whether such a `.toc` lies beside the entry is unknown, so Beetle's entry answers `disc-unread` with
+status `unreadable` — as a cue sheet or an `.m3u` there does under either core, its files looked for beside it. A CHD in
+`cdzs` needs a zstd provider — the one `register_zstd_provider` hands over, or `compression.zstd` / `backports.zstd` —
+and where the running Python has none, or lacks `lzma` or `zlib` for the other two, the answer says `disc-unread` with
+status `codec-unavailable`: the same file reads elsewhere. A CHD that names a parent is read through the parent
+DuckStation finds among the files of its folder; SwanStation and Beetle PSX open no such CHD, and SwanStation none in
+`cdzs`. Where the region was not decided the group keeps its per-region answer, `region` and `region_source` are `null`,
+and `core-mode-unestablished` says why with one of four reasons in place of `region-decided-by-disc`:
+`disc-format-unread` (an image atlas does not read, a CHD with `cdfl` hunks and an encrypted PBP under Beetle and the
+`.toc` Beetle loads beside the content among them), `disc-unread` (no region came from the image, with its `status`: it
+was read and decided nothing, or, extracted into a `cache_directory` atlas cannot locate, it was left unread because
+what the core looks for beside it — a cue sheet's or a playlist's files, and under Beetle the `.toc` — cannot be found),
 `content-unopenable` (content the emulator itself does not open — Beetle opens no bare `.bin`, SwanStation no `cdzs`
 CHD, DuckStation no CHD whose parent its search does not find, and DuckStation and SwanStation no PBP they refuse), or
 `region-property-unread` (DuckStation's `custom_properties.ini` is there and would not read, and it can name the

@@ -11638,6 +11638,1384 @@
           ]
         }
       }
+    },
+    {
+      "name": "beetle-psx-loads-the-toc-beside-a-cue-sheet",
+      "rationale": "The launch names a cue sheet, and a cdrdao .toc of the same name lies beside it. Beetle PSX joins the content's directory and its name without the last extension to .toc and loads that file instead wherever it opens (libretro.cpp:4280-4288 at d6383bf), so the disc it boots is the .toc's, a format atlas does not read: disc-format-unread naming the .toc, the per-region answer standing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 3\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/roms/psx/Game.cue": "FILE \"Game.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n",
+          "/home/deck/roms/psx/Game.bin": {
+            "md5": "00000000000000000000000000000000",
+            "size": 705600
+          },
+          "/home/deck/roms/psx/Game.toc": "CD_ROM_XA\n\nTRACK MODE2_RAW\nDATAFILE \"Game.bin\" 00:02:00\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX"
+          }
+        },
+        "disc_identities": {
+          "/home/deck/roms/psx/Game.cue": {
+            "license": "          Licensed  by          Sony Computer Entertainment Euro pe",
+            "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n",
+            "boot_found": true,
+            "edc_valid": true
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true,
+          "content_path": "/home/deck/roms/psx/Game.cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ],
+                  "region": null,
+                  "region_source": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "reason": "disc-format-unread",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ],
+                    "unstated": [],
+                    "content_path": "/home/deck/roms/psx/Game.cue",
+                    "core_so": "mednafen_psx_libretro.so",
+                    "disc": "/home/deck/roms/psx/Game.toc",
+                    "extension": "toc"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "beetle-psx-loads-the-toc-beside-a-chd",
+      "rationale": "The same swap whatever the content is: a CHD with Game.toc beside it is not opened, and the answer names the .toc (libretro.cpp:4280-4288 at d6383bf): disc-format-unread, the per-region answer standing.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 3\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/roms/psx/Game.chd": {
+            "md5": "00000000000000000000000000000000",
+            "size": 783360
+          },
+          "/home/deck/roms/psx/Game.toc": "CD_ROM_XA\n\nTRACK MODE2_RAW\nDATAFILE \"Game.bin\" 00:02:00\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX"
+          }
+        },
+        "disc_identities": {
+          "/home/deck/roms/psx/Game.chd": {
+            "codecs": [
+              "cdzs"
+            ],
+            "requires_parent": false,
+            "identity": {
+              "license": "          Licensed  by          Sony Computer Entertainment Amer  ica ",
+              "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n",
+              "boot_found": true,
+              "edc_valid": true
+            }
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true,
+          "content_path": "/home/deck/roms/psx/Game.chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ],
+                  "region": null,
+                  "region_source": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "reason": "disc-format-unread",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ],
+                    "unstated": [],
+                    "content_path": "/home/deck/roms/psx/Game.chd",
+                    "core_so": "mednafen_psx_libretro.so",
+                    "disc": "/home/deck/roms/psx/Game.toc",
+                    "extension": "toc"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "beetle-psx-loads-the-toc-named-for-a-playlist",
+      "rationale": "The launch names Collection.m3u, whose first entry is Game.cue, and Collection.toc lies beside it. Beetle PSX swaps the content it is handed before it reads anything (libretro.cpp:4280-4288 at d6383bf), so the playlist is never read: disc-format-unread naming Collection.toc.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 3\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/roms/psx/Game.cue": "FILE \"Game.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n",
+          "/home/deck/roms/psx/Game.bin": {
+            "md5": "00000000000000000000000000000000",
+            "size": 705600
+          },
+          "/home/deck/roms/psx/Collection.m3u": "Game.cue\n",
+          "/home/deck/roms/psx/Collection.toc": "CD_ROM_XA\n\nTRACK MODE2_RAW\nDATAFILE \"Game.bin\" 00:02:00\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX"
+          }
+        },
+        "disc_identities": {
+          "/home/deck/roms/psx/Game.cue": {
+            "license": "          Licensed  by          Sony Computer Entertainment Euro pe",
+            "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n",
+            "boot_found": true,
+            "edc_valid": true
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true,
+          "content_path": "/home/deck/roms/psx/Collection.m3u"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ],
+                  "region": null,
+                  "region_source": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "reason": "disc-format-unread",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ],
+                    "unstated": [],
+                    "content_path": "/home/deck/roms/psx/Collection.m3u",
+                    "core_so": "mednafen_psx_libretro.so",
+                    "disc": "/home/deck/roms/psx/Collection.toc",
+                    "extension": "toc"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "swanstation-boots-the-cue-sheet-beside-a-toc",
+      "rationale": "The disc of the first SwanStation vector with Game.toc beside its cue sheet. SwanStation boots the path it is handed (src/libretro/libretro_host_interface.cpp:555-558 at 4d309c0), so the .toc changes nothing: pal from the licence, as before.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\n",
+          "/usr/share/libretro/info/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\nsystemname = \"PlayStation\"\nfirmware_count = \"1\"\nfirmware0_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware0_path = \"scph5501.bin\"\nfirmware0_opt = \"true\"\n",
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/roms/psx/Game.cue": "FILE \"Game.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n",
+          "/home/deck/roms/psx/Game.bin": {
+            "md5": "00000000000000000000000000000000",
+            "size": 705600
+          },
+          "/home/deck/roms/psx/Game.toc": "CD_ROM_XA\n\nTRACK MODE2_RAW\nDATAFILE \"Game.bin\" 00:02:00\n"
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/swanstation_libretro.so": {
+            "library_name": "SwanStation"
+          }
+        },
+        "disc_identities": {
+          "/home/deck/roms/psx/Game.cue": {
+            "license": "          Licensed  by          Sony Computer Entertainment Euro pe",
+            "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n",
+            "boot_found": true,
+            "edc_valid": true
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "swanstation_libretro.so",
+          "verify": true,
+          "content_path": "/home/deck/roms/psx/Game.cue"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "swanstation_libretro.so",
+              "emulator": "swanstation_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name-then-content",
+              "requirements_met": true,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "swanstation_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j",
+                        "pal"
+                      ]
+                    },
+                    {
+                      "core_so": "swanstation_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": {
+                        "md5": "490f666e1afb15b7362b406ed1cea246",
+                        "sha1": null,
+                        "size": 524288,
+                        "kind": "file"
+                      },
+                      "found": "file",
+                      "present": true,
+                      "checked": "verified",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    }
+                  ],
+                  "region": "pal",
+                  "region_source": "license"
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-search-candidates",
+                  "data": {
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "core_so": "swanstation_libretro.so",
+                    "readings": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "identified"
+                    },
+                    "images": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)"
+                    },
+                    "image_regions": {
+                      "/home/deck/.config/retroarch/system/scph5501.bin": "ntsc-u"
+                    }
+                  }
+                },
+                {
+                  "code": "firmware-image-identified",
+                  "data": {
+                    "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                    "image": "SCPH-5501, 5503, 7003 (v3.0 11-18-96 A)",
+                    "region": "ntsc-u",
+                    "core_so": "swanstation_libretro.so",
+                    "table": "4d309c0",
+                    "regions": [
+                      "ntsc-j",
+                      "pal"
+                    ]
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "beetle-psx-a-chd-extracted-into-a-cache-directory-atlas-cannot-place",
+      "rationale": "The same cfg, cache_directory = \"default\", over a zip holding one CHD. Beetle PSX loads the .toc of the name it is handed from beside the extracted entry wherever one is there (libretro.cpp:4280-4288 at d6383bf), and where RetroArch writes the entry is a directory atlas cannot place, so whether that .toc is there is unknown: disc-unread, unreadable, though the CHD itself reads.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/retroarch/retroarch.cfg": "system_directory = \"/home/deck/.config/retroarch/system\"\nlibretro_directory = \"/usr/lib/libretro\"\nlibretro_info_path = \"/usr/share/libretro/info\"\ncache_directory = \"default\"\n",
+          "/usr/share/libretro/info/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\nsystemname = \"PlayStation\"\nfirmware_count = 3\nfirmware0_desc = \"scph5500.bin (PS1 JP BIOS)\"\nfirmware0_path = \"scph5500.bin\"\nfirmware0_opt = \"false\"\nfirmware1_desc = \"scph5501.bin (PS1 US BIOS)\"\nfirmware1_path = \"scph5501.bin\"\nfirmware1_opt = \"false\"\nfirmware2_desc = \"scph5502.bin (PS1 EU BIOS)\"\nfirmware2_path = \"scph5502.bin\"\nfirmware2_opt = \"false\"\n",
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "status": "invalid-text"
+          },
+          "/home/deck/.config/retroarch/system/scph5501.bin": {
+            "md5": "490f666e1afb15b7362b406ed1cea246",
+            "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+            "size": 524288
+          },
+          "/home/deck/roms/psx/Game.zip": {
+            "md5": "00000000000000000000000000000000",
+            "size": 812544
+          }
+        },
+        "dirs": [
+          "/home/deck/.config/retroarch/system"
+        ],
+        "cores": {
+          "/usr/lib/libretro/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX",
+            "valid_extensions": "cue|toc|m3u|ccd|exe|pbp|chd"
+          }
+        },
+        "disc_identities": {
+          "/home/deck/roms/psx/Game.zip#Game.chd": {
+            "codecs": [
+              "cdlz",
+              "cdzl",
+              "cdfl"
+            ],
+            "requires_parent": false,
+            "identity": {
+              "license": "          Licensed  by          Sony Computer Entertainment Amer  ica ",
+              "system_cnf": "BOOT = cdrom:\\SLUS_000.01;1\r\nTCB = 4\r\nEVENT = 10\r\nSTACK = 801FFFF0\r\n",
+              "boot_found": true,
+              "edc_valid": true
+            }
+          }
+        },
+        "firmware_query": {
+          "kind": "core",
+          "core_so": "mednafen_psx_libretro.so",
+          "verify": true,
+          "content_path": "/home/deck/roms/psx/Game.zip"
+        },
+        "archives": {
+          "/home/deck/roms/psx/Game.zip": [
+            "Game.chd"
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "bare_retroarch_native",
+            "label": "RetroArch (native)",
+            "kinds": [
+              "bare_retroarch_native"
+            ],
+            "root": "/home/deck/.config/retroarch",
+            "health": []
+          }
+        ],
+        "firmware": {
+          "root": "/home/deck/.config/retroarch/system",
+          "hash_checked": true,
+          "cores": [
+            {
+              "core_so": "mednafen_psx_libretro.so",
+              "emulator": "mednafen_psx_libretro.so",
+              "declared_index": null,
+              "label": null,
+              "declaration": "read",
+              "locating": "by-name",
+              "requirements_met": null,
+              "system_firmware": "cannot-run-without-firmware",
+              "system_firmware_met": true,
+              "requirements": [
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5500.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                  "declared": "scph5500.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "8dd7d5296a650fac7319bce665a6a53c",
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5501.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                  "declared": "scph5501.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "490f666e1afb15b7362b406ed1cea246",
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "file",
+                  "present": true,
+                  "checked": "verified",
+                  "satisfied": true,
+                  "supplied_by": null
+                },
+                {
+                  "core_so": "mednafen_psx_libretro.so",
+                  "system": "psx",
+                  "system_source": "systemname",
+                  "need": "optional",
+                  "file_name": "scph5502.bin",
+                  "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                  "declared": "scph5502.bin",
+                  "declared_kind": "file",
+                  "identity": {
+                    "md5": "32736f17079d0b2b7024407c39bd3050",
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "size": 524288,
+                    "kind": "file"
+                  },
+                  "found": "missing",
+                  "present": false,
+                  "checked": null,
+                  "satisfied": false,
+                  "supplied_by": null
+                },
+                {
+                  "alternatives": [
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5500.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5500.bin",
+                      "declared": "scph5500.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-j"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5501.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5501.bin",
+                      "declared": "scph5501.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "file",
+                      "present": true,
+                      "checked": "unknown",
+                      "satisfied": true,
+                      "supplied_by": null,
+                      "regions": [
+                        "ntsc-u"
+                      ]
+                    },
+                    {
+                      "core_so": "mednafen_psx_libretro.so",
+                      "system": "psx",
+                      "system_source": "systemname",
+                      "need": "required",
+                      "file_name": "scph5502.bin",
+                      "path": "/home/deck/.config/retroarch/system/scph5502.bin",
+                      "declared": "scph5502.bin",
+                      "declared_kind": "file",
+                      "identity": null,
+                      "found": "missing",
+                      "present": false,
+                      "checked": null,
+                      "satisfied": false,
+                      "supplied_by": null,
+                      "regions": [
+                        "pal"
+                      ]
+                    }
+                  ],
+                  "region": null,
+                  "region_source": null
+                }
+              ],
+              "refused": [],
+              "caveats": [
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5500.bin",
+                      "SCPH5500.bin",
+                      "SCPH-5500.bin"
+                    ],
+                    "sha1": "b05def971d8ec59f346f2d9ac21fb742e3eb6917",
+                    "region": "ntsc-j"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5501.bin",
+                      "SCPH5501.bin",
+                      "SCPH-5501.bin",
+                      "scph5503.bin",
+                      "SCPH5503.bin",
+                      "SCPH-5503.bin",
+                      "scph7003.bin",
+                      "SCPH7003.bin",
+                      "SCPH-7003.bin"
+                    ],
+                    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+                    "region": "ntsc-u"
+                  }
+                },
+                {
+                  "code": "firmware-name-spellings",
+                  "data": {
+                    "core_so": "mednafen_psx_libretro.so",
+                    "spellings": [
+                      "scph5502.bin",
+                      "SCPH5502.bin",
+                      "SCPH-5502.bin",
+                      "scph5552.bin",
+                      "SCPH5552.bin",
+                      "SCPH-5552.bin"
+                    ],
+                    "sha1": "f6bc2d1f5eb6593de7d089c425ac681d6fffd3f0",
+                    "region": "pal"
+                  }
+                },
+                {
+                  "code": "core-mode-unestablished",
+                  "data": {
+                    "reason": "disc-unread",
+                    "dir": "/home/deck/.config/retroarch/system",
+                    "regions": [
+                      "ntsc-j",
+                      "ntsc-u",
+                      "pal"
+                    ],
+                    "unstated": [],
+                    "content_path": "/home/deck/roms/psx/Game.zip",
+                    "core_so": "mednafen_psx_libretro.so",
+                    "disc": "/home/deck/roms/psx/Game.zip#Game.chd",
+                    "status": "unreadable"
+                  }
+                },
+                {
+                  "code": "system-firmware-world-knowledge",
+                  "data": {
+                    "system": "psx",
+                    "evidence": "verified"
+                  }
+                }
+              ]
+            }
+          ],
+          "unclaimed": [],
+          "caveats": [
+            {
+              "code": "arrangement-unverified",
+              "data": {
+                "kind": "bare_retroarch_native"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

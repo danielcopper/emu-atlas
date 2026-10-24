@@ -46,6 +46,11 @@ decrypted — is answered per emulator (D1 of #691). An archive is opened by
 RetroArch, not by the emulator: under SwanStation and Beetle PSX the entry it
 extracts is read as content of its own format (D2 of #691), and DuckStation
 opens none.
+
+Before any of that, Beetle PSX loads the ``.toc`` of the content's name from
+beside the content wherever one is there, in place of whatever it was handed,
+a playlist included (``libretro.cpp:4280-4288``); SwanStation boots the path
+it is handed (``src/libretro/libretro_host_interface.cpp:555-558`` at 4d309c0).
 """
 
 from __future__ import annotations
@@ -68,6 +73,8 @@ from .machine import (
     DISC_OK,
     DISC_PARENT_NOT_FOUND,
     DISC_UNREADABLE,
+    KIND_DIRECTORY,
+    KIND_FILE,
     READ_MISSING,
     READ_OK,
     READ_UNREADABLE,
@@ -118,7 +125,8 @@ DISC_UNREAD_MISSING: DiscUnreadStatus = "missing"
 DISC_UNREAD_UNREADABLE: DiscUnreadStatus = "unreadable"
 """The image, a file it names, or the playlist naming it is there and its bytes did not come back — or the read would
 pass a bound atlas reads within: a length the image states, a chain of copies or of metadata entries, a parent's folder
-too large to search, or the work one read may spend."""
+too large to search, or the work one read may spend — or the entry was extracted into a ``cache_directory`` atlas cannot
+locate, where what the core looks for beside it cannot be found."""
 DISC_UNREAD_NOT_A_DISC: DiscUnreadStatus = "not-a-disc"
 """The image opens as no disc: a cue sheet the parser refuses, a CHD whose header, map or tracks the emulators'
 reader refuses, or an image whose first track is audio."""
@@ -227,12 +235,14 @@ class DiscRegionReading:
     ``None``. Otherwise ``reason`` is one of the three
     ``core-mode-unestablished`` reasons a statement about the disc rides on, and
     the fields beside it are that statement's data: ``disc`` is the image the
-    region would be read from — the content path itself, or the playlist's first
-    entry — ``status`` the word of ``disc-unread``, and ``extension`` the suffix
-    a format or an open was refused on, lowered and without its dot, the way
-    every other statement of an extension spells it. ``path`` is a file other
-    than the disc that would have decided and could not be read — DuckStation's
-    per-path properties file, under ``region-property-unread``.
+    region would be read from — the content path itself, the playlist's first
+    entry, the archive entry RetroArch extracts, or the ``.toc`` Beetle PSX
+    loads beside the content — ``status`` the word of ``disc-unread``, and
+    ``extension`` the suffix a format or an open was refused on, lowered and
+    without its dot, the way every other statement of an extension spells it.
+    ``path`` is a file other than the disc that would have decided and could
+    not be read — DuckStation's per-path properties file, under
+    ``region-property-unread``.
     """
 
     region: ConsoleRegion | None = None
@@ -509,7 +519,9 @@ class ArchiveHands:
     on this host, and ``None`` where it is empty: the entry is then written
     beside the archive (archive_file.c:111-116 @ a79435a);
     ``cache_directory_read`` is false where it is set and does not read as a
-    path on this host, so where a cue sheet or a playlist lands is unknown.
+    path on this host, so where the entry lands is unknown, and with it what
+    the core looks for beside it — a cue sheet's or a playlist's files, and
+    under Beetle PSX the ``.toc`` it loads in the entry's place.
     """
 
     claims: frozenset[str] | None
@@ -566,8 +578,8 @@ def _archive_region(machine: Machine, emulator: str, archive: str, hands: Archiv
     archive — joined there as the entry's full name (``fill_pathname_resolve_relative``
     over ``<archive>#<entry>``, file_path.c:952-965 and :625-640 @ a79435a),
     so an entry in a folder of the archive is written into a directory that
-    does not exist and the core gets nothing. The entry is then read as
-    content of its own format.
+    does not exist and the core gets nothing. The written entry is then read
+    by :func:`_written_entry_region`.
     """
     if _fold(path_extension(archive)) in (b"7z", b"zst"):
         return _format_unread(archive)
@@ -586,10 +598,30 @@ def _archive_region(machine: Machine, emulator: str, archive: str, hands: Archiv
     if hands.cache_directory is None and hands.cache_directory_read and "/" in entry:
         return _unopenable(shown)
     written = os.path.join(hands.cache_directory or os.path.dirname(archive), entry.rsplit("/", 1)[-1])
-    extracted = ExtractedEntry(archive, entry)
-    if not hands.cache_directory_read and _extension(written) in (PLAYLIST_SUFFIX, psx_disc.CUE_SUFFIX):
-        # What the entry names is looked for beside it, and where it lands is not known here.
+    return _written_entry_region(
+        machine, emulator, written, ExtractedEntry(archive, entry), placed=hands.cache_directory_read
+    )
+
+
+def _written_entry_region(
+    machine: Machine, emulator: str, written: str, extracted: ExtractedEntry, *, placed: bool
+) -> DiscRegionReading:
+    """The region the entry RetroArch wrote to *written* decides, read as content of its own format.
+
+    Beetle PSX gets the written entry's path, so the ``.toc`` it loads in
+    place of the content is looked for beside it (:func:`_beetle_toc`). Where
+    the entry lands in a ``cache_directory`` atlas cannot place — *placed*
+    false — what is looked for beside it cannot be: a cue sheet's or a
+    playlist's files under any core, and under Beetle that ``.toc`` beside
+    every entry, so the disc is one atlas did not read.
+    """
+    shown = f"{extracted.archive}#{extracted.entry}"
+    beside = emulator == EMULATOR_BEETLE or _extension(written) in (PLAYLIST_SUFFIX, psx_disc.CUE_SUFFIX)
+    if not placed and beside:
         return DiscRegionReading(reason=REASON_DISC_UNREAD, disc=shown, status=DISC_UNREAD_UNREADABLE)
+    toc = _beetle_toc(machine, written) if emulator == EMULATOR_BEETLE else None
+    if toc is not None:
+        return _format_unread(toc)
     if _extension(written) == PLAYLIST_SUFFIX:
         return _extracted_playlist_region(machine, emulator, written, extracted)
     if _extension(written) in _BOOT_SUFFIXES[emulator]:
@@ -653,6 +685,27 @@ def _unopenable(path: str) -> DiscRegionReading:
 
 def _format_unread(path: str) -> DiscRegionReading:
     return DiscRegionReading(reason=REASON_DISC_FORMAT_UNREAD, disc=path, extension=_stated_extension(path))
+
+
+def _beetle_toc(machine: Machine, path: str) -> str | None:
+    """The ``.toc`` Beetle PSX opens in place of the content at *path*, or ``None`` where it opens *path* itself.
+
+    ``retro_load_game`` (libretro.cpp:4280-4288 at d6383bf) joins the
+    directory before the last ``/``, a ``/`` and the name after it without its
+    last extension (``extract_directory``, :356-369; ``extract_basename``,
+    :337-354) to a lowercase ``.toc``, and loads that instead of the content
+    wherever ``filestream_exists`` opens it for reading
+    (``libretro-common/streams/file_stream.c:104-121``) — whatever the content
+    is, a playlist included. A directory opens for reading too; a path ``stat``
+    cannot reach, the open cannot reach either. Content that is that ``.toc``
+    itself goes on through the route as any other content does.
+    """
+    directory, _, name = path.rpartition("/")
+    dot = name.rfind(".")
+    toc = f"{directory}/{name if dot < 0 else name[:dot]}.toc"
+    if toc == path:
+        return None
+    return toc if machine.path_kind(toc) in (KIND_FILE, KIND_DIRECTORY) else None
 
 
 def _playlist_entries(machine: Machine, emulator: str, playlist: str) -> list[str] | DiscRegionReading:
@@ -759,7 +812,10 @@ def read_disc_region(
     """The region *emulator*'s own rule decides for the content at *content_path*, or the statement of why none.
 
     An archive first, under a libretro core: the entry RetroArch hands the
-    core out of it, by *hands* (:func:`_archive_region`). Then the playlist,
+    core out of it, by *hands* (:func:`_archive_region`). Then, under Beetle
+    PSX, the ``.toc`` it loads in place of the content where one lies beside
+    it (:func:`_beetle_toc`) — a format atlas does not read, stated as
+    ``disc-format-unread`` about that file. Then the playlist,
     by the emulator's own reader; then whether the emulator opens the image
     at all (``content-unopenable`` where it does not); then whether atlas
     reads that image (``disc-format-unread`` where it does not); then the
@@ -772,6 +828,9 @@ def read_disc_region(
     """
     if emulator != EMULATOR_DUCKSTATION and is_compressed_file(content_path):
         return _archive_region(machine, emulator, content_path, hands)
+    toc = _beetle_toc(machine, content_path) if emulator == EMULATOR_BEETLE else None
+    if toc is not None:
+        return _format_unread(toc)
     first = _first_disc(machine, emulator, content_path)
     if isinstance(first, DiscRegionReading):
         return first
