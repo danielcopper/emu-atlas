@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.28.0](https://github.com/danielcopper/emu-atlas/compare/v0.27.0...v0.28.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** on RetroDECK, a DeSmuME 2015 save answer, and a MAME save answer with mame_mame_paths_enable on where a relative tree is joined to the working directory, asked with a cwd the sandbox does not show, now state the sandbox's HOME (or / where that is not shown either) as the working directory (the root, or the base of the joined trees) with cwd-hidden-in-sandbox, instead of the cwd as given. Asked with a cwd the sandbox model cannot tell, they carry save-directory-visibility-unestablished.
+* **saves:** groups that answered size_fixed null now answer true for the memory card and backup RAM images of Beetle PSX, SwanStation, PCSX-ReARMed, LRPS2, Genesis Plus GX, Beetle Saturn, Kronos, Flycast and Opera, for Dolphin's and PrimeHack's GBA cartridge .sav, melonDS's .sav and xemu's EEPROM, and PUAE's _save.adf.gz answers false. The answer for bsnes-jg and for PUAE's redirected floppy modes (puae and puae2021) changes shape: one group per file instead of one group for both. Each of those groups says per-game-file, except in the archived floppy mode, where a group holds one write file per archive member and stays per-game-files. The top-level granularity for bsnes-jg and for PUAE's plain redirected floppy mode moves from per-game-files to per-game-file; the archived floppy mode's does not move. In the split groups, bsnes-jg's .srm and .rtc and PUAE's _save.adf answer true.
+* **firmware:** Beetle PSX's firmware answer for a content path with a same-name .toc beside it, or beside the entry extracted from a zip, now states disc-format-unread naming that .toc instead of the region or the statement read from the content. And every entry Beetle PSX is handed out of a zip, where cache_directory is set to a place atlas cannot locate, now answers disc-unread with status unreadable, instead of the region or the disc-format-unread statement read from the entry.
+* **firmware:** a firmware question whose content_path names a .pbp no longer answers disc-format-unread: the region group states the decided region, or content-unopenable where DuckStation or SwanStation refuse the PBP, or disc-format-unread for an encrypted one under Beetle PSX. A content_path naming a .zip or .apk under SwanStation or Beetle PSX no longer answers content-unopenable: the group answers from the extracted entry, whose disc is spelled "<archive>#<entry>"; a .7z or .zst there answers disc-format-unread. Questions without a content path, and DuckStation's answers for archives, are unchanged.
+
+### Features
+
+* **firmware:** read a PlayStation disc's region from PBPs and archives ([#694](https://github.com/danielcopper/emu-atlas/issues/694)) ([51537fd](https://github.com/danielcopper/emu-atlas/commit/51537fd64673d339d157e55152f5f112a045dd91))
+* **saves:** state whether core-written save images keep their size ([#697](https://github.com/danielcopper/emu-atlas/issues/697)) ([1e7563f](https://github.com/danielcopper/emu-atlas/commit/1e7563f8542889a1d7363318d5d81c30ecf1d074))
+
+
+### Bug Fixes
+
+* **firmware:** read Beetle PSX's disc from the .toc it opens beside the content ([#696](https://github.com/danielcopper/emu-atlas/issues/696)) ([1e27523](https://github.com/danielcopper/emu-atlas/commit/1e275237ecc2a4665bc592dbe8d4e341095ebbe4))
+* **saves:** read the caller's cwd inside RetroDECK's sandbox everywhere ([#699](https://github.com/danielcopper/emu-atlas/issues/699)) ([132e2be](https://github.com/danielcopper/emu-atlas/commit/132e2beab80aef9ea034094e37762a31e7beefc0))
+
 ## [0.27.0](https://github.com/danielcopper/emu-atlas/compare/v0.26.0...v0.27.0) (2026-10-23)
 
 
