@@ -3116,6 +3116,54 @@ class TestPcee2MemoryCards:
         assert shared == [{"core": "pcsx2", "dir": PCEE2_CARDS}]
 
 
+class TestLrps2SharedCards:
+    """The mirror of PCEE2's caveat: LRPS2's shared cards name PCEE2 where it writes the same folder."""
+
+    def _query(self, files, *, cores=None):
+        rd = _retrodeck(
+            {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, PS2_ROM: "", SAVES_KEEP: "", **files},
+            cores=cores
+            or {f"{DEPLOY}/pcee2_libretro.so": PCEE2_CORE, f"{DEPLOY}/pcsx2_libretro.so": LRPS2_CORE},
+        )
+        return placed(rd.savefile_location(content_path=PS2_ROM, core_so="pcsx2_libretro.so"))
+
+    @staticmethod
+    def _shared(placement) -> list[dict[str, str]]:
+        return [dict(c.data) for c in placement.caveats if c.code == atlas.CAVEAT_SAVE_FILES_SHARED_WITH_CORE]
+
+    def test_each_core_names_the_other(self):
+        table = atlas.installations._SAVE_FOLDER_SHARED_WITH  # pyright: ignore[reportPrivateUsage]
+        assert table == {"pcee2": ("pcsx2", "pcsx2_libretro.so"), "pcsx2": ("pcee2", "pcee2_libretro.so")}
+
+    def test_the_shared_folder_names_pcee2_and_asks_it_once(self):
+        # PCEE2's answer is asked without the check, so the entry standing both
+        # ways cannot send the two questions round in a loop.
+        p = self._query({f"{PCEE2_CARDS}/Mcd001.ps2": "m"})
+        assert p.root_kind == "system_directory"
+        assert self._shared(p) == [{"core": "pcee2", "dir": PCEE2_CARDS}]
+
+    def test_pcee2_not_installed_shares_nothing(self):
+        p = self._query({f"{PCEE2_CARDS}/Mcd001.ps2": "m"}, cores={f"{DEPLOY}/pcsx2_libretro.so": LRPS2_CORE})
+        assert self._shared(p) == []
+
+    def test_lrps2_in_per_game_mode_shares_nothing(self):
+        p = self._query(
+            {f"{PCEE2_CARDS}/Mcd001.ps2": "m", OPTIONS_CFG: 'pcsx2_shared_memory_cards = "disabled"\n'}
+        )
+        assert p.root_kind == "savefile_directory"
+        assert self._shared(p) == []
+
+    def test_pcee2_keeping_no_card_shares_nothing(self):
+        p = self._query(
+            {
+                f"{PCEE2_CARDS}/Mcd001.ps2": "m",
+                OPTIONS_CFG: 'pcsx2_memcard_slot1_enable = "disabled"\n'
+                'pcsx2_memcard_slot2_enable = "disabled"\n',
+            }
+        )
+        assert self._shared(p) == []
+
+
 class TestBeetlePsxSecondCard:
     """Issue #80's answer: the default-enabled slot 1 is a core-written .mcr."""
 

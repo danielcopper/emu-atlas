@@ -1628,7 +1628,7 @@ Shape:
     and whose content door is the folder's own listing. The folder's curated row in
     `atlas.firmware.FIRMWARE_DECLARED_DIRECTORY` states the option, the value that asks for the listing, the size filter
     and the content read, so this shape states nothing else, and a `content_route` beside it is refused — the core reads
-    headers, it looks nothing up in a table. PCEE2 is the case:
+    headers, it looks nothing up in a table. PCEE2 and LRPS2 are the cases:
     `"name_route": { "declared_directory": "pcsx2/bios", "citation": "..." }`.
   - `by-name-then-content` otherwise takes the **option** shape, and must: `region_option` is the option that pins the
     console region, with every value it takes mapped to a region token — `null` for a value that pins none, which is

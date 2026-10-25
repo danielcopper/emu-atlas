@@ -51,6 +51,7 @@ from atlas.firmware import (
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_CANDIDATE,
     CAVEAT_FIRMWARE_DIRECTORY_HOLDS_NO_IMAGE,
     CAVEAT_FIRMWARE_IDENTITY_NOT_COMPARABLE,
+    CAVEAT_FIRMWARE_CONFIGURED_IMAGE_NOT_OFFERED,
     CAVEAT_FIRMWARE_IMAGE_CONFIGURED,
     CAVEAT_FIRMWARE_IMAGE_CONTRADICTED,
     CAVEAT_FIRMWARE_IMAGE_AMBIGUOUS,
@@ -1553,6 +1554,9 @@ class TestADeclarationStatesItsOwnShape:
             # launch opens (main.cpp:360-365 at 14d19f8) — the row states it,
             # so the resolver reads no core name of its own.
             option_key="pcsx2_bios",
+            # Its values are the files the listing accepts (main.cpp:1813-1834),
+            # and RetroArch hands on a stored value only where it is one of them.
+            offered_by_listing=True,
         )
         assert row.accepts_size(4 * 1024 * 1024 - 1) is False
         assert row.accepts_size(4 * 1024 * 1024) is True
@@ -2211,6 +2215,7 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         chain: CoreOptionsChain | None = None,
         no_chain: bool = False,
         verify: bool = True,
+        headers: Mapping[str, Mapping[str, object] | str] | None = None,
         **kwargs: object,
     ):
         tree: dict[str, FixtureFileSpec] = {
@@ -2223,7 +2228,7 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         if per_core is not None:
             tree[f"{self.OPT_DIR}/PCSX2/PCSX2.opt"] = per_core
         tree.update(files or {})
-        machine = _machine(tree, ps2_bios_headers={self.IMAGE: PS2_HEADER_EUR}, **kwargs)
+        machine = _machine(tree, ps2_bios_headers={self.IMAGE: PS2_HEADER_EUR, **(headers or {})}, **kwargs)
         if chain is None and not no_chain:
             chain = CoreOptionsChain(
                 global_file=self.OPTIONS,
@@ -2238,6 +2243,28 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
     def _entry(self, answer) -> FirmwareRequirement:
         (entry,) = _plain_requirements(answer.cores[0])
         return entry
+
+    @staticmethod
+    def _without_the_frontend_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+        """LRPS2's row as the core's own code reads it, with no frontend guard in front of the option.
+
+        No shipped row reads a stored name this way any more — both set
+        ``offered_by_listing`` — so the tests that pin what the core's own
+        stat and ``Path::Combine`` do with a name run against this copy.
+        """
+        key = ("pcsx2", "pcsx2/bios")
+        rows = dict(atlas.firmware.FIRMWARE_DECLARED_DIRECTORY)
+        rows[key] = replace(rows[key], offered_by_listing=False)
+        monkeypatch.setattr(atlas.firmware, "FIRMWARE_DECLARED_DIRECTORY", rows)
+
+    def _not_offered(self, answer) -> dict[str, str]:
+        """The folder answers and the one core caveat says the stored name was not offered."""
+        entry = self._entry(answer)
+        assert entry.declared_kind == DECLARED_DIRECTORY
+        assert entry.path == LRPS2_FOLDER
+        (caveat,) = answer.cores[0].caveats
+        assert caveat.code == CAVEAT_FIRMWARE_CONFIGURED_IMAGE_NOT_OFFERED
+        return dict(caveat.data)
 
     def test_the_named_file_is_the_requirement_and_the_folder_is_not_judged(self):
         answer = self._answer('pcsx2_bios = "scph70004.bin"\n')
@@ -2317,7 +2344,7 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
             "dir": LRPS2_FOLDER,
         }
 
-    def test_a_directory_at_the_configured_name_is_not_searched_past(self):
+    def test_a_directory_at_the_configured_name_is_not_searched_past(self, monkeypatch: pytest.MonkeyPatch):
         """The core's test is a stat that succeeded, and a directory passes it.
 
         ``LoadBIOS`` searches the folder where the path is empty or where
@@ -2327,7 +2354,12 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         the stat, so the core does not search past it: the configured file
         stays the requirement, the shape is stated, and no folder verdict and
         no green light stands over it.
+
+        The core's own reading, run against LRPS2's row without the frontend
+        guard: through RetroArch a directory is never offered
+        (:meth:`test_a_directory_at_the_configured_name_is_not_offered`).
         """
+        self._without_the_frontend_guard(monkeypatch)
         answer = self._answer(
             'pcsx2_bios = "a-folder"\n', dirs=[f"{LRPS2_FOLDER}/a-folder"]
         )
@@ -2358,7 +2390,7 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         assert [c.code for c in answer.caveats] == [CAVEAT_FIRMWARE_PATH_INACCESSIBLE]
         assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
 
-    def test_a_value_with_a_separator_is_followed_the_way_the_core_follows_it(self):
+    def test_a_value_with_a_separator_is_followed_the_way_the_core_follows_it(self, monkeypatch: pytest.MonkeyPatch):
         """Nothing normalises, so a climb that stays under the root is followed, not refused.
 
         ``Path::Combine`` resolves no component of its own, so the value
@@ -2367,7 +2399,12 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         file OUTSIDE the declared folder while ``declared`` stays the folder,
         and the claim follows the path so the unclaimed scan does not meet it
         again.
+
+        The core's own reading, run against LRPS2's row without the frontend
+        guard: through RetroArch a name with a separator is never offered
+        (:meth:`test_a_value_with_a_separator_is_not_offered`).
         """
+        self._without_the_frontend_guard(monkeypatch)
         outside = f"{BIOS_DIR}/pcsx2/elsewhere.bin"
         answer = self._answer(
             'pcsx2_bios = "../elsewhere.bin"\n', files={outside: PS2_IMAGE_EUR}
@@ -2443,15 +2480,22 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
         )
         assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
 
-    def test_an_absolute_value_lands_below_the_folder(self):
+    def test_an_absolute_value_lands_below_the_folder(self, monkeypatch: pytest.MonkeyPatch):
         # Path::Combine swallows the leading separator of an absolute name
         # (common/FileSystem.cpp:442-457 at 14d19f8, ported as
         # qt_ini.path_combine), where os.path.join would let it replace the
-        # folder entirely.
+        # folder entirely. The core's own reading, run against LRPS2's row
+        # without the frontend guard: through RetroArch the name is not offered
+        # (test_an_absolute_value_is_not_offered).
+        self._without_the_frontend_guard(monkeypatch)
         answer = self._answer('pcsx2_bios = "/scph70004.bin"\n')
         assert self._entry(answer).path == self.IMAGE
 
-    def test_a_value_climbing_out_of_the_root_is_refused_rather_than_followed(self):
+    def test_a_value_climbing_out_of_the_root_is_refused_rather_than_followed(self, monkeypatch: pytest.MonkeyPatch):
+        # The core's own reading, run against LRPS2's row without the frontend
+        # guard: through RetroArch the name is not offered
+        # (test_a_value_climbing_out_of_the_root_is_not_offered).
+        self._without_the_frontend_guard(monkeypatch)
         answer = self._answer('pcsx2_bios = "../../../elsewhere/scph70004.bin"\n')
         entry = self._entry(answer)
         # No destination is stated for it, so the folder's own listing is what
@@ -2464,6 +2508,86 @@ class TestAConfiguredNameNamesWhatTheLaunchOpens:
             "declared": "../../../elsewhere/scph70004.bin",
             "key": "pcsx2_bios",
         }
+
+    def test_a_directory_at_the_configured_name_is_not_offered(self):
+        # The listing passes FILESYSTEM_FIND_FILES alone (main.cpp:1807 at
+        # 14d19f8), so a directory is no value of the option, RetroArch hands
+        # the core its default, and the folder verdict is the answer.
+        answer = self._answer('pcsx2_bios = "a-folder"\n', dirs=[f"{LRPS2_FOLDER}/a-folder"])
+        data = self._not_offered(answer)
+        assert data == {"core": "pcsx2", "key": "pcsx2_bios", "name": "a-folder", "dir": LRPS2_FOLDER}
+        assert self._entry(answer).satisfied is True
+
+    def test_a_value_with_a_separator_is_not_offered(self):
+        outside = f"{BIOS_DIR}/pcsx2/elsewhere.bin"
+        answer = self._answer(
+            'pcsx2_bios = "../elsewhere.bin"\n', files={outside: PS2_IMAGE_EUR}
+        )
+        assert self._not_offered(answer)["name"] == "../elsewhere.bin"
+        # Nothing composed the name, so the file it would reach is claimed by nobody.
+        assert outside not in answer.cores[0].claims
+
+    def test_an_absolute_value_is_not_offered(self):
+        answer = self._answer('pcsx2_bios = "/scph70004.bin"\n')
+        assert self._not_offered(answer)["name"] == "/scph70004.bin"
+        # The folder still holds that image, so its verdict is a green one.
+        assert self._entry(answer).satisfied is True
+
+    def test_a_value_climbing_out_of_the_root_is_not_offered(self):
+        answer = self._answer('pcsx2_bios = "../../../elsewhere/scph70004.bin"\n')
+        assert self._not_offered(answer)["name"] == "../../../elsewhere/scph70004.bin"
+
+    @pytest.mark.parametrize("size", [4 * 1024 * 1024 - 1, 8 * 1024 * 1024 + 1])
+    def test_a_file_of_a_size_the_listing_drops_is_not_offered(self, size: int):
+        # The listing keeps 4 to 8 MiB only (main.cpp:1810-1816 at 14d19f8), a
+        # stat settled before any read — so it is settled without a content
+        # check too.
+        odd = f"{LRPS2_FOLDER}/odd.bin"
+        for verify in (True, False):
+            answer = self._answer(
+                'pcsx2_bios = "odd.bin"\n',
+                files={odd: {**PS2_IMAGE_EUR, "size": size}},
+                headers={odd: PS2_HEADER_EUR},
+                verify=verify,
+            )
+            data = self._not_offered(answer)
+            assert data["name"] == "odd.bin"
+
+    @pytest.mark.parametrize("size", [4 * 1024 * 1024, 8 * 1024 * 1024])
+    def test_a_file_at_either_bound_is_offered(self, size: int):
+        edge = f"{LRPS2_FOLDER}/edge.bin"
+        answer = self._answer(
+            'pcsx2_bios = "edge.bin"\n',
+            files={edge: {**PS2_UNLISTED, "size": size}},
+            headers={edge: PS2_HEADER_EUR},
+        )
+        entry = self._entry(answer)
+        assert entry.declared_kind == DECLARED_FILE
+        assert entry.path == edge
+        assert [c.code for c in answer.cores[0].caveats] == [CAVEAT_FIRMWARE_IMAGE_CONFIGURED]
+
+    def test_a_file_whose_header_fails_is_not_offered(self):
+        # IsBIOS gates the listing (main.cpp:1818 at 14d19f8): a right-sized
+        # file the ROMDIR walk denies is no value of the option.
+        junk = f"{LRPS2_FOLDER}/junk.bin"
+        answer = self._answer(
+            'pcsx2_bios = "junk.bin"\n',
+            files={junk: PS2_UNLISTED},
+            headers={junk: "not-a-bios"},
+        )
+        assert self._not_offered(answer)["name"] == "junk.bin"
+        assert self._entry(answer).satisfied is True
+
+    def test_a_hidden_name_is_not_offered(self):
+        # FindFiles skips a leading "." without FILESYSTEM_FIND_HIDDEN_FILES
+        # (common/FileSystem.cpp:855-862 at 14d19f8).
+        hidden = f"{LRPS2_FOLDER}/.scph70004.bin"
+        answer = self._answer(
+            'pcsx2_bios = ".scph70004.bin"\n',
+            files={hidden: PS2_IMAGE_EUR},
+            headers={hidden: PS2_HEADER_EUR},
+        )
+        assert self._not_offered(answer)["name"] == ".scph70004.bin"
 
     def test_identification_still_names_the_declared_folder(self):
         """A setting says which image the next launch opens, not where a file belongs.

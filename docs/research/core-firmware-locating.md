@@ -11,9 +11,9 @@ Every claim carries an evidence level:
 - **[D]** derived — follows from verified facts by reading, but not directly observed
 - **[O]** open — not yet established
 
-Sources are cited as `file:line`. SwanStation refers to upstream at `4d309c05f`, Beetle PSX to `d6383bff` and PCEE2 to
-`WizzardSK/pcee2-libretro@340ce04` — each the revision the deployed build stamps itself with — and RetroArch to
-`a79435a`, the pin this repository already uses for RetroArch facts (see the header of
+Sources are cited as `file:line`. SwanStation refers to upstream at `4d309c05f`, Beetle PSX to `d6383bff`, PCEE2 to
+`WizzardSK/pcee2-libretro@340ce04` and LRPS2 to `libretro/ps2@14d19f8` — each the revision the deployed build stamps
+itself with — and RetroArch to `a79435a`, the pin this repository already uses for RetroArch facts (see the header of
 [`retrodeck-save-placement.md`](retrodeck-save-placement.md)).
 
 ## The defect this exists for
@@ -31,11 +31,11 @@ The answer needed a word for the door, not a longer list of names. That word is 
 
 ## What was read, and at which revision
 
-**[V]** Three upstream trees and four deployed binaries. A core reports its own version through `retro_get_system_info`,
-and three of the four put a short commit hash in it, so the binary names the revision its source must be read at rather
+**[V]** Four upstream trees and five deployed binaries. A core reports its own version through `retro_get_system_info`,
+and four of the five put a short commit hash in it, so the binary names the revision its source must be read at rather
 than the other way round. Each of those stamps was read twice and independently: once from an unfiltered `strings -a`
 pass over the shipped file, and once through atlas's own core probe (`atlas.machine.CoreInfo.library_version`). The two
-agreed for all three.
+agreed for all four.
 
 | deployed core                 | reported version   | source revision                            |
 | ----------------------------- | ------------------ | ------------------------------------------ |
@@ -43,6 +43,7 @@ agreed for all three.
 | `mednafen_psx_hw_libretro.so` | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff`    |
 | `mednafen_psx_libretro.so`    | `0.9.44.1 d6383bf` | `libretro/beetle-psx-libretro@d6383bff`    |
 | `pcee2_libretro.so`           | `v2.9.78`          | `WizzardSK/pcee2-libretro@340ce04` (stamp) |
+| `pcsx2_libretro.so`           | `14d19f8`          | `libretro/ps2@14d19f8`                     |
 
 PCEE2's reported version names no commit of its own. It is `GIT_REV` (`pcee2-libretro/Libretro.cpp:1436`), which
 `cmake/Pcee2UpstreamVersion.cmake:49-50` replaces with the upstream PCSX2 release recorded in
@@ -270,8 +271,46 @@ cannot start without are built into it (`Libretro.cpp:495-504`). The packaged de
 file inside a folder, and the content door is a header read rather than a table — so its entry states the third
 `name_route` shape, a pointer at the folder declaration, and the folder's curated row in
 `atlas.firmware.FIRMWARE_DECLARED_DIRECTORY` states the option, the value `auto`, the absent size filter and the content
-read. LRPS2 has the same shape and is not entered yet: it answers `unestablished` until its own entry and the value
-check above are read for it.
+read. LRPS2 has the same shape and states it the same way, below.
+
+## LRPS2 — the same shape, with a size-bounded listing
+
+Everything below is at `libretro/ps2@14d19f8`, the revision the deployed `pcsx2_libretro.so` reports as its version.
+RetroDECK's catalogue launches it under two labels, "LRPS2" and "PCSX2"; both run this one `.so`. Its own `.info`
+declares the folder (`firmware0_path = "pcsx2/bios"`), so no packaged declaration stands in for it.
+
+**[V] The folder is `<system>/pcsx2/bios`.** `retro_init` lists the system directory joined with `/pcsx2/bios`
+(`libretro/main.cpp:1801-1807`), and `retro_load_game` sets `EmuFolders::DataRoot` to `<system>/pcsx2`
+(`main.cpp:1909-1913`), under which `EmuFolders::LoadConfig` resolves the default `bios` (`pcsx2/Pcsx2Config.cpp:1042`,
+`:1061`).
+
+**[V] The option's values come from a size-bounded listing.** The core declares `pcsx2_bios` with no values of its own
+(`libretro/libretro_core_options.h:117-128`). Whenever it has not read a value yet (`setting_bios` empty,
+`main.cpp:1801`), `retro_init` lists the folder non-recursively with `FILESYSTEM_FIND_FILES` and no hidden-files flag
+(`:1807`; `FindFiles` skips a leading `.` without it, `common/FileSystem.cpp:855-862`), keeps the files of 4 to 8 MiB
+(`main.cpp:1810-1816`) that `IsBIOS` accepts (`:1818`; `pcsx2/ps2/BiosTools.cpp:325-335`), and fills the option's values
+with their bare names, at most 127 (`main.cpp:1819`, `:1828-1829`), the first of them the default (`:1833-1834`).
+
+**[V] A name first.** `check_variables` reads `pcsx2_bios` at content load (`main.cpp:360-365`, called from
+`retro_load_game` at `:1926`) and writes it to `Filenames/BIOS`, `FullpathToBios` joins it onto the folder with
+`Path::Combine` (`pcsx2/Pcsx2Config.cpp:994-1000`), and `LoadBIOS` opens that path where it stats
+(`pcsx2/ps2/BiosTools.cpp:269-281`).
+
+**[V] The listing as the fallback.** With no stored value the option holds its default, the first image the listing kept
+— the content door. `LoadBIOS`'s own fallback, `FindBiosImage`, walks the same listing with the same bounds and test
+(`BiosTools.cpp:236-251`, reached at `:270-278`).
+
+**[D] A stored name reaches the core only when the listing offered it.** By the RetroArch chain above
+(`core_option_manager.c:1031-1053`, the guard at `:1037`), a stored name that is missing, of another size, fails the
+header test, is not a plain file, is hidden, or carries a separator reaches the core as the default — the first image
+the listing kept. The core's own code would open a configured file whatever its header said (the walk's return is
+discarded at `BiosTools.cpp:294`) and would compose any value with `Path::Combine`; through RetroArch neither is
+reached, because only names the listing produced arrive. Derived from the chain and the registration, not from a watched
+launch.
+
+**Where this lives.** The same third `name_route` shape as PCEE2's, pointing at LRPS2's own curated row in
+`atlas.firmware.FIRMWARE_DECLARED_DIRECTORY`, which states the option, the 4–8 MiB size filter and the content read, and
+offers no value that asks for the listing — LRPS2 has no `auto`; its default is the listing's first image.
 
 ## What a verdict here must cite
 
@@ -321,7 +360,7 @@ emptiness.
 
 ## Scope
 
-Four cores are entered. Every other libretro core answers `unestablished`, and that is the honest state — not a backlog
+Five cores are entered. Every other libretro core answers `unestablished`, and that is the honest state — not a backlog
 with a deadline, and not a claim that the others are `by-name`. The standalone emulators atlas carries a firmware card
 for answer from the shape of that card instead, with no second table: a card that states a search describes a directory
 read with per-region keys in front of it, which is `by-name-then-content`, and a card that states `files` or
@@ -329,8 +368,8 @@ read with per-region keys in front of it, which is `by-name-then-content`, and a
 
 **The vocabulary carries only the words a producer exists for.** Three of them, and each is reachable: two rules put a
 word on an answer — the packaged entry a `.so` reaches, and the shape of a standalone card — and `unestablished` is what
-a core neither of them describes takes. Over the 310 `cores[]` blocks the vector corpus holds, the words come out 157
-`unestablished`, 70 `by-name` and 83 `by-name-then-content` (counting rule: the serialized `locating` of every core
+a core neither of them describes takes. Over the 315 `cores[]` blocks the vector corpus holds, the words come out 109
+`unestablished`, 70 `by-name` and 136 `by-name-then-content` (counting rule: the serialized `locating` of every core
 block in every `expected` tree under `vectors/machines/`, tallied by value).
 
 A value nothing produces would be a claim with no mechanism behind it, and a branch a consumer could write and never

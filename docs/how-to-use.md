@@ -1225,16 +1225,18 @@ per-game path anywhere). Ask atlas first, then decide whether the identifier is 
 all.
 
 **Two cores can write one folder.** PCEE2 and LRPS2 each compose `<system>/pcsx2/memcards` for their memory cards
-themselves, so where LRPS2 keeps its shared cards there, PCEE2's answer carries `save-files-shared-with-core`:
-`data["core"]` names the other core by its card key (`pcsx2`) and `data["dir"]` the folder both write — the link's
-target where a link leads there, as `physical_dir` is. It is decided for the game you ask about: read from LRPS2's own
-answer for the same content, so LRPS2 not installed, or put in its per-game mode for that game — globally or by a
-per-game or per-folder options file — states nothing, even though LRPS2 running other games may still write the folder.
-A card either core uses there can be the other's too, so sync or back that folder up once, not once per core. Which
-cards PCEE2 uses comes from its two slot switches and the folder's own listing: a slot's card option names a card only
-where the folder holds it, and the slot's default — or the first card listed, where the default is not there — stands
-otherwise. Where the folder cannot be listed, or a standalone `PCSX2.ini` stands under `<system>/pcsx2/inis` (the core
-adopts its memory-card settings), the answer names the folder with `file-names-unestablished` and no file names.
+themselves, so where both keep their cards there, each one's answer carries `save-files-shared-with-core` naming the
+other: `data["core"]` names the other core by its card key (`pcsx2` on PCEE2's answer, `pcee2` on LRPS2's) and
+`data["dir"]` the folder both write — the link's target where a link leads there, as `physical_dir` is. It is decided
+for the game you ask about: read from the other core's own answer for the same content, so the other core not installed
+states nothing, and neither does LRPS2 put in its per-game mode for that game — globally or by a per-game or per-folder
+options file — on either answer, even though LRPS2 running other games may still write the folder; PCEE2 with both slots
+switched off keeps no card, and LRPS2's answer then names no other core either. A card either core uses there can be the
+other's too, so sync or back that folder up once, not once per core. Which cards PCEE2 uses comes from its two slot
+switches and the folder's own listing: a slot's card option names a card only where the folder holds it, and the slot's
+default — or the first card listed, where the default is not there — stands otherwise. Where the folder cannot be
+listed, or a standalone `PCSX2.ini` stands under `<system>/pcsx2/inis` (the core adopts its memory-card settings), the
+answer names the folder with `file-names-unestablished` and no file names.
 
 ### Placement caveats worth branching on
 
@@ -3598,11 +3600,12 @@ of every region list and which serves whichever region the disc turns out to be.
 of its two spellings, `firmware-configured-image-missing` says the configured value names no file and the per-region
 options answer instead — with the override's own spellings stated beside theirs, because the launch does try them first.
 
-**PCEE2 is `by-name-then-content` with a folder in place of a table.** Its one option, `pcsx2_bios`, names a file inside
-the `pcsx2/bios` folder it declares, and where it names none — the value `auto` — the core takes the first file of its
-own listing whose ROMDIR header passes its test, of any size. Both doors are the folder declaration's own, described in
-[What a listed folder holds](#what-a-listed-folder-holds), so no further entry rides beside it: the word says a missing
-named file is not the end, and the folder verdict is what answers then.
+**PCEE2 and LRPS2 are `by-name-then-content` with a folder in place of a table.** Their one option, `pcsx2_bios`, names
+a file inside the `pcsx2/bios` folder each declares, and where it names none the core takes an image off its own
+listing: PCEE2's value `auto` takes the first file whose ROMDIR header passes its test, of any size, and LRPS2's default
+is the first file of 4 to 8 MiB its listing found passing the same test. Both doors are the folder declaration's own,
+described in [What a listed folder holds](#what-a-listed-folder-holds), so no further entry rides beside it: the word
+says a missing named file is not the end, and the folder verdict is what answers then.
 
 The word itself moves no verdict: `requirements_met` answers to the requirement list, and a word about how a file is
 found can neither satisfy a requirement nor fail one. What the group in that list does is the ordinary thing an
@@ -3677,16 +3680,17 @@ files with `4 MiB <= size <= 8 MiB` (`MIN_BIOS_SIZE` / `MAX_BIOS_SIZE`, `main.cp
 `BiosTools.cpp:325-335`), which reads the ROMDIR header (`LoadBiosVersion`, `BiosTools.cpp:60-173`) — no hash table
 anywhere. It needs exactly one image: the first found becomes the `pcsx2_bios` option's default (`main.cpp:1832-1834`),
 `LoadBIOS` opens one file (`BiosTools.cpp:281`), and when the configured one is absent `FindBiosImage` returns the first
-file passing `IsBIOS` regardless of region (`BiosTools.cpp:241-250`; the fallback `:270-278`). A configured image is
-opened with no size filter (`BiosTools.cpp:281-306`, only `filesize > 0`), so the size-based verdict below is a verdict
-about the auto-detect path; the option does not stop the listing — set, `LoadBIOS` opens the named file rather than the
-first the listing found, which is [what a setting names](#when-a-setting-names-the-image). Atlas lists the same folder
-at its resolved path, stats the sizes, and reads each file of an accepted size the way the core reads it: the ROMDIR
-walk `LoadBiosVersion` makes — performed step for step by `atlas/ps2_bios.py` and asked of the machine seam as
-`read_ps2_bios_header` — is the verdict, and the md5 against the packaged identities filed under the `pcsx2/bios/`
-prefix — 73 of them, a _subset_ of what the header check accepts — is the name. The curated row states the prefix, the
-size range, the content read and the option that can name a file inside the folder (`FIRMWARE_DECLARED_DIRECTORY`,
-version 4), and the caveats reuse the codes the DuckStation search already taught you beside codes of their own:
+file passing `IsBIOS` regardless of region (`BiosTools.cpp:241-250`; the fallback `:270-278`). The core itself opens a
+configured image with no size filter (`BiosTools.cpp:281-306`, only `filesize > 0`), but a launch through RetroArch
+hands it only a name its listing offered, so that name is within the same bounds; the option does not stop the listing —
+set, `LoadBIOS` opens the named file rather than the first the listing found, which is
+[what a setting names](#when-a-setting-names-the-image). Atlas lists the same folder at its resolved path, stats the
+sizes, and reads each file of an accepted size the way the core reads it: the ROMDIR walk `LoadBiosVersion` makes —
+performed step for step by `atlas/ps2_bios.py` and asked of the machine seam as `read_ps2_bios_header` — is the verdict,
+and the md5 against the packaged identities filed under the `pcsx2/bios/` prefix — 73 of them, a _subset_ of what the
+header check accepts — is the name. The curated row states the prefix, the size range, the content read and the option
+that can name a file inside the folder (`FIRMWARE_DECLARED_DIRECTORY`, version 6), and the caveats reuse the codes the
+DuckStation search already taught you beside codes of their own:
 
 | the folder holds                                                                           | `satisfied`                                  | stated by                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -3722,68 +3726,54 @@ Once `pcsx2_bios` holds a name, the folder verdict answers a question the launch
 the option and writes it to `Filenames/BIOS` (`main.cpp:360-365`), `FullpathToBios` joins it onto the folder with
 `Path::Combine` (`Pcsx2Config.cpp:994-1000`), and `LoadBIOS` opens that one path (`BiosTools.cpp:281`). The setting does
 not replace the listing — `retro_init` runs it whenever the core has not read a value yet, to fill the option's own
-values — it replaces the listing's verdict. Where RetroArch keeps the value is the ordinary options chain: the per-core
-`.opt` unless `global_core_options` is on, then the global options file. Reading the per-core file means knowing the
-core's `library_name`, which lives in the binary, so a core that cannot be queried states `core-unqueryable` and the
-global file is the whole of what was read — unless there is no per-core directory at all, in which case there was
-nothing to miss and nothing is said.
+values — it replaces the listing's verdict. Those values are the whole of what the option can hold: the core declares
+none of its own (`libretro/libretro_core_options.h:117-128`) and fills them with the bare names of the files its listing
+keeps — 4 to 8 MiB and passing `IsBIOS`, the first of them the default (`main.cpp:1813-1834`) — and RetroArch hands a
+core a stored value only where it matches one the core declared (`core_option_manager.c:1031-1053`, the guard at
+`:1037`, at `a79435a`). So a stored name the listing would not produce never reaches the core, and the launch reads the
+default instead: the first image the listing kept. Where RetroArch keeps the value is the ordinary options chain: the
+per-core `.opt` unless `global_core_options` is on, then the global options file. Reading the per-core file means
+knowing the core's `library_name`, which lives in the binary, so a core that cannot be queried states `core-unqueryable`
+and the global file is the whole of what was read — unless there is no per-core directory at all, in which case there
+was nothing to miss and nothing is said.
 
-What the folder answers again is the one state atlas can state as a search: **nothing at the composed path** (a refused
-name, in the last row below, is answered by the folder too, with the refusal beside it). The core's own test is
-`path_is_valid`, and that is a stat that succeeded and nothing more — `LoadBIOS` searches where the path is empty or
-that call says no (`BiosTools.cpp:270`), the call is `retro_vfs_stat_impl(path, NULL) & RETRO_VFS_STAT_IS_VALID`
-(`file_path_io.c:87-90`), and that answers `0` on an empty path (`vfs_implementation.c:848-849`) and where the `stat`
-itself fails (`:941-952`), a directory setting a separate `IS_DIRECTORY` bit nobody tests here. So a directory at the
-configured name is _not_ searched past: it stats, so the core goes to the open at `:281` instead, and what that open
-yields for a directory is the platform's answer rather than anything these lines state.
+The states the option can be in:
 
-Four states the option can be in:
-
-| the option                                      | the requirement                                                        | stated by                                                                                                                                                                                                                                                                                           |
-| ----------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| names a file that is there                      | that file: `declared_kind: "file"`, `path` the joined destination      | `firmware-image-configured` (`core`, `key`, `name`, `options_file`) — `declared` stays the `.info`'s folder path, because the declaration is still the folder and only the name came from a setting; `contents_satisfied` is absent, since no folder was judged                                     |
-| names a file that is not there                  | the folder, exactly as before                                          | `firmware-configured-image-missing` (`core`, `key`, `name`, `dir`) — the state `LoadBIOS` searches the folder in, so the listing answers and the stored name is stale. The same requirement as the unset row below, reached for a different reason: here a value was read and composed              |
-| names a directory, or a path that will not stat | still that path: `declared_kind: "file"`, `found` saying what is there | `firmware-image-configured` beside `firmware-path-obstructed` or `firmware-path-inaccessible` — no folder verdict and `satisfied` `null`: a directory stats, so the core does not search past it, and what its open then yields is the platform's answer rather than anything the cited lines state |
-| is unset, empty, or states a path atlas refuses | the folder, exactly as before                                          | nothing, or the refusal's own code — `retro_init` fills this option's _default_ from the folder it just listed (`main.cpp:1832-1834`), and a default is not a stored value                                                                                                                          |
+| the option                                                          | the requirement                                                   | stated by                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| names a file that is there, of 4 to 8 MiB, passing the header check | that file: `declared_kind: "file"`, `path` the joined destination | `firmware-image-configured` (`core`, `key`, `name`, `options_file`) — `declared` stays the `.info`'s folder path, because the declaration is still the folder and only the name came from a setting; `contents_satisfied` is absent, since no folder was judged |
+| names a file that is there, without a content check                 | that file, `checked: "unchecked"`, `satisfied` `null`             | `firmware-image-configured` — whether the core offers it turns on its header, which nobody read                                                                                                                                                                 |
+| names a file whose header read did not come back                    | that file                                                         | `firmware-image-configured` beside `firmware-unreadable` (`path`) — whether the core offers it is unestablished, so the name stands                                                                                                                             |
+| names a path that will not stat                                     | still that path, `found: "inaccessible"`                          | `firmware-image-configured` beside `firmware-path-inaccessible` — whether anything the core would offer is there is unestablished, so `satisfied` is `null`                                                                                                     |
+| names a file of another size                                        | the folder                                                        | `firmware-configured-image-not-offered` (`core`, `key`, `name`, `dir`) — the size is a stat, the listing's first test, so it settles this with or without `verify`                                                                                              |
+| names a file that is there and fails the header check               | the folder                                                        | `firmware-configured-image-not-offered`                                                                                                                                                                                                                         |
+| names a directory, a hidden name, or one carrying a separator       | the folder                                                        | `firmware-configured-image-not-offered` — the listing offers bare names of unhidden files only, so none of these is ever a value, and nothing is composed                                                                                                       |
+| names a file that is not there                                      | the folder                                                        | `firmware-configured-image-missing` (`core`, `key`, `name`, `dir`) — not offered either, but stated as the stale name it is                                                                                                                                     |
+| is unset or empty                                                   | the folder                                                        | nothing — `retro_init` fills this option's _default_ from the folder it just listed (`main.cpp:1832-1834`), and a default is not a stored value                                                                                                                 |
 
 `checked` on the named file is the packaged prefix table's answer about its **bytes**, never about its name: the core
 takes any name inside the folder. `verified` where `pcsx2/bios/` lists them, `unrecognised` where it does not, `unread`
 where they would not come back, and `unchecked` without a content check. `unrecognised` means _bytes the packaged table
-does not know, and the core opens them regardless_: `LoadBIOS` loads the configured file whatever its header reads as
-(the ROMDIR walk at `BiosTools.cpp:294` has its return discarded). Nothing about its bytes turns it down — what can is
-an open that fails (`:281-283`) or a size of zero (`:286-290`) — so the header check that gates the _listing_ (`IsBIOS`,
-`main.cpp:1818`) does not stand between this core and the file a setting named.
-
-The value is a file **name**, and `Path::Combine` is how it is joined: an absolute value lands _below_ the folder rather
-than replacing it. Nothing normalises, because upstream resolves no `.` or `..` component either — so a value carrying a
-separator composes literally and where it lands is the kernel's answer, which is the file the core opens. atlas follows
-it for that reason: `../elsewhere.bin` under a `pcsx2/bios` declaration gives a requirement whose `path` is
-`<root>/pcsx2/elsewhere.bin` while `declared` stays `pcsx2/bios`, and the claim follows the `path`, so the unclaimed
-scan does not meet that file a second time. What is refused rather than followed is a value whose directory leaves the
-firmware root — `firmware-path-escapes-root`, carrying `core_so`, `declared` and `key` — which is the bound every place
-atlas looks is held to; a value naming a file that is itself a link out of the root is followed to its target instead
-([A file reached through a link](#a-file-reached-through-a-link)). None of this moves where a download goes: a
+does not know, and the core opens them regardless_: the header check passed them when the listing offered the name, and
+the table is no part of that offer, nor of the open (`LoadBIOS` loads the configured file whatever its header reads as,
+the ROMDIR walk at `BiosTools.cpp:294` having its return discarded). None of this moves where a download goes: a
 `needs`/identification answer still names the declared folder as the destination, because that is what the core declares
 and a setting does not change it.
 
-**PCEE2 reads the same option, and offers only what its listing accepts.** PCEE2 is a port of current PCSX2 that
-RetroDECK ships without its `.info`; its packaged declaration names the same folder, and its row differs from LRPS2's in
-three ways (`WizzardSK/pcee2-libretro@340ce04`). Its listing filters by **no size** — every file in the folder goes to
-the header check (`Libretro.cpp:640-657`, `:660-680`) — so "nothing to read" means an empty folder and a 2 MiB image the
-header check passes is an image. Its option has a value that names no file: `auto`, the default, asks for the listing
-and composes no path. And the option's values are `auto` plus the bare names of the files that listing accepts, filled
-at every core load, while RetroArch hands a core a stored value only where it matches one the core declared
-(`core_option_manager.c:1031-1053`, the guard at `:1037`, at `a79435a`) — so a stored name the listing would not produce
-never reaches the core, and the launch reads `auto` instead:
+The core's own code, read without RetroArch in front of it, would follow more than that: `Path::Combine` joins any value
+onto the folder, a directory at the name passes the core's stat (`path_is_valid`, `BiosTools.cpp:270`), and the header
+has no say in the open. atlas still carries that reading — composing a separator literally, refusing a value that leaves
+the firmware root with `firmware-path-escapes-root`, stating a directory as `firmware-path-obstructed` — but no shipped
+row reaches it, because both cores that read this option offer only what their listing accepts.
 
-| the option                                                    | the requirement                                       | stated by                                                                                                                        |
-| ------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| names a file that is there and passes the header check        | that file, as for LRPS2                               | `firmware-image-configured`                                                                                                      |
-| names a file that is there, without a content check           | that file, `checked: "unchecked"`, `satisfied` `null` | `firmware-image-configured` — whether the core offers it turns on its header, which nobody read                                  |
-| names a file that is there and fails the header check         | the folder                                            | `firmware-configured-image-not-offered` (`core`, `key`, `name`, `dir`)                                                           |
-| names a directory, a hidden name, or one carrying a separator | the folder                                            | `firmware-configured-image-not-offered` — the listing offers bare names of unhidden files only, so none of these is ever a value |
-| names a file that is not there                                | the folder                                            | `firmware-configured-image-missing`                                                                                              |
-| is `auto`, unset or empty                                     | the folder                                            | nothing                                                                                                                          |
+**PCEE2 reads the same option, and offers only what its listing accepts too.** PCEE2 is a port of current PCSX2 that
+RetroDECK ships without its `.info`; its packaged declaration names the same folder, and its row differs from LRPS2's in
+two ways (`WizzardSK/pcee2-libretro@340ce04`). Its listing filters by **no size** — every file in the folder goes to the
+header check (`Libretro.cpp:640-657`, `:660-680`) — so "nothing to read" means an empty folder, a 2 MiB image the header
+check passes is an image, and a stored name is never turned away for its size. And its option has a value that names no
+file: `auto`, the default, asks for the listing and composes no path, and is answered as an unset option is. Its values
+are `auto` plus the bare names of the files that listing accepts, filled at every core load, so every other row of the
+table above holds for it as it does for LRPS2.
 
 **Why is `satisfied` `None`?** Every route to it, in one place:
 
@@ -3799,7 +3789,6 @@ never reaches the core, and the launch reads `auto` instead:
 | a listed folder whose candidates' header reads did not come back, none passing            | `directory`    | `unknown`        | `firmware-unreadable`              |
 | a listed folder that could not be listed                                                  | `directory`    | `unknown`        | `firmware-scan-incomplete`         |
 | a configured image, and `verify` was not passed                                           | `file`         | `unchecked`      | `hash_checked: false`              |
-| a configured name with a directory at it                                                  | `directory`    | `unknown`        | `firmware-path-obstructed`         |
 | a configured name atlas could not stat                                                    | `inaccessible` | `None`           | `firmware-path-inaccessible`       |
 | a configured image whose bytes the packaged prefix does not list                          | `file`         | `unrecognised`   | `firmware-image-configured`        |
 | a configured image whose bytes could not be read                                          | `file`         | `unread`         | `firmware-unreadable`              |

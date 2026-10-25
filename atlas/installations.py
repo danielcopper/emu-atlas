@@ -6489,9 +6489,10 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
 # same at libretro/ps2 14d19f8, the build RetroDECK deploys (DataRoot at
 # libretro/main.cpp:1909-1913, memcards at pcsx2/Pcsx2Config.cpp:1043, :1062) —
 # so whether the two meet is read off the machine through the other core's own
-# answer for the same content (:func:`_save_files_shared`), never assumed.
+# answer for the same content (:func:`_save_files_shared`), never assumed. The
+# entry stands both ways, because each core's answer states the other.
 _SAVE_FOLDER_SHARED_WITH: Mapping[str, tuple[str, str]] = MappingProxyType(
-    {"pcee2": ("pcsx2", "pcsx2_libretro.so")}
+    {"pcee2": ("pcsx2", "pcsx2_libretro.so"), "pcsx2": ("pcee2", "pcee2_libretro.so")}
 )
 
 

@@ -383,6 +383,7 @@ class TestTheLoaderFailsClosed:
             "mednafen_psx_hw",
             "mednafen_psx",
             "pcee2",
+            "pcsx2",
         }
         card = lookup_core_firmware("swanstation_libretro.so")
         assert card is not None
@@ -901,6 +902,22 @@ class TestAFolderRouteIsStatedOrRefused:
             row = declared_directory_of(f"{card.key}_libretro", card.name_route.declared_directory)
             assert row is not None, card.key
             assert row.option_key is not None, card.key
+
+    def test_lrps2_answers_through_its_own_folder_row(self):
+        # LRPS2's route has PCEE2's shape (#664 D3): the option names a file in
+        # pcsx2/bios and its size-bounded listing is the content door.
+        card = lookup_core_firmware("pcsx2_libretro.so")
+        assert card is not None
+        assert card.locating.mode == LOCATING_BY_NAME_THEN_CONTENT
+        assert isinstance(card.name_route, CoreFirmwareFolderRoute)
+        assert card.name_route.declared_directory == "pcsx2/bios"
+        assert card.content_route is None
+        # The version the core reports is its own short hash, so no stamp.
+        assert (card.build.revision, card.build.stamp) == ("14d19f8", None)
+        row = declared_directory_of("pcsx2_libretro", "pcsx2/bios")
+        assert row is not None
+        assert row.offered_by_listing is True
+        assert row.option_lists is None
 
     def test_a_folder_route_adds_no_entry_of_its_own(self):
         # The folder declaration answers by itself; the route only states the word.
