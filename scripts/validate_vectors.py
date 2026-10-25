@@ -68,79 +68,73 @@ INPUT_FIELDS_OPTIONAL = {
     "platform_ids_query",
     "roots_query",
 }
+# What every query accepts, in one registry (issue #668): QUERY_FAMILY_FIELDS
+# maps each query input key but aggregate_query to the fields its family
+# accepts, and AGGREGATE_QUESTION_FIELDS, for the one family asked per
+# question, maps each of the aggregate's questions to the fields it takes.
+# Every query validator takes its accepted set from here, so a field cannot be
+# accepted without being listed, and tests/test_vectors_readme.py holds every
+# field listed here to a description in vectors/README.md. Which of the fields
+# a family requires, and how a value is spelled, stay with its validator.
+#
 # The savefile, savestate and texture-pack questions take the same three
 # arguments, because they are one question asked about three families — one
 # vocabulary, not three that have to be kept in step. Content plays a part in
 # the texture answer too, and a narrower part than in the other two: it never
 # moves the directory a core builds its tree in, but it does decide which
 # per-game options file states whether replacement is on.
-QUERY_FIELDS = {"content_path", "core_so", "installation"}
+_PLACEMENT_QUERY_FIELDS = frozenset({"content_path", "core_so", "installation"})
+# The same placement asked through a catalogue entry: the system whose
+# catalogue holds the entry, and the label that names it.
+_ENTRY_QUERY_FIELDS = frozenset({"installation", "system", "label", "content_path"})
 # The working folder the launch will use (issue #581) is taken by the questions
 # whose answer can depend on it — saves, savestates, firmware — so a family that
 # otherwise shares their keys refuses it: a texture query carrying one would
-# state an input no answer reflects.
-CWD_QUERY_FAMILIES = frozenset(
-    {"savefile_query", "savestate_query", "entry_savefile_query", "entry_savestate_query"}
-)
-# The files a RetroArch launch appends (issue #637) are taken by exactly the
-# questions that take the working folder — the save and savestate families —
-# spelled as RetroArch's own --appendconfig value: one string, several absolute
-# paths joined by '|'.
+# state an input no answer reflects. The files a RetroArch launch appends
+# (issue #637) are taken by exactly the save and savestate families, spelled as
+# RetroArch's own --appendconfig value: one string, several absolute paths
+# joined by '|'.
 APPENDCONFIG = "appendconfig"
-APPENDCONFIG_QUERY_FAMILIES = CWD_QUERY_FAMILIES
-CATALOGUE_QUERY_FIELDS = {"installation", "system", "content_path"}
-# The systems question takes no arguments — only which handle answers it.
-SYSTEMS_QUERY_FIELDS = {"installation"}
-LAUNCHABLE_QUERY_FIELDS = {"installation", "system", "content_path"}
-# The launchability verdicts — the vocabulary expected.launchable.verdict draws
-# from, mirrored from atlas.installations.LAUNCH_VERDICTS.
-KNOWN_LAUNCH_VERDICTS = {
-    "launchable",
-    "not-accepted",
-    "entry-not-accepted",
-    "needs-installation",
-    "unknown",
+_LAUNCH_QUERY_FIELDS = frozenset({"cwd", APPENDCONFIG})
+QUERY_FAMILY_FIELDS: dict[str, frozenset[str]] = {
+    "savefile_query": _PLACEMENT_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
+    "savestate_query": _PLACEMENT_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
+    "screenshot_query": _PLACEMENT_QUERY_FIELDS,
+    "texture_query": _PLACEMENT_QUERY_FIELDS,
+    "mod_query": _PLACEMENT_QUERY_FIELDS,
+    "soft_patch_query": _PLACEMENT_QUERY_FIELDS,
+    "entry_savefile_query": _ENTRY_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
+    "entry_savestate_query": _ENTRY_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
+    "entry_texture_query": _ENTRY_QUERY_FIELDS,
+    "entry_mod_query": _ENTRY_QUERY_FIELDS,
+    "catalogue_query": frozenset({"installation", "system", "content_path"}),
+    # The systems question takes no arguments — only which handle answers it.
+    "systems_query": frozenset({"installation"}),
+    "launchable_query": frozenset({"installation", "system", "content_path"}),
+    # The launch command question (issue #573) is asked of one file as one
+    # system's content, optionally of the entry a label names; the file is the
+    # frontend's spelling and absolute, as the question requires.
+    "launch_command_query": frozenset({"installation", "system", "content_path", "label"}),
+    # ROM placement is asked of one system; content plays no part in where a
+    # system's ROMs live, so unlike the catalogue query this one takes no path.
+    "rom_location_query": frozenset({"installation", "system"}),
+    # Every system's ROM placement at once (issue #670) is asked of the systems
+    # the systems question lists, so like that question it takes no arguments —
+    # only which handle answers it.
+    "rom_locations_query": frozenset({"installation"}),
+    # The platform questions (issue #68): forward takes a public vocabulary and
+    # a value in it, reverse takes one system.
+    "platform_systems_query": frozenset({"installation", "vocabulary", "value"}),
+    "platform_ids_query": frozenset({"installation", "system"}),
+    # The roots question (issue #612) is always asked of one arrangement by
+    # name, as its CLI form asks it.
+    "roots_query": frozenset({"installation"}),
+    "firmware_query": frozenset({"installation", "kind", "core_so", "system", "verify", "cwd", "content_path"}),
+    "identify_query": frozenset({"installation", "md5", "sha1", "size"}),
 }
-# The launch command question (issue #573) is asked of one file as one
-# system's content, optionally of the entry a label names; the file is the
-# frontend's spelling and absolute, as the question requires.
-LAUNCH_COMMAND_QUERY_FIELDS = {"installation", "system", "content_path", "label"}
-# A command taken apart, mirrored from atlas.launch_command: the program's four
-# keys whatever its variant, and the closed sets of variants and of what one
-# %INJECT% did.
-LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections"}
-PROGRAM_FIELDS = {"variant", "app_id", "command", "path"}
-KNOWN_PROGRAM_VARIANTS = {"flatpak", "appimage", "native"}
-WORKING_FOLDER_FIELDS = {"frontend_path", "host_path", "created_if_missing"}
-KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
-# ROM placement is asked of one system; content plays no part in where a
-# system's ROMs live, so unlike the catalogue query this one takes no path.
-ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
-# Every system's ROM placement at once (issue #670) is asked of the systems the
-# systems question lists, so like that question it takes no arguments — only
-# which handle answers it.
-ROM_LOCATIONS_QUERY_FIELDS = {"installation"}
-# The platform questions (issue #68): forward takes a public vocabulary and a
-# value in it, reverse takes one system. The vocabularies, statuses and tag
-# sources mirror atlas.platforms / atlas.installations — closed sets.
-PLATFORM_SYSTEMS_QUERY_FIELDS = {"installation", "vocabulary", "value"}
-PLATFORM_IDS_QUERY_FIELDS = {"installation", "system"}
-KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"}
-KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
-KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
-ENTRY_QUERY_FIELDS = {"installation", "system", "label", "content_path"}
-# The roots question (issue #612) is answered by two arrangements alone and is
-# always asked of one of them by name, as its CLI form asks it. Its entries come
-# in one fixed order, and the vocabularies mirror atlas.installations'
-# INSTALLATION_ROOTS and ROOT_PROVENANCES — closed sets.
-ROOTS_QUERY_FIELDS = {"installation"}
-ROOTS_KINDS = {"retrodeck", "emudeck"}
-ROOTS_ORDER = ["installation", "roms", "bios", "saves"]
-KNOWN_ROOT_PROVENANCES = {"read", "frontend-default", "assumed"}
-ROOT_ENTRY_FIELDS = {"root", "path", "provenance", "setting", "caveats"}
-ROOT_SETTING_FIELDS = {"file", "key"}
 # The aggregate asks EVERY detected handle one question, so it names the
-# question instead of a handle. The fan-out is the same for every question it
+# question instead of a handle, and what it accepts is held per question rather
+# than in QUERY_FAMILY_FIELDS. The fan-out is the same for every question it
 # mirrors, so the vocabulary is the questions that make the LABEL provable —
 # one with a full payload per arrangement, one whose arrangements refuse for
 # different reasons — rather than every question the surface offers; widening
@@ -157,9 +151,37 @@ AGGREGATE_QUESTION_FIELDS = {
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
-FIRMWARE_QUERY_FIELDS = {"installation", "kind", "core_so", "system", "verify", "cwd", "content_path"}
+# The launchability verdicts — the vocabulary expected.launchable.verdict draws
+# from, mirrored from atlas.installations.LAUNCH_VERDICTS.
+KNOWN_LAUNCH_VERDICTS = {
+    "launchable",
+    "not-accepted",
+    "entry-not-accepted",
+    "needs-installation",
+    "unknown",
+}
+# A command taken apart, mirrored from atlas.launch_command: the program's four
+# keys whatever its variant, and the closed sets of variants and of what one
+# %INJECT% did.
+LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections"}
+PROGRAM_FIELDS = {"variant", "app_id", "command", "path"}
+KNOWN_PROGRAM_VARIANTS = {"flatpak", "appimage", "native"}
+WORKING_FOLDER_FIELDS = {"frontend_path", "host_path", "created_if_missing"}
+KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
+# The platform vocabularies, statuses and tag sources mirror atlas.platforms /
+# atlas.installations — closed sets.
+KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"}
+KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
+KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
+# The roots question (issue #612) is answered by two arrangements alone. Its
+# entries come in one fixed order, and the vocabularies mirror
+# atlas.installations' INSTALLATION_ROOTS and ROOT_PROVENANCES — closed sets.
+ROOTS_KINDS = {"retrodeck", "emudeck"}
+ROOTS_ORDER = ["installation", "roms", "bios", "saves"]
+KNOWN_ROOT_PROVENANCES = {"read", "frontend-default", "assumed"}
+ROOT_ENTRY_FIELDS = {"root", "path", "provenance", "setting", "caveats"}
+ROOT_SETTING_FIELDS = {"file", "key"}
 KNOWN_FIRMWARE_QUERY_KINDS = {"core", "system", "inventory"}
-IDENTIFY_QUERY_FIELDS = {"installation", "md5", "sha1", "size"}
 INSTALLATION_FIELDS = {"kind", "label", "kinds", "root", "health"}
 PLACEMENT_FIELDS = {
     "dir",
@@ -741,20 +763,18 @@ def _validate_appendconfig(name: str, family: str, query: Any) -> None:
 
 
 def _validate_query(name: str, query: Any, family: str = "savefile_query") -> None:
-    """A placement question — *family* says which of the two it is.
+    """A placement question asked of a core — *family* says which one it is.
 
-    Both take the same three keys, so both are held to one rule; only the
-    message names the key the vector actually wrote. The save and savestate
-    families take the working folder too (:data:`CWD_QUERY_FAMILIES`).
+    Every family in :data:`_PLAIN_QUERY_KEYS` takes the same three keys, so all
+    are held to one rule; only the message names the key the vector actually
+    wrote. The save and savestate
+    families take the working folder and the appended files too
+    (:data:`QUERY_FAMILY_FIELDS`).
     """
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
-    fields = (
-        QUERY_FIELDS
-        | ({"cwd"} if family in CWD_QUERY_FAMILIES else set())
-        | ({APPENDCONFIG} if family in APPENDCONFIG_QUERY_FAMILIES else set())
-    )
+    fields = QUERY_FAMILY_FIELDS[family]
     if not keys or not keys <= fields:
         fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(fields)}")
     for key in keys:
@@ -792,15 +812,17 @@ def _validate_firmware_query_kind(name: str, query: Any) -> None:
 
 
 def _validate_firmware_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or not set(query) <= FIRMWARE_QUERY_FIELDS:
-        fail(f"{name}: input.firmware_query keys must be a subset of {sorted(FIRMWARE_QUERY_FIELDS)}")
+    fields = QUERY_FAMILY_FIELDS["firmware_query"]
+    if not isinstance(query, dict) or not set(query) <= fields:
+        fail(f"{name}: input.firmware_query keys must be a subset of {sorted(fields)}")
     _validate_firmware_query_fields(name, query)
     _validate_firmware_query_kind(name, query)
 
 
 def _validate_identify_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or not set(query) <= IDENTIFY_QUERY_FIELDS:
-        fail(f"{name}: input.identify_query keys must be a subset of {sorted(IDENTIFY_QUERY_FIELDS)}")
+    fields = QUERY_FAMILY_FIELDS["identify_query"]
+    if not isinstance(query, dict) or not set(query) <= fields:
+        fail(f"{name}: input.identify_query keys must be a subset of {sorted(fields)}")
     for key in ("installation", "md5", "sha1"):
         if key in query and (not isinstance(query[key], str) or not query[key]):
             fail(f"{name}: input.identify_query.{key} must be a non-empty string")
@@ -815,17 +837,10 @@ def _validate_entry_query(name: str, query: Any, family: str = "entry_savefile_q
     if not isinstance(query, dict):
         fail(f"{name}: input.{family} must be an object")
     keys = set(query)
-    takes_cwd = family in CWD_QUERY_FAMILIES
-    takes_appendconfig = family in APPENDCONFIG_QUERY_FAMILIES
-    fields = (
-        ENTRY_QUERY_FIELDS
-        | ({"cwd"} if takes_cwd else set())
-        | ({APPENDCONFIG} if takes_appendconfig else set())
-    )
+    fields = QUERY_FAMILY_FIELDS[family]
     if "system" not in keys or not keys <= fields:
-        named = ["label", "content_path", *(["cwd"] if takes_cwd else []), "installation"]
-        if takes_appendconfig:
-            named.insert(-1, APPENDCONFIG)
+        # The optional fields in the order the message has always named them.
+        named = [key for key in ("label", "content_path", "cwd", APPENDCONFIG, "installation") if key in fields]
         optional = "/".join(f"'{field}'" for field in named)
         fail(f"{name}: input.{family} must carry 'system' plus optional {optional}")
     for key in keys:
@@ -840,7 +855,7 @@ def _validate_catalogue_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.catalogue_query must be an object")
     keys = set(query)
-    if "system" not in keys or not keys <= CATALOGUE_QUERY_FIELDS:
+    if "system" not in keys or not keys <= QUERY_FAMILY_FIELDS["catalogue_query"]:
         fail(
             f"{name}: input.catalogue_query must carry 'system' plus optional "
             "'content_path'/'installation'"
@@ -854,10 +869,11 @@ def _validate_catalogue_query(name: str, query: Any) -> None:
 def _validate_rom_location_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.rom_location_query must be an object")
-    if not set(query) <= ROM_LOCATION_QUERY_FIELDS or "system" not in query:
+    fields = QUERY_FAMILY_FIELDS["rom_location_query"]
+    if not set(query) <= fields or "system" not in query:
         fail(
             f"{name}: input.rom_location_query must carry 'system' plus optional "
-            f"{sorted(ROM_LOCATION_QUERY_FIELDS - {'system'})}"
+            f"{sorted(fields - {'system'})}"
         )
     if not isinstance(query["system"], str) or not query["system"]:
         fail(f"{name}: input.rom_location_query.system must be a non-empty string")
@@ -865,20 +881,23 @@ def _validate_rom_location_query(name: str, query: Any) -> None:
 
 
 def _validate_rom_locations_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or not set(query) <= ROM_LOCATIONS_QUERY_FIELDS:
-        fail(f"{name}: input.rom_locations_query keys must be a subset of {sorted(ROM_LOCATIONS_QUERY_FIELDS)}")
+    fields = QUERY_FAMILY_FIELDS["rom_locations_query"]
+    if not isinstance(query, dict) or not set(query) <= fields:
+        fail(f"{name}: input.rom_locations_query keys must be a subset of {sorted(fields)}")
     _validate_handle_selector(name, "rom_locations_query", query)
 
 
 def _validate_systems_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or not set(query) <= SYSTEMS_QUERY_FIELDS:
-        fail(f"{name}: input.systems_query keys must be a subset of {sorted(SYSTEMS_QUERY_FIELDS)}")
+    fields = QUERY_FAMILY_FIELDS["systems_query"]
+    if not isinstance(query, dict) or not set(query) <= fields:
+        fail(f"{name}: input.systems_query keys must be a subset of {sorted(fields)}")
     _validate_handle_selector(name, "systems_query", query)
 
 
 def _validate_roots_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or set(query) != ROOTS_QUERY_FIELDS:
-        fail(f"{name}: input.roots_query must carry exactly {sorted(ROOTS_QUERY_FIELDS)}")
+    fields = QUERY_FAMILY_FIELDS["roots_query"]
+    if not isinstance(query, dict) or frozenset(query) != fields:
+        fail(f"{name}: input.roots_query must carry exactly {sorted(fields)}")
     if query["installation"] not in ROOTS_KINDS:
         fail(f"{name}: input.roots_query.installation must be one of {sorted(ROOTS_KINDS)}")
 
@@ -889,7 +908,7 @@ def _validate_launch_command_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.launch_command_query must be an object")
     keys = set(query)
-    if not {"system", "content_path"} <= keys or not keys <= LAUNCH_COMMAND_QUERY_FIELDS:
+    if not {"system", "content_path"} <= keys or not keys <= QUERY_FAMILY_FIELDS["launch_command_query"]:
         fail(
             f"{name}: input.launch_command_query must carry 'system' and 'content_path' plus "
             "optional 'label' and 'installation'"
@@ -909,7 +928,7 @@ def _validate_launchable_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.launchable_query must be an object")
     keys = set(query)
-    if not {"system", "content_path"} <= keys or not keys <= LAUNCHABLE_QUERY_FIELDS:
+    if not {"system", "content_path"} <= keys or not keys <= QUERY_FAMILY_FIELDS["launchable_query"]:
         fail(
             f"{name}: input.launchable_query must carry 'system' and 'content_path' plus "
             "optional 'installation'"
@@ -924,7 +943,7 @@ def _validate_platform_systems_query(name: str, query: Any) -> None:
     if not isinstance(query, dict):
         fail(f"{name}: input.platform_systems_query must be an object")
     keys = set(query)
-    if not {"vocabulary", "value"} <= keys or not keys <= PLATFORM_SYSTEMS_QUERY_FIELDS:
+    if not {"vocabulary", "value"} <= keys or not keys <= QUERY_FAMILY_FIELDS["platform_systems_query"]:
         fail(
             f"{name}: input.platform_systems_query must carry 'vocabulary' and 'value' plus "
             "optional 'installation'"
@@ -940,7 +959,7 @@ def _validate_platform_systems_query(name: str, query: Any) -> None:
 
 
 def _validate_platform_ids_query(name: str, query: Any) -> None:
-    if not isinstance(query, dict) or not {"system"} <= set(query) <= PLATFORM_IDS_QUERY_FIELDS:
+    if not isinstance(query, dict) or not {"system"} <= set(query) <= QUERY_FAMILY_FIELDS["platform_ids_query"]:
         fail(
             f"{name}: input.platform_ids_query must carry 'system' plus optional 'installation'"
         )
