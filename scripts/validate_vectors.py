@@ -635,6 +635,7 @@ KNOWN_CAVEAT_CODES = {
     "savestate-support-machine-dependent",
     "save-writes-discarded",
     "save-files-compressed",
+    "save-files-shared-with-core",
     "size-fixed-except-trailing-fill",
     "core-mode-unestablished",
     "save-root-redirected",

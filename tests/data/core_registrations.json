@@ -883,6 +883,48 @@
         "opera_vdlp_pixel_format": {"default": "RGB565", "values": ["0RGB1555", "RGB565", "XRGB8888"]}
       }
     },
+    "pcee2": {
+      "build": "v2.9.78",
+      "registration": {
+        "pcsx2_anisotropic_filtering": {"default": "0", "values": ["0", "2", "4", "8", "16"]},
+        "pcsx2_aspect_ratio": {"default": "auto", "values": ["auto", "4:3", "16:9"]},
+        "pcsx2_audio_buffer_ms": {"default": "100", "values": ["50", "75", "100", "150", "200"]},
+        "pcsx2_axis_deadzone": {"default": "0", "values": ["0", "5", "10", "15", "20", "30"]},
+        "pcsx2_axis_scale": {"default": "133", "values": ["100", "115", "133", "150"]},
+        "pcsx2_bios": {"default": "auto", "values": ["auto"]},
+        "pcsx2_blending_accuracy": {"default": "basic", "values": ["minimum", "basic", "medium", "high", "full", "maximum"]},
+        "pcsx2_cas_mode": {"default": "disabled", "values": ["disabled", "sharpen"]},
+        "pcsx2_cas_sharpness": {"default": "50", "values": ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]},
+        "pcsx2_cpu_recompiler": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_deinterlace_mode": {"default": "0", "values": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]},
+        "pcsx2_dithering": {"default": "2", "values": ["0", "1", "2"]},
+        "pcsx2_ee_cycle_rate": {"default": "0", "values": ["-3", "-2", "-1", "0", "1", "2", "3"]},
+        "pcsx2_ee_cycle_skip": {"default": "0", "values": ["0", "1", "2", "3"]},
+        "pcsx2_fast_boot": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_frame_limiter": {"default": "frontend", "values": ["frontend", "internal"]},
+        "pcsx2_fxaa": {"default": "disabled", "values": ["disabled", "enabled"]},
+        "pcsx2_hw_download_mode": {"default": "accurate", "values": ["accurate", "unsynchronized", "disabled"]},
+        "pcsx2_instant_vu1": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_lightgun": {"default": "disabled", "values": ["disabled", "usb1", "usb2", "both"]},
+        "pcsx2_memcard_slot1_enable": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_memcard_slot2_enable": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_mipmapping": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_mtvu": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_multitap": {"default": "disabled", "values": ["disabled", "port1", "port2", "both"]},
+        "pcsx2_no_interlacing_patches": {"default": "disabled", "values": ["disabled", "enabled"]},
+        "pcsx2_rec_ee": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_rec_iop": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_rec_vu0": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_rec_vu1": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_renderer": {"default": "vulkan", "values": ["vulkan", "opengl", "software"]},
+        "pcsx2_rumble": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_skip_duplicate_frames": {"default": "enabled", "values": ["enabled", "disabled"]},
+        "pcsx2_texture_filtering": {"default": "bilinear_ps2", "values": ["nearest", "bilinear_ps2", "bilinear_forced", "bilinear_forced_sprite"]},
+        "pcsx2_trilinear_filtering": {"default": "auto", "values": ["auto", "off", "ps2", "forced"]},
+        "pcsx2_upscale_multiplier": {"default": "1", "values": ["1", "2", "3", "4"]},
+        "pcsx2_widescreen_patches": {"default": "disabled", "values": ["disabled", "enabled"]}
+      }
+    },
     "pcsx2": {
       "build": "14d19f8",
       "registration": "not-captured"

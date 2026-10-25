@@ -286,6 +286,7 @@ from .placement import (
     CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_FILES_COMPRESSED,
+    CAVEAT_SAVE_FILES_SHARED_WITH_CORE,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
     CAVEAT_SAVESTATE_INSIDE_IMAGE,
@@ -3653,6 +3654,25 @@ def _rule_option_readings(
             source = f'core default: {key} = "{default}" (the stored value is not one the core registers)'
         values[key] = value
         readings[key] = OptionReading(key, value, source, options_file)
+    for key in card.listed_options:
+        # Registered from a listing the probe never sees, so no registered
+        # default or value set stands to normalise against: the stored value
+        # goes to the rule as it is, and the rule says what the core is handed
+        # (ModeChoice.handed).
+        value, source, options_file, _ = core_options_value(
+            machine,
+            override_config_dir=gates.override_config_dir,
+            global_file=option_gates.global_file,
+            library_name=library_name,
+            content_dir_name=content.dir_name,
+            rom_stem=content.rom_stem,
+            option_key=key,
+            option_default=None,
+            game_specific_options=option_gates.game_specific_options,
+            per_core_options=option_gates.per_core_options,
+        )
+        values[key] = value
+        readings[key] = OptionReading(key, value, source, options_file)
     return values, readings, caveats
 
 
@@ -3667,6 +3687,19 @@ def _rule_file_lookup(machine: Machine, base: str | None, name: str) -> FileLook
     if result.status == READ_MISSING:
         return FileLookup(None, FILE_ABSENT, path)
     return FileLookup(None, FILE_UNREADABLE, path)
+
+
+def _rule_files(machine: Machine, base: str | None, name: str) -> tuple[str, ...] | None:
+    """The regular files in one directory a rule asked about — :func:`_rule_entries`, files only."""
+    entries = _rule_entries(machine, base, name)
+    if entries is None or base is None:
+        return entries
+    directory = os.path.join(base, name)
+    return tuple(
+        entry
+        for entry in entries
+        if machine.path_kind(os.path.join(directory, entry)) == KIND_FILE
+    )
 
 
 def _rule_entries(machine: Machine, base: str | None, name: str) -> tuple[str, ...] | None:
@@ -3821,6 +3854,9 @@ def _rule_reading(
     def system_entries(name: str) -> tuple[str, ...] | None:
         return _rule_entries(machine, system.base(), name)
 
+    def system_files(name: str) -> tuple[str, ...] | None:
+        return _rule_files(machine, system.base(), name)
+
     def home_entries(name: str) -> tuple[str, ...] | None:
         return _rule_entries(machine, sandbox.expansion_home, name)
 
@@ -3851,6 +3887,7 @@ def _rule_reading(
             home_file=home_file,
             system_entries=system_entries,
             home_entries=home_entries,
+            system_files=system_files,
             save_dirs=tuple(save_dirs),
             is_directory=is_directory,
             content_path=content.path,
@@ -3931,6 +3968,15 @@ def _apply_rule_card(
         raise ValueError(
             f"the rule for card {card.key!r} offered alternatives {unknown}, which the card does "
             "not state — the rule and the card shipped out of step"
+        )
+    for key, value in choice.handed.items():
+        stored = readings[key]
+        readings[key] = OptionReading(
+            key,
+            value,
+            f'{key} = "{value}", as RetroArch hands it to the core from the values the core '
+            f"offers (stored: {stored.value!r}, {stored.provenance})",
+            stored.options_file,
         )
     consulted = tuple(readings[key] for key in recorder.consulted) + choice.readings
     granularity = Granularity(
@@ -6435,7 +6481,69 @@ def _retroarch_savefile_location(machine: Machine, query: _SaveQuery) -> Savefil
     )
 
 
-def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> SavefilePlacement | Unresolved:
+# Cards whose save folder another core composes for itself too, keyed by the
+# card: the other core's card key and its ``.so``. PCEE2 and LRPS2 each open
+# <system>/pcsx2/memcards on their own — pcee2-libretro's DataRoot is the
+# system directory joined with pcsx2 (Libretro.cpp:481-487 at 340ce04) and its
+# card folder memcards below it (Pcsx2Config.cpp:2311, :2337), and LRPS2 the
+# same at libretro/ps2 14d19f8, the build RetroDECK deploys (DataRoot at
+# libretro/main.cpp:1909-1913, memcards at pcsx2/Pcsx2Config.cpp:1043, :1062) —
+# so whether the two meet is read off the machine through the other core's own
+# answer for the same content (:func:`_save_files_shared`), never assumed.
+_SAVE_FOLDER_SHARED_WITH: Mapping[str, tuple[str, str]] = MappingProxyType(
+    {"pcee2": ("pcsx2", "pcsx2_libretro.so")}
+)
+
+
+def _save_files_shared(
+    machine: Machine,
+    query: _SaveQuery,
+    *,
+    card: CoreCard,
+    mode: SaveMode,
+    placement: SavefilePlacement,
+    check: bool,
+) -> SavefilePlacement:
+    """*placement* with ``save-files-shared-with-core`` where another core writes its folder too.
+
+    The other core's folder is its own save answer, asked of the same machine
+    with the same content and only the core swapped — its options, its system
+    directory and whether it is installed at all are read the way they are for
+    any question about it — and the two are compared after links are resolved,
+    since a link is how two spellings name one folder. That answer is asked
+    without this check (*check* false), so two cards naming each other cannot
+    ask forever. A mode that keeps no file shares none, and a folder that is
+    still a template is no folder to compare.
+    """
+    other = _SAVE_FOLDER_SHARED_WITH.get(card.key)
+    if not check or other is None or query.core_so is None:
+        return placement
+    if mode.stated is not None or placement.needs:
+        return placement
+    other_key, other_so = other
+    sibling = (
+        os.path.join(os.path.dirname(query.core_so), other_so)
+        if os.sep in query.core_so
+        else other_so
+    )
+    swapped = cast(_SaveQuery, _dc_replace(query, core_so=sibling))
+    answer = _savefile_location_resolved(machine, swapped, check_shared=False)
+    folder = placement.physical_dir or placement.dir
+    if isinstance(answer, Unresolved) or answer.needs or (answer.physical_dir or answer.dir) != folder:
+        return placement
+    shared = Caveat(
+        CAVEAT_SAVE_FILES_SHARED_WITH_CORE,
+        f"core {other_key!r} writes its save files in this same folder ({folder}) — both "
+        "cores keep their cards here, so a card either one uses can be the other's too, "
+        "and syncing or backing up this folder handles both cores' cards",
+        {"core": other_key, "dir": folder},
+    )
+    return cast(SavefilePlacement, _dc_replace(placement, caveats=(*placement.caveats, shared)))
+
+
+def _savefile_location_resolved(
+    machine: Machine, query: _SaveQuery, *, check_shared: bool = True
+) -> SavefilePlacement | Unresolved:
     """Where the savefile lands: the shared chain, then the per-core rule cards.
 
     The cards are what this route has and the savestate one does not — cores
@@ -6445,6 +6553,9 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
     A core the machine established is not installed ends the question instead of
     steering it: there is no answer to give about where a core that is not here
     keeps its saves, and the typed refusal says so.
+
+    *check_shared* asks whether another core writes the same folder
+    (:func:`_save_files_shared`); that core's own answer is asked without it.
     """
     chain = _read_chain(machine, query, SAVEFILE_KEYS)
     if chain.core.not_installed is not None:
@@ -6504,7 +6615,7 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             ROOT_CONTENT_DIRECTORY: _content_directory_placement,
             ROOT_WORKING_DIRECTORY: _working_directory_placement,
         }[card_mode.root]
-        return diverted(
+        placement = diverted(
             machine,
             sandbox=query.sandbox,
             cfg_label=query.cfg_label,
@@ -6518,6 +6629,9 @@ def _savefile_location_resolved(machine: Machine, query: _SaveQuery) -> Savefile
             caveats=tuple(caveats),
             excluded=applied.excluded_observations,
             launch=chain.launch,
+        )
+        return _save_files_shared(
+            machine, query, card=card, mode=card_mode, placement=placement, check=check_shared
         )
 
     cross_parts = _CrossParts()
