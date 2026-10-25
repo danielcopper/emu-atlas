@@ -3025,6 +3025,97 @@ def _beetle_query(files):
     return placed(rd.savefile_location(content_path=SWAN_ROM, core_so="mednafen_psx_libretro.so"))
 
 
+PCEE2_REGISTERED = {
+    "pcsx2_memcard_slot1_enable": {"default": "enabled", "values": ["enabled", "disabled"]},
+    "pcsx2_memcard_slot2_enable": {"default": "enabled", "values": ["enabled", "disabled"]},
+}
+PCEE2_CORE = {"library_name": "PCEE2", "options": PCEE2_REGISTERED}
+LRPS2_CORE = {"library_name": "LRPS2"}
+PS2_ROM = "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso"
+PCEE2_CARDS = "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+
+
+def _pcee2_query(files, *, cores=None, dirs=None):
+    rd = _retrodeck(
+        {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, PS2_ROM: "", SAVES_KEEP: "", **files},
+        cores=cores or {f"{DEPLOY}/pcee2_libretro.so": PCEE2_CORE},
+        dirs=dirs,
+    )
+    return placed(rd.savefile_location(content_path=PS2_ROM, core_so="pcee2_libretro.so"))
+
+
+def _readings(placement) -> dict[str, str | None]:
+    assert placement.granularity is not None
+    return {r.key: r.value for r in placement.granularity.readings}
+
+
+class TestPcee2MemoryCards:
+    """PCEE2's two slots: the switches pick the mode, the folder's listing the card names."""
+
+    def test_only_the_ps2_files_of_the_folder_are_offered(self):
+        # FindFiles with FILESYSTEM_FIND_FILES, then the .ps2 filter
+        # (Libretro.cpp:688-697 at 340ce04): neither another file nor a
+        # directory named like a card — PCSX2's folder card — is a value the
+        # selector offers, so a stored name for either is passed over.
+        p = _pcee2_query(
+            {
+                f"{PCEE2_CARDS}/Mcd001.ps2": "m",
+                f"{PCEE2_CARDS}/Mcd002.ps2": "m",
+                f"{PCEE2_CARDS}/notes.txt": "n",
+                f"{PCEE2_CARDS}/Folder.ps2/_pcsx2_superblock": "f",
+                OPTIONS_CFG: 'pcsx2_memcard_slot1_file = "Folder.ps2"\n'
+                'pcsx2_memcard_slot2_file = "notes.txt"\n',
+            }
+        )
+        assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
+        passed_over = [c.data["value"] for c in p.caveats if c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE]
+        assert passed_over == ["Folder.ps2", "notes.txt"]
+
+    def test_the_offer_stops_at_127_cards(self):
+        # 128 value slots, one of them the terminator (Libretro.cpp:750): the
+        # 128th card in sorted order is offered to no selector.
+        cards = {f"{PCEE2_CARDS}/Card{i:03d}.ps2": "m" for i in range(130)}
+        kept = _pcee2_query({**cards, OPTIONS_CFG: 'pcsx2_memcard_slot1_file = "Card126.ps2"\n'})
+        assert _readings(kept)["pcsx2_memcard_slot1_file"] == "Card126.ps2"
+        beyond = _pcee2_query({**cards, OPTIONS_CFG: 'pcsx2_memcard_slot1_file = "Card127.ps2"\n'})
+        # Neither default is among the cards, so both slots fall to the first.
+        assert _readings(beyond)["pcsx2_memcard_slot1_file"] == "Card000.ps2"
+        assert beyond.file_set.files == ("Card000.ps2",)
+
+    def test_the_probes_registration_of_a_listed_option_decides_nothing(self):
+        # A probe registering a selector saw some folder, not necessarily this
+        # one: one selector registered and the other not neither retires the
+        # card, and the offer is this machine's listing, whatever the probe holds.
+        registered = {
+            **PCEE2_REGISTERED,
+            "pcsx2_memcard_slot1_file": {"default": "Probe.ps2", "values": ["Probe.ps2"]},
+        }
+        p = _pcee2_query(
+            {f"{PCEE2_CARDS}/Mcd001.ps2": "m", f"{PCEE2_CARDS}/Mcd002.ps2": "m"},
+            cores={f"{DEPLOY}/pcee2_libretro.so": {"library_name": "PCEE2", "options": registered}},
+        )
+        assert _readings(p)["pcsx2_memcard_slot1_file"] == "Mcd001.ps2"
+        assert not [c for c in p.caveats if c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE]
+
+    def test_two_cards_naming_each_other_ask_each_other_once(self, monkeypatch):
+        # The other core's answer is asked without the check, so a mirror
+        # entry cannot send the two questions round in a loop.
+        monkeypatch.setattr(
+            atlas.installations,
+            "_SAVE_FOLDER_SHARED_WITH",
+            {"pcee2": ("pcsx2", "pcsx2_libretro.so"), "pcsx2": ("pcee2", "pcee2_libretro.so")},
+        )
+        p = _pcee2_query(
+            {f"{PCEE2_CARDS}/Mcd001.ps2": "m"},
+            cores={
+                f"{DEPLOY}/pcee2_libretro.so": PCEE2_CORE,
+                f"{DEPLOY}/pcsx2_libretro.so": LRPS2_CORE,
+            },
+        )
+        shared = [c.data for c in p.caveats if c.code == atlas.CAVEAT_SAVE_FILES_SHARED_WITH_CORE]
+        assert shared == [{"core": "pcsx2", "dir": PCEE2_CARDS}]
+
+
 class TestBeetlePsxSecondCard:
     """Issue #80's answer: the default-enabled slot 1 is a core-written .mcr."""
 
@@ -3813,14 +3904,17 @@ class TestStrictLoaders:
         )
         with pytest.raises(ValueError, match="no separate file to group"):
             load_oddities(with_groups)
-        # The discarded statement may also anchor at the save root — where
-        # the writes would have gone (SwanStation with no cards at all) — but
-        # never at a root no save was ever headed for.
+        # The discarded statement may also anchor at the save root or the
+        # system directory — where the writes would have gone (SwanStation
+        # with no cards at all, PCEE2 with both slots off) — but never at a
+        # root no save was ever headed for.
         savefile_rooted = self._inside_card(
             {"root": "savefile_directory", "writes_discarded": "why"}
         )
         assert load_oddities(savefile_rooted)[0].modes["always"].writes_discarded == "why"
-        other_root = self._inside_card({"root": "system_directory", "writes_discarded": "why"})
+        system_rooted = self._inside_card({"root": "system_directory", "writes_discarded": "why"})
+        assert load_oddities(system_rooted)[0].modes["always"].writes_discarded == "why"
+        other_root = self._inside_card({"root": "working_directory", "writes_discarded": "why"})
         with pytest.raises(ValueError, match="anchors where the writes would have landed"):
             load_oddities(other_root)
 
@@ -4314,6 +4408,48 @@ class TestAGoverningRule:
         # caller reads them back as this core's own words.
         words = recorded_vocabulary(option_key=None, modes={}, rule_options=("opt_a",))
         assert "opt_a" in words
+
+    def test_listed_options_load_beside_the_rule_options(self):
+        card = load_oddities(
+            self._rule_card(
+                "mednafen_saturn",
+                {
+                    "governing_rule": {"options": ["opt_a"], "listed_options": ["opt_b"]},
+                    "modes": self._MODES,
+                },
+            )
+        )[0]
+        assert card.rule_options == ("opt_a",)
+        assert card.listed_options == ("opt_b",)
+
+    @pytest.mark.parametrize(
+        ("block", "match"),
+        [
+            ({"options": ["opt_a"], "listed_options": ["opt_a"]}, "in both 'options' and 'listed_options'"),
+            ({"options": ["opt_a"], "listed_options": []}, "names an option"),
+            ({"listed_options": ["opt_b"]}, "governing_rule must be an object"),
+        ],
+    )
+    def test_a_listed_option_block_that_contradicts_itself_is_refused(self, block, match):
+        text = self._rule_card("mednafen_saturn", {"governing_rule": block, "modes": self._MODES})
+        with pytest.raises(ValueError, match=match):
+            load_oddities(text)
+
+    def test_a_listed_option_cannot_also_be_retired(self):
+        text = self._rule_card(
+            "mednafen_saturn",
+            {
+                "governing_rule": {"options": ["opt_a"], "listed_options": ["opt_b"]},
+                "modes": self._MODES,
+                "retired_options": [{"key": "opt_b", "citation": "why"}],
+            },
+        )
+        with pytest.raises(ValueError, match="retired and current"):
+            load_oddities(text)
+
+    def test_the_listed_options_are_recorded_vocabulary(self):
+        words = recorded_vocabulary(option_key=None, modes={}, listed_options=("opt_b",))
+        assert "opt_b" in words
 
 
 class TestCardEvidence:
@@ -5210,6 +5346,14 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("nxengine", "profile3.dat", "unprotected"),
             ("nxengine", "profile4.dat", "unprotected"),
             ("nxengine", "profile5.dat", "unprotected"),
+            # PCEE2's card names come from its folder's listing at run time,
+            # and its two short path segments are composed in code: an
+            # unfiltered byte search of the shipped binary finds "memcards" and
+            # "pcsx2" only inside longer strings. The option keys and the
+            # default names beside them are whole literals and pinned.
+            ("pcee2", "<memory_card_file>", "unprotected"),
+            ("pcee2", "memcards", "unprotected"),
+            ("pcee2", "pcsx2", "unprotected"),
             ("pcsx2", "pcsx2", "arrangement"),
             # PCSX-ReARMed's slot 1 fills the SRAM interface — the .srm is
             # RetroArch's naming, like the psx neighbours above.

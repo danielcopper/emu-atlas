@@ -138,8 +138,8 @@ The two a placement speaks, which can reach a caller as a hole in `SavefilePlace
   `save_id` joins `needs`, so a caller sees a template rather than a resolved-looking name. A group whose `files` name
   it states what fills it in `save_id` (below), and the loader refuses the group without one.
 
-And two a card's **own selection rule** fills from a machine read (`RULE_FILLED_TEMPLATES`), which therefore belong only
-to a card that states a `governing_rule` — the loader refuses one on a card with no rule behind it. Neither is ever a
+And three a card's **own selection rule** fills from a machine read (`RULE_FILLED_TEMPLATES`), which therefore belong
+only to a card that states a `governing_rule` — the loader refuses one on a card with no rule behind it. None is ever a
 hole: where the read behind it fails, the rule selects a different mode that states no such name.
 
 - `<whdload_name>` — the program name inside a WHDLoad slave (`ws_name`), which is what WHDLoad derives its per-game
@@ -147,6 +147,9 @@ hole: where the read behind it fails, the rule selects a different mode that sta
 - `<archive_member_stem>` — one archived image's own stem, because a core that extracts an archive names each member's
   write file after the member rather than after the question's content. The fill is a list, so the declared file list
   grows with it: one name per member.
+- `<memory_card_file>` — a memory card a slot opens by name, picked from the card folder's own listing by an option or
+  by the core's default for the slot (PCEE2). One value per card in use, so two slots on one file fill it once; where
+  the folder cannot be listed the rule selects a mode that names the folder without file names.
 
 A group may also carry `observe`: candidates wider than the declared defaults, probed on the machine because they exist
 only when configured (Flycast's slot-2 VMUs beside the four port-1 cards). Since issue #89 an **observation gate** can
@@ -238,9 +241,9 @@ so no save exists _anywhere_ — not beside the content, not inside it. Same con
 difference a client reads: the granularity value is `none`, the one value no file group may ever carry, because a group
 is a place save data lives and this mode says none does. The granularity block still travels — its readings and
 alternatives are how a caller sees which switch would make saves exist again. The root is where the writes would have
-landed: the content's own tree for hatari, and the frontend's save root for SwanStation with both memory-card slots set
-to none — the one root kind `inside_content` can never take, since that statement is about the loaded content file
-itself.
+landed: the content's own tree for hatari, the frontend's save root for SwanStation with both memory-card slots set to
+none, and the system directory for PCEE2 with both slots switched off, whose cards would have gone under it — two root
+kinds `inside_content` can never take, since that statement is about the loaded content file itself.
 
 ### `governing_rule` — modes a rule selects instead of one option's value
 
@@ -255,8 +258,16 @@ The rule itself is code, in `atlas/mode_rules.py`, keyed by the card key — the
 referencing it_, never a DSL. The card stays what a card always was (**what can exist**), the rule decides **what holds
 here**, and everything it decides on is a live read the resolver hands it: the declared options' values, the content's
 class, a file of the emulator's own. The loader refuses a `governing_rule` with no registered rule behind it, and the
-tests hold the mirror claim. Feature detection covers the plural: every declared option must be registered by the
+tests hold the mirror claim. Feature detection covers the plural: every option in `options` must be registered by the
 installed core, or the card steps aside as a generation mismatch exactly as a single-option card does.
+
+`listed_options` beside `options` names the options a core registers **from a listing of the machine** rather than from
+a fixed set: PCEE2 offers as each card selector's values the `.ps2` files its card folder lists, and registers neither
+selector while that folder is empty. The probe hands a core no system directory, so it never sees such an option, and
+its registration would describe some other folder if it did — a listed option is therefore read through every option
+layer like the others but never checked against the probe's registration and never normalised against its values; the
+rule reads the listing itself and states the value RetroArch hands the core. A key may not stand in both lists, the list
+is not empty where stated, and a listed key cannot also be retired.
 
 A card may also record **`retired_options`** — the spellings an older generation of the same core wrote and this one no
 longer reads (issue #79: RetroArch never prunes the options file, so the entry stays and its value silently stops

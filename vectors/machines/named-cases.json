@@ -22162,6 +22162,1910 @@
           }
         }
       }
+    },
+    {
+      "name": "pcee2-default-cards-through-the-link-are-lrps2s-too",
+      "rationale": "PCEE2 keeps its memory cards under <system>/pcsx2/memcards (pcee2-libretro Libretro.cpp:481-487, pcsx2/Pcsx2Config.cpp:2311 and :2337 at 340ce04) and asks RetroArch for no save directory. Both slots are on by their registered default and the folder offers Mcd001.ps2 and Mcd002.ps2, so each slot opens its own default card. Under RetroDECK that folder is a link into the saves tree, and the answer names the link's target as physical_dir. LRPS2 in its default shared mode composes the same <system>/pcsx2/memcards itself, its own save answer for this content names the same folder after the link is resolved, so save-files-shared-with-core names it, with the target as dir (#664 D6).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          }
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-a-games-own-options-pick-another-card-of-the-folder",
+      "rationale": "A per-game options file sets pcsx2_memcard_slot1_file to Custom.ps2, a .ps2 file the folder holds, so the core offers it and RetroArch hands it on (Libretro.cpp:683-752 at 340ce04, core_option_manager.c:1031-1053 at a79435a): slot 1 opens Custom.ps2 and slot 2 its default Mcd002.ps2. The card is still shared-card — any other game can pick the same file (#664 D7). The reading names the per-game file as where the value came from.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Custom.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PCEE2/Example Game (USA).opt": "pcsx2_memcard_slot1_file = \"Custom.ps2\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Custom.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Custom.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PCEE2/Example Game (USA).opt"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PCEE2/Example Game (USA).opt"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Custom.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PCEE2/Example Game (USA).opt"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/config/PCEE2/Example Game (USA).opt"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-a-stored-card-the-folder-does-not-hold-falls-back-to-the-default",
+      "rationale": "The global options file stores pcsx2_memcard_slot1_file = Gone.ps2, a card the folder does not hold. The core offers only the .ps2 files the folder lists, and RetroArch keeps a stored value only where it is offered (core_option_manager.c:1031-1053 at a79435a), so slot 1 opens its default Mcd001.ps2. The reading states the value handed on, and unknown-option-value names the stored one (#664 D7).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_memcard_slot1_file = \"Gone.ps2\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "unknown-option-value",
+              "data": {
+                "core": "pcee2",
+                "option_key": "pcsx2_memcard_slot1_file",
+                "value": "Gone.ps2"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-a-switched-off-slot-states-no-card",
+      "rationale": "pcsx2_memcard_slot2_enable is disabled, so slot 2 is off (Libretro.cpp:1057-1060 at 340ce04) and Open skips it (MemoryCardFile.cpp:281-285): the answer states slot 1's card alone. Mcd002.ps2 is in the folder and is not part of this configuration's save.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_memcard_slot2_enable = \"disabled\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "slot-1",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "no-slot",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "none"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "both-slots",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "enabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-both-slots-off-keep-no-card",
+      "rationale": "Both slot switches are disabled, so no memory card is opened or created: the mode states that the writes are discarded, rooted at the system directory where the cards would have gone, with granularity none.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_memcard_slot1_enable = \"disabled\"\npcsx2_memcard_slot2_enable = \"disabled\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": true,
+            "groups": []
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-writes-discarded",
+              "data": {
+                "core": "pcee2",
+                "mode": "no-slot"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "none",
+            "mode": "no-slot",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "enabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "enabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-an-empty-card-folder-names-pcsx2s-own-cards",
+      "rationale": "The card folder holds no .ps2 file, so the core registers neither card selector (Libretro.cpp:716-725 at 340ce04), sets no file name at startup (:1065), and PCSX2's own names stand, which Open creates: Mcd001.ps2 and Mcd002.ps2, declared, none present yet. No selector reading is stated, because none is registered.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-the-default-card-missing-moves-to-the-first-card-listed",
+      "rationale": "The folder holds Mcd002.ps2 alone. Slot 1's declared default Mcd001.ps2 is not offered, so the core moves it to the first card listed (Libretro.cpp:754-762 at 340ce04): both slots open Mcd002.ps2, which the answer states once (#664 D7).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          }
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-without-the-link-the-folder-is-still-lrps2s",
+      "rationale": "No link stands at <system>/pcsx2/memcards: it is a plain folder. LRPS2 in shared mode composes that same folder itself, so the two cores still write the same cards and save-files-shared-with-core names the folder as it is, with no physical_dir (#664 D6).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          }
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/saves"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-lrps2-in-per-game-mode-shares-no-folder",
+      "rationale": "pcsx2_shared_memory_cards is disabled, which only LRPS2 registers: LRPS2 then writes per-game cards into RetroArch's save folder, its own save answer names that folder, and PCEE2's card folder is no longer LRPS2's, so no save-files-shared-with-core is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "pcsx2_shared_memory_cards = \"disabled\"\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-lrps2-not-installed-shares-no-folder",
+      "rationale": "No pcsx2_libretro.so is deployed, so no other core writes the card folder and no save-files-shared-with-core is stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          }
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "observed",
+            "files": [
+              "Mcd001.ps2",
+              "Mcd002.ps2"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
+                  "Mcd001.ps2",
+                  "Mcd002.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "both-slots",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot1_file",
+                "value": "Mcd001.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_file",
+                "value": "Mcd002.ps2",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "slot-2",
+                "options": {
+                  "pcsx2_memcard_slot1_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "slot-1",
+                "options": {
+                  "pcsx2_memcard_slot2_enable": "disabled"
+                },
+                "values": [
+                  "shared-card"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-a-card-folder-that-cannot-be-listed-is-named-without-names",
+      "rationale": "The folder behind the link exists and cannot be listed. Which file a slot opens follows from that listing, so no card name follows from anything atlas reads: the answer names the folder with files null and file-names-unestablished, and neither falls back to RetroArch's save folder nor reads the failed listing as an empty folder (#664 D8).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "unlistable": [
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        ],
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": null,
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "pcee2",
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "role": "memory-card",
+                "citation": "Which file a switched-on slot opens follows from this folder's own listing: the core offers the .ps2 files the folder lists as each slot's values, and moves a slot's default to the first of them where its own name is not among them (pcee2-libretro/Libretro.cpp:683-702, :741-762 at 340ce04). Where the folder cannot be listed no card name follows from anything atlas reads. The cards are in this folder all the same: every card the core opens is a name joined onto it (pcsx2/Pcsx2Config.cpp:2110-2113, the folder at :2337)."
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "folder-unlisted",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
+    },
+    {
+      "name": "pcee2-a-standalone-pcsx2-ini-leaves-the-card-names-unstated",
+      "rationale": "A standalone PCSX2.ini stands under <system>/pcsx2/inis, and the core adopts its [MemoryCards] section before it reads its own options (Libretro.cpp:562-596 at 340ce04): its names can stand in for the slots' and its multitap entries can add cards. atlas does not read them, so the answer names the card folder with files null and file-names-unestablished (#664 D9).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.10b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_enable = \"false\"\n",
+          "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd001.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards/Mcd002.ps2": {
+            "size": 8650752
+          },
+          "/mnt/sd/retrodeck/bios/pcsx2/inis/PCSX2.ini": "[MemoryCards]\nSlot1_Filename = Other.ps2\n"
+        },
+        "dirs": [
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "symlinks": {
+          "/mnt/sd/retrodeck/bios/pcsx2/memcards": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+        },
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcee2_libretro.so": {
+            "library_name": "PCEE2",
+            "library_version": "v2.9.78",
+            "options": {
+              "pcsx2_memcard_slot1_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "pcsx2_memcard_slot2_enable": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/pcsx2_libretro.so": {
+            "library_name": "LRPS2",
+            "library_version": "14d19f8"
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso",
+          "core_so": "pcee2_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+          "root_kind": "system_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards",
+          "file_set": {
+            "state": "declared",
+            "files": [],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": null,
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": null
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "arrangement-version-drifted",
+              "data": {
+                "kind": "retrodeck",
+                "verified": "0.10.9b",
+                "observed": "0.10.10b"
+              }
+            },
+            {
+              "code": "unverified-version",
+              "data": {
+                "core": "pcee2",
+                "arrangement": "retrodeck",
+                "verification": "never-verified"
+              }
+            },
+            {
+              "code": "file-names-unestablished",
+              "data": {
+                "core": "pcee2",
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "role": "memory-card",
+                "citation": "A standalone PCSX2.ini stands under <system>/pcsx2/inis, or may stand there where atlas cannot tell, and the core adopts its [MemoryCards] section before it reads its own options (pcee2-libretro/Libretro.cpp:562-596, ReadCoreOptions after it at :2093, both at 340ce04): with no card in the folder its slot file names name the cards the core creates, and its multitap entries add cards beside them. atlas does not read those names, so the folder is stated and the names are not."
+              }
+            },
+            {
+              "code": "save-files-shared-with-core",
+              "data": {
+                "core": "pcsx2",
+                "dir": "/mnt/sd/retrodeck/saves/ps2/retroarch-core/LRPS2/memcards"
+              }
+            }
+          ],
+          "granularity": {
+            "value": "shared-card",
+            "mode": "standalone-ini",
+            "readings": [
+              {
+                "key": "pcsx2_memcard_slot1_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "pcsx2_memcard_slot2_enable",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": []
+          }
+        }
+      }
     }
   ]
 }

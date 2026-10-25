@@ -497,6 +497,20 @@ CAVEAT_FILE_SET_DIRECTORIES_UNREAD = "file-set-directories-unread"
 # on. Claims that agree in every field — two slots of one emulator on one card
 # file — are one group and no caveat: nothing was lost.
 CAVEAT_FILE_SET_CLAIMS_MERGED = "file-set-claims-merged"
+# Another core on this machine writes its save files in the same folder.
+# PCEE2 and LRPS2 both open `<system>/pcsx2/memcards` for their memory cards —
+# each composes that folder under the system directory itself — so a card one
+# of them uses can be the other's too (LRPS2's default cards are PCEE2's
+# default names), and a client that syncs or backs up that folder is handling
+# both cores' cards. Established from the machine, not from an arrangement,
+# and for the game the question names (#664 D10): the other core's own save
+# answer for the same content names that folder, compared after links are
+# resolved, and a core that is not installed, or whose options move its cards
+# elsewhere for that game — a per-game or per-folder options file included —
+# states nothing, although it may still write the folder for other games.
+# `data` carries `core`, the other core's card key, and `dir`, the
+# folder both write, spelled as the link's target where a link leads there.
+CAVEAT_SAVE_FILES_SHARED_WITH_CORE = "save-files-shared-with-core"
 # The caller named no system, and the answer holds anyway because every system
 # the core's record covers writes the same files. The claim is scoped to those
 # systems — `data["systems"]` lists them — because a core run for a system its
@@ -1193,9 +1207,17 @@ SUBDIR_TEMPLATE_HOLES: Mapping[str, str] = MappingProxyType(
 # that extracts an archive names each member's write file after the member
 # rather than after the question's content — one value per member, so the
 # fill is a list and the declared file list grows with it.
+# ``<memory_card_file>`` is a memory card a slot opens by name, picked from the
+# card folder's own listing by an option or by the core's default for the slot
+# — one value per card in use, so two slots on one file fill it once.
 TEMPLATE_WHDLOAD_NAME = "<whdload_name>"
 TEMPLATE_ARCHIVE_MEMBER_STEM = "<archive_member_stem>"
-RULE_FILLED_TEMPLATES = (TEMPLATE_WHDLOAD_NAME, TEMPLATE_ARCHIVE_MEMBER_STEM)
+TEMPLATE_MEMORY_CARD_FILE = "<memory_card_file>"
+RULE_FILLED_TEMPLATES = (
+    TEMPLATE_WHDLOAD_NAME,
+    TEMPLATE_ARCHIVE_MEMBER_STEM,
+    TEMPLATE_MEMORY_CARD_FILE,
+)
 
 
 def _holes(named: list[str]) -> tuple[str, ...]:

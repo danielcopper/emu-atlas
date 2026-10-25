@@ -201,6 +201,9 @@ UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
     ("installations.py", "_core_info_unreadable_for_patching", CORE_SO_KEY): (
         "os.path.basename(core_so)"
     ),
+    # The other core's card key off ``_SAVE_FOLDER_SHARED_WITH``, which the
+    # rule cards and the core audit are keyed by — the vocabulary ``core`` names.
+    ("installations.py", "_save_files_shared", CORE_KEY): "other_key",
     ("installations.py", "_savestate_support_caveats", CORE_SO_KEY): (
         "os.path.basename(core_so)"
     ),

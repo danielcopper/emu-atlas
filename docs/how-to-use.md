@@ -1224,6 +1224,18 @@ which is what atlas's `granularity` answers (`shared-card` for LRPS2's default: 
 per-game path anywhere). Ask atlas first, then decide whether the identifier is relevant to a filesystem operation at
 all.
 
+**Two cores can write one folder.** PCEE2 and LRPS2 each compose `<system>/pcsx2/memcards` for their memory cards
+themselves, so where LRPS2 keeps its shared cards there, PCEE2's answer carries `save-files-shared-with-core`:
+`data["core"]` names the other core by its card key (`pcsx2`) and `data["dir"]` the folder both write — the link's
+target where a link leads there, as `physical_dir` is. It is decided for the game you ask about: read from LRPS2's own
+answer for the same content, so LRPS2 not installed, or put in its per-game mode for that game — globally or by a
+per-game or per-folder options file — states nothing, even though LRPS2 running other games may still write the folder.
+A card either core uses there can be the other's too, so sync or back that folder up once, not once per core. Which
+cards PCEE2 uses comes from its two slot switches and the folder's own listing: a slot's card option names a card only
+where the folder holds it, and the slot's default — or the first card listed, where the default is not there — stands
+otherwise. Where the folder cannot be listed, or a standalone `PCSX2.ini` stands under `<system>/pcsx2/inis` (the core
+adopts its memory-card settings), the answer names the folder with `file-names-unestablished` and no file names.
+
 ### Placement caveats worth branching on
 
 | Code                                       | Meaning                                                                                                                                                          |
@@ -1264,6 +1276,7 @@ all.
 | `save-inside-image`                        | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file                                                                 |
 | `save-writes-discarded`                    | nothing keeps a save at all: the writes are discarded — the granularity block names the way out                                                                  |
 | `save-files-compressed`                    | RetroArch compresses the files it writes (`data["key"]`, `layer`, `file`) — those groups' `size_fixed` is false                                                  |
+| `save-files-shared-with-core`              | another core (`data["core"]`) writes its save files in the same folder, `data["dir"]` — sync or back it up once, not per core                                    |
 | `size-fixed-except-trailing-fill`          | `data["file"]` keeps its size but may grow or shrink by a trailing run of `data["fill"]` alone — below                                                           |
 | `save-root-redirected`                     | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip                                                                  |
 | `save-root-revoked`                        | a flatpak override revokes the tree the save root lives under — writes never land here on the host                                                               |
