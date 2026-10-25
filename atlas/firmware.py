@@ -643,10 +643,12 @@ CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING = "firmware-configured-image-missing"
 # accepts, and RetroArch moves an option off its declared default only where
 # the stored value matches a declared one (core_option_manager.c:1031-1053,
 # the guard at :1037, at a79435a) — so the core reads its default instead,
-# which for PCEE2 is ``auto``: the folder's own listing. The name fails the
-# listing one of three ways: it is not a bare, unhidden file name a listing
-# could produce at all; a directory is at it; or the file at it fails the
-# core's header test. A name with nothing at it is
+# which is the folder's own listing: ``auto`` for PCEE2, the first image the
+# listing kept for LRPS2. The name fails the listing one of four ways: it is
+# not a bare, unhidden file name a listing could produce at all; a directory
+# is at it; the file at it is of a size the listing drops (LRPS2 keeps 4 to
+# 8 MiB); or the file at it fails the core's header test. A name with nothing
+# at it is
 # :data:`CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING` instead, stated where the
 # name could have been offered.
 CAVEAT_FIRMWARE_CONFIGURED_IMAGE_NOT_OFFERED = "firmware-configured-image-not-offered"
@@ -1357,9 +1359,12 @@ FIRMWARE_SYSTEM_OVERRIDE: Mapping[str, str] = {
 # option has a value meaning "list the folder" rather than naming a file, and
 # whose option offers only the files its listing accepts — so a stored name the
 # listing would not produce never reaches the core — and states per row the
-# citations its caveats quote, since two cores now share the shape.
-FIRMWARE_DECLARED_DIRECTORY_VERSION = "5"
-FIRMWARE_DECLARED_DIRECTORY_REVIEWED = "2026-10-24"
+# citations its caveats quote, since two cores now share the shape. Version 6
+# reads LRPS2's option through the frontend too: its values are the files its
+# size-bounded listing accepts, so a stored name outside them never reaches
+# the core either.
+FIRMWARE_DECLARED_DIRECTORY_VERSION = "6"
+FIRMWARE_DECLARED_DIRECTORY_REVIEWED = "2026-10-25"
 
 # The content reads a row may name, each the seam question that performs it.
 # Closed, and checked at construction: a row naming a read nobody implemented
@@ -1432,10 +1437,11 @@ class DeclaredDirectory:
     value matches a value the core declared (core_option_manager.c:1031-1053,
     the guard at :1037, at a79435a). Where it holds, a configured name is the
     file the launch opens only when it is a bare file name, a plain file is
-    there, and that file passes the content read — anything else reaches the
-    core as the option's default, the listing. ``False`` keeps a configured
-    name as what the launch opens whatever its header says, which is the
-    reading LRPS2's row was written with.
+    there, of a size the row's filter keeps, and that file passes the content
+    read — anything else reaches the core as the option's default, the
+    listing. ``False`` keeps a configured name as what the launch opens
+    whatever its size and header — the core's own code read without the
+    frontend's guard in front of it; no row states it today.
 
     ``own_check``, ``listing_test``, ``offers`` and ``lists_when`` are the
     citations this row's caveats quote — the content read, the listing's one
@@ -1526,10 +1532,11 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
     #     ``"*"`` with ``FILESYSTEM_FIND_FILES`` and no hidden-files flag
     #     (main.cpp:1807), where DuckStation's search asks for hidden names too
     #     and this one does not. A stored ``pcsx2_bios`` value does not stop
-    #     the listing — what it does instead is the section after this one —
-    #     and the file it names is opened under none of the listing's size
-    #     bounds, so the size verdict below is a verdict about the auto-detect
-    #     path;
+    #     the listing — what it does instead is the section after this one.
+    #     The core itself opens the file a stored value names under none of
+    #     the listing's size bounds, but a launch through RetroArch hands it
+    #     only a name the listing offered, so that file is within the same
+    #     bounds;
     #   - it keeps only files with ``MIN_BIOS_SIZE <= size <= MAX_BIOS_SIZE``,
     #     4 MiB and 8 MiB (libretro/main.cpp:1810-1816; the same constants in
     #     pcsx2/ps2/BiosTools.cpp:31-32), and validates each survivor by
@@ -1569,7 +1576,23 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
     #     configured name stats perfectly well and is NOT searched past; it
     #     goes to the open at :281 instead. [D] What that open then yields
     #     for a directory is the platform's answer and not something these
-    #     lines state — atlas states the shape it found and no verdict.
+    #     lines state — atlas states the shape it found and no verdict;
+    #   - but both bullets above are the core's own code, and the value only
+    #     reaches it when it is one the core declared: RetroArch moves an
+    #     option off its declared default only where the stored value matches
+    #     a declared value (core_option_manager.c:1031-1053, the guard at
+    #     :1037, at a79435a). The core declares no values of its own for this
+    #     option (libretro/libretro_core_options.h:117-128) and fills them
+    #     from the listing: the bare names of the files of 4 to 8 MiB that
+    #     IsBIOS accepts, the first of them the default (main.cpp:1813-1834).
+    #     So a stored name that is no such file — missing, of another size,
+    #     failing the header test, not a plain file, hidden (FindFiles skips a
+    #     leading "." without FILESYSTEM_FIND_HIDDEN_FILES,
+    #     common/FileSystem.cpp:855-862), or carrying a separator — reaches
+    #     the core as the default, the first image the listing kept. A launch
+    #     through RetroArch therefore opens a configured file only where the
+    #     size filter and the header test passed it, and never a directory at
+    #     the configured name.
     #
     # The packaged identities under ``pcsx2/bios/`` (73 in the packaged table
     # at schema version 6.0.0, all 4194304 bytes, all ``kind`` file) are a
@@ -1585,6 +1608,7 @@ FIRMWARE_DECLARED_DIRECTORY: Mapping[tuple[str, str], DeclaredDirectory] = {
         offers=_LRPS2_OFFERS,
         lists_when=_LRPS2_LISTS_WHEN,
         option_key="pcsx2_bios",
+        offered_by_listing=True,
     ),
     # PCEE2, at the deployed 340ce04 (the build stamp in
     # atlas/data/core_declarations.json), upstream github.com/WizzardSK/
@@ -5280,14 +5304,15 @@ def _configured_content(
     ``unrecognised`` here means: bytes the packaged table does not know, and
     the core opens them regardless. It is no failure and no refusal. The
     content test the core makes stands over its LISTING (``IsBIOS``,
-    libretro/main.cpp:1818) and not between it and a configured file — that
-    one is opened and loaded whatever its header reads as
-    (pcsx2/ps2/BiosTools.cpp:281, the ROMDIR walk at :294 with its own return
-    discarded). Nothing about its bytes turns it down: what can is an open
-    that fails (:281-283) or a size of zero (:286-290), neither of which the
-    table has any say in. So the table's silence leaves what the file is
-    open, which is what ``satisfied`` answering ``None`` beside that value
-    says.
+    libretro/main.cpp:1818 at 14d19f8) and not between the core and a
+    configured file — that one is opened and loaded whatever its header reads
+    as (pcsx2/ps2/BiosTools.cpp:281, the ROMDIR walk at :294 with its own
+    return discarded). The listing reaches this file only through the
+    frontend, which hands the core a name its listing offered
+    (:attr:`DeclaredDirectory.offered_by_listing`, checked before this read),
+    and the table is no part of that offer either. So the table's silence
+    leaves what the file is open, which is what ``satisfied`` answering
+    ``None`` beside that value says.
 
     The third return is what this read learned about the destination's own
     bytes (:class:`_ObservedBytes`), so the provenance check that runs after
@@ -5434,19 +5459,23 @@ def _configured_image(
     anything these lines state, which is exactly why no verdict is put on
     it.
 
-    The above is LRPS2's reading. A row whose option offers only what its
-    listing accepts (:attr:`DeclaredDirectory.offered_by_listing`, PCEE2) is
-    read through the frontend first, because RetroArch hands such a core a
-    stored value only where the core offered it. Its value naming the listing
-    (:attr:`DeclaredDirectory.option_lists`, ``auto``) is read as unset. A name
-    a listing could not produce — one carrying a separator, or a hidden one —
-    is not offered and is never composed; nor is a name a directory is at, nor,
-    under ``verify``, one whose file fails the row's content read. Each of those
-    is stated as :data:`CAVEAT_FIRMWARE_CONFIGURED_IMAGE_NOT_OFFERED`, and the
-    folder's own listing answers, which is what the launch reads instead. A
-    file whose header read did not come back stays the requirement with that
-    read failure stated beside it, and without ``verify`` the named file stays
-    the requirement unchecked.
+    The above is the core's own code. A row whose option offers only what its
+    listing accepts (:attr:`DeclaredDirectory.offered_by_listing` — LRPS2's
+    and PCEE2's both) is read through the frontend first, because RetroArch
+    hands such a core a stored value only where the core offered it, so for
+    those rows a separator, a climb and a directory at the name never reach
+    the composition and the stat above. Its value naming the listing
+    (:attr:`DeclaredDirectory.option_lists`, PCEE2's ``auto``) is read as
+    unset. A name a listing could not produce — one carrying a separator, or
+    a hidden one — is not offered and is never composed; nor is a name a
+    directory is at, nor one whose file is of a size the row's filter drops
+    (a stat, settled without ``verify``), nor, under ``verify``, one whose
+    file fails the row's content read. Each of those is stated as
+    :data:`CAVEAT_FIRMWARE_CONFIGURED_IMAGE_NOT_OFFERED`, and the folder's own
+    listing answers, which is what the launch reads instead. A file whose
+    header read did not come back stays the requirement with that read
+    failure stated beside it, and without ``verify`` the named file stays the
+    requirement unchecked.
     """
     row = declared_directory_of(core.stem, declaration.path)
     if row is None or row.option_key is None or found != KIND_DIRECTORY:
@@ -5520,12 +5549,13 @@ def _configured_image(
 def _a_listing_could_name(name: str) -> bool:
     """Could a listing of the folder produce *name*? Only a bare file name, and never a hidden one.
 
-    The core offers ``GetFileName`` of each file its listing returns
-    (pcee2-libretro/Libretro.cpp:677 at 340ce04), and that listing passes no
-    ``FILESYSTEM_FIND_HIDDEN_FILES`` (:670-671), so ``FindFiles`` skips every
-    name starting with ``.`` (common/FileSystem.cpp:2319-2325, and the
-    libretro VFS walk at common/FileSystemVFS.cpp:675-682). ``.`` and ``..``
-    are among those names.
+    Both cores offer ``GetFileName`` of each file their listing returns, and
+    neither listing passes ``FILESYSTEM_FIND_HIDDEN_FILES``, so ``FindFiles``
+    skips every name starting with ``.``. PCEE2: pcee2-libretro/Libretro.cpp:677
+    and :670-671 at 340ce04, with the skip at common/FileSystem.cpp:2319-2325
+    and the libretro VFS walk at common/FileSystemVFS.cpp:675-682. LRPS2:
+    libretro/main.cpp:1819 and :1807 at 14d19f8, with the skip at
+    common/FileSystem.cpp:855-862. ``.`` and ``..`` are among those names.
     """
     return "/" not in name and not name.startswith(".")
 
@@ -5551,16 +5581,28 @@ _OFFERED = _Offered()
 def _offered(machine: Machine, row: DeclaredDirectory, named: str, *, verify: bool) -> _Offered:
     """Would the core's listing offer the file at *named* as a value of its option?
 
-    The listing keeps files only, and of those the ones the row's content read
-    accepts (:attr:`DeclaredDirectory.offered_by_listing`). A directory at the
-    name is settled by the stat. A plain file is settled by its header, which
-    is read only under ``verify``: without a content check the name stands, and
-    ``satisfied`` beside it says nothing was established.
+    The listing keeps files only, of those the ones of a size the row's filter
+    keeps, and of those the ones the row's content read accepts
+    (:attr:`DeclaredDirectory.offered_by_listing`). A directory at the name is
+    settled by the stat, and so is a size outside the filter — the core's own
+    first test, made before anything is read (libretro/main.cpp:1815 at
+    14d19f8). A size the stat did not give settles nothing, and the header
+    read decides alone. A plain file is settled by its header, which is read only under
+    ``verify``: without a content check the name stands, and ``satisfied``
+    beside it says nothing was established.
     """
     kind = machine.path_kind(named)
     if kind == KIND_DIRECTORY:
         return _Offered(why="a directory is at that name, and the core's listing offers files only")
-    if kind != KIND_FILE or not verify:
+    if kind != KIND_FILE:
+        return _OFFERED
+    size = machine.file_size(named)
+    if size is not None and not row.accepts_size(size):
+        return _Offered(
+            why=f"the file at that name is {size} bytes, and the core's listing keeps only files of "
+            f"{row.min_size}-{row.max_size} bytes"
+        )
+    if not verify:
         return _OFFERED
     header = _content_read(machine, row, named)
     if header.status == PS2_BIOS_NOT_A_BIOS:
