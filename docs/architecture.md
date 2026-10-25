@@ -116,11 +116,13 @@ classDiagram
 
 RetroDECK always answers from a frontend catalogue, and EmuDeck does while an ES-DE is on its disk — including the
 bundled layer inside the ES-DE AppImage, which atlas reads itself (`atlas.squashfs`) wherever the runtime has the
-image's codec, and states as sealed where it does not; the handles without a catalogue answer the question with a stated
-refusal rather than an empty list. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend);
-"standalone" is the emulator axis (an emulator without a libretro core) — the two never mix. A standalone entry resolves
-through a packaged save card where one covers the emulator the command names (by `%EMULATOR_…%` token, or on EmuDeck by
-the launcher script the command runs); everything else refuses typed.
+image's codec, and states as sealed where it does not. Without a catalogue the question is still answered: a bare
+RetroArch derives its entries from the installed cores, marked `emulator-catalogue-unavailable`, and where there are no
+entries to give — a bare RetroArch whose cores cannot be read, or an EmuDeck with no ES-DE — the answer is empty and its
+caveat says why. "Bare" is the arrangement axis (a RetroArch nobody configured for a frontend); "standalone" is the
+emulator axis (an emulator without a libretro core) — the two never mix. A standalone entry resolves through a packaged
+save card where one covers the emulator the command names (by `%EMULATOR_…%` token, or on EmuDeck by the launcher script
+the command runs); everything else refuses typed.
 
 ## The answers
 

@@ -794,7 +794,7 @@ def _launch_command_body(command: LaunchCommand) -> dict[str, Any]:
 
 
 def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
-    """The stable form of a systems answer — what the catalogue declares, or why nothing."""
+    """The stable form of a systems answer — every system the installation lists, or why none."""
     return {
         "systems": list(answer.systems),
         "caveats": _caveats_contract(answer.caveats),
@@ -879,14 +879,13 @@ def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
 
 
 def rom_locations_contract(answer: RomLocationsAnswer) -> dict[str, Any]:
-    """The stable form of every system's ROM placement — one entry per system, and the catalogue's caveats.
+    """The stable form of every system's ROM placement — one entry per system, and the systems answer's caveats.
 
     ``placements`` keeps the systems answer's order, and each entry's
     ``placement`` is :func:`rom_placement_contract` of the answer the
     per-system question gives, so a client reads one entry exactly as it reads
     that question's answer. The top-level ``caveats`` are the systems answer's:
-    on an empty list they say whether the catalogue declares no systems or
-    could not be read.
+    on an empty list they say which empty it is.
     """
     return {
         "placements": [

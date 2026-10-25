@@ -204,21 +204,21 @@ inst.identify_firmware(md5="32fbbd84...")            # this content — where do
   playlists — which core actually launched a ROM). When no catalogue exists, the caller names the core; atlas does not
   invent a default.
 - **Absent is not one answer, so the question is on the protocol.** Every handle answers `emulators_for` / `systems` /
-  `rom_location`; the ES-DE-driven handles answer from a catalogue, and the others say why they cannot in a caveat
-  rather than leaving the caller to `isinstance`-narrow and guess. The reasons are distinct codes because they are
-  distinct claims: a bare RetroArch ships none (`emulator-catalogue-unavailable`, a settled fact about the arrangement),
-  an EmuDeck arrangement with no ES-DE on disk may have a catalogue whose location atlas has not established
-  (`emulator-catalogue-unestablished`, a statement about atlas — never to be read as an absence), and a catalogue atlas
-  could not read — missing, unreadable, or empty — says nothing at all (`emulator-catalogue-unreadable`). The third is
-  the same code, and the same fact, the firmware route already states. The fourth claim is partial: EmuDeck's ES-DE
-  embeds its bundled `es_systems.xml` inside the AppImage, so its handle answers from the on-disk layers — EmuDeck's own
-  `custom_systems` overlay, the gamelists, `es_settings.xml` — and every such answer carries
-  `emulator-catalogue-sealed`, a code that legitimately accompanies real entries: what the readable layers declare is
-  stated, and the frontend may declare more. The fifth claim is no refusal at all: the custom `es_systems.xml` can
-  declare itself the whole catalogue with a document-level `<loadExclusive/>` — ES-DE honors it only there and then
-  never opens the bundled file — and every catalogue-derived answer of such a machine carries
-  `emulator-catalogue-exclusive`: the enumeration is the custom layer alone, and it is complete, so its empty is a real
-  "none" where sealed's empty is a failed look.
+  `rom_location`; the ES-DE-driven handles answer from a catalogue, and the others answer what the installed cores let
+  them derive or say why they cannot, in a caveat either way, rather than leaving the caller to `isinstance`-narrow and
+  guess. The reasons are distinct codes because they are distinct claims: a bare RetroArch ships none
+  (`emulator-catalogue-unavailable`, a settled fact about the arrangement), an EmuDeck arrangement with no ES-DE on disk
+  may have a catalogue whose location atlas has not established (`emulator-catalogue-unestablished`, a statement about
+  atlas — never to be read as an absence), and a catalogue atlas could not read — missing, unreadable, or empty — says
+  nothing at all (`emulator-catalogue-unreadable`). The third is the same code, and the same fact, the firmware route
+  already states. The fourth claim is partial: EmuDeck's ES-DE embeds its bundled `es_systems.xml` inside the AppImage,
+  so its handle answers from the on-disk layers — EmuDeck's own `custom_systems` overlay, the gamelists,
+  `es_settings.xml` — and every such answer carries `emulator-catalogue-sealed`, a code that legitimately accompanies
+  real entries: what the readable layers declare is stated, and the frontend may declare more. The fifth claim is no
+  refusal at all: the custom `es_systems.xml` can declare itself the whole catalogue with a document-level
+  `<loadExclusive/>` — ES-DE honors it only there and then never opens the bundled file — and every catalogue-derived
+  answer of such a machine carries `emulator-catalogue-exclusive`: the enumeration is the custom layer alone, and it is
+  complete, so its empty is a real "none" where sealed's empty is a failed look.
 - **A directory read out of a config atlas could not read is not a directory.** `rom_location` resolves the frontend's
   own documented default where the ROM-directory setting is genuinely unset, because on this arrangement the home that
   default hangs off is read rather than assumed — and no Flatpak override can move it: flatpak force-pins the
@@ -549,8 +549,8 @@ visible in `system_source`, and marked as derived where the core spans systems.
   research — the rules are not small. The decision survives on the other leg, now stronger: atlas is the wrong shape for
   a C ABI (callback FFI across the seam, string ownership, variable-length results), and more rules across an FFI
   boundary make that worse, not better. Ports reimplement the resolver and prove themselves against the vectors; the
-  known consumers confirm the model (decky imports Python directly; grout/argosy would have had to build, bind, and
-  callback into a C library on ARM/Android anyway). Revisit only on a concrete drop-in request.
+  known consumers confirm the model (Tender imports the Python package directly; grout/argosy would have had to build,
+  bind, and callback into a C library on ARM/Android anyway). Revisit only on a concrete drop-in request.
 
 - **No cross-installation fall-through.** Unchanged: a RetroDECK install with no own `retroarch.cfg` gets RetroDECK's
   defaults, never a coexisting install's cfg.
