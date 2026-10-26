@@ -542,23 +542,28 @@ beside the card (`atlas/installations.py`), the same split the rule cards make w
 refuses a card whose token has no resolver registered.
 
 A card may also pin the builds its citations were read at, as an optional `builds` list. Each build states the `release`
-the deploy names for it — the tag RetroDECK's component recipe writes as `component_version` — the `revision`, the short
-commit hash the card's citations were read at, the `stamp`, the string constant the build itself carries to say which
-build it is, the `citation` that ties the three, and the `provenance` an answer read under that build carries in its
-`sources`; the card-level provenance is what an answer carries where no pinned build applied. What the stamp says is the
-emulator's choice: Vita3K's version string names the commit, while DuckStation's legacy build carries no commit hash and
-states its commit's date instead, so the stamp is stated beside the revision rather than derived from it. It is what
-makes a card checkable, for the reason the core-firmware entries carry the same kind of block: **the readings are a
-property of one build, not of an emulator.** So `tests/test_standalone_build_tripwire.py` searches the deployed binary
-for exactly the stamp, as raw bytes with a NUL on each side so a hit is the whole constant — nothing has to be run, and
-an emulator that composes its version at startup instead would need reading of another kind — and fails a card none of
-whose pinned stamps the binary carries. More than one build is a card whose emulator is in the field at builds that
-answer differently, and whose resolver reads which build runs: Vita3K's card pins 3996 and 4103, whose rules for picking
-the user differ, and the resolver reads `component_version` to pick one — a release the card does not pin, or none read
-at all, answers what the builds share and states the rest as not established. DuckStation's card pins the one build
-RetroDECK ships, `preview`. The rest pin none, which that test's `UNPINNED` set keeps deliberate rather than accidental,
-and pinning them is open work. The list is schema 3: it replaced schema 2's single `build` block, which the loader now
-refuses by name rather than read as a card that pins nothing, and an empty list is refused for the same reason.
+the deploy names for it — what RetroDECK's component recipe writes as `component_version`: the tag, or for a component
+extracted from a Flathub app, that app's commit — the `revision`, the short commit hash the card's citations were read
+at, the `stamp`, the string constant the build itself carries to say which build it is, the `citation` that ties the
+three, and the `provenance` an answer read under that build carries in its `sources`; the card-level provenance is what
+an answer carries where no pinned build applied. What the stamp says is the emulator's choice: Vita3K's version string
+names the commit, while DuckStation's legacy build carries no commit hash and states its commit's date instead, so the
+stamp is stated beside the revision rather than derived from it. It is what makes a card checkable, for the reason the
+core-firmware entries carry the same kind of block: **the readings are a property of one build, not of an emulator.** So
+`tests/test_standalone_build_tripwire.py` searches the deployed binary for exactly the stamp, as raw bytes with a NUL on
+each side so a hit is the whole constant — nothing has to be run, and an emulator that composes its version at startup
+instead would need reading of another kind — and fails a card none of whose pinned stamps the binary carries. More than
+one build is a card whose emulator is in the field at builds that answer differently, and whose resolver reads which
+build runs: Vita3K's card pins 3996 and 4103, whose rules for picking the user differ, and the resolver reads
+`component_version` to pick one — a release the card does not pin, or none read at all, answers what the builds share
+and states the rest as not established. Every other card pins the one build RetroDECK ships. A card that pins none would
+have to be named in that test's `UNPINNED` set, with the reason its binary carries no stamp, so an absence stays
+deliberate rather than accidental; today the set is empty. Most stamps name the commit, because the build reads them
+from HEAD — a full or short hash, a commit count, a commit date, or a git description that reads a bare tag only at the
+commit that tag names — while Cemu's and melonDS's binaries carry no hash, only the release number the build was
+configured with, so their stamps name the release. The list is schema 3: it replaced schema 2's single `build` block,
+which the loader now refuses by name rather than read as a card that pins nothing, and an empty list is refused for the
+same reason.
 
 ### `citations` — the evidence a shared reading speaks
 
@@ -589,51 +594,51 @@ has no default at the call — a reading that simply forgot it would name the ar
 else's answer and look exactly like a verified one. Two tests cross the slots with the code: every slot a reading names,
 its card states, and every slot a card states, some reading names.
 
-Eleven cards today, each at the release RetroDECK ships. Dolphin (2603a): GameCube card slots read from `Dolphin.ini`'s
+Eleven cards today, each at the release RetroDECK ships. Dolphin (2609): GameCube card slots read from `Dolphin.ini`'s
 EXI device ids, the GCI folder and raw card schemes as region-keyed templates with the `region` hole, and a Wii title's
 save directory in the NAND, `title/<save_id>/data` with the whole title id as the hole, beside a listing of the title
 directories the NAND holds. PrimeHack (shiiion/dolphin 81bfb96, and 53f53e0 for the Flathub build EmuDeck installs): the
 same reading, the same shape, and its own evidence — the fork inherits Dolphin's save tree whole and hangs it off a user
 directory whose name belongs to the build (#246). PPSSPP (v1.20.4): the Linux memstick is compiled in — the card's
 `settings` is `null`, the honest spelling of "no file governs this" — and savedata is one unnamed directory per game
-below `PSP/SAVEDATA`. xemu (v0.8.135): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read
+below `PSP/SAVEDATA`. xemu (v0.8.136): every save lives inside the emulated Xbox hard disk named by `xemu.toml` — read
 under the **data** home, where the emulator opens it — stated as one shared file with the `save-inside-image` caveat
 carrying the inside layout (`UDATA/<title id>`), the EEPROM beside it as a named settings group; a **relative**
 `[sys.files]` value is opened by the process verbatim (composed unchanged into the QEMU options, system/vl.c:2983-3095,
-probed with plain fopen/access, vl.c:2527-2535 with osdep.h:645-653, and no launch step chdirs, ui/xemu.c:1278-1379), so
+probed with plain fopen/access, vl.c:2527-2535 with osdep.h:645-653, and no launch step chdirs, ui/xemu.c:1275-1376), so
 it anchors at the launching process's working directory and the answer takes the `working_directory` shape above, per
 value — a relative EEPROM beside an absolute disk keeps the disk's root and carries its own `<cwd>` group, the hole in
 `needs` either way, unless the question names the folder with `cwd=`, which fills every such group. Cemu (2.6): the MLC
 resolved the way the emulator resolves it (`--mlc` flag outranks `settings.xml` outranks the default), and the per-title
 unit templated below it — `usr/save/<save_id>`, granularity `per-game-directory`, the fill spelled in the caveat
-(nn_save.cpp:133-145). Azahar (2125.1.1): the emulated SD read from `qt-config.ini`'s `[Data Storage]` group the way the
+(nn_save.cpp:133-145). Azahar (2126.1.1): the emulated SD read from `qt-config.ini`'s `[Data Storage]` group the way the
 emulator reads it (`use_custom_storage` routes `sdmc_directory`, `\default` companions honored — ReadSetting,
-config.cpp:1442-1450), the per-title unit `Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with
+config.cpp:1464-1472), the per-title unit `Nintendo 3DS/<ID0>/<ID1>/title/<save_id>/data/00000001` below it with
 compile-time all-zero ids (archive.h:22-24), and the extdata tree stated beside it as its own group. DuckStation (the
 "Legacy" build RetroDECK froze from the 2024-09 rolling release; citations at RetroDECK/Duckstation@1f6de046b): two
 memory-card slots, six modes each — the Dolphin GC shape in DuckStation's vocabulary — a per-game `<name>_<slot>.mcd`
 below `[MemoryCards] Directory` keyed by serial, sanitized title, or the content file's own stem (which the resolver
 fills itself), a shared card at its configured or default path, and the DataRoot probed on both spellings the launch
-environment can pick (qthost.cpp:562-582). PCSX2 (v2.6.3): up to eight slots — two console ports and six multitap slots
+environment can pick (qthost.cpp:562-582). PCSX2 (v2.8.2): up to eight slots — two console ports and six multitap slots
 that join only when enabled — each card's type read off the disk the way `FileMcd_SetType` reads it: a directory at the
 card's full path is a folder card (per-game saves as auto-managed subdirectories, stated with its names refused),
-anything else the shared `.ps2` image it is; one config-side DataRoot either way (Pcsx2Config.cpp:2197-2217), completing
+anything else the shared `.ps2` image it is; one config-side DataRoot either way (Pcsx2Config.cpp:2223-2243), completing
 the ps2 pair beside the LRPS2 core rule. melonDS (1.1): one `<rom stem>.sav` per game in the directory
 `[Instance0] SaveFilePath` names, the config read the way `Config::Load` reads it — `melonDS.toml`, a missing TOML
 falling back to the pre-1.0 `melonDS.ini` line by line as the built-in migration, an unparseable TOML yielding factory
 defaults — and the empty default landing the save beside the ROM itself (root `content_directory`); the stem is filled
 from named content, held open as `<rom_stem>` for archives, whose saves are named after the file inside. RPCS3 (build
-7c6b3dcd): the save tree hangs off the emulated PS3's internal drive, and `vfs.yml` states where that drive lives —
-`/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get` replaces everywhere it appears (vfs_config.cpp:14-62)
+d5213de6): the save tree hangs off the emulated PS3's internal drive, and `vfs.yml` states where that drive lives —
+`/dev_hdd0/`, composed off `$(EmulatorDir)`, which `cfg_vfs::get` replaces everywhere it appears (vfs_config.cpp:14-64)
 with the value as written, or with the emulator's config directory when that value is empty (`get_emu_dir`,
-system_utils.cpp:146-150, called at System.cpp:395 and passed at :483). It is the first card read through the YAML
+system_utils.cpp:148-152, called at System.cpp:450 and passed at :537). It is the first card read through the YAML
 scalar reader (`atlas.yaml_scalars`), which names the one key of that file it does not read rather than guessing at it.
 Below the drive the unit is `home/<user>/savedata`, one directory per title id; the active user is a runtime selection
 no file records, so **every user home RPCS3's own `GetUserAccounts` would list becomes its own group where every entry
 found here was decided**, the ones it passes over stated as `skipped` — the same stance the Dolphin card takes with its
 region trees. Where an entry was left undecided the answer claims the accounts established here instead and names the
 undecided entries; it never reports an early end, because neither kind of undecided entry can stop the walk — a failed
-stat is skipped and the walk reads on into the next entry (unix_dir::read, File.cpp:2091-2105). Where none exists the
+stat is skipped and the walk reads on into the next entry (unix_dir::read, File.cpp:2391-2405). Where none exists the
 answer says so outright rather than presenting the compiled default as a home somebody found, and a tree that cannot be
 listed carries `save-dir-unlistable` rather than a clause glued onto another caveat's prose. A second save location is
 named and not walked: `savedata/vmc`, the virtual memory cards for PS1 and PS2 classics, which a sync walking only the

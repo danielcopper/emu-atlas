@@ -33,9 +33,10 @@ SAVES_SCHEMA = 3
 class StandaloneBuild:
     """One build a card's readings were taken at, as the deploy names it and the build stamps it.
 
-    ``release`` is the name the deploy writes for the build it ships — the
-    release tag RetroDECK's component recipe writes as ``component_version`` —
-    which is what a resolver whose rule turns on the build reads to pick this
+    ``release`` is the name the deploy writes for the build it ships — what
+    RetroDECK's component recipe writes as ``component_version``: the tag, or
+    for a component extracted from a Flathub app, that app's commit — which is
+    what a resolver whose rule turns on the build reads to pick this
     one. ``revision`` is the short commit hash the card's citations were read
     at. ``stamp`` is the identity the build itself carries: the whole string
     constant the deployed binary holds, NUL-delimited, which
@@ -115,10 +116,11 @@ class StandaloneSaveCard:
     builds: tuple[StandaloneBuild, ...] = ()
     """The builds the card's readings were taken at, where the card pins any.
 
-    Empty is a card that pins no build, which is most of them today: the pin
-    is only worth stating where something can read the deployed build's own
-    answer back and compare it, and pinning the rest is open work. The
-    tripwire's ``UNPINNED`` set is what keeps that absence deliberate. More
+    Empty is a card that pins no build, which no packaged card is today: the
+    pin is only worth stating where something can read the deployed build's
+    own answer back and compare it, and every deployed standalone binary
+    carries a stamp that can. The tripwire's ``UNPINNED`` set is what keeps an
+    absence deliberate, with the reason its binary carries no stamp. More
     than one is a card whose emulator is in the field at builds that answer
     differently — Vita3K picks its user by one rule at 3996 and another at
     4103 — and whose resolver reads which one runs.
