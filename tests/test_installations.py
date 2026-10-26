@@ -2575,7 +2575,7 @@ class TestDolphinPerGameSettingsLayer:
         stated = self._caveat(
             self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
         )
-        assert "dolphin 2603a" in stated.message
+        assert "dolphin 2609" in stated.message
 
     def test_primehacks_statement_cites_the_fork_revision_instead(self):
         # A shared reading with one hard-coded citation would state Dolphin's
@@ -2586,6 +2586,30 @@ class TestDolphinPerGameSettingsLayer:
             atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
         )
         assert "shiiion/dolphin 81bfb96" in stated.message
+
+    def test_dolphins_build_layer_names_both_places_2609_looks(self):
+        # From 2609 GetSysDirectory takes a Sys directory beside the
+        # executable where one exists before the compiled one, so a statement
+        # calling the place compiled in would be false for this build.
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd).savefile_location(), atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD
+        )
+        assert (
+            "(a Sys directory beside the executable where one exists, else the one compiled in, "
+            "FileUtil.cpp:760-793 at dolphin 2609)" in stated.message
+        )
+
+    def test_primehacks_build_layer_stays_compiled_in(self):
+        # Both PrimeHack pins predate that lookup: the place is compiled in,
+        # and the fork's statement must not borrow 2609's.
+        rd = self._machine()
+        stated = self._caveat(
+            self._entry(rd, label="PrimeHack (Standalone)").savefile_location(),
+            atlas.CAVEAT_PER_GAME_BUILD_LAYER_UNREAD,
+        )
+        assert "(compiled in, FileUtil.cpp:758-791 at shiiion/dolphin 81bfb96)" in stated.message
+        assert "beside the executable" not in stated.message
 
     def test_primehack_lists_its_own_user_directory_not_dolphins(self):
         rd = self._machine(
@@ -4636,13 +4660,13 @@ VITA3K_COMPONENT_VERSION = (
 RPCS3_VFS_YML = f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/vfs.yml"
 # Where the compiled default drive puts the first user's saves: $(EmulatorDir)
 # is empty, which means the emulator's own config directory (get_emu_dir,
-# system_utils.cpp:146-150, called at System.cpp:395 and passed at :483 into
-# vfs_config.cpp:50 at build 7c6b3dcd; the default itself vfs_config.h:13).
+# system_utils.cpp:148-152, called at System.cpp:450 and passed at :537 into
+# vfs_config.cpp:52 at build d5213de6; the default itself vfs_config.h:13).
 RPCS3_DEFAULT_SAVEDATA = (
     f"{HOME}/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata"
 )
 # The file GetUserAccounts asks for below each user home (user_account.cpp:57-60
-# at build 7c6b3dcd); an RPCS3 that has run writes it itself (System.cpp:617).
+# at build d5213de6); an RPCS3 that has run writes it itself (System.cpp:671).
 RPCS3_HOME = "/mnt/sd/hdd/home"
 RPCS3_LOCALUSERNAME = f"{RPCS3_HOME}/00000001/localusername"
 RPCS3_USER_UNRECORDED = atlas.REASON_ACTIVE_USER_UNRECORDED
@@ -5934,7 +5958,7 @@ class TestTheUserAPerUserTreeWouldOpen:
     def test_rpcs3_a_drive_stated_as_a_null_node_is_the_compiled_default(self, vfs):
         # A null node is a statement RPCS3's own reader passes over: cfg::decode
         # takes a value only where convert<std::string>::decode accepts it
-        # (Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no
+        # (Utilities/Config.cpp:648-658 at build d5213de6) and a null node is no
         # scalar for it to accept (convert.h:73-75 at the yaml-cpp fork
         # 51a5d623), so the node keeps its declared default and the drive is
         # the compiled one. Both spellings here are that node — a tilde, and a
@@ -5947,12 +5971,12 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert self._provenance(p)["/dev_hdd0/"] == (
             "/dev_hdd0/ is stated as a null node, which RPCS3's reader passes over — a "
             "cfg::string takes a value only where convert<std::string>::decode accepts it "
-            "(Utilities/Config.cpp:645-655 at build 7c6b3dcd) and a null node is no scalar "
+            "(Utilities/Config.cpp:648-658 at build d5213de6) and a null node is no scalar "
             "for it to accept (convert.h:73-75 at the yaml-cpp fork 51a5d623, the submodule "
             "that build pins) — so the compiled default $(EmulatorDir)dev_hdd0/ governs "
             "(vfs_config.h:13), with $(EmulatorDir) the config directory an unset, empty or "
-            "null one means (get_emu_dir, system_utils.cpp:146-150, called at "
-            "System.cpp:395 and passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd)"
+            "null one means (get_emu_dir, system_utils.cpp:148-152, called at "
+            "System.cpp:450 and passed at :537 into vfs_config.cpp:52 at build d5213de6)"
         )
 
     # A drive left to the compiled default, once per way vfs.yml can leave it:
@@ -5981,8 +6005,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.dir == savedata
         assert self._provenance(p)["/dev_hdd0/"].endswith(
             f', with $(EmulatorDir) the "{emulator_dir}" vfs.yml states, substituted as '
-            "written (get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and "
-            "passed at :483 into vfs_config.cpp:50 at build 7c6b3dcd)"
+            "written (get_emu_dir, system_utils.cpp:148-152, called at System.cpp:450 and "
+            "passed at :537 into vfs_config.cpp:52 at build d5213de6)"
         )
 
     @pytest.mark.parametrize("drive", sorted(_RPCS3_DEFAULT_DRIVES))
@@ -5998,8 +6022,8 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert p.dir == RPCS3_DEFAULT_SAVEDATA
         assert self._provenance(p)["/dev_hdd0/"].endswith(
             ", with $(EmulatorDir) the config directory an unset, empty or null one means "
-            "(get_emu_dir, system_utils.cpp:146-150, called at System.cpp:395 and passed at "
-            ":483 into vfs_config.cpp:50 at build 7c6b3dcd)"
+            "(get_emu_dir, system_utils.cpp:148-152, called at System.cpp:450 and passed at "
+            ":537 into vfs_config.cpp:52 at build d5213de6)"
         )
 
     def test_rpcs3_a_drive_stated_empty_says_so_rather_than_unset(self):
@@ -6008,7 +6032,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert self._readings(p)["/dev_hdd0/"] == ""
         assert self._provenance(p)["/dev_hdd0/"].startswith(
             "/dev_hdd0/ is stated empty, and cfg_vfs::get falls to the default for an empty path "
-            "(vfs_config.cpp:18-28 at build 7c6b3dcd) — so the compiled default "
+            "(vfs_config.cpp:18-28 at build d5213de6) — so the compiled default "
             "$(EmulatorDir)dev_hdd0/ governs (vfs_config.h:13)"
         )
 
@@ -6097,7 +6121,7 @@ class TestTheUserAPerUserTreeWouldOpen:
     def test_rpcs3_a_drive_key_stated_twice_is_unknowable_here(self, shape):
         # A shape where the two readers of one file disagree: cfg::decode walks
         # every pair in file order and takes each one it can
-        # (Utilities/Config.cpp:477-505 at build 7c6b3dcd), so the last scalar
+        # (Utilities/Config.cpp:480-508 at build d5213de6), so the last scalar
         # statement is the one that stands; the scalar reader holds the first,
         # the way a yaml-cpp lookup answers. Neither answer can be published as
         # the emulator's, so the question refuses and names the key.
@@ -6158,9 +6182,10 @@ class TestTheUserAPerUserTreeWouldOpen:
         ],
     )
     def test_rpcs3_check_user_is_the_code_not_the_comment(self, name, key):
-        # id = 0; if (user.size() == 8) std::from_chars(&user.front(),
-        # &user.back() + 1, id); return id; (check_user, system_utils.cpp:59-69
-        # at 7c6b3dcd) — the leading digits read, the result code ignored.
+        # id = 0; if (user.size() == 8) std::from_chars(user.data(),
+        # user.data() + user.size(), id); return id; (check_user,
+        # system_utils.cpp:61-71 at d5213de6) — the leading digits read, the
+        # result code ignored.
         from atlas.installations import (
             _rpcs3_check_user,  # pyright: ignore[reportPrivateUsage] - the mirror is the unit under test
         )
@@ -6224,9 +6249,9 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert caveat.data["skipped"] == ("00000000", "12345678")
         assert (
             "00000000, which is not named by eight bytes opening with a non-zero number "
-            "(check_user, system_utils.cpp:59-69 at build 7c6b3dcd), and 12345678, which "
+            "(check_user, system_utils.cpp:61-71 at build d5213de6), and 12345678, which "
             "holds no localusername file (GetUserAccounts, user_account.cpp:57-60 at "
-            "build 7c6b3dcd), so those entries are not stated as users" in caveat.message
+            "build d5213de6), so those entries are not stated as users" in caveat.message
         )
         # The full name-and-localusername pair already stands in user_sentence
         # — the aside cites the one call each entry actually turns on instead.
@@ -6347,7 +6372,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         assert (
             "whether RPCS3 lists 12345678 is not established — nothing about it could be "
             "looked at, not even whether it is a directory, and the walk that would reach "
-            "it stats every entry (unix_dir::read, File.cpp:2091-2105 at build 7c6b3dcd)"
+            "it stats every entry (unix_dir::read, File.cpp:2391-2405 at build d5213de6)"
             in caveat.message
         )
         # No group names its savedata: a tree below a name that was never
@@ -6506,7 +6531,7 @@ class TestTheUserAPerUserTreeWouldOpen:
         # would claim of that entry exactly what is unsettled. And no clause
         # says the listing could stop there — the walk skips an entry whose
         # fstatat fails and reads on into the next (unix_dir::read,
-        # File.cpp:2091-2105 at build 7c6b3dcd), so nothing after it is lost.
+        # File.cpp:2391-2405 at build d5213de6), so nothing after it is lost.
         p = self._rpcs3(
             files={RPCS3_LOCALUSERNAME: "User"},
             dirs=[f"{RPCS3_HOME}/00000001"],

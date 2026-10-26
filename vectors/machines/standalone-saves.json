@@ -102,7 +102,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -111,7 +111,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -120,7 +120,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -264,7 +264,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -273,7 +273,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -282,7 +282,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -528,7 +528,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             }
           ],
@@ -630,7 +630,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             }
           ],
@@ -1449,7 +1449,7 @@
                 "role": "battery",
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
+                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
               }
             },
             {
@@ -1458,7 +1458,7 @@
                 "token": "AZAHAR",
                 "dir": "/mnt/sd/retrodeck/saves/n3ds/azahar/sdmc/Nintendo 3DS/00000000000000000000000000000000/00000000000000000000000000000000/extdata",
                 "role": "battery",
-                "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
+                "citation": "archive_extsavedata.cpp at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
               }
             }
           ],
@@ -1558,7 +1558,7 @@
                 "role": "battery",
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
+                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
               }
             },
             {
@@ -1567,7 +1567,7 @@
                 "token": "AZAHAR",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/azahar-emu/sdmc/Nintendo 3DS/00000000000000000000000000000000/00000000000000000000000000000000/extdata",
                 "role": "battery",
-                "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
+                "citation": "archive_extsavedata.cpp at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
               }
             }
           ],
@@ -1660,7 +1660,7 @@
                 "role": "battery",
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
+                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
               }
             },
             {
@@ -1669,7 +1669,7 @@
                 "token": "AZAHAR",
                 "dir": "/home/deck/Emulation/storage/azahar/sdmc/Nintendo 3DS/00000000000000000000000000000000/00000000000000000000000000000000/extdata",
                 "role": "battery",
-                "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
+                "citation": "archive_extsavedata.cpp at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
               }
             }
           ],
@@ -1767,7 +1767,7 @@
                 "role": "battery",
                 "save_id": "the 3DS title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
+                "citation": "archive_source_sd_savedata.cpp:21-29 at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/title/' + '{:08x}/{:08x}/data/00000001/'; ID0/ID1 are all-zero (archive.h:22-24)"
               }
             },
             {
@@ -1776,7 +1776,7 @@
                 "token": "AZAHAR",
                 "dir": "/home/deck/Emulation/storage/azahar/sdmc/Nintendo 3DS/00000000000000000000000000000000/00000000000000000000000000000000/extdata",
                 "role": "battery",
-                "citation": "archive_extsavedata.cpp at Azahar 2125.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
+                "citation": "archive_extsavedata.cpp at Azahar 2126.1.1 — '{}Nintendo 3DS/{}/{}/extdata/'"
               }
             }
           ],
@@ -2856,7 +2856,7 @@
                 "token": "PCSX2",
                 "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
                 "role": "memory-card",
-                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.8.2 — a directory at the card's full path is MemoryCardType::Folder (its filtering always on: SetFiltering(true), MemoryCardFile.cpp:614, and FileMcd_ReIndex passing true, :826)"
               }
             }
           ],
@@ -3580,7 +3580,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -3695,7 +3695,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -3804,7 +3804,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -3916,7 +3916,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4026,7 +4026,7 @@
                 "token": "RPCS3",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4130,7 +4130,7 @@
                 "token": "RPCS3",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4234,7 +4234,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4338,7 +4338,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/retrodeck/storage/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4536,7 +4536,7 @@
                 "token": "RPCS3",
                 "dir": "/home/deck/Emulation/storage/rpcs3/dev_hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4643,7 +4643,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4754,7 +4754,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4872,7 +4872,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/12345678/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -4981,7 +4981,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -5089,7 +5089,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -5202,7 +5202,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -5313,7 +5313,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -5425,7 +5425,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -5537,7 +5537,7 @@
                 "token": "RPCS3",
                 "dir": "/mnt/sd/hdd0/home/00000001/savedata",
                 "role": "battery",
-                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build 7c6b3dcd)"
+                "citation": "'/dev_hdd0/home/%08u/savedata/' as a whole string in the shipped binary (build d5213de6)"
               }
             },
             {
@@ -9562,7 +9562,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -9571,7 +9571,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -9580,7 +9580,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -11322,7 +11322,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -11331,7 +11331,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -11340,7 +11340,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -11463,7 +11463,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             }
           ],
@@ -11570,7 +11570,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             },
             {
@@ -11584,7 +11584,7 @@
                   "00010000/41424345"
                 ],
                 "unreadable": [],
-                "citation": "ES.cpp:830-870, Boot_BS2Emu.cpp:621 at dolphin 2603a"
+                "citation": "ES.cpp:834-874, Boot_BS2Emu.cpp:621 at dolphin 2609"
               }
             }
           ],
@@ -11686,7 +11686,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             },
             {
@@ -11699,7 +11699,7 @@
                   "00010004/41424344"
                 ],
                 "unreadable": [],
-                "citation": "ES.cpp:830-870, Boot_BS2Emu.cpp:621 at dolphin 2603a"
+                "citation": "ES.cpp:834-874, Boot_BS2Emu.cpp:621 at dolphin 2609"
               }
             }
           ],
@@ -11797,7 +11797,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             },
             {
@@ -11809,7 +11809,7 @@
                 "unreadable": [
                   "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii/title"
                 ],
-                "citation": "ES.cpp:830-870, Boot_BS2Emu.cpp:621 at dolphin 2603a"
+                "citation": "ES.cpp:834-874, Boot_BS2Emu.cpp:621 at dolphin 2609"
               }
             }
           ],
@@ -11911,7 +11911,7 @@
                 "role": "battery",
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
                 "save_id_spelling": "title-id-words",
-                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:269-275 at dolphin 2603a"
+                "citation": "NandPaths.cpp:63-71 and VolumeWii.cpp:270-276 at dolphin 2609"
               }
             },
             {
@@ -11925,7 +11925,7 @@
                 "unreadable": [
                   "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/Wii/title/00010000"
                 ],
-                "citation": "ES.cpp:830-870, Boot_BS2Emu.cpp:621 at dolphin 2603a"
+                "citation": "ES.cpp:834-874, Boot_BS2Emu.cpp:621 at dolphin 2609"
               }
             }
           ],
@@ -13480,7 +13480,7 @@
                 "token": "PCSX2",
                 "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards",
                 "role": "memory-card",
-                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.8.2 — a directory at the card's full path is MemoryCardType::Folder (its filtering always on: SetFiltering(true), MemoryCardFile.cpp:614, and FileMcd_ReIndex passing true, :826)"
               }
             }
           ],
@@ -14308,7 +14308,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14317,7 +14317,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14326,7 +14326,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -14459,7 +14459,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14468,7 +14468,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14477,7 +14477,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -14625,7 +14625,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14634,7 +14634,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14643,7 +14643,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14652,7 +14652,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14661,7 +14661,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14670,7 +14670,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -14827,7 +14827,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14836,7 +14836,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14845,7 +14845,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14854,7 +14854,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14863,7 +14863,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -14872,7 +14872,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card B",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -15119,7 +15119,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -15128,7 +15128,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -15137,7 +15137,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -15591,7 +15591,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -15600,7 +15600,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -15609,7 +15609,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -17294,7 +17294,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -17303,7 +17303,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -17312,7 +17312,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -17442,7 +17442,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/USA/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -17451,7 +17451,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/EUR/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -17460,7 +17460,7 @@
                 "token": "DOLPHIN",
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/data/dolphin-emu/GC/JAP/Card A",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],
@@ -21340,7 +21340,7 @@
                 "token": "PCSX2",
                 "dir": "/mnt/sd/retrodeck/saves/ps2/pcsx2/memcards/FolderCard",
                 "role": "memory-card",
-                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.6.3 — a directory at the card's full path is MemoryCardType::Folder (McdFolderAutoManage default true, Pcsx2Config.cpp:1922)"
+                "citation": "FileMcd_SetType, MemoryCardFile.cpp:584-604 at v2.8.2 — a directory at the card's full path is MemoryCardType::Folder (its filtering always on: SetFiltering(true), MemoryCardFile.cpp:614, and FileMcd_ReIndex passing true, :826)"
               }
             }
           ],
@@ -21477,7 +21477,7 @@
                 "token": "DOLPHIN",
                 "dir": "/mnt/sd/retrodeck/saves/gc/folders/USA",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -21486,7 +21486,7 @@
                 "token": "DOLPHIN",
                 "dir": "/mnt/sd/retrodeck/saves/gc/folders/EUR",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             },
             {
@@ -21495,7 +21495,7 @@
                 "token": "DOLPHIN",
                 "dir": "/mnt/sd/retrodeck/saves/gc/folders/JAP",
                 "role": "memory-card",
-                "citation": "GCMemcardDirectory.cpp:56-60 at dolphin 2603a"
+                "citation": "GCMemcardDirectory.cpp:57-61 at dolphin 2609"
               }
             }
           ],

@@ -1251,7 +1251,7 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `per-game-alternative-emulator`            | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]`                                                        |
 | `per-game-overrides-present`               | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)                                                           |
 | `per-game-layer-unread`                    | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"                                                              |
-| `per-game-build-layer-unread`              | a per-game layer the emulator's BUILD ships, at a compiled-in path — never listed, never counted                                                                 |
+| `per-game-build-layer-unread`              | a per-game layer the emulator's BUILD ships, at a path the build decides — never listed, never counted                                                           |
 | `cfg-value-rejected`                       | the file sets a value the emulator cannot read, so the value it had keeps governing                                                                              |
 | `appended-config-overridden`               | an override wins a layout key a file you appended sets (`data["key"]`, `layer`, `file`) — the answer is the override's                                           |
 | `appended-config-visibility-unestablished` | whether the program's sandbox shows the appended files was not established — read as the host's paths                                                            |
@@ -1702,8 +1702,8 @@ Which game runs is not a fact atlas holds, so the answers stay the **global** re
 and the two directories are two different statements, because one of them is a check atlas can make and the other never
 is. The user's directory is listed: `per-game-overrides-present` where files sit there, with `data["count"]` and
 `data["dir"]`, and `per-game-layer-unread` where the listing failed — which is not the same as "no game overrides this",
-and never silence. The build's directory is at a path compiled into the binary and written nowhere on a running machine,
-so `per-game-build-layer-unread` states it, carries **no** `data["dir"]`, and appears on every Dolphin-family answer the
+and never silence. The build's directory is at a path the build decides and writes nowhere on a running machine, so
+`per-game-build-layer-unread` states it, carries **no** `data["dir"]`, and appears on every Dolphin-family answer the
 layer reaches whatever the user's directory holds. Treat the first as "some games here answer differently — go read
 those files", the second as "the emulator ships a layer atlas will never enumerate". Neither says a key _is_ set; both
 say it _can_ be. `savestate_location` stays silent throughout, because the states tree is a compiled join off the user

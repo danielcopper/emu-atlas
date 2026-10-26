@@ -31,12 +31,17 @@ and the build itself sits inside that archive, which this test does not open.
 EmuDeck installs DuckStation as an AppImage too (emuDeckDuckStation.sh:5-6
 at acc45fc). The app-of-its-own road ``test_anchor_tripwire.py`` walks does
 not apply either, because the settings table names no flatpak for either
-emulator. What the stamp cannot do is go stale while the revision
-moves, since both stamps pinned today are read from HEAD — Vita3K's count and
-hash as the build is configured, DuckStation's committer date as its version
-file is written — so the stamp names the commit the build was made from. But
-the reading is still a floor rather than a proof: it establishes which build
-is deployed, not that any line the card cites still says what the card says.
+emulator. Most stamps pinned today cannot go stale while the revision moves,
+because the build reads them from HEAD as it is configured: Vita3K's and
+RPCS3's commit count and short hash, DuckStation's committer date, the full
+hash PCSX2, xemu and Azahar carry, and the git description Dolphin, PrimeHack
+and PPSSPP carry, which reads a bare tag only at the commit that tag names — so
+the stamp names the commit the build was made from. Cemu's and melonDS's are
+the exception: those binaries carry no hash, only the release number the build
+was configured with, so their stamp names the release and a build of another
+commit under the same number would pass. Either way the reading is a floor
+rather than a proof: it establishes which build is deployed, not that any line
+the card cites still says what the card says.
 
 Skipped where the components tree is not deployed, like the tripwires beside
 it.
@@ -62,22 +67,10 @@ COMPONENTS = Path(
     "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components"
 )
 
-# The cards that pin no build today. A new card either pins its build — and
-# states the stamp its binary carries — or is added here on purpose; pinning
-# the cards below is open work, not a finding that they cannot be pinned.
-UNPINNED = frozenset(
-    {
-        "DOLPHIN",
-        "PRIMEHACK",
-        "PPSSPP",
-        "XEMU",
-        "CEMU",
-        "AZAHAR",
-        "PCSX2",
-        "MELONDS",
-        "RPCS3",
-    }
-)
+# The cards that pin no build. Every card pins one today; a new card either
+# pins its build — and states the stamp its binary carries — or is added here
+# on purpose, together with the reason its binary carries no stamp.
+UNPINNED: frozenset[str] = frozenset()
 
 NO_STAMP = "carries none of them as a whole NUL-delimited constant"
 
@@ -458,10 +451,12 @@ class TestEveryPinnedCardDescribesTheDeployedBuild:
         )
 
     def test_the_component_version_agrees_with_the_stamp(self):
-        # Two readings of one fact: the component recipe writes the tag of the
-        # release it downloaded, and the binary carries the stamp of one pinned
-        # build, which names the release it is. A mismatch means the deployed
-        # binary is not the release the tree beside it names.
+        # Two readings of one fact: the component recipe writes the release it
+        # downloaded — the tag, or for a component extracted from a Flathub
+        # app, that app's commit — and the binary carries the stamp of one
+        # pinned build, whose release the card states beside it. A mismatch
+        # means the deployed binary is not the release the tree beside it
+        # names.
         binaries = _binaries_or_skip()
         for card in pinned_cards():
             if card.token not in binaries:
