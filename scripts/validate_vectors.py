@@ -117,8 +117,8 @@ KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
 # system's ROMs live, so unlike the catalogue query this one takes no path.
 ROM_LOCATION_QUERY_FIELDS = {"installation", "system"}
 # Every system's ROM placement at once (issue #670) is asked of the systems the
-# catalogue declares, so like the systems question it takes no arguments —
-# only which handle answers it.
+# systems question lists, so like that question it takes no arguments — only
+# which handle answers it.
 ROM_LOCATIONS_QUERY_FIELDS = {"installation"}
 # The platform questions (issue #68): forward takes a public vocabulary and a
 # value in it, reverse takes one system. The vocabularies, statuses and tag
@@ -3402,7 +3402,7 @@ def _validate_rom_location(name: str, placement: Any, label: str = "expected.rom
 
 
 def _validate_rom_locations(name: str, answer: Any) -> None:
-    """Every system's ROM placement: one entry per listed system, and the catalogue's caveats.
+    """Every system's ROM placement: one entry per listed system, and the systems answer's caveats.
 
     Each entry's placement is held to the per-system question's own form, and
     the top-level caveats are the systems answer's, held to its rule: systems
@@ -3693,7 +3693,7 @@ def _validate_working_folder(name: str, folder: Any) -> None:
 
 
 def _validate_systems(name: str, answer: Any) -> None:
-    """A systems answer: what the catalogue declares, and why nothing when nothing."""
+    """A systems answer: every system the installation lists, and why none when none."""
     if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
         fail(f"{name}: expected.systems must be {{'systems': [...], 'caveats': [...]}}")
     if not isinstance(answer["systems"], list) or not all(

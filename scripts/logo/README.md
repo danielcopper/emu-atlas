@@ -4,9 +4,9 @@ The mark: a compass rose set in a disc, split along a facet. It animates — the
 onto the bead on the bezel.
 
 It is built on the same recipe as the marks of its two sibling repos
-([decky-romm-sync](https://github.com/danielcopper/decky-romm-sync),
-[romm-gavel](https://github.com/danielcopper/romm-gavel)), so the three read as related: a 200-unit disc, a facet
-through its centre with the darker tone below-right, flat two-tone ink, two warm accent dots — here two _places_.
+([romm-tender](https://github.com/danielcopper/romm-tender), [romm-gavel](https://github.com/danielcopper/romm-gavel)),
+so the three read as related: a 200-unit disc, a facet through its centre with the darker tone below-right, flat
+two-tone ink, two warm accent dots — here two _places_.
 
 A compass rather than a globe, because a globe is a fixed printed picture of a world, which is the thing this library
 argues against. A compass is an instrument that answers now, and its reading depends on where it is held — the same

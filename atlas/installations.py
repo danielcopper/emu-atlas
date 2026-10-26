@@ -18329,7 +18329,7 @@ class CatalogueAnswer:
 
 @dataclass(frozen=True, slots=True)
 class SystemsAnswer:
-    """Every system a frontend catalogue declares, and what was read to say so.
+    """Every system an installation lists, from its frontend catalogue or its installed cores, and what was read to say so.
 
     The same empty-is-ambiguous problem as :class:`CatalogueAnswer`, one level
     up: a catalogue that could not be read lists no systems, and so does one
@@ -18337,11 +18337,22 @@ class SystemsAnswer:
     """
 
     systems: tuple[str, ...] = ()
-    """Every system this frontend catalogue declares, in the catalogue's own spelling."""
+    """Every system this installation lists, sorted. On RetroDECK that is what its
+    frontend catalogue declares, in the catalogue's own spelling, and on EmuDeck what
+    its readable catalogue layers declare — joined, while the bundled layer is sealed,
+    by the systems the installed cores' own declarations file under. A bare RetroArch
+    ships no catalogue, so there the cores' systems are the whole list. A system taken
+    from the cores rather than a catalogue is named in atlas's own vocabulary, and an
+    answer listing one carries ``emulator-list-derived``.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
-    """Every degradation of this answer, and on an empty one the statement of whether
-    the catalogue declares no systems or could not be read.
+    """Every degradation of this answer, and on an empty one the statement of which
+    empty it is: a catalogue that could not be read, one that declares no systems, or
+    none to read — an EmuDeck without ES-DE says ``emulator-catalogue-unestablished``,
+    and a bare RetroArch says ``emulator-catalogue-unavailable`` when its installed
+    cores could not be read either, and ``emulator-list-derived`` when they were read
+    and name no system.
     """
 
 
@@ -20146,7 +20157,9 @@ class SystemRomPlacement:
     """One system of a :class:`RomLocationsAnswer` and where its ROMs live."""
 
     system: str
-    """The system, in the catalogue's own spelling, as the systems answer lists it."""
+    """The system as the systems answer lists it — in the catalogue's own spelling, or in
+    atlas's own vocabulary where it was taken from the installed cores.
+    """
     placement: RomPlacement
     """Exactly the placement the per-system ROM question answers for this system, caveats included."""
 
@@ -20158,9 +20171,9 @@ class RomLocationsAnswer:
     The bulk form of :class:`RomPlacement` for a client that needs every ROM
     folder at once: one entry per system the systems answer lists, in its
     order, each carrying the placement the per-system question gives. What
-    the systems answer states about the catalogue as a whole — what was read,
-    and on an empty answer whether the catalogue declares no systems or could
-    not be read — is stated once here rather than inferred from the entries.
+    the systems answer states about the installation as a whole — what was
+    read, and on an empty answer which empty it is — is stated once here
+    rather than inferred from the entries.
     """
 
     placements: tuple[SystemRomPlacement, ...] = ()
@@ -20169,9 +20182,9 @@ class RomLocationsAnswer:
     """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
-    """The systems answer's caveats: every degradation of the catalogue as a whole,
-    and on an empty answer the statement of whether the catalogue declares no
-    systems or could not be read.
+    """The systems answer's caveats: every degradation of its list as a whole, and
+    on an empty answer the statement of which empty it is, as the systems answer
+    states it.
     """
 
 
@@ -20205,7 +20218,10 @@ class EmulatorEntry:
 
     @property
     def system(self) -> str:
-        """The system this entry launches, in the catalogue's own spelling."""
+        """The system this entry launches — in the catalogue's own spelling, or, on an entry
+        derived from the installed cores, the identifier it was asked under, in atlas's own
+        vocabulary.
+        """
         return self._spec.system
 
     @property
@@ -21156,7 +21172,7 @@ class _CatalogueQueries:
 
     @one_question
     def systems(self) -> SystemsAnswer:
-        """Every system the frontend catalogue declares, sorted."""
+        """Every system this installation lists, sorted — from its frontend catalogue or its installed cores."""
         answer, version = self._systems_answer()
         return _systems_with_caveats(
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
@@ -21353,8 +21369,7 @@ class _CatalogueQueries:
         system, asked within this one question, so the catalogue is read and
         parsed once for all of them rather than once per system. The systems
         answer's sources and caveats ride once on the whole answer: an empty
-        one says whether the catalogue declares no systems or could not be
-        read.
+        one says which empty it is, exactly as the systems answer does.
         """
         listed = self.systems()
         return RomLocationsAnswer(

@@ -10,7 +10,7 @@ Atlas is pure Python with zero runtime dependencies (`dependencies = []` in `pyp
 accident) — vendoring is a directory copy:
 
 ```bash
-pip install --target py_modules/ /path/to/emu-atlas   # decky-style vendoring, from a checkout
+pip install --target py_modules/ /path/to/emu-atlas   # vendoring into your own tree, from a checkout
 # or, for development:
 pip install -e .
 ```
@@ -552,8 +552,8 @@ atlas.installation_answers_contract(everywhere.savefile_location(content_path=ro
 #   'answer': {'dir': '/run/media/deck/Emulation/retrodeck/saves/n64', ...}}, ...]
 ```
 
-The handle route underneath is unchanged: a consumer that has chosen — decky mostly asks RetroDECK directly — keeps
-using it.
+The handle route underneath is unchanged: a consumer that has already chosen an installation — one that asks RetroDECK
+directly, say — keeps using it.
 
 ## What atlas has actually seen — `arrangement-unverified`
 
@@ -2425,7 +2425,7 @@ entry.launcher, entry.core_path    # what it would run, where, and the core
 entry.caveats                      # this entry's own degradations, e.g. games selecting another emulator
 entry.provenance                   # which catalogue layer declared it (prose, for debugging)
 
-inst.systems().systems             # every system the catalogue declares (same answer shape, same caveats)
+inst.systems().systems             # every system the installation lists (same answer shape, same caveats)
 ```
 
 Whether each entry starts, and with what, is its launch answer:
@@ -3063,10 +3063,10 @@ answer.caveats                    # the systems answer's caveats, once for the w
 ```
 
 Each entry is the per-system answer, so everything above holds for it unchanged — including a `None` directory and the
-caveat saying which of the seven reasons. What the answer adds is the catalogue as a whole: its `caveats` are what
-`systems()` states, so an empty `placements` says whether the catalogue declares no systems or could not be read. One
-question reads and parses the catalogue and the frontend's settings once for every system, where the loop would read
-them once per system.
+caveat saying which of the seven reasons. What the answer adds is the systems answer's statement about the installation
+as a whole: its `caveats` are what `systems()` states, so an empty `placements` says which empty it is, exactly as an
+empty `systems()` does. One question reads and parses the catalogue and the frontend's settings once for every system,
+where the loop would read them once per system.
 
 ## Is this file launchable here?
 
@@ -4323,7 +4323,7 @@ else:
 ```
 
 For a save that does not exist locally yet, atlas can only name the files where a rule card declares them
-(`file_set.state == "declared"`); otherwise the expected filename is your call (decky derives
+(`file_set.state == "declared"`); otherwise the expected filename is your call (a sync client might derive
 `<rom_stem>.<server extension>`). A declared set with `save_id` in `needs` is the in-between case: the names are stated
 but one of them is yours to complete, so a download that writes `<rom_stem>.…` there would land beside the save the
 emulator reads, not on it.

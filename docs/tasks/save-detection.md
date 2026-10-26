@@ -114,8 +114,9 @@ roughly by severity: wrong-and-unmarked answers first, then missing coverage, th
 ## Context and docs
 
 11. **`home` guidance for callers.** Document who supplies `home` and why there is no default: the caller knows which
-    user it serves; a root-running host (decky's backend) must pass the target user's home, `expanduser("~")` is only
-    correct when the process runs as that user. No `/home/*` scanning — that would be guessing.
+    user it serves; a host running as root, or as any user other than the one it serves, must pass the target user's
+    home, `expanduser("~")` is only correct when the process runs as that user. No `/home/*` scanning — that would be
+    guessing.
 
 12. **Subsystem content** (§7). `--subsystem` launches (Neo Geo CD in the matrix) use core-declared save extensions —
     the one path where RetroArch itself writes something other than `.srm`/`.rtc`. Unhandled and unmarked.
