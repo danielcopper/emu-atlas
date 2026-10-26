@@ -39,6 +39,7 @@ from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
 from scripts.validate_vectors import (
     _validate_emulator,  # pyright: ignore[reportPrivateUsage] - the one entry's rules, without a whole vector
+    _validate_input_queries,  # pyright: ignore[reportPrivateUsage] - the query rules, without an expectation
 )
 
 # A vector is plain JSON on the way in — the validator's whole job is to decide
@@ -2151,6 +2152,103 @@ def test_a_widened_aggregate_vocabulary_without_an_answer_shape_is_refused(monke
     )
     with pytest.raises(VectorError, match=re.escape("no answer shape is defined")):
         validate_machines_vector(vector)
+
+
+# Every field of every registry entry, one case each: the family or aggregate
+# question that takes it, and the field.
+_FAMILY_FIELDS = [
+    pytest.param(family, field, id=f"{family}-{field}")
+    for family, fields in sorted(validate_vectors.QUERY_FAMILY_FIELDS.items())
+    for field in sorted(fields)
+]
+_QUESTION_FIELDS = [
+    pytest.param(question, field, id=f"{question}-{field}")
+    for question, (required, optional) in sorted(validate_vectors.AGGREGATE_QUESTION_FIELDS.items())
+    for field in sorted(required | optional)
+]
+
+
+class TestTheQueryRegistryIsWhatTheValidatorAccepts:
+    """Every query validator accepts exactly what one registry lists.
+
+    ``QUERY_FAMILY_FIELDS`` and ``AGGREGATE_QUESTION_FIELDS`` are what
+    ``tests/test_vectors_readme.py`` holds to a description, so a validator
+    that accepted a field the registry does not list would accept a field no
+    description is held to. Three things are held, per family and per
+    aggregate question: every field its entry lists passes; one field more is
+    refused; and with one field taken out of the entry, a query carrying that
+    field is refused. The last is what catches a validator that unions a field
+    of its own onto the registry's set, or keeps a private copy of today's
+    entry: either still accepts the field the registry no longer lists. Every
+    refusal must come from the rule that names the family's fields, never from
+    a rule about one value.
+    """
+
+    STRAY = "not_a_field"
+    # A value each field accepts; every other field takes an absolute path,
+    # which is a non-empty string as well.
+    VALUES: dict[str, Any] = {
+        "installation": "retrodeck",
+        "kind": "core",
+        "verify": True,
+        "size": 1,
+        "vocabulary": "igdb",
+    }
+
+    def _query(self, fields: Any) -> Vector:
+        return {field: self.VALUES.get(field, ROM) for field in fields}
+
+    def test_every_query_family_is_in_the_registry(self):
+        queries = {key for key in validate_vectors.INPUT_FIELDS_OPTIONAL if key.endswith("_query")}
+        registered = set(validate_vectors.QUERY_FAMILY_FIELDS) | {"aggregate_query"}
+        assert sorted(queries ^ registered) == []
+
+    @pytest.mark.parametrize("family", sorted(validate_vectors.QUERY_FAMILY_FIELDS))
+    def test_a_family_accepts_every_field_its_entry_lists(self, family):
+        _validate_input_queries("synthetic", {family: self._query(validate_vectors.QUERY_FAMILY_FIELDS[family])})
+
+    @pytest.mark.parametrize("family", sorted(validate_vectors.QUERY_FAMILY_FIELDS))
+    def test_a_family_refuses_a_field_its_entry_does_not_list(self, family):
+        query = self._query(validate_vectors.QUERY_FAMILY_FIELDS[family] | {self.STRAY})
+        # A trailing space, not a dot: the message about the family's fields,
+        # never one about a single field's value.
+        with pytest.raises(VectorError, match=re.escape(f"input.{family} ")):
+            _validate_input_queries("synthetic", {family: query})
+
+    @pytest.mark.parametrize(("family", "field"), _FAMILY_FIELDS)
+    def test_a_family_refuses_a_field_taken_out_of_its_entry(self, monkeypatch, family, field):
+        listed = validate_vectors.QUERY_FAMILY_FIELDS[family]
+        monkeypatch.setitem(validate_vectors.QUERY_FAMILY_FIELDS, family, listed - {field})
+        query = self._query(listed)
+        with pytest.raises(VectorError, match=re.escape(f"input.{family} ")):
+            _validate_input_queries("synthetic", {family: query})
+
+    @pytest.mark.parametrize("question", sorted(validate_vectors.AGGREGATE_QUESTION_FIELDS))
+    def test_an_aggregate_question_accepts_every_field_it_lists(self, question):
+        required, optional = validate_vectors.AGGREGATE_QUESTION_FIELDS[question]
+        query = {**self._query(required | optional), "question": question}
+        _validate_input_queries("synthetic", {"aggregate_query": query})
+
+    @pytest.mark.parametrize("question", sorted(validate_vectors.AGGREGATE_QUESTION_FIELDS))
+    def test_an_aggregate_question_refuses_a_field_it_does_not_list(self, question):
+        required, optional = validate_vectors.AGGREGATE_QUESTION_FIELDS[question]
+        query = {**self._query(required | optional | {self.STRAY}), "question": question}
+        with pytest.raises(VectorError, match=re.escape(f"is not asked by [{self.STRAY!r}]")):
+            _validate_input_queries("synthetic", {"aggregate_query": query})
+
+    @pytest.mark.parametrize(("question", "field"), _QUESTION_FIELDS)
+    def test_an_aggregate_question_refuses_a_field_taken_out_of_its_entry(self, monkeypatch, question, field):
+        # Out of both halves: a required field the entry stops listing is no
+        # longer one the question is asked by, so carrying it is the stray rule's
+        # case like any optional one. That the required half is required is
+        # held by the aggregate-query-missing-key case above.
+        required, optional = validate_vectors.AGGREGATE_QUESTION_FIELDS[question]
+        monkeypatch.setitem(
+            validate_vectors.AGGREGATE_QUESTION_FIELDS, question, (required - {field}, optional - {field})
+        )
+        query = {**self._query(required | optional), "question": question}
+        with pytest.raises(VectorError, match=re.escape(f"is not asked by [{field!r}]")):
+            _validate_input_queries("synthetic", {"aggregate_query": query})
 
 
 class TestTheVocabularyIsOneVocabulary:
