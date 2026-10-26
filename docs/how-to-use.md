@@ -1263,6 +1263,7 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `filenames-content-conditional`            | the file set depends on the content: `data` carries the id-less spelling and the scope token, below                                                              |
 | `file-set-spans-roots`                     | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                                                                    |
 | `file-names-unestablished`                 | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                                                                |
+| `redirect-outranked`                       | this machine's configuration outranks a stated redirect route, or makes it not apply (`data["argument"]`, `data["key"]`) — below                                 |
 | `save-id-candidates`                       | the title directories the NAND holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                                                          |
 | `file-set-claims-merged`                   | two parts of the answer named one file and disagreed; it is one group, `data` lists what each said                                                               |
 | `file-set-directories-unread`              | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                                                                 |
@@ -1926,6 +1927,50 @@ why (melonDS names the save after the file _inside_ the archive). The config is 
 `melonDS.toml`, a missing TOML falling back to the pre-1.0 `melonDS.ini` line by line — the file EmuDeck still writes,
 so the migration door is one a real arrangement walks through — and an unparseable TOML yielding factory defaults rather
 than a refusal, because that is what the emulator itself does.
+
+#### Moving the saves for one launch — `redirects`
+
+A save answer also says whether one launch can move the emulator's saves somewhere else without its configuration being
+written: a caller that keeps saves in a store of its own either hands the launch a route, or copies the game's saves in
+before the launch and out after it. `redirects` is the list of routes the emulator offers, read from its source at the
+build its card pins:
+
+```python
+p = duckstation_entry.savefile_location()   # a catalogue entry launching DuckStation
+[(r.via, r.name, r.argument, r.moves) for r in p.redirects]
+# [('variable', 'XDG_CONFIG_HOME', '<dir>',
+#   ('saves', 'savestates', 'configuration', 'firmware'))]
+```
+
+- `via` says how the launch carries the route: `flag` (append `name` and its `argument` to the command), `variable` (set
+  `name` to the `argument` for the emulator's process alone, as `atlas/data/README.md` explains), or `working-directory`
+  (start the emulator in a directory that holds the `argument`; `name` is `None`). `<dir>` and `<file>` mark where your
+  path goes.
+- `moves` is everything the route moves, not only the saves: `saves`, `savestates`, `configuration`, `firmware` and
+  `installed-content`. Read it before you use a route. One that moves `configuration` starts the emulator from another
+  settings file — a fresh one, unless you copy one in — and one that moves `firmware` or `installed-content` leaves the
+  BIOS files, system titles or installed games behind. For such a whole-directory route, copying the saves in and out is
+  often the better way. A route that moves only `saves` (Dolphin's `-C Dolphin.Core.GCIFolderAPathOverride=<dir>`, say)
+  leaves everything else where it is.
+- `[]` means none exists: the emulator offers no route (xemu keeps its saves inside a hard-disk image only its
+  configuration names; melonDS follows paths only its configuration sets; Vita3K writes the folder a variable moves it
+  to into its configuration), so copying is the way. `None` means nothing is stated: every answer from a RetroArch core
+  carries `None` today, which says nothing either way about RetroArch's own routes.
+
+Each route's limits — what ranks above it, what a fresh directory lacks, which device the slot must hold — are in its
+`citation`, on the Python object only: the serialized answer carries `via`, `name`, `argument` and `moves`, and leaves
+the prose out like every other.
+
+The routes are the ones the emulator's source offers, the same on every machine. Whether one still moves the saves
+**here** depends on the configuration the answer was read from, and where that configuration outranks a route or makes
+it not apply, the answer says so with a `redirect-outranked` caveat, one per route and setting: `data` names the route
+(`via`, `name`, `argument`) and the setting (`file`, `key`). A Cemu whose `settings.xml` names an MLC carries it for
+`XDG_DATA_HOME` (`mlc_path`), an Azahar with custom storage switched on for its `XDG_DATA_HOME` (the
+`[Data Storage] sdmc_directory` it names), and a Dolphin answer for every `-C` card-slot key whose slot holds another
+device. The configuration counts as read, compiled defaults included: an unset `SlotB` is the default "no device", so
+every Dolphin GameCube answer whose `Dolphin.ini` leaves slot B unset carries the caveat for the two slot-B keys
+(`[Core] SlotB`). Check the caveats before you pick a route: one it names moves less than its `moves` says on this
+machine, or nothing.
 
 ## Where do this ROM's savestates live?
 

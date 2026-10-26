@@ -286,6 +286,7 @@ from .placement import (
     CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_FILES_COMPRESSED,
+    CAVEAT_REDIRECT_OUTRANKED,
     CAVEAT_SAVE_FILES_SHARED_WITH_CORE,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
@@ -404,7 +405,13 @@ from .placement import (
 )
 from . import duckstation, emulator_settings, melonds, qt_ini
 from .yaml_scalars import YamlScalars, read_scalars
-from .standalone_saves import StandaloneBuild, StandaloneSaveCard, lookup_standalone_save_card
+from .standalone_saves import (
+    RedirectSetting,
+    SaveRedirect,
+    StandaloneBuild,
+    StandaloneSaveCard,
+    lookup_standalone_save_card,
+)
 from .standalone_savestates import (
     SavestateIniKey,
     SavestateLaunchIni,
@@ -15028,7 +15035,8 @@ def _standalone_savefile_placement(
     names the card after the content's own stem — and the caller's working
     folder for the one it cannot: a relative path the emulator opens from the
     launch's own directory (xemu's disk image, melonDS's save directory,
-    Dolphin's GBA cartridge save).
+    Dolphin's GBA cartridge save). Every placement leaves here carrying the
+    card's redirect routes, the one field no resolver reads anything for.
     """
     resolver = _STANDALONE_SAVE_RESOLVERS.get(card.token)
     if resolver is None:
@@ -15036,7 +15044,7 @@ def _standalone_savefile_placement(
             f"standalone save card {card.token!r} has no resolver registered — the card and "
             "the code shipped out of step"
         )
-    return resolver(
+    outcome = resolver(
         machine,
         card=card,
         homes=homes,
@@ -15046,6 +15054,92 @@ def _standalone_savefile_placement(
         extra_caveats=extra_caveats,
         content_path=content_path,
         cwd=cwd,
+    )
+    if isinstance(outcome, Unresolved):
+        return outcome
+    # The routes are the card's, whichever resolver read the tree: what can
+    # move the saves for one launch is a fact about the emulator, stated once.
+    # What holds on this machine is the configuration the resolver read, and
+    # that is compared here, from the readings it already made.
+    return cast(
+        SavefilePlacement,
+        _dc_replace(
+            outcome,
+            redirects=card.redirects,
+            caveats=(*outcome.caveats, *_redirects_outranked(card, outcome)),
+        ),
+    )
+
+
+# The slot device a Dolphin-family ``-C`` card-slot key needs to apply, as the
+# mode word the slot's reading resolves to: a GCI-folder key moves the saves of
+# a slot holding the GCI folder (device 8), a raw-card key those of a slot
+# holding a memory card (device 1) (EXI_DeviceMemoryCard.cpp:149-170 and
+# :218-234 at dolphin 2609). A route naming a slot setting and missing here is
+# a card and code out of step, and raises.
+_DOLPHIN_SLOT_ROUTE_MODES = {
+    f"Dolphin.Core.{key}{letter}{suffix}": mode
+    for letter in ("A", "B")
+    for key, suffix, mode in (
+        ("GCIFolder", "PathOverride=<dir>", "folder"),
+        ("Memcard", "Path=<file>", "card"),
+    )
+}
+_DOLPHIN_SLOT_KEYS = ("SlotA", "SlotB")
+
+
+def _redirect_setting_outranks(
+    route: SaveRedirect, setting: RedirectSetting, placement: SavefilePlacement
+) -> bool:
+    """Whether the configuration this answer read outranks *route* through *setting*.
+
+    Read off the answer's own readings, so nothing is read the answer did not
+    already read: a setting with no reading is one this answer never
+    consulted, and outranks nothing it could state. A Dolphin slot setting
+    makes a card-slot route not apply where the slot resolved to a device
+    other than the one the route moves; every other setting outranks where its
+    reading carries a configured value, because a configured path is the one
+    the emulator uses in place of the route's.
+    """
+    granularity = placement.granularity
+    if granularity is None:
+        return False
+    bare = setting.key.split("] ", 1)[-1]
+    reading = next((r for r in granularity.readings if r.key == bare), None)
+    if reading is None:
+        return False
+    if bare not in _DOLPHIN_SLOT_KEYS:
+        return reading.value is not None
+    needed = _DOLPHIN_SLOT_ROUTE_MODES.get(route.argument)
+    if needed is None:
+        raise ValueError(
+            f"route {route.argument!r} names {setting.key!r} and no slot device it needs — "
+            "the card and the code shipped out of step"
+        )
+    modes = dict(zip(_DOLPHIN_SLOT_KEYS, (granularity.mode or "").split("+")))
+    return bare in modes and modes[bare] != needed
+
+
+def _redirects_outranked(card: StandaloneSaveCard, placement: SavefilePlacement) -> tuple[Caveat, ...]:
+    """One ``redirect-outranked`` per stated route and setting this answer's configuration outranks."""
+    return tuple(
+        Caveat(
+            CAVEAT_REDIRECT_OUTRANKED,
+            f"the configuration this answer read decides {setting.key} in {setting.file}, which "
+            f"outranks the {route.via} route {route.argument} or makes it not apply — on this "
+            "machine the route moves less than its scope, or nothing",
+            {
+                "token": card.token,
+                "via": route.via,
+                "name": route.name or "",
+                "argument": route.argument,
+                "file": setting.file,
+                "key": setting.key,
+            },
+        )
+        for route in card.redirects or ()
+        for setting in route.outranked_by
+        if _redirect_setting_outranks(route, setting, placement)
     )
 
 

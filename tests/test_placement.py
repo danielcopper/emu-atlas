@@ -355,7 +355,9 @@ class TestSavestatePlacementIsTheSaveShapeMinusOneField:
     No core writes a savestate — the libretro API hands it no savestate
     directory and RetroArch serializes the file itself — so no rule card can
     ever state how one groups them. The field is absent rather than permanently
-    ``None``, which is what these tests pin down.
+    ``None``, which is what these tests pin down. ``redirects`` is the other
+    field it lacks: D2 of #638 puts the routes on the save answer, and each
+    route's ``moves`` says whether the savestates move.
     """
 
     def test_the_type_carries_no_granularity_at_all(self):
@@ -364,7 +366,7 @@ class TestSavestatePlacementIsTheSaveShapeMinusOneField:
     def test_it_carries_every_other_field_a_save_placement_does(self):
         save = set(SavefilePlacement.__dataclass_fields__)
         state = set(SavestatePlacement.__dataclass_fields__)
-        assert save - state == {"granularity"}
+        assert save - state == {"granularity", "redirects"}
         assert state - save == set()
 
     def test_root_kind_vocabulary_is_its_own(self):

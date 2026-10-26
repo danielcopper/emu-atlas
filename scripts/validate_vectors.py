@@ -193,6 +193,16 @@ PLACEMENT_FIELDS = {
     "granularity",
     "caveats",
 }
+# A save placement also states `redirects`: null for an answer from a
+# RetroArch core, which states nothing about them, and a list for a standalone
+# emulator's — empty where its source offers no route (atlas/standalone_saves.py).
+SAVEFILE_PLACEMENT_FIELDS = PLACEMENT_FIELDS | {"redirects"}
+REDIRECT_FIELDS = {"via", "name", "argument", "moves"}
+KNOWN_REDIRECT_VIAS = {"flag", "variable", "working-directory"}
+# The one `via` that names nothing: the route is the launch's own directory.
+REDIRECT_VIA_UNNAMED = "working-directory"
+# In the order a route lists them, which is the order atlas exports them in.
+KNOWN_REDIRECT_SCOPES = ["saves", "savestates", "configuration", "firmware", "installed-content"]
 # A savestate placement is a save placement without `granularity`, and the
 # omission is the contract: no core writes a savestate, so no rule card can
 # ever state how one groups them (atlas/placement.py). Derived from the save
@@ -657,6 +667,7 @@ KNOWN_CAVEAT_CODES = {
     "savestate-support-machine-dependent",
     "save-writes-discarded",
     "save-files-compressed",
+    "redirect-outranked",
     "save-files-shared-with-core",
     "size-fixed-except-trailing-fill",
     "core-mode-unestablished",
@@ -1989,11 +2000,41 @@ def _validate_placement_core(name: str, placement: Any, *, root_kinds: set[str],
     _validate_save_id_stated(name, needs, placement["caveats"], what)
 
 
+def _validate_redirect(name: str, redirect: Any) -> None:
+    """One redirect route: how it is carried, what it names, and what it moves."""
+    _require_exact(name, redirect, REDIRECT_FIELDS, "redirect")
+    via = redirect["via"]
+    if via not in KNOWN_REDIRECT_VIAS:
+        fail(f"{name}: a redirect's via must be one of {sorted(KNOWN_REDIRECT_VIAS)}")
+    route_name = redirect["name"]
+    if via == REDIRECT_VIA_UNNAMED:
+        if route_name is not None:
+            fail(f"{name}: a {REDIRECT_VIA_UNNAMED} redirect names nothing, so its name must be null")
+    elif not isinstance(route_name, str) or not route_name:
+        fail(f"{name}: a {via} redirect's name must be a non-empty string")
+    if not isinstance(redirect["argument"], str) or not redirect["argument"]:
+        fail(f"{name}: a redirect's argument must be a non-empty string")
+    moves = redirect["moves"]
+    if not isinstance(moves, list) or any(scope not in KNOWN_REDIRECT_SCOPES for scope in moves):
+        fail(f"{name}: a redirect's moves must be a list of {KNOWN_REDIRECT_SCOPES}")
+    if moves != sorted(set(moves), key=KNOWN_REDIRECT_SCOPES.index):
+        fail(f"{name}: a redirect's moves must name each value once, in {KNOWN_REDIRECT_SCOPES} order")
+    if "saves" not in moves and "savestates" not in moves:
+        fail(f"{name}: a redirect must move the saves or the savestates")
+
+
 def _validate_savefile_placement(name: str, placement: Any) -> None:
-    _require_exact(name, placement, PLACEMENT_FIELDS, "savefile_location")
+    _require_exact(name, placement, SAVEFILE_PLACEMENT_FIELDS, "savefile_location")
     _validate_placement_core(name, placement, root_kinds=KNOWN_ROOT_KINDS, what="savefile_location")
     if placement["granularity"] is not None:
         _validate_granularity(name, placement["granularity"])
+    redirects = placement["redirects"]
+    if redirects is None:
+        return
+    if not isinstance(redirects, list):
+        fail(f"{name}: savefile_location.redirects must be null or a list")
+    for redirect in redirects:
+        _validate_redirect(name, redirect)
 
 
 def _validate_screenshot_placement(name: str, placement: Any) -> None:

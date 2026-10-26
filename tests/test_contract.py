@@ -107,7 +107,9 @@ class TestTheSavestateFormOmitsGranularity:
     A ``"granularity": null`` here would be a key no answer can ever fill, and
     a client would read it as "not established yet" rather than "cannot exist".
     Its absence is therefore contractual, and so is the rest of the form being
-    identical — the two answers come off one upstream rule.
+    identical — the two answers come off one upstream rule. ``redirects`` is the
+    other key it lacks: D2 of #638 puts the routes on the save answer, and each
+    route's ``moves`` says whether the savestates move.
     """
 
     def _placements(self):
@@ -123,7 +125,7 @@ class TestTheSavestateFormOmitsGranularity:
 
     def test_every_other_key_is_the_same(self):
         save, state = self._placements()
-        assert set(save) - set(state) == {"granularity"}
+        assert set(save) - set(state) == {"granularity", "redirects"}
         assert set(state) - set(save) == set()
 
     def test_the_root_kind_names_the_savestate_anchor(self):
