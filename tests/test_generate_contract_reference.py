@@ -1596,6 +1596,7 @@ class TestTheDataRegistryReading:
             ("invalid-save-directory", "layer"): "CFG_LAYER_KINDS",
             ("appended-config-overridden", "layer"): "CFG_LAYER_OVERRIDE_KINDS",
             ("save-files-compressed", "layer"): "CFG_LAYER_KINDS",
+            ("redirect-outranked", "via"): "REDIRECT_VIAS",
             ("size-fixed-except-trailing-fill", "fill"): "SIZE_FILLS",
             ("file-set-claims-merged", "roles"): "ROLES",
             ("file-set-claims-merged", "granularities"): "GRANULARITIES",

@@ -72,6 +72,7 @@ from .find_rules import (
 )
 from .machine import CORE_UNANSWERED_STATUSES
 from .retroarch_cfg import CFG_LAYER_KINDS, CFG_LAYER_OVERRIDE_KINDS, RetroArchCfg
+from .standalone_saves import REDIRECT_VIAS, SaveRedirect
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
 
@@ -745,6 +746,15 @@ CAVEAT_SAVE_WRITES_DISCARDED = "save-writes-discarded"
 # the cfg ``layer`` whose read stands and its ``file`` — the triple
 # ``appended-config-overridden`` carries, because the remedy is the same edit.
 CAVEAT_SAVE_FILES_COMPRESSED = "save-files-compressed"
+# A redirect route the answer states (``redirects``) that the configuration this
+# answer was read from outranks, or makes not apply: Cemu's settings.xml naming
+# an MLC beside XDG_DATA_HOME, Azahar's custom storage beside it, Dolphin's
+# ``-C`` GCI-folder key for a slot that holds no GCI folder. The route stays as
+# the card states it, because it is what the source offers; this says what holds
+# on this machine (D7 of #638). One per route and setting; ``data`` names the
+# route (``via``, ``name``, ``argument``), the setting (``file``, ``key``, the
+# card's spelling) and the ``token``.
+CAVEAT_REDIRECT_OUTRANKED = "redirect-outranked"
 # A file whose ``size_fixed`` is true may still be written longer or shorter by
 # a trailing run of one fill byte, so its length is compared without that run.
 # Genesis Plus GX reports its SRAM only up to the last byte that is not
@@ -1921,6 +1931,12 @@ class SavefilePlacement:
     """The fully link-resolved backing directory where ``dir`` reaches its files through
     symlinks, and ``None`` otherwise.
     """
+    redirects: tuple[SaveRedirect, ...] | None = None
+    """The routes one launch can move a standalone emulator's saves by without its
+    configuration being written. An empty tuple (``[]`` serialized) means none exists: the
+    emulator's source offers no route. ``None`` means not stated: the answer comes from a
+    RetroArch core, or from a card that states no redirect block.
+    """
 
     def __post_init__(self) -> None:
         if not self.dir:
@@ -2185,6 +2201,7 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # Only an override can win a key an appended file sets.
         (CAVEAT_APPENDED_CONFIG_OVERRIDDEN, "layer"): CFG_LAYER_OVERRIDE_KINDS,
         (CAVEAT_SAVE_FILES_COMPRESSED, "layer"): CFG_LAYER_KINDS,
+        (CAVEAT_REDIRECT_OUTRANKED, "via"): REDIRECT_VIAS,
         (CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL, "fill"): SIZE_FILLS,
         # List-valued pairs: the values the colliding claims stated, each a
         # word of the vocabulary a group's own field is held to.

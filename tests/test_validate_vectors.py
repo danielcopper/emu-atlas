@@ -110,8 +110,13 @@ def _placement(**overrides) -> Vector:
         "file_set": _file_set(),
         "granularity": None,
         "caveats": [],
+        "redirects": None,
         **overrides,
     }
+
+
+def _redirect(**overrides) -> Vector:
+    return {"via": "flag", "name": "--mlc", "argument": "<dir>", "moves": ["saves", "firmware"], **overrides}
 
 
 def _granularity(**overrides) -> Vector:
@@ -994,6 +999,24 @@ PLACEMENT_CASES = [
     case(_base_placement(file_set=_file_set(state="observed", files=["a.srm"],
                                             groups=[_group(role="unaudited", size_fixed=None)])),
          "file group role must be one of", id="file-group-role"),
+    case(_base_placement(redirects={}),
+         "savefile_location.redirects must be null or a list", id="redirects-not-a-list"),
+    case(_base_placement(redirects=[{**_redirect(), "citation": "prose"}]),
+         "redirect must be exactly the fields", id="redirect-stray-field"),
+    case(_base_placement(redirects=[_redirect(via="config-file")]),
+         "a redirect's via must be one of", id="redirect-via"),
+    case(_base_placement(redirects=[_redirect(via="working-directory", argument="<dir>/user/")]),
+         "a working-directory redirect names nothing", id="redirect-working-directory-named"),
+    case(_base_placement(redirects=[_redirect(name=None)]),
+         "a flag redirect's name must be a non-empty string", id="redirect-flag-unnamed"),
+    case(_base_placement(redirects=[_redirect(argument="")]),
+         "a redirect's argument must be a non-empty string", id="redirect-argument-empty"),
+    case(_base_placement(redirects=[_redirect(moves=["saves", "keys"])]),
+         "a redirect's moves must be a list of", id="redirect-scope-unknown"),
+    case(_base_placement(redirects=[_redirect(moves=["firmware", "saves"])]),
+         "must name each value once, in", id="redirect-scopes-out-of-order"),
+    case(_base_placement(redirects=[_redirect(moves=["configuration"])]),
+         "a redirect must move the saves or the savestates", id="redirect-moves-no-save"),
     case(_base_placement(granularity={**_granularity(), "stray": 1}),
          "granularity must be exactly the fields", id="granularity-stray-field"),
     case(_base_placement(granularity=_granularity(value="nope")),
@@ -2007,6 +2030,11 @@ ACCEPTED_CASES = [
                  id="a-save-id-hole-named-only-in-the-caveat-that-fills-it"),
     pytest.param(_base_placement(granularity=_granularity(value="per-game-files")),
                  id="a-granularity-with-alternatives"),
+    pytest.param(_base_placement(redirects=[]), id="a-standalone-save-answer-with-no-redirect"),
+    pytest.param(_base_placement(redirects=[_redirect(),
+                                            _redirect(via="working-directory", name=None,
+                                                      argument="<dir>/user/", moves=["savestates"])]),
+                 id="a-standalone-save-answer-with-redirects"),
     pytest.param(_base_firmware(root=None, cores=[], unclaimed=[],
                                 caveats=[{"code": "firmware-root-missing", "data": {}}]),
                  id="a-firmware-answer-with-no-root-at-all"),
@@ -2331,6 +2359,13 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_granularity_vocabularies_match(self):
         assert validate_vectors.KNOWN_GRANULARITIES == set(atlas.GRANULARITIES)
+
+    def test_the_redirect_vocabularies_match(self):
+        # The scopes in order too: a route lists them in the order atlas does.
+        assert validate_vectors.KNOWN_REDIRECT_VIAS == set(atlas.REDIRECT_VIAS)
+        assert validate_vectors.KNOWN_REDIRECT_VIAS == self._exported("REDIRECT_VIA_")
+        assert validate_vectors.KNOWN_REDIRECT_SCOPES == list(atlas.REDIRECT_SCOPES)
+        assert set(validate_vectors.KNOWN_REDIRECT_SCOPES) == self._exported("REDIRECT_MOVES_")
 
     def test_the_declarable_core_states_match(self):
         # The fixture grammar's side of the probe vocabulary: every unanswered

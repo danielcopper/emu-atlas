@@ -146,10 +146,28 @@ def savefile_placement_contract(placement: SavefilePlacement) -> dict[str, Any]:
     with the full option combination that selects it — a client renders
     "is the wanted option active, and in which file does it change" from the
     readings, for one switch or several alike.
+
+    ``redirects`` is a list for a standalone emulator's answer, ``[]`` where no
+    route exists, and ``null`` where nothing is stated — every answer from a
+    RetroArch core. Each route's citation stays out, like all prose: the
+    structured ``via``, ``name``, ``argument`` and ``moves`` are what a caller
+    acts on.
     """
     granularity = placement.granularity
+    redirects = placement.redirects
     return {
         **_placement_core(placement),
+        "redirects": None
+        if redirects is None
+        else [
+            {
+                "via": r.via,
+                "name": r.name,
+                "argument": r.argument,
+                "moves": list(r.moves),
+            }
+            for r in redirects
+        ],
         "granularity": None
         if granularity is None
         else {

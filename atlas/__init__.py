@@ -446,6 +446,26 @@ from .core_firmware import (
     FirmwareLocating,
 )
 
+# How one launch can move a standalone emulator's saves, as the CONTRACT spells
+# it: the type `redirects[]` carries on a save answer, and the two closed lists
+# its `via` and `moves` words come from. The cards that state the routes stay
+# inside the package.
+from .standalone_saves import (
+    REDIRECT_MOVES_CONFIGURATION,
+    REDIRECT_MOVES_FIRMWARE,
+    REDIRECT_MOVES_INSTALLED_CONTENT,
+    REDIRECT_MOVES_SAVES,
+    REDIRECT_MOVES_SAVESTATES,
+    REDIRECT_SCOPES,
+    REDIRECT_VIA_FLAG,
+    REDIRECT_VIA_VARIABLE,
+    REDIRECT_VIA_WORKING_DIRECTORY,
+    REDIRECT_VIAS,
+    RedirectScope,
+    RedirectVia,
+    SaveRedirect,
+)
+
 # The evidence scale the world-knowledge mark's `evidence` comes from, as the
 # CONTRACT spells it. The bracket forms beside these in `atlas.system_firmware`
 # ([V], [D], [O]) are this repository's documentation notation and stay inside
@@ -595,6 +615,7 @@ from .placement import (
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
     CAVEAT_SAVE_WRITES_DISCARDED,
     CAVEAT_SAVE_FILES_COMPRESSED,
+    CAVEAT_REDIRECT_OUTRANKED,
     CAVEAT_SAVE_FILES_SHARED_WITH_CORE,
     CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
     CAVEAT_SAVE_DIR_UNLISTABLE,
@@ -803,6 +824,7 @@ __all__ = [
     "Granularity",
     "ModeAlternative",
     "OptionReading",
+    "SaveRedirect",
     "Health",
     "CatalogueAnswer",
     "SystemsAnswer",
@@ -921,6 +943,8 @@ __all__ = [
     "CoreDeclarationState",
     "CoreSystemFirmware",
     "FirmwareLocating",
+    "RedirectVia",
+    "RedirectScope",
     "SystemSource",
     "RootProvenance",
     "InstallationRootName",
@@ -1033,6 +1057,16 @@ __all__ = [
     "LOCATING_BY_NAME_THEN_CONTENT",
     "LOCATING_UNESTABLISHED",
     "FIRMWARE_LOCATING",
+    "REDIRECT_VIA_FLAG",
+    "REDIRECT_VIA_VARIABLE",
+    "REDIRECT_VIA_WORKING_DIRECTORY",
+    "REDIRECT_VIAS",
+    "REDIRECT_MOVES_SAVES",
+    "REDIRECT_MOVES_SAVESTATES",
+    "REDIRECT_MOVES_CONFIGURATION",
+    "REDIRECT_MOVES_FIRMWARE",
+    "REDIRECT_MOVES_INSTALLED_CONTENT",
+    "REDIRECT_SCOPES",
     "SOURCE_OVERRIDE",
     "SOURCE_SYSTEMNAME",
     "SOURCE_SLUG",
@@ -1386,6 +1420,7 @@ __all__ = [
     "CAVEAT_SAVE_ROOT_UNRESOLVABLE",
     "CAVEAT_SAVE_WRITES_DISCARDED",
     "CAVEAT_SAVE_FILES_COMPRESSED",
+    "CAVEAT_REDIRECT_OUTRANKED",
     "CAVEAT_SAVE_FILES_SHARED_WITH_CORE",
     "CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL",
     "CAVEAT_SAVE_DIR_UNLISTABLE",

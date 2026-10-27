@@ -711,6 +711,52 @@ AppImage does. The rest refuse with `standalone-variant-unestablished`. The id l
 because the gate is one question about the launch and every card family asks it — while it sat on the **save** card, an
 emulator without one could reach no trees at all, which is what MAME's savestate answer was refusing over (#288).
 
+### `redirects` — what one launch can move
+
+Every card states, beside its save knowledge, how one launch can move the emulator's saves elsewhere without its
+configuration being written (#638). The block is `{routes, provenance}`: each route states `via` — `flag`, `variable` or
+`working-directory` — the flag's spelling or the variable's `name` (`null` for a working-directory route), the
+`argument` with `<dir>` or `<file>` where the caller's path goes, what it `moves` — any of `saves`, `savestates`,
+`configuration`, `firmware`, `installed-content`, in that order — and a `citation` at the build the card pins, which
+carries the route's limits where the source states them. `provenance` says what was searched, and is what backs an empty
+`routes` list: xemu, melonDS and Vita3K state none.
+
+A route counts when the launch carries it and it moves the saves or the savestates. Three kinds of route are left out
+and named in the provenance instead. A route that works only through the emulator's own configuration file — another
+`xemu.toml`, `config.yml` or `settings.ini` passed by flag, or a variable that moves the configuration alone — is the
+configuration-file route, not a redirect. An `APPIMAGE` route works only by telling the emulator it runs as an AppImage
+it is not, and what else the emulator does with that variable is unread. A flag that moves the data to the deployed
+binary's own directory (`-portable`) names no place a caller can choose. A route that moves the emulator's whole data
+directory is stated with its whole scope — configuration, firmware lookup and installed content with the saves — so a
+caller can see where copying the saves in before the launch and out after is the better way. Dolphin's and PrimeHack's
+`-C` keys are routes: their command-line layer writes nothing back, and they move no savestates; the game-INI, movie,
+netplay and current-run layers rank above them.
+
+A variable is set for the emulator process alone. RetroDECK's component launchers set no `HOME` or `XDG_*_HOME` variable
+of their own and hand their arguments through to the binary (`components/<emulator>/component_launcher.sh` in the
+deployed Flatpak, each ending in an `exec` of the binary with `"$@"`), so a variable set in the launch's environment and
+a flag appended to its command reach the emulator unchanged. Set for the whole Flatpak instead, an `XDG_*` variable
+moves RetroDECK's own trees as well.
+
+A route may also state `outranked_by`, the settings that rank above it or that it depends on, each `{file, key}` in the
+card's own spelling: the file is the one the card's `settings` names, and an ini key carries its section
+(`[Core]
+SlotA`). Cemu's `XDG_DATA_HOME` names `mlc_path`, Azahar's names `[Data Storage] sdmc_directory` and
+`nand_directory`, Dolphin's and PrimeHack's name the memory-card, GCI-folder, GCI-folder-override and `NANDRootPath`
+keys, their `-C` card-slot keys the slot whose device they need, and their `GBA.SavesPath` key `[GBA] SavesInRomPath`.
+The routes that move the configuration with everything else name none, because the configuration that would outrank them
+moves too. What a value means is the resolver's to read: it compares each named setting with the readings it already
+made for the answer, and where the configuration outranks the route or makes it not apply, the answer carries
+`redirect-outranked`. `nand_directory`, `SavesInRomPath` and Dolphin's `GCIFolderAPathOverride`/`GCIFolderBPathOverride`
+stay named and uncompared, because no resolver reads them as a reading of the save answer — the override keys only for
+the session-override caveat.
+
+The loader refuses a block of any other shape, a `via` or a `moves` value outside its vocabulary, a route that moves
+neither the saves nor the savestates, one route stated twice, and an `outranked_by` setting in a file other than the
+card's. An absent block loads as "not stated", and `tests/test_standalone_saves.py` holds every packaged card to stating
+one. The save answer carries the card's routes as `redirects` — `[]` where none exists, `null` where nothing is stated,
+as on every answer from a RetroArch core — without the citation, which is prose.
+
 ## `standalone_savestates.json` — which standalone emulators the savestate question answers for
 
 Read by `atlas.standalone_savestates`, keyed like the save cards beside it, and dispatched the same way: the savestate
