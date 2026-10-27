@@ -3633,7 +3633,7 @@
       }
     },
     {
-      "name": "launch-command-an-emudeck-entry-is-not-taken-apart-yet",
+      "name": "launch-command-an-emudeck-entry-the-lookup-cannot-place-has-no-command",
       "rationale": "The chosen entry's lookup cannot tell what ES-DE would run — the AppImage's bundled find rules are unread here, so the entry is unestablished with find-rules-unreadable — and an entry that is not startable has no command to take apart.",
       "input": {
         "home": "/home/deck",
@@ -3785,8 +3785,8 @@
       }
     },
     {
-      "name": "launch-command-an-emudeck-startable-entry-is-not-taken-apart-yet",
-      "rationale": "EmuDeck's entries now carry the frontend's lookup, and this one is startable: RetroArch's Flatpak export is found through the assumed PATH and the core in its corepath directory. Taking EmuDeck's command apart is a later step, so the answer names the entry and no command, with launch-resolution-unsupported naming the installation.",
+      "name": "launch-command-an-emudeck-build-atlas-cannot-read-is-not-established",
+      "rationale": "The AppImage's usr/bin/es-de yields no build this read can take, so the ES-DE build is not established: the startable entry is named and its command refused with frontend-build-unpinned, which names no version where none was read.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -3880,10 +3880,1433 @@
               }
             },
             {
-              "code": "launch-resolution-unsupported",
-              "data": {
-                "installation": "emudeck"
+              "code": "frontend-build-unpinned",
+              "data": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-flatpak-export-is-the-native-program",
+      "rationale": "ES-DE runs on the host here, and the systempath rule finds RetroArch's Flatpak export on the assumed PATH: the program is that export, native with its path, the wrapper ES-DE runs and a caller can start unchanged, its app id not stated apart (D18). The AppImage states build 3.4.1 off usr/bin/es-de, the build the reading is pinned to.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "psx",
+          "content_path": "/home/deck/ROMs/psx/game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "psx",
+            "label": "SwanStation",
+            "kind": "libretro",
+            "core_so": "swanstation_libretro.so",
+            "emulator": "swanstation_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "systempath",
+              "entry": "org.libretro.RetroArch"
+            },
+            "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
+                }
               }
+            ]
+          },
+          "command": {
+            "program": {
+              "variant": "native",
+              "app_id": null,
+              "command": null,
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch"
+            },
+            "arguments": [
+              "-L",
+              "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+              "/home/deck/ROMs/psx/game.iso"
+            ],
+            "environment": [],
+            "working_folder": null,
+            "injections": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-appimage-is-an-appimage-program",
+      "rationale": "PCSX2's staticpath rule matches ~/Applications/pcsx2*.AppImage, and the file ES-DE runs is named as an AppImage, so the program is appimage with that path; the file name's space comes back as one argument.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>ps2</name><path>%ROMPATH%/ps2</path><extension>.iso</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/Applications/pcsx2-Qt.AppImage": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "ps2",
+          "content_path": "/home/deck/ROMs/ps2/My Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "ps2",
+            "label": "PCSX2 (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "PCSX2",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/home/deck/Applications/pcsx2-Qt.AppImage",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "staticpath",
+              "entry": "~/Applications/pcsx2*.AppImage"
+            },
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
+                }
+              }
+            ]
+          },
+          "command": {
+            "program": {
+              "variant": "appimage",
+              "app_id": null,
+              "command": null,
+              "path": "/home/deck/Applications/pcsx2-Qt.AppImage"
+            },
+            "arguments": [
+              "-batch",
+              "/home/deck/ROMs/ps2/My Game.iso"
+            ],
+            "environment": [],
+            "working_folder": null,
+            "injections": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "ps2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-build-other-than-the-pinned-one-is-not-established",
+      "rationale": "The AppImage states build 3.5.0 off usr/bin/es-de, and atlas's reading of how ES-DE builds a command is pinned to 3.4.1: the startable entry is named and the command is refused with frontend-build-unpinned, naming the build read.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "psx",
+          "content_path": "/home/deck/ROMs/psx/game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.5.0"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "psx",
+            "label": "SwanStation",
+            "kind": "libretro",
+            "core_so": "swanstation_libretro.so",
+            "emulator": "swanstation_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "systempath",
+              "entry": "org.libretro.RetroArch"
+            },
+            "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            },
+            {
+              "code": "frontend-build-unpinned",
+              "data": {
+                "version": "3.5.0"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-launcher-script-row-is-not-established",
+      "rationale": "The row runs /bin/bash with EmuDeck's launcher script as its second word, and the script is there, so the entry is startable; what a launcher script runs around the emulator is stated only for a copy atlas's reading is pinned to, and none is pinned, so the command is refused with launcher-script-unpinned naming the script as the command spells it.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox360</name><path>%ROMPATH%/xbox360</path><extension>.iso</extension>\n    <command label=\"Xenia (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/xenia.sh z:%ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/bin/bash": "",
+          "/home/deck/Emulation/tools/launchers/xenia.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "xbox360",
+          "content_path": "/home/deck/ROMs/xbox360/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "xbox360",
+            "label": "Xenia (Proton)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "xenia",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/bin/bash",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "command",
+              "entry": "/bin/bash"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox360"
+              }
+            },
+            {
+              "code": "launcher-script-unpinned",
+              "data": {
+                "path": "/home/deck/Emulation/tools/launchers/xenia.sh"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-token-whose-rule-finds-a-launcher-script-is-not-established",
+      "rationale": "The custom find rules make DOLPHIN EmuDeck's launcher script under toolsPath/launchers, the rule EmuDeck's launcher writes there, and ES-DE finds it: the token runs the script, so the command is refused with launcher-script-unpinned naming the path the rule found.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/home/deck/Emulation/tools/launchers/dolphin-emu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/home/deck/Emulation/tools/launchers/dolphin-emu.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "gc",
+          "content_path": "/home/deck/ROMs/gc/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "gc",
+            "label": "Dolphin",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "DOLPHIN",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "staticpath",
+              "entry": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
+              }
+            },
+            {
+              "code": "launcher-script-unpinned",
+              "data": {
+                "path": "/home/deck/Emulation/tools/launchers/dolphin-emu.sh"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-espath-argument-is-not-established",
+      "rationale": "%ESPATH% is the directory ES-DE runs from, which for an AppImage frontend is inside the image's own mount, a place atlas does not open: a command that hands it to the program is refused with launch-path-unestablished naming the placeholder.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so --appendconfig %ESPATH%/extra.cfg %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "psx",
+          "content_path": "/home/deck/ROMs/psx/game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "psx",
+            "label": "SwanStation",
+            "kind": "libretro",
+            "core_so": "swanstation_libretro.so",
+            "emulator": "swanstation_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "systempath",
+              "entry": "org.libretro.RetroArch"
+            },
+            "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            },
+            {
+              "code": "launch-path-unestablished",
+              "data": {
+                "path": "%ESPATH%"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-derived-entry-has-no-command",
+      "rationale": "The readable layers do not declare gba and the bundled layer is sealed, so the entries are derived from the installed cores (emulator-list-derived): such an entry carries no command, and it answers with its own launch-resolution-unsupported and no command.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "gba",
+          "content_path": "/home/deck/ROMs/gba/Game.gba"
+        },
+        "cores": {
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
+            "library_name": "mGBA"
+          }
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "gba",
+            "label": "mGBA",
+            "kind": "libretro",
+            "core_so": "mgba_libretro.so",
+            "emulator": "mgba_libretro.so",
+            "declared_index": null,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-resolution-unsupported",
+                "data": {
+                  "installation": "emudeck"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gba"
+              }
+            },
+            {
+              "code": "emulator-list-derived",
+              "data": {
+                "system": "gba"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-launcher-script-spelled-through-the-card-s-other-name-is-not-established",
+      "rationale": "SteamOS mounts a card through udisks under /run/media/deck/<label> and links /run/media/<label> to that mount point (steamos-automount.sh). toolsPath names the link and the find rule names the mount: the two spell one directory, so the comparison follows the links on the way to both, and the DOLPHIN rule's file is EmuDeck's launcher script — refused with launcher-script-unpinned, naming the path as the rule spells it. The entry keeps find-rules-rewritten-at-start: EmuDeck's launcher compares the rule's text with toolsPath's spelling, so its next start rewrites the rule.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"/run/media/SD/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/run/media/deck/SD/Emulation/tools/launchers/dolphin-emu.sh": "#!/bin/bash\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/run/media/deck/SD/Emulation/tools/launchers/dolphin-emu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs",
+          "/run/media/deck/SD/Emulation/tools/launchers"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "gc",
+          "content_path": "/home/deck/ROMs/gc/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        },
+        "symlinks": {
+          "/run/media/SD": "/run/media/deck/SD"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "gc",
+            "label": "Dolphin",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "DOLPHIN",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/run/media/deck/SD/Emulation/tools/launchers/dolphin-emu.sh",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "staticpath",
+              "entry": "/run/media/deck/SD/Emulation/tools/launchers/dolphin-emu.sh"
+            },
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-rewritten-at-start",
+                "data": {
+                  "emulator_token": "DOLPHIN",
+                  "entry": "/run/media/SD/Emulation/tools/launchers/dolphin-emu.sh"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
+              }
+            },
+            {
+              "code": "launcher-script-unpinned",
+              "data": {
+                "path": "/run/media/deck/SD/Emulation/tools/launchers/dolphin-emu.sh"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-bash-c-row-is-not-a-launcher-script",
+      "rationale": "A /bin/bash row whose second word is -c hands bash a command string, not a launcher script: nothing under toolsPath/launchers runs, so launcher-script-unpinned does not apply, and the existing rules answer — the lookup cannot place -c as the file bash opens, so the entry is unestablished and its own reason is the answer.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox360</name><path>%ROMPATH%/xbox360</path><extension>.iso</extension>\n    <command label=\"Shell\">/bin/bash -c &quot;/opt/emu/run %ROM%&quot;</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/bin/bash": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "xbox360",
+          "content_path": "/home/deck/ROMs/xbox360/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "xbox360",
+            "label": "Shell",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": null,
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "launch-path-unestablished",
+                "data": {
+                  "path": "-c"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox360"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-bash-row-with-a-script-outside-the-launchers-is-taken-apart",
+      "rationale": "The row runs a script of the user's own outside toolsPath/launchers: no EmuDeck launcher script runs, so the command is taken apart as it is written — /bin/bash, native, with the script and the file as its arguments.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox360</name><path>%ROMPATH%/xbox360</path><extension>.iso</extension>\n    <command label=\"Custom\">/bin/bash /home/deck/bin/my-emu.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/bin/my-emu.sh": "#!/bin/bash\n",
+          "/bin/bash": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "xbox360",
+          "content_path": "/home/deck/ROMs/xbox360/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "xbox360",
+            "label": "Custom",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": null,
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/bin/bash",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "command",
+              "entry": "/bin/bash"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": {
+            "program": {
+              "variant": "native",
+              "app_id": null,
+              "command": null,
+              "path": "/bin/bash"
+            },
+            "arguments": [
+              "/home/deck/bin/my-emu.sh",
+              "/home/deck/ROMs/xbox360/Game.iso"
+            ],
+            "environment": [],
+            "working_folder": null,
+            "injections": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox360"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-launcher-script-under-a-configured-tools-path-is-not-established",
+      "rationale": "settings.sh moves toolsPath away from EmuDeck's default, and the DOLPHIN rule finds dolphin-emu.sh under that directory's launchers: the launcher scripts are where toolsPath says, so the command is refused with launcher-script-unpinned.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"/opt/emudeck/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gc</name><path>%ROMPATH%/gc</path><extension>.iso</extension>\n    <command label=\"Dolphin\">%EMULATOR_DOLPHIN% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/opt/emudeck/tools/launchers/dolphin-emu.sh": "#!/bin/bash\n",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/opt/emudeck/tools/launchers/dolphin-emu.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "gc",
+          "content_path": "/home/deck/ROMs/gc/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "gc",
+            "label": "Dolphin",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "DOLPHIN",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/opt/emudeck/tools/launchers/dolphin-emu.sh",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "staticpath",
+              "entry": "/opt/emudeck/tools/launchers/dolphin-emu.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "gc"
+              }
+            },
+            {
+              "code": "launcher-script-unpinned",
+              "data": {
+                "path": "/opt/emudeck/tools/launchers/dolphin-emu.sh"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-script-under-the-default-tools-path-another-is-configured-is-taken-apart",
+      "rationale": "toolsPath is configured elsewhere, so ~/Emulation/tools/launchers is no launcher directory of this installation: the script the row runs there is an ordinary file, and the command is taken apart — /bin/bash, native, with the script and the file as its arguments.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"/opt/emudeck/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox360</name><path>%ROMPATH%/xbox360</path><extension>.iso</extension>\n    <command label=\"Custom\">/bin/bash /home/deck/Emulation/tools/launchers/xenia.sh %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/Emulation/tools/launchers/xenia.sh": "#!/bin/bash\n",
+          "/bin/bash": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "xbox360",
+          "content_path": "/home/deck/ROMs/xbox360/Game.iso"
+        },
+        "appimage_stamps": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/bin/es-de": "3.4.1"
+          }
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "xbox360",
+            "label": "Custom",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "xenia",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/bin/bash",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "command",
+              "entry": "/bin/bash"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": {
+            "program": {
+              "variant": "native",
+              "app_id": null,
+              "command": null,
+              "path": "/bin/bash"
+            },
+            "arguments": [
+              "/home/deck/Emulation/tools/launchers/xenia.sh",
+              "/home/deck/ROMs/xbox360/Game.iso"
+            ],
+            "environment": [],
+            "working_folder": null,
+            "injections": []
+          },
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox360"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-launcher-script-is-refused-before-the-frontend-build",
+      "rationale": "The row runs EmuDeck's launcher script and the AppImage yields no build this read can take: every launcher-script command answers launcher-script-unpinned (D21), so that is the refusal, whatever the build.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>xbox360</name><path>%ROMPATH%/xbox360</path><extension>.iso</extension>\n    <command label=\"Xenia (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/xenia.sh z:%ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/Emulation/tools/launchers/xenia.sh": "#!/bin/bash\n",
+          "/bin/bash": ""
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>retroarch</entry>\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/RetroArch-Linux*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PCSX2\">\n        <rule type=\"systempath\">\n            <entry>pcsx2-qt</entry>\n            <entry>net.pcsx2.PCSX2</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/pcsx2*.AppImage</entry>\n            <entry>/var/lib/flatpak/exports/bin/net.pcsx2.PCSX2</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"XEMU\">\n        <rule type=\"systempath\">\n            <entry>xemu</entry>\n            <entry>app.xemu.xemu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/xemu*.AppImage</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"systempath\">\n            <entry>dolphin-emu</entry>\n            <entry>org.DolphinEmu.dolphin-emu</entry>\n        </rule>\n        <rule type=\"staticpath\">\n            <entry>~/Applications/Dolphin_Emulator*.AppImage</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+            "usr/bin/es-de": {
+              "status": "invalid-text"
+            }
+          }
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "xbox360",
+          "content_path": "/home/deck/ROMs/xbox360/Game.iso"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "xbox360",
+            "label": "Xenia (Proton)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "xenia",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/bin/bash",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "command",
+              "entry": "/bin/bash"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "xbox360"
+              }
+            },
+            {
+              "code": "launcher-script-unpinned",
+              "data": {
+                "path": "/home/deck/Emulation/tools/launchers/xenia.sh"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "launch-command-an-emudeck-build-this-runtime-cannot-open-is-sealed",
+      "rationale": "This runtime lacks the zstd codec ES-DE's AppImage is compressed with, so neither the bundled layers nor usr/bin/es-de are opened; the custom find rules still define RETROARCH, so the entry is startable through the export. The build is not established, and the reason is the runtime's: the command is refused with frontend-build-sealed, not with frontend-build-unpinned, which would say the image states no build (D24).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ntoolsPath=\"$HOME/Emulation/tools\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>psx</name><path>%ROMPATH%/psx</path><extension>.iso</extension>\n    <command label=\"SwanStation\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/swanstation_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/exports/bin/org.libretro.RetroArch": "",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so": "",
+          "/home/deck/ES-DE/custom_systems/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"systempath\">\n            <entry>org.libretro.RetroArch</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>~/.var/app/org.libretro.RetroArch/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/ROMs"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": "capability-missing"
+        },
+        "launch_command_query": {
+          "installation": "emudeck",
+          "system": "psx",
+          "content_path": "/home/deck/ROMs/psx/game.iso"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "launch_command": {
+          "entry": {
+            "system": "psx",
+            "label": "SwanStation",
+            "kind": "libretro",
+            "core_so": "swanstation_libretro.so",
+            "emulator": "swanstation_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/var/lib/flatpak/exports/bin/org.libretro.RetroArch",
+              "replacement_command": null,
+              "app_id": null,
+              "rule": "systempath",
+              "entry": "org.libretro.RetroArch"
+            },
+            "core_path": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.so",
+            "caveats": [
+              {
+                "code": "launch-path-assumed",
+                "data": {
+                  "search_path": [
+                    "/home/deck/.config/EmuDeck/backend//tools/binaries/",
+                    "/usr/local/sbin",
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/home/deck/.local/share/flatpak/exports/bin",
+                    "/var/lib/flatpak/exports/bin",
+                    "/usr/bin/site_perl",
+                    "/usr/bin/vendor_perl",
+                    "/usr/bin/core_perl"
+                  ],
+                  "working_directory": "/home/deck/.config/EmuDeck/backend"
+                }
+              }
+            ]
+          },
+          "command": null,
+          "caveats": [
+            {
+              "code": "emulator-catalogue-sealed",
+              "data": {
+                "system": "psx"
+              }
+            },
+            {
+              "code": "frontend-build-sealed",
+              "data": {}
             }
           ]
         }

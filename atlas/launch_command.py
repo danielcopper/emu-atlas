@@ -1136,7 +1136,9 @@ class CommandInputs:
     content_path: str
     parts: CommandParts
     home: str
-    es_path: str
+    es_path: str | None
+    """ES-DE's own directory (``%ESPATH%``), ``None`` where it is not established — the directory inside the mount
+    of a frontend run from an AppImage."""
     rom_directory: str | None
 
 
@@ -1244,11 +1246,19 @@ class _Assembly:
         replaced, wherever it stands, with the first match — a value put in as
         it is, unescaped.
         """
-        built, es_path = self.built, self.inputs.es_path
-        built.replace(_ESPATH, _raw_value(_ESPATH, es_path, es_path))
+        self._es_path()
         if found.replaced is not None:
             word, match = found.replaced
-            built.replace(word, _raw_value(word, match, match))
+            self.built.replace(word, _raw_value(word, match, match))
+
+    def _es_path(self) -> None:
+        """``%ESPATH%`` expanded across the command — refused where ES-DE's own directory is not established."""
+        built, es_path = self.built, self.inputs.es_path
+        if built.find(_ESPATH) == -1:
+            return
+        if es_path is None:
+            raise _Refused(_unestablished(_ESPATH))
+        built.replace(_ESPATH, _raw_value(_ESPATH, es_path, es_path))
 
     def _core(self, core: str, *, quoted: bool) -> None:
         """The ``%CORE_X%/name`` reference replaced with the core file (``FileData.cpp:1484-1551``)."""
@@ -1377,7 +1387,7 @@ class _Assembly:
     def _frontend_values(self) -> None:
         """``%ESPATH%`` … ``%GAMEDIRRAW%`` (``FileData.cpp:2092-2101``)."""
         built, content, inputs = self.built, self.content, self.inputs
-        built.replace(_ESPATH, _raw_value(_ESPATH, inputs.es_path, inputs.es_path))
+        self._es_path()
         emulator_dir = parent_path(inputs.parts.emulator.substituted.replace("\\", ""))
         built.replace(
             _EMUDIR,
@@ -1415,13 +1425,7 @@ class _Assembly:
         unsafe = reading.second_shell_unsafe(shell_words, argument_tilde=argument_tilde)
         if unsafe is not None:
             raise _Refused(_second_shell_unsafe(unsafe))
-        program = words[program_at]
-        app_id = self.view.app_id
-        launch_program = (
-            LaunchProgram(VARIANT_FLATPAK, app_id=app_id, command=program)
-            if app_id is not None
-            else LaunchProgram(VARIANT_NATIVE, path=program)
-        )
+        launch_program = _program(words[program_at], self.view.app_id)
         notes = [
             *self.notes,
             *(_argument_broken(name) for name in reading.broken_placeholders()),
@@ -1437,6 +1441,21 @@ class _Assembly:
             ),
             tuple(notes),
         )
+
+
+# How ES-DE's find rules and EmuDeck's launchers name an AppImage, compared in any case.
+_APPIMAGE_SUFFIX = ".appimage"
+
+
+def _program(program: str, app_id: str | None) -> LaunchProgram:
+    """What the command starts: inside *app_id*'s sandbox where the frontend runs in one, else on the host — an
+    AppImage where the file is named as one (:data:`_APPIMAGE_SUFFIX`), a native program otherwise.
+    """
+    if app_id is not None:
+        return LaunchProgram(VARIANT_FLATPAK, app_id=app_id, command=program)
+    if program.casefold().endswith(_APPIMAGE_SUFFIX):
+        return LaunchProgram(VARIANT_APPIMAGE, path=program)
+    return LaunchProgram(VARIANT_NATIVE, path=program)
 
 
 def _cut_entry(built: _Built, position: int, marker: str) -> str:

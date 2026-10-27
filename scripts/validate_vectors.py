@@ -539,6 +539,8 @@ KNOWN_CAVEAT_CODES = {
     "launch-command-inject-loop",
     "launch-command-label-unknown",
     "frontend-build-unpinned",
+    "frontend-build-sealed",
+    "launcher-script-unpinned",
     "launch-command-placeholder-unknown",
     "launch-command-argument-broken",
     "launch-command-second-shell-unsafe",
