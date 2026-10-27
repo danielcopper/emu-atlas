@@ -263,6 +263,16 @@ class TestAScopedDigest:
         m = FixtureMachine({"/bios/ps3.bin": {"md5": "whole", "size": 4089584}})
         assert m.file_digest("/bios/ps3.bin", "md5", first_bytes=524288) is None
 
+    def test_string_content_answers_git_s_object_id(self):
+        m = FixtureMachine({"/a/f.sh": "hello\n"})
+        assert m.file_digest("/a/f.sh", "git-blob") == "ce013625030ba8dba906f756967f9e9ca394464a"
+        assert m.file_digest("/a/f.sh", "git-blob", first_bytes=3) is None
+
+    def test_a_blob_answers_the_git_blob_it_declares_and_no_scoped_one(self):
+        m = FixtureMachine({"/a/f.sh": {"git-blob": "ce013625030ba8dba906f756967f9e9ca394464a", "git-blob:3": "x"}})
+        assert m.file_digest("/a/f.sh", "git-blob") == "ce013625030ba8dba906f756967f9e9ca394464a"
+        assert m.file_digest("/a/f.sh", "git-blob", first_bytes=3) is None
+
     def test_a_scope_of_no_bytes_is_refused_the_way_an_unknown_algorithm_is(self):
         m = FixtureMachine({"/a/f.txt": "hello"})
         assert m.file_digest("/a/f.txt", "md5", first_bytes=0) is None
@@ -920,6 +930,15 @@ class TestRealMachine:
         for path in (str(tmp_path / "gone.bin"), str(tmp_path / "d")):
             assert m.file_size(path) is None, path
             assert m.file_digest(path, "md5") is None, path
+
+    def test_git_blob_is_git_s_object_id_of_the_file(self, tmp_path):
+        # The id `git hash-object` prints for a file holding "hello\n".
+        (tmp_path / "f.sh").write_bytes(b"hello\n")
+        assert RealMachine().file_digest(str(tmp_path / "f.sh"), "git-blob") == "ce013625030ba8dba906f756967f9e9ca394464a"
+
+    def test_git_blob_has_no_scoped_form(self, tmp_path):
+        (tmp_path / "f.sh").write_bytes(b"hello\n")
+        assert RealMachine().file_digest(str(tmp_path / "f.sh"), "git-blob", first_bytes=3) is None
 
     def test_file_digest_rejects_unlisted_algorithm(self, tmp_path):
         (tmp_path / "f.bin").write_bytes(b"x")
@@ -1979,6 +1998,7 @@ class TestFixtureRealParity:
             "size": len(content),
             "md5": hashlib.md5(content).hexdigest(),
             "sha1": hashlib.sha1(content).hexdigest(),
+            "git-blob": hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest(),
         }
         real = RealMachine()
         for spec in (identity, {"status": "invalid-text", **identity}):

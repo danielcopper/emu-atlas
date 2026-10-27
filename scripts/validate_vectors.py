@@ -163,11 +163,31 @@ KNOWN_LAUNCH_VERDICTS = {
 # A command taken apart, mirrored from atlas.launch_command: the program's four
 # keys whatever its variant, and the closed sets of variants and of what one
 # %INJECT% did.
-LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections"}
+LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections", "launcher_script"}
 PROGRAM_FIELDS = {"variant", "app_id", "command", "path"}
 KNOWN_PROGRAM_VARIANTS = {"flatpak", "appimage", "native"}
 WORKING_FOLDER_FIELDS = {"frontend_path", "host_path", "created_if_missing"}
 KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
+# An EmuDeck launcher script beside the command, mirrored from
+# atlas.launch_command: its keys, the closed set of builds it starts and the
+# closed set of steps, in the order a script runs them.
+LAUNCHER_SCRIPT_FIELDS = {"path", "variant", "steps", "pinned_at"}
+KNOWN_EMUDECK_VARIANTS = {"appimage", "binary", "flatpak", "proton", "unestablished"}
+LAUNCHER_STEP_ORDER = (
+    "backend-update",
+    "emulator-install",
+    "launch-fixes",
+    "service-stop",
+    "saves-marker-write",
+    "cloud-sync-download",
+    "service-start",
+    "cloud-sync-check",
+    "emulator-made-executable",
+    "proton-install",
+    "proton-prefix-create",
+    "cloud-sync-upload",
+    "saves-marker-removal",
+)
 # The platform vocabularies, statuses and tag sources mirror atlas.platforms /
 # atlas.installations — closed sets.
 KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"}
@@ -462,7 +482,7 @@ KNOWN_DISTRIBUTION_LABELS = {
 }
 KNOWN_KINDS = set(KNOWN_DISTRIBUTION_LABELS)
 KNOWN_FILE_STATUSES = {"unreadable", "invalid-text"}
-BLOB_FIELDS = {"md5", "sha1", "size"}
+BLOB_FIELDS = {"md5", "sha1", "git-blob", "size"}
 KNOWN_HEALTH_ISSUES = {
     "marker-missing",
     "marker-unreadable",
@@ -3731,6 +3751,32 @@ def _validate_command_body(name: str, command: Any) -> None:
         _require_exact(name, injection, {"file", "outcome"}, "each injection")
         if injection["outcome"] not in KNOWN_INJECTION_OUTCOMES:
             fail(f"{name}: an injection's outcome must be one of {sorted(KNOWN_INJECTION_OUTCOMES)}")
+    if command["launcher_script"] is not None:
+        _validate_launcher_script(name, command["launcher_script"])
+
+
+def _validate_launcher_script(name: str, script: Any) -> None:
+    """The launcher script: its path, the build it starts, its steps once each in run order, the revision read."""
+    _require_exact(name, script, LAUNCHER_SCRIPT_FIELDS, "the command's launcher_script")
+    if not (isinstance(script["path"], str) and script["path"]):
+        fail(f"{name}: a launcher script has a path")
+    pinned_at = script["pinned_at"]
+    if not (isinstance(pinned_at, str) and len(pinned_at) == 40 and all(c in "0123456789abcdef" for c in pinned_at)):
+        fail(f"{name}: launcher_script.pinned_at is the full revision hash the reading was made at")
+    if not isinstance(script["steps"], list):
+        fail(f"{name}: launcher_script.steps is a list")
+    if script["variant"] not in KNOWN_EMUDECK_VARIANTS:
+        fail(f"{name}: launcher_script.variant must be one of {sorted(KNOWN_EMUDECK_VARIANTS)}")
+    order: list[int] = []
+    for step in script["steps"]:
+        _require_exact(name, step, {"code", "runs"}, "each launcher step")
+        if step["code"] not in LAUNCHER_STEP_ORDER:
+            fail(f"{name}: a launcher step's code must be one of {list(LAUNCHER_STEP_ORDER)}")
+        if step["runs"] is not None and not isinstance(step["runs"], bool):
+            fail(f"{name}: a launcher step runs true, false or null")
+        order.append(LAUNCHER_STEP_ORDER.index(step["code"]))
+    if order != sorted(set(order)):
+        fail(f"{name}: launcher steps appear once each, in the order a script runs them")
 
 
 def _validate_program(name: str, program: Any) -> None:

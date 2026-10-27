@@ -970,6 +970,42 @@ class TestTheGrammarRefusesContradictions:
         with pytest.raises(validate_vectors.VectorError, match="injection's outcome"):
             validate_vectors.validate_machines_vector(vector)
 
+    _SCRIPT_VECTOR = "launch-command-an-emudeck-pinned-launcher-script-states-its-steps"
+
+    def test_the_launcher_script_vector_these_tests_break_is_valid(self):
+        validate_vectors.validate_machines_vector(self._command_vector(self._SCRIPT_VECTOR))
+
+    def test_a_launcher_script_variant_outside_the_vocabulary_is_refused(self):
+        vector = self._command_vector(self._SCRIPT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["launcher_script"]["variant"] = "native"
+        with pytest.raises(validate_vectors.VectorError, match="launcher_script.variant"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_launcher_steps_out_of_their_run_order_are_refused(self):
+        vector = self._command_vector(self._SCRIPT_VECTOR)
+        steps = vector["expected"]["launch_command"]["command"]["launcher_script"]["steps"]
+        steps[0], steps[1] = steps[1], steps[0]
+        with pytest.raises(validate_vectors.VectorError, match="in the order a script runs them"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_launcher_script_pinned_at_a_short_revision_is_refused(self):
+        vector = self._command_vector(self._SCRIPT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["launcher_script"]["pinned_at"] = "863ab69"
+        with pytest.raises(validate_vectors.VectorError, match="pinned_at is the full revision hash"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_launcher_steps_that_are_no_list_are_refused(self):
+        vector = self._command_vector(self._SCRIPT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["launcher_script"]["steps"] = {"code": "backend-update"}
+        with pytest.raises(validate_vectors.VectorError, match="steps is a list"):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_launcher_step_that_runs_maybe_is_refused(self):
+        vector = self._command_vector(self._SCRIPT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["launcher_script"]["steps"][0]["runs"] = "maybe"
+        with pytest.raises(validate_vectors.VectorError, match="runs true, false or null"):
+            validate_vectors.validate_machines_vector(vector)
+
     def test_a_systems_query_the_runner_cannot_read_is_refused(self):
         # Not an object is not a query: the runner asks it for a handle
         # selector, so a bare string reaches the resolver as an AttributeError

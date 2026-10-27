@@ -68,12 +68,14 @@ walk it could read, and a fixture could state a directory that exists and cannot
 - **`{"status": "unreadable" | "invalid-text"}`**, optionally with `"size"` — a file that exists and yields that read
   outcome. The `size` belongs with it because the two come from different reads on a real machine: a chmod-000 file
   `stat`s fine and only its bytes fail.
-- **`{"md5": …, "sha1": …, "size": …}`** — a binary blob: it exists, reads as `invalid-text`, and answers those values
-  for `file_digest` / `file_size`. Any subset of the three, plus a **scoped** digest under `"<algorithm>:<bytes>"`
-  (`"md5:524288"`): the digest of the file's first N bytes, which an emulator that hashes a fixed-length prefix asks for
-  and which is a different fact from the file's own digest. It is needed only where the file is longer than the scope —
-  inside it the read yields the whole file, so the bare algorithm answers both, and a scope at least the stated `size`
-  is refused as one fact written twice. The scope is decimal, at least 1, with no leading zero.
+- **`{"md5": …, "sha1": …, "git-blob": …, "size": …}`** — a binary blob: it exists, reads as `invalid-text`, and answers
+  those values for `file_digest` / `file_size` (`git-blob` is git's object id of the file, which pins EmuDeck's launcher
+  scripts and the files they source or execute). Any subset of the four, plus a **scoped** md5 or sha1 digest under
+  `"<algorithm>:<bytes>"` (`"md5:524288"`): the digest of the file's first N bytes, which an emulator that hashes a
+  fixed-length prefix asks for and which is a different fact from the file's own digest. It is needed only where the
+  file is longer than the scope — inside it the read yields the whole file, so the bare algorithm answers both, and a
+  scope at least the stated `size` is refused as one fact written twice. The scope is decimal, at least 1, with no
+  leading zero.
 
 **`dirs`** — directories that exist with nothing in them. Parents of every path named anywhere are directories already;
 this list is how an _empty_ one is stated. A configured save root must be a directory: list it here, or put a file in
