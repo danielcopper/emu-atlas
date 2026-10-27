@@ -155,7 +155,24 @@ from .launch import (
     unsupported,
     word_after_program,
 )
-from .launch_command import TOO_LARGE, CommandInputs, LaunchCommand, TooLarge, take_apart
+from .launch_command import (
+    TOO_LARGE,
+    CommandInputs,
+    LaunchCommand,
+    LauncherScript,
+    LauncherStep,
+    TooLarge,
+    take_apart,
+)
+from .launcher_scripts import (
+    BACKEND_ROOT,
+    EMULATION_ROOT,
+    TOOLS_ROOT,
+    LauncherState,
+    launcher_rules,
+    ryujinx_names_sdl2,
+    step_runs,
+)
 from .frontend_path import frontend_search_path, frontend_working_directory
 from .launch_formats import lookup_install_first, lookup_standalone_launch
 from .firmware import firmware_for_core as _resolve_for_core
@@ -169,6 +186,7 @@ from .machine import (
     FileStamp,
     StampingMachine,
     BoundedReadingMachine,
+    DIGEST_GIT_BLOB,
     DIGEST_MD5,
     GLOB_COMPLETE,
     GLOB_INCOMPLETE,
@@ -19812,6 +19830,31 @@ class _RulesFile(NamedTuple):
     text: str | None
 
 
+class _BlobHashes:
+    """The git blob hashes one handle keeps between questions, each under the stat identity of the file it came from.
+
+    The same keeping rule as :class:`_FindRulesFiles`: every ask stats the
+    file, a changed or replaced one is hashed again, and a machine that cannot
+    stamp hashes every time.
+    """
+
+    def __init__(self, machine: Machine) -> None:
+        self._machine = machine
+        self._held: dict[str, tuple[FileStamp, str | None]] = {}
+
+    def hash(self, path: str) -> str | None:
+        """The git blob hash of the file at *path*, links followed — ``None`` where it cannot be read."""
+        machine = self._machine
+        stamp = machine.file_stamp(path) if isinstance(machine, StampingMachine) else None
+        held = self._held.get(path)
+        if stamp is not None and held is not None and held[0] == stamp:
+            return held[1]
+        digest = machine.file_digest(path, DIGEST_GIT_BLOB)
+        if stamp is not None:
+            self._held[path] = (stamp, digest)
+        return digest
+
+
 class _FindRulesFiles:
     """The find-rules parses one handle keeps between questions, and the layers ES-DE composes out of them.
 
@@ -21605,10 +21648,11 @@ class _CatalogueQueries:
         (``frontend-build-sealed``), or a command atlas does not take apart — shell syntax beyond plain
         words, an ``env`` option, a ``.desktop`` file, an entry ES-DE itself
         refuses, an ``%INJECT%`` file it cannot read or one that injects
-        itself. RetroDECK and EmuDeck take their commands apart, except that
-        EmuDeck refuses a command that runs one of its launcher scripts
-        (``launcher-script-unpinned``); a bare RetroArch has no frontend
-        catalogue at all.
+        itself. RetroDECK and EmuDeck take their commands apart; EmuDeck's
+        command carries the launcher script it runs, with the script's steps,
+        or is refused where no reading is pinned for that script and the files
+        it rests on (``launcher-script-unpinned``); a bare RetroArch has no
+        frontend catalogue at all.
         """
         if not os.path.isabs(content_path):
             raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
@@ -21750,14 +21794,49 @@ def _build_sealed() -> Caveat:
     )
 
 
-def _script_unpinned(path: str) -> Caveat:
-    """The refusal of a launch command that runs an EmuDeck launcher script no reading is pinned for."""
+def _probe_bool(probe: Probe) -> bool | None:
+    """A probe as a test's answer: hit true, miss false, ``None`` where it cannot be told."""
+    return None if probe == PROBE_UNKNOWN else probe == PROBE_HIT
+
+
+def _ryujinx_sdl2(config: ReadResult) -> bool | None:
+    """Whether Ryujinx's ``Config.json`` names an SDL2 gamepad: no file is no such name, since ``jq`` fails on it and
+    the fix takes no branch; a file atlas cannot read cannot be told.
+    """
+    if config.status == READ_MISSING:
+        return False
+    if config.text is None:
+        return None
+    return ryujinx_names_sdl2(config.text)
+
+
+def _read_line(read: ReadResult) -> str | None:
+    """What ``$(cat file)`` yields for *read*: the text without its trailing newlines, nothing for a missing file,
+    ``None`` where atlas cannot read what is there.
+    """
+    if read.status == READ_MISSING:
+        return ""
+    return None if read.text is None else read.text.rstrip("\n")
+
+
+def _script_unpinned(path: str, helper: str | None = None) -> Caveat:
+    """The refusal of a launch command that runs an EmuDeck launcher script no reading is pinned for — the script
+    itself, or *helper*, a file the reading rests on that is not the one it was made from.
+    """
+    if helper is None:
+        return Caveat(
+            CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
+            f"the command runs EmuDeck's launcher script {path}, which runs steps of its own around the emulator, and "
+            "atlas states what a script runs only for a copy its reading is pinned to — none is pinned for this one, "
+            "so what this launch runs is not established",
+            {"path": path},
+        )
     return Caveat(
         CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
-        f"the command runs EmuDeck's launcher script {path}, which runs steps of its own around the emulator, and "
-        "atlas states what a script runs only for a copy its reading is pinned to — none is pinned for this one, so "
-        "what this launch runs is not established",
-        {"path": path},
+        f"the command runs EmuDeck's launcher script {path}, whose reading is pinned together with every file it "
+        f"sources or executes, and {helper} is not the file that reading was made from — what this launch runs is "
+        "not established",
+        {"path": path, "helper": helper},
     )
 
 
@@ -23891,10 +23970,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         self._home = home
         self._machine = machine
         # What this handle keeps between questions, each under the stat stamp
-        # of the file it came from: the find-rules parses, and the build
-        # stamp read out of the AppImage.
+        # of the file it came from: the find-rules parses, the build stamp
+        # read out of the AppImage, and the blob hashes of the files a
+        # launcher script is pinned by.
         self._find_rules_files = _FindRulesFiles(machine)
         self._build_held: tuple[FileStamp, AppImageStampResult] | None = None
+        self._blob_hashes = _BlobHashes(machine)
 
     def _marker_path(self) -> str:
         return os.path.join(self._home, EMUDECK_SETTINGS_SUFFIX)
@@ -23919,7 +24000,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     # backend to ``~/.config/EmuDeck/backend`` (upstream ``dragoonDorise/
     # EmuDeck`` @ ``863ab69``) — and that checkout's HEAD is the one version
     # statement the arrangement leaves on disk: ``settings.sh`` names none.
-    _BACKEND_GIT_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "EmuDeck", "backend", ".git")
+    _BACKEND_SUFFIX = os.path.join(_XDG_CONFIG_DIRNAME, "EmuDeck", "backend")
+    _BACKEND_GIT_SUFFIX = os.path.join(_BACKEND_SUFFIX, ".git")
 
     def _observed_backend_head(self) -> str | None:
         """The backend commit this machine runs — EmuDeck's version statement.
@@ -25081,14 +25163,16 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         the lookup's home, the user's own, and ``%ESPATH%``, ES-DE's directory
         inside the AppImage's mount, is not established
         (``launch-path-unestablished``). A command that runs one of EmuDeck's
-        launcher scripts (:meth:`_launcher_script_run`) is refused with
-        ``launcher-script-unpinned`` whatever the build: what a script does
-        around the emulator is read per script, at a copy it is pinned to, and
-        no script is pinned. Any other command is taken apart only for the
-        ES-DE build the reading is pinned to (:data:`ESDE_APPIMAGE_BUILD`, read
-        off the image): a runtime without the image's codec answers
-        ``frontend-build-sealed``, and any other build, or none the image
-        states, ``frontend-build-unpinned``.
+        launcher scripts (:meth:`_launcher_script_run`) carries the script
+        beside it — the build of the emulator it starts and the steps it runs
+        around it — read through the rule pinned for exactly that script and
+        the files it sources and executes (:meth:`_launcher_script_answer`);
+        where no rule is, the command is refused with
+        ``launcher-script-unpinned``, whatever the build. A command is taken
+        apart only for the ES-DE build the reading is pinned to
+        (:data:`ESDE_APPIMAGE_BUILD`, read off the image): a runtime without
+        the image's codec answers ``frontend-build-sealed``, and any other
+        build, or none the image states, ``frontend-build-unpinned``.
         """
         version = self._observed_backend_head()
         snapshot = self._esde_snapshot(system)
@@ -25114,9 +25198,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if chosen is None or chosen.availability != AVAILABILITY_STARTABLE or not lookups:
             return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
         lookup, view = lookups[0]
-        script = self._launcher_script_run(chosen, snapshot.settings, view)
-        if script is not None:
-            return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _script_unpinned(script))), version
+        launcher = self._launcher_script_answer(chosen, snapshot.settings, view)
+        if isinstance(launcher, Caveat):
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, launcher)), version
         build = self._deployed_esde_build_read()
         if build.status == APPIMAGE_CAPABILITY_MISSING:
             return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _build_sealed())), version
@@ -25136,7 +25220,79 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             rom_directory=self._launch_rom_directory(),
         )
         taken = take_apart(chosen.command, inputs, view)
-        return LaunchCommandAnswer(chosen, taken.command, sources, (*caveats, *taken.caveats)), version
+        command = taken.command
+        if command is not None and launcher is not None:
+            command = cast(LaunchCommand, _dc_replace(command, launcher_script=launcher))
+        return LaunchCommandAnswer(chosen, command, sources, (*caveats, *taken.caveats)), version
+
+    def _launcher_script_answer(
+        self, entry: EmulatorEntry, settings: Mapping[str, str], view: _HostLaunchView
+    ) -> LauncherScript | Caveat | None:
+        """The launcher script *entry*'s command runs, read through the rule pinned for it — the refusal where none
+        is, ``None`` where the command runs no launcher script (:meth:`_launcher_script_run`).
+
+        The script is matched by the git blob hash of the file at its path
+        (``~`` read as ES-DE reads it); every file the rule's reading rests
+        on — the backend files every script sources and the ones this script
+        executes — must hash to its pin, or the first that does not is named.
+        A file that cannot be hashed fails its pin the same way.
+        """
+        script = self._launcher_script_run(entry, settings, view)
+        if script is None:
+            return None
+        rules = launcher_rules()
+        rule = rules.by_blob.get(self._blob_hashes.hash(expand_home_path(script, view.home)) or "")
+        if rule is None:
+            return _script_unpinned(script)
+        for pinned, blob in (*rules.sources.items(), *rule.executes.items()):
+            path = self._pinned_path(pinned, settings)
+            if self._blob_hashes.hash(path) != blob:
+                return _script_unpinned(script, path)
+        state = self._launcher_state(settings, view)
+        steps = tuple(
+            LauncherStep(step.code, step_runs(step.code, step.runs, state, rule.emulator)) for step in rule.steps
+        )
+        return LauncherScript(script, rule.variant, steps, rules.revision)
+
+    def _launcher_state(self, settings: Mapping[str, str], view: _HostLaunchView) -> LauncherState:
+        """What the steps of a launcher script turn on, read the way EmuDeck's own tests read it.
+
+        The settings come from ``settings.sh``; the files are tested as the
+        backend tests them: ``-f`` on the rclone and the gyro plugin binaries
+        (emuDeckCloudSync.sh:3, emuDeckRyujinx.sh:440), ``-e`` on Ryujinx's
+        binary (:281, under ``$emusFolder/publish``, ``~/Applications`` per
+        vars.sh:4-5), its configuration through the fix's ``jq`` filter
+        (:445-446, :7), and the device's product name as ``getProductName``
+        reads it (helperFunctions.sh:97-98) — a file that is not there reads as
+        no name, as ``cat`` leaves it, and one atlas cannot read as unknown.
+        """
+        tools = self._setting_path(dict(settings), "toolsPath", "tools")[0]
+        product = self._machine.read_text(self._PRODUCT_NAME)
+        config = self._machine.read_text(os.path.join(self._home, ".config", "Ryujinx", "Config.json"))
+        ryujinx = self._machine.path_kind(os.path.join(self._home, "Applications", "publish", "Ryujinx"))
+        return LauncherState(
+            rclone=_probe_bool(view.regular_file(os.path.join(tools, "rclone", "rclone"))),
+            status=settings.get("cloud_sync_status") or "",
+            provider=settings.get("cloud_sync_provider") or "",
+            net_play=settings.get("netPlay") or "",
+            auto_map=settings.get("autoMap") or "",
+            product=_read_line(product),
+            gyro=_probe_bool(view.regular_file(os.path.join(self._home, "sdgyrodsu", "sdgyrodsu"))),
+            ryujinx_installed=None if ryujinx == KIND_INACCESSIBLE else ryujinx != KIND_MISSING,
+            ryujinx_sdl2=_ryujinx_sdl2(config),
+        )
+
+    # Where EmuDeck reads the device's product name (helperFunctions.sh:97-98).
+    _PRODUCT_NAME = "/sys/devices/virtual/dmi/id/product_name"
+
+    def _pinned_path(self, pinned: str, settings: Mapping[str, str]) -> str:
+        """Where a pinned file's path points on this machine: the backend checkout, or a folder the settings name."""
+        if pinned.startswith(BACKEND_ROOT):
+            return os.path.join(self._home, self._BACKEND_SUFFIX, pinned[len(BACKEND_ROOT) :])
+        if pinned.startswith(TOOLS_ROOT):
+            return os.path.join(self._setting_path(dict(settings), "toolsPath", "tools")[0], pinned[len(TOOLS_ROOT) :])
+        emulation = settings.get("emulationPath") or os.path.join(self._home, "Emulation")
+        return os.path.join(emulation, pinned[len(EMULATION_ROOT) :])
 
     def _derived_launch_command(self, snapshot: _EsdeSnapshot, system: str, label: str | None) -> LaunchCommandAnswer:
         """A system only the installed cores declare while the bundled layer is sealed: its entries are derived from

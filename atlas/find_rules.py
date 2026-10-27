@@ -129,7 +129,8 @@ CAVEAT_COMMAND_REWRITTEN_AT_START = "command-rewritten-at-start"
 # ES-DE is pinned for, a frontend build sealed in an AppImage this runtime
 # cannot open — the sealed family's "atlas does not open it here", the
 # capability the runtime's and never the machine's — and an EmuDeck launcher
-# script the command runs whose steps no reading is pinned for.
+# script the command runs that no reading is pinned for, the script itself or
+# a file it sources or executes (``helper`` names that file).
 CAVEAT_LAUNCH_COMMAND_SHELL_SYNTAX = "launch-command-shell-syntax"
 CAVEAT_LAUNCH_COMMAND_SECOND_SHELL_UNSAFE = "launch-command-second-shell-unsafe"
 CAVEAT_LAUNCH_COMMAND_ENV_OPTION = "launch-command-env-option"

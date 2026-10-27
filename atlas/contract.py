@@ -61,7 +61,7 @@ from .installations import (
     SystemsAnswer,
 )
 from .launch import Launcher
-from .launch_command import LaunchCommand
+from .launch_command import LaunchCommand, LauncherScript
 from .platforms import PlatformIdentities
 from .placement import (
     Caveat,
@@ -778,7 +778,8 @@ def launch_command_contract(answer: LaunchCommandAnswer) -> dict[str, Any]:
     ``null`` — a ``flatpak`` program carries ``app_id`` and ``command``, an
     ``appimage`` or ``native`` one its ``path``. ``environment`` is a list, in
     the order the command sets the variables, because the order is the
-    command's. ``working_folder`` is ``null`` where the command names none.
+    command's. ``working_folder`` is ``null`` where the command names none, and
+    ``launcher_script`` where the command runs no EmuDeck launcher script.
     """
     return {
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
@@ -808,6 +809,17 @@ def _launch_command_body(command: LaunchCommand) -> dict[str, Any]:
             "created_if_missing": folder.created_if_missing,
         },
         "injections": [{"file": injection.file, "outcome": injection.outcome} for injection in command.injections],
+        "launcher_script": None if command.launcher_script is None else _launcher_script_body(command.launcher_script),
+    }
+
+
+def _launcher_script_body(script: LauncherScript) -> dict[str, Any]:
+    """The EmuDeck launcher script a command runs: the build it starts and its steps, in the order it runs them."""
+    return {
+        "path": script.path,
+        "variant": script.variant,
+        "steps": [{"code": step.code, "runs": step.runs} for step in script.steps],
+        "pinned_at": script.pinned_at,
     }
 
 

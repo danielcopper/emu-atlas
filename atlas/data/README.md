@@ -1272,6 +1272,31 @@ one the arrangement's launcher leaves it in (EmuDeck's changes into its backend 
 word there carries `launch-path-assumed` too. A frontend whose entry states none has no working directory atlas can
 state, and such a word answers `launch-path-unestablished`.
 
+## `emudeck_launchers.json` — what an EmuDeck launcher script runs beside the emulator
+
+Read by `atlas.launcher_scripts`, behind the `launcher_script` an EmuDeck launch command carries (issue #573). ES-DE on
+EmuDeck runs some emulators through a script under `<toolsPath>/launchers`, and every such script runs steps of its own
+around the emulator — it updates EmuDeck's backend, syncs saves, stops and restarts a service. What a script runs is
+read off its source at one backend revision (`backend`, provenance only) and packaged per script: the emulator name it
+hands `emulatorInit` (`emulator`), the build of the emulator it starts (`variant`, one of `EMUDECK_VARIANTS`, with
+`variant_citation` — `unestablished` where the script searches for the build at launch in a way atlas does not model),
+and its steps in run order, each a code from `LAUNCHER_STEPS` with a citation and `runs`: `true`, `false` or `null`
+where the script decides it alone (`null` where state at launch decides it), or `settings` where EmuDeck's settings and
+the machine's files decide it — the cloud sync settings and the rclone binary for a sync step; `autoMap`, the device's
+product name and, for Ryujinx, the gyro plugin for an emulator's own launch fix; Ryujinx's binary and `Config.json` for
+its reinstall — which `atlas.launcher_scripts.step_runs` reads.
+
+A reading holds for exactly the files it was made from, so every one is pinned by its git blob hash (what
+`git hash-object` prints): the script by its deployed copy (`blob`, which is also how a script is recognised, whatever
+its name), the backend files every script sources through `functions/all.sh` (`sources` — the closure bash walks, the
+darwin branch and the settings file aside) and the files the script runs or copies on its launch path, itself or through
+a function it reaches — a helper it executes, a template a launch fix copies (`executes`). A path starts with the
+variable it is spelled with — `$emudeckBackend/` (the checkout under `~/.config/EmuDeck/backend`), `$toolsPath/` or
+`$emulationPath/` (the folders `settings.sh` names). An answer hashes them all and refuses with
+`launcher-script-unpinned` where one differs, and `tests/test_launcher_script_tripwire.py` holds them against the
+deployed backend. EmuDeck's housekeeping inside its own trees — its backend checkout, `~/.config/EmuDeck`, logs in its
+tools folder — is not stated as a step.
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's

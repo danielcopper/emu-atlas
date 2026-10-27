@@ -3232,17 +3232,48 @@ established — the answer's other caveats say why), `launch-command-no-program`
 `command-length` 16384 characters, `substitutions` 256, `rescans` 64 passes of one replacement, `injections` 16
 `%INJECT%` entries, `inject-file-size` an injection file over 1 MiB, which is never read; ES-DE itself bounds only the
 4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). On EmuDeck two more:
-`launcher-script-unpinned` (the command runs one of EmuDeck's launcher scripts: a `/bin/bash <script>` row or a token
-whose find rule found a file under `toolsPath/launchers`, compared once the links on the way are followed, so a card
-spelled through its udisks mount under `/run/media/deck/` or through the `/run/media/<label>` link SteamOS keeps to it
-(`/run/media/<device>` for a card without a label) is one directory; a script runs steps of its own around the emulator,
-which atlas states only for a copy its reading is pinned to, and none is pinned yet, so this is the refusal whatever the
-frontend build — `path` names the script as the command or the rule spells it; a `/bin/bash -c` row or a script of the
-user's own elsewhere is an ordinary command), and `launch-path-unestablished` with `path` `%ESPATH%` for a command that
-hands the program ES-DE's own directory, which for an AppImage frontend is inside the image's mount. An entry derived
-from the installed cores while EmuDeck's bundled catalogue is sealed carries no command and answers with its own
+`launcher-script-unpinned` (below), and `launch-path-unestablished` with `path` `%ESPATH%` for a command that hands the
+program ES-DE's own directory, which for an AppImage frontend is inside the image's mount. An entry derived from the
+installed cores while EmuDeck's bundled catalogue is sealed carries no command and answers with its own
 `launch-resolution-unsupported`. A bare RetroArch has no frontend catalogue at all and answers through the catalogue's
 own caveats.
+
+**EmuDeck's launcher scripts.** Some EmuDeck commands run one of EmuDeck's launcher scripts: a `/bin/bash <script>` row,
+or a token whose find rule found a file under `toolsPath/launchers` — compared once the links on the way are followed,
+so a card spelled through its udisks mount under `/run/media/deck/` or through the `/run/media/<label>` link SteamOS
+keeps to it (`/run/media/<device>` for a card without a label) is one directory. A `/bin/bash -c` row or a script of the
+user's own elsewhere is an ordinary command. The program is what ES-DE runs, the script itself or `/bin/bash` with the
+script as its first argument, and the script runs steps of its own around the emulator, which `launcher_script` states
+beside the command:
+
+```python
+script = answer.command.launcher_script   # None where the command runs no launcher script
+script.path        # the script, as the command or the find rule spells it
+script.variant     # the emulator's build it starts: appimage, binary, flatpak, proton or unestablished
+script.steps       # (LauncherStep(code='backend-update', runs=True), ...), in the order the script runs them
+script.pinned_at   # the EmuDeck backend revision the reading was made at
+```
+
+`runs` is `true` or `false` where the script, EmuDeck's settings or the machine's files decide it the way EmuDeck tests
+them — `cloud_sync_status`, `cloud_sync_provider`, `netPlay` and `autoMap`, whether `toolsPath/rclone/rclone` is there,
+the device's product name EmuDeck reads (`/sys/devices/virtual/dmi/id/product_name`: its controller fixes leave a Steam
+Deck alone), and for Ryujinx whether its binary is there and its `Config.json` still names an SDL2 gamepad, which is
+when its fix installs it again (`emulator-install`) — and `null` where state at launch decides it (the network, the save
+folder's markers, which emulator file the script finds) or where atlas cannot read what decides it. The steps describe a
+launch that reaches the emulator: a script that exits early because it finds no emulator to run skips the steps after
+that point. The codes (`LAUNCHER_STEPS`): `backend-update` (the backend is updated from upstream before anything else
+runs, and the steps listed after it are read from the deployed files, which this update can replace),
+`emulator-install`, `launch-fixes`, `service-stop`, `saves-marker-write`, `cloud-sync-download`, `service-start`,
+`cloud-sync-check`, `emulator-made-executable`, `proton-install`, `proton-prefix-create`, `cloud-sync-upload` and
+`saves-marker-removal`; each constant's docstring says what the step does. EmuDeck's housekeeping inside its own trees —
+its backend checkout, `~/.config/EmuDeck`, logs in its tools folder — is not a step. `variant` is `unestablished` where
+the script picks the build at launch in a way atlas does not model, which is every script that searches for one.
+
+A reading holds for exactly the files it was made from: the script by the git blob hash of its deployed copy, and every
+backend file it sources and every file it runs or copies on its launch path by theirs
+(`atlas/data/emudeck_launchers.json`). The backend revision is provenance, not the gate. Where the script, or any file
+it rests on, is not one a reading is pinned for, the command is refused with `launcher-script-unpinned`, whatever the
+frontend build: `path` names the script, and `helper` the first file that differs, is missing or cannot be read.
 
 **Two notes beside an answered command.** `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve
 and leaves in the argument as written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself).
