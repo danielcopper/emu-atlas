@@ -21,7 +21,8 @@ import atlas
 from atlas.installations import _HostLaunchView  # pyright: ignore[reportPrivateUsage] - the view the handle builds
 from atlas.esde import EmulatorSpec
 from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN, LaunchResolution
-from atlas.machine import FixtureFileSpec, FixtureMachine, RealMachine
+from atlas.launch_command import TOO_LARGE
+from atlas.machine import FixtureFileSpec, FixtureMachine, ReadResult, RealMachine
 
 HOME = "/home/deck"
 APPIMAGE = f"{HOME}/Applications/ES-DE.AppImage"
@@ -395,3 +396,54 @@ class TestTheHostViewOpensWhatBashOpens:
         handle = atlas.EmuDeck(HOME, FixtureMachine({SETTINGS: ""}))
         _, host = handle._lookup(handle._esde_snapshot("x"))  # pyright: ignore[reportPrivateUsage] - the view it builds
         assert host.working_directory == f"{HOME}/.config/EmuDeck/backend"
+
+
+class TestTheHostViewReadsWhatACommandNeeds:
+    """The three reads taking a command apart asks of EmuDeck's host view (#573)."""
+
+    def test_a_directory_and_a_link_to_one_are_directories(self):
+        host = view(FixtureMachine({"/opt/a.sh": ""}, dirs=["/opt/dir"], symlinks={"/opt/link": "/opt/dir"}))
+        assert [host.is_directory(p) for p in ("/opt/dir", "/opt/link", "/opt/a.sh", "/opt/none")] == [
+            PROBE_HIT,
+            PROBE_HIT,
+            PROBE_MISS,
+            PROBE_MISS,
+        ]
+
+    def test_a_folder_is_spelled_alike_on_both_sides(self):
+        host = view(FixtureMachine({}, symlinks={"/opt/link": "/opt/dir"}))
+        assert host.host_path("/opt/link/saves") == "/opt/link/saves"
+
+    def test_a_file_is_read_within_the_bound(self):
+        host = view(FixtureMachine({"/roms/Game.esprefix": "-a -b"}))
+        read = host.read_text_within("/roms/Game.esprefix", 5)
+        assert isinstance(read, ReadResult)
+        assert read.text == "-a -b"
+        assert host.read_text_within("/roms/Game.esprefix", 4) == TOO_LARGE
+
+    def test_what_cannot_be_stat_ed_relative_or_inside_the_image_cannot_be_told(self):
+        host = view(FixtureMachine({}, inaccessible=["/mnt/card"]))
+        assert [host.is_directory(p) for p in ("/mnt/card/dir", "dir", "%ESPATH%/dir")] == [PROBE_UNKNOWN] * 3
+        assert [host.host_path(p) for p in ("dir", "%ESPATH%/dir")] == [None, None]
+        assert [host.read_text_within(p, 10) for p in ("a.cfg", "%ESPATH%/a.cfg")] == [None, None]
+
+    def test_a_path_is_beneath_a_directory_once_the_links_to_both_are_followed(self):
+        machine = FixtureMachine(
+            {"/run/media/deck/SD/tools/launchers/a.sh": ""},
+            symlinks={
+                "/run/media/mmcblk0p1": "/run/media/deck/SD",
+                "/opt/b.sh": "/run/media/deck/SD/tools/launchers/a.sh",
+            },
+        )
+        host = view(machine)
+        launchers = "/run/media/mmcblk0p1/tools/launchers"
+        assert host.beneath("/run/media/deck/SD/tools/launchers/a.sh", launchers)
+        assert host.beneath("/opt/b.sh", launchers)
+        assert not host.beneath("/run/media/deck/SD/tools/launchers-old/a.sh", launchers)
+        assert not host.beneath("/run/media/deck/SD/tools/launchers", launchers)
+
+    def test_links_that_do_not_settle_are_compared_as_spelled(self):
+        host = view(FixtureMachine({}, symlinks={"/loop/a": "/loop/b", "/loop/b": "/loop/a"}))
+        assert host.resolved("/loop/a/x.sh") is None
+        assert host.resolved("x.sh") is None
+        assert host.beneath("/loop/a/x.sh", "/loop/a")

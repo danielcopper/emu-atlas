@@ -123,9 +123,11 @@ def apart(
     found: Found | None = None,
     core: str | None = CORE,
     rom_directory: str | None = ROMS + "/",
+    es_path_established: bool = True,
 ) -> TakenApart:
     view = view or View()
-    inputs = CommandInputs(content, parts(found, core), HOME, view.es_path, rom_directory)
+    es_path = view.es_path if es_path_established else None
+    inputs = CommandInputs(content, parts(found, core), HOME, es_path, rom_directory)
     return take_apart(command, inputs, view)
 
 
@@ -190,6 +192,36 @@ class TestPlainWords:
         answer = apart("%EMULATOR_X% %ROM%", view=View(app_id=None), core=None)
         assert answer.command is not None
         assert answer.command.program == LaunchProgram("native", path=LAUNCHER)
+
+    @pytest.mark.parametrize("name", ["Emu.AppImage", "emu-x86_64.appimage", "EMU.APPIMAGE"])
+    def test_a_frontend_on_the_host_runs_a_file_named_as_an_appimage_as_one(self, name: str):
+        path = f"/home/deck/Applications/{name}"
+        answer = apart("%EMULATOR_X% %ROM%", view=View(app_id=None), found=static(path), core=None)
+        assert answer.command is not None
+        assert answer.command.program == LaunchProgram("appimage", path=path)
+
+    @pytest.mark.parametrize("name", ["Emu.AppImage.sh", "AppImage", "emu.AppImage-old"])
+    def test_a_name_that_does_not_end_as_an_appimage_is_native(self, name: str):
+        path = f"/home/deck/Applications/{name}"
+        answer = apart("%EMULATOR_X% %ROM%", view=View(app_id=None), found=static(path), core=None)
+        assert answer.command is not None
+        assert answer.command.program == LaunchProgram("native", path=path)
+
+    def test_inside_a_sandbox_a_file_named_as_an_appimage_is_its_command(self):
+        path = "/var/data/Emu.AppImage"
+        answer = apart("%EMULATOR_X% %ROM%", found=static(path), core=None)
+        assert answer.command is not None
+        assert answer.command.program == LaunchProgram("flatpak", app_id=APP, command=path)
+
+    def test_espath_where_the_frontends_directory_is_not_established_is_refused(self):
+        answer = apart("%EMULATOR_X% %ESPATH%/extra.cfg %ROM%", core=None, es_path_established=False)
+        assert answer.command is None
+        assert codes(answer) == [("launch-path-unestablished", {"path": "%ESPATH%"})]
+
+    def test_a_command_without_espath_does_not_need_the_frontends_directory(self):
+        answer = apart("%EMULATOR_X% %ROM%", core=None, es_path_established=False)
+        assert answer.command is not None
+        assert answer.command.arguments == (GAME,)
 
     def test_runinbackground_is_removed_with_the_leading_blanks(self):
         assert arguments("%RUNINBACKGROUND%   %EMULATOR_X% %ROM%", core=None) == (GAME,)
@@ -1034,6 +1066,11 @@ class TestTheSecondMethodsCommand:
         assert answer.command.program == LaunchProgram("flatpak", app_id=APP, command=RUN)
         assert answer.command.arguments == ("/app/retrodeck/components/es-de/bin/data", GAME)
         assert answer.caveats == ()
+
+    def test_espath_where_the_frontends_directory_is_not_established_is_refused(self):
+        answer = apart(f"{RUN} %ESPATH%/data %ROM%", found=program(), core=None, es_path_established=False)
+        assert answer.command is None
+        assert codes(answer) == [("launch-path-unestablished", {"path": "%ESPATH%"})]
 
     def test_a_wildcard_word_is_replaced_with_its_match_wherever_it_stands(self):
         found = program("/opt/emu/app-1", ("/opt/emu/app-*", "/opt/emu/app-1"))

@@ -82,13 +82,17 @@ missing from the copy is skipped, not flagged.
 
 ### The zstd codec under a host's own packaging
 
-Two reads an answer makes are capability-gated, both into one image: EmuDeck deploys ES-DE as an AppImage, the
+Three reads an answer makes are capability-gated, all into one image: EmuDeck deploys ES-DE as an AppImage, the
 frontend's bundled `es_systems.xml` and `es_find_rules.xml` are sealed inside it, and atlas opens the image itself
 wherever the runtime has the image's zstd codec —
 [the catalogue section](#which-emulator-would-launch-this-the-catalogue) and
 [the launch answer](#does-it-start-and-with-what--availability-launcher-core_path) say what changes when it does. The
-build the image's binary states is read through the same codec too, but by the launch tripwire alone: no answer states
-it. Those reads are the codec's only consumers: the resolver asks for AppImage contents of EmuDeck's ES-DE alone
+third is the build the image's `usr/bin/es-de` states, which gates EmuDeck's
+[`launch_command`](#what-would-the-frontend-run--launch_command): a command is taken apart only for the ES-DE build
+atlas's reading is pinned to. Without the codec that build is not read, and a startable entry's command is refused with
+`frontend-build-sealed` — the capability is the runtime's, never the machine's — while `frontend-build-unpinned` stays
+for a build that was read and is not pinned, or one the binary does not state. The launch tripwire reads the same build.
+Those reads are the codec's only consumers: the resolver asks for AppImage contents of EmuDeck's ES-DE alone
 (`atlas/installations.py`), gzip images decompress everywhere through the stdlib, and a consumer asking only RetroDECK —
 whose ES-DE lives in its Flatpak as plain files — never reaches the codec at all. On Python ≥ 3.14 the stdlib's
 `compression.zstd` answers the probe on its own, and a host that registers nothing needs nothing below.
@@ -3188,16 +3192,20 @@ entry is the one `emulators_for` puts first for this file, per-game override fir
 frontend sees it and must be absolute (a relative one raises `ValueError`). The question does not judge whether the
 frontend takes the file at all — `launchable` answers that.
 
-**How it is built.** The command is assembled the way ES-DE's `FileData::launchGame` assembles it (v3.4.1, which
-RetroDECK's fork carries unchanged on Linux), with the program and core the entry's own launch lookup found, and then
-read the way the frontend's shell reads it. So:
+**How it is built.** The command is assembled the way ES-DE's `FileData::launchGame` assembles it (v3.4.1 — RetroDECK's
+fork carries it unchanged on Linux, and EmuDeck's AppImage is that release, as its `usr/bin/es-de` states), with the
+program and core the entry's own launch lookup found, and then read the way the frontend's shell reads it. So:
 
 - `program` is tagged by `variant`: `flatpak` with the `app_id` and the `command` inside it — every RetroDECK program,
-  since the frontend runs inside its sandbox and so does everything it starts; `appimage` or `native` with a `path`. The
-  keys a variant does not use are `null`.
+  since the frontend runs inside its sandbox and so does everything it starts; `appimage` or `native` with a `path` —
+  EmuDeck's, whose ES-DE runs on the host: the file ES-DE runs, `appimage` where it is named as one (`.AppImage`, in any
+  case) and `native` otherwise. A Flatpak export ES-DE finds on the `PATH` is `native` with the export's path, the
+  wrapper that runs `flatpak run`, which a caller can start unchanged; its app id is not stated apart. The keys a
+  variant does not use are `null`.
 - `arguments` are in the frontend's spelling, every placeholder resolved: `%ROM%`, `%ROMRAW%`, `%BASENAME%`,
   `%FILENAME%`, `%ROMPATH%` (the ROM root), `%GAMEDIR%`, `%GAMEDIRRAW%`, `%ESPATH%`, `%EMUDIR%`, and `~`, which is
-  ES-DE's `--home` — for RetroDECK the app's config directory, not the user's home.
+  ES-DE's `--home` — for RetroDECK the app's config directory, not the user's home; for EmuDeck, whose ES-DE starts
+  without one, the user's home.
 - A leading `env NAME=value …` becomes `environment`, in its order, and the program is the word after it.
 - `%STARTDIR%` becomes `working_folder`, in the frontend's spelling and the host's; ES-DE creates the folder where it is
   missing. `host_path` is `null` where atlas cannot place the folder, and `launch-path-unestablished` names it.
@@ -3211,19 +3219,30 @@ read the way the frontend's shell reads it. So:
 **What is refused.** `command` is `null` exactly where the answer refuses, and one caveat says why: the entry's own
 launch reason where it is not `startable`, or `launch-command-label-unknown`, `frontend-build-unpinned` (the deployed
 frontend is not the build atlas's reading of `launchGame` is pinned to; `version` names the build it states, absent
-where none can be read), `launch-command-shell-syntax` (the shell would read more than plain words — `construct` says
-which: a pipe, a `;`, `&&`, a `$` or backtick, a redirection, a glob, a brace, a NUL an injected file carries, …),
-`launch-command-env-option`, `launch-command-desktop-file` (`%ENABLESHORTCUTS%` with a `.desktop` file, whose `Exec`
-line ES-DE runs instead), `launch-command-entry-invalid` (a `%STARTDIR%` or `%INJECT%` entry ES-DE itself refuses),
+where none is read), `frontend-build-sealed` (EmuDeck's build sits in its AppImage and this runtime lacks the image's
+codec — see [the zstd codec](#the-zstd-codec-under-a-hosts-own-packaging) for what grants it),
+`launch-command-shell-syntax` (the shell would read more than plain words — `construct` says which: a pipe, a `;`, `&&`,
+a `$` or backtick, a redirection, a glob, a brace, a NUL an injected file carries, …), `launch-command-env-option`,
+`launch-command-desktop-file` (`%ENABLESHORTCUTS%` with a `.desktop` file, whose `Exec` line ES-DE runs instead),
+`launch-command-entry-invalid` (a `%STARTDIR%` or `%INJECT%` entry ES-DE itself refuses),
 `launch-command-inject-unreadable` or `launch-command-inject-loop` for an `%INJECT%` file atlas cannot read or one that
 injects itself again, `launch-command-rom-root-unestablished` (the command uses `%ROMPATH%` and the ROM root is not
 established — the answer's other caveats say why), `launch-command-no-program` (the command reads as no words at all),
 `launch-command-beyond-limits` (taking the command apart goes beyond a bound atlas keeps — `limit` names it:
 `command-length` 16384 characters, `substitutions` 256, `rescans` 64 passes of one replacement, `injections` 16
 `%INJECT%` entries, `inject-file-size` an injection file over 1 MiB, which is never read; ES-DE itself bounds only the
-4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). EmuDeck's commands are not taken
-apart yet: a startable EmuDeck entry answers with no command and `launch-resolution-unsupported` naming the
-installation. A bare RetroArch has no frontend catalogue at all and answers through the catalogue's own caveats.
+4096 bytes one injection splices in), and `launch-command-second-shell-unsafe` (below). On EmuDeck two more:
+`launcher-script-unpinned` (the command runs one of EmuDeck's launcher scripts: a `/bin/bash <script>` row or a token
+whose find rule found a file under `toolsPath/launchers`, compared once the links on the way are followed, so a card
+spelled through its udisks mount under `/run/media/deck/` or through the `/run/media/<label>` link SteamOS keeps to it
+(`/run/media/<device>` for a card without a label) is one directory; a script runs steps of its own around the emulator,
+which atlas states only for a copy its reading is pinned to, and none is pinned yet, so this is the refusal whatever the
+frontend build — `path` names the script as the command or the rule spells it; a `/bin/bash -c` row or a script of the
+user's own elsewhere is an ordinary command), and `launch-path-unestablished` with `path` `%ESPATH%` for a command that
+hands the program ES-DE's own directory, which for an AppImage frontend is inside the image's mount. An entry derived
+from the installed cores while EmuDeck's bundled catalogue is sealed carries no command and answers with its own
+`launch-resolution-unsupported`. A bare RetroArch has no frontend catalogue at all and answers through the catalogue's
+own caveats.
 
 **Two notes beside an answered command.** `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve
 and leaves in the argument as written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself).

@@ -134,6 +134,8 @@ from .find_rules import (
     LAYER_CUSTOM,
     RULE_COMMAND,
     CAVEAT_FRONTEND_BUILD_UNPINNED,
+    CAVEAT_FRONTEND_BUILD_SEALED,
+    CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
     CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
     Availability,
@@ -161,6 +163,7 @@ from .firmware import firmware_for_system as _resolve_for_system
 from .firmware import firmware_inventory as _resolve_inventory
 from .firmware import identify_firmware as _resolve_identification
 from .machine import (
+    APPIMAGE_CAPABILITY_MISSING,
     ARCHIVE_MISSING,
     claimed_extensions,
     FileStamp,
@@ -1690,10 +1693,7 @@ class _SandboxLaunchView:
     def read_text_within(self, path: str, limit: int) -> ReadResult | TooLarge | None:
         """The text at the sandbox's *path*, read through the host no further than *limit* + 1 bytes — missing where
         the sandbox shows nothing there, ``too-large`` where the file holds more than *limit*, ``None`` where what it
-        shows cannot be told.
-
-        A machine that cannot bound its read (:class:`~atlas.machine.BoundedReadingMachine`)
-        is asked the file's size first and read only within the bound.
+        shows cannot be told (:func:`_read_within`).
         """
         if not path.startswith("/"):
             return None
@@ -1702,14 +1702,7 @@ class _SandboxLaunchView:
             return None
         if isinstance(host, _Hidden):
             return ReadResult(READ_MISSING)
-        machine = self.machine
-        if isinstance(machine, BoundedReadingMachine):
-            read = machine.read_text_within(host, limit)
-            return TOO_LARGE if read is None else read
-        size = machine.file_size(host)
-        if size is not None and size > limit:
-            return TOO_LARGE
-        return machine.read_text(host)
+        return _read_within(self.machine, host, limit)
 
     def listing(self, directory: str) -> tuple[str, ...] | None:
         """The names in the sandbox's *directory*, read through the host — all of them, hidden ones included.
@@ -1725,6 +1718,22 @@ class _SandboxLaunchView:
         if isinstance(host, _Hidden):
             return ()
         return _host_listing(self.machine, host)
+
+
+def _read_within(machine: Machine, host: str, limit: int) -> ReadResult | TooLarge:
+    """The text at the host's *host*, read no further than *limit* + 1 bytes — ``too-large`` where the file holds
+    more than *limit*.
+
+    A machine that cannot bound its read (:class:`~atlas.machine.BoundedReadingMachine`)
+    is asked the file's size first and read only within the bound.
+    """
+    if isinstance(machine, BoundedReadingMachine):
+        read = machine.read_text_within(host, limit)
+        return TOO_LARGE if read is None else read
+    size = machine.file_size(host)
+    if size is not None and size > limit:
+        return TOO_LARGE
+    return machine.read_text(host)
 
 
 def _host_listing(machine: Machine, host: str) -> tuple[str, ...] | None:
@@ -1829,6 +1838,46 @@ class _HostLaunchView:
         if kind == KIND_INACCESSIBLE:
             return PROBE_UNKNOWN
         return PROBE_HIT if kind == KIND_FILE else PROBE_MISS
+
+    def is_directory(self, path: str) -> Probe:
+        """ES-DE's ``isDirectory`` on the host's *path*, links followed (``FileSystemUtil.cpp:1035-1050``)."""
+        if self._unknowable(path):
+            return PROBE_UNKNOWN
+        kind = self.machine.path_kind(path)
+        if kind == KIND_INACCESSIBLE:
+            return PROBE_UNKNOWN
+        return PROBE_HIT if kind == KIND_DIRECTORY else PROBE_MISS
+
+    def host_path(self, path: str) -> str | None:
+        """*path* itself: the frontend reads the host's own tree, so both spell a folder alike and the kernel follows
+        the links on the way for either — ``None`` where *path* cannot be told.
+        """
+        return None if self._unknowable(path) else path
+
+    def read_text_within(self, path: str, limit: int) -> ReadResult | TooLarge | None:
+        """The text at the host's *path*, links followed, read no further than *limit* + 1 bytes — ``too-large``
+        where the file holds more than *limit*, ``None`` where *path* cannot be told.
+        """
+        if self._unknowable(path):
+            return None
+        return _read_within(self.machine, path, limit)
+
+    def resolved(self, path: str) -> str | None:
+        """*path* with every link on the way followed, the kernel's way (:func:`_resolve_symlink_chain`) — ``None``
+        where it cannot be told: a path the view cannot place, or links that do not settle.
+        """
+        if self._unknowable(path):
+            return None
+        resolved = _resolve_symlink_chain(self.machine, path)[0]
+        return None if resolved is None else os.path.normpath(resolved)
+
+    def beneath(self, path: str, directory: str) -> bool:
+        """Whether *path* lies under *directory* once the links on the way to each are followed — a path or
+        directory whose links cannot be followed is compared as it is spelled.
+        """
+        inner = self.resolved(path) or os.path.normpath(path)
+        outer = self.resolved(directory) or os.path.normpath(directory)
+        return inner.startswith(outer.rstrip("/") + "/")
 
 
 # One file of the override chain as it is read: where it came from and its
@@ -21551,14 +21600,15 @@ class _CatalogueQueries:
         ``command`` is ``None`` exactly where the answer refuses: a label the
         system does not carry (``launch-command-label-unknown``), an entry
         whose launch is not ``startable`` (its own reason caveat), a frontend
-        build no reading of ES-DE is pinned for (``frontend-build-unpinned``),
-        or a command atlas does not take apart — shell syntax beyond plain
+        build no reading of ES-DE is pinned for (``frontend-build-unpinned``)
+        or one this runtime cannot read out of its AppImage
+        (``frontend-build-sealed``), or a command atlas does not take apart — shell syntax beyond plain
         words, an ``env`` option, a ``.desktop`` file, an entry ES-DE itself
         refuses, an ``%INJECT%`` file it cannot read or one that injects
-        itself. RetroDECK takes its commands apart; EmuDeck's entries carry the
-        frontend's lookup and its commands are not taken apart yet
-        (``launch-resolution-unsupported`` naming the installation), and a bare
-        RetroArch has no frontend catalogue at all.
+        itself. RetroDECK and EmuDeck take their commands apart, except that
+        EmuDeck refuses a command that runs one of its launcher scripts
+        (``launcher-script-unpinned``); a bare RetroArch has no frontend
+        catalogue at all.
         """
         if not os.path.isabs(content_path):
             raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
@@ -21686,6 +21736,28 @@ def _build_unpinned(build: str | None) -> Caveat:
         f"the deployed frontend states build {build}, and atlas's reading of how ES-DE builds a launch command is "
         "pinned to another — what this build would run is not established",
         {"version": build},
+    )
+
+
+def _build_sealed() -> Caveat:
+    """The refusal of a launch command whose frontend build sits in an AppImage this runtime cannot open."""
+    return Caveat(
+        CAVEAT_FRONTEND_BUILD_SEALED,
+        "the frontend's build is stated inside its AppImage, which this runtime cannot open — it lacks the codec the "
+        "image is compressed with — so the build, and with it what the frontend would run, is not established; the "
+        "capability is the runtime's, not the machine's",
+        {},
+    )
+
+
+def _script_unpinned(path: str) -> Caveat:
+    """The refusal of a launch command that runs an EmuDeck launcher script no reading is pinned for."""
+    return Caveat(
+        CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
+        f"the command runs EmuDeck's launcher script {path}, which runs steps of its own around the emulator, and "
+        "atlas states what a script runs only for a copy its reading is pinned to — none is pinned for this one, so "
+        "what this launch runs is not established",
+        {"path": path},
     )
 
 
@@ -24425,8 +24497,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         ("RYUJINX", "launchers/ryujinx.sh", 'name="RYUJINX"'),
     )
 
-    def _launch_for(self, snapshot: _EsdeSnapshot) -> Callable[[EmulatorSpec], LaunchResolution]:
+    def _launch_for(
+        self, snapshot: _EsdeSnapshot, lookups: "list[tuple[LaunchLookup, _HostLaunchView]] | None" = None
+    ) -> Callable[[EmulatorSpec], LaunchResolution]:
         """Each entry's launch answer, the find rules and the host read once — and only once an entry asks.
+
+        *lookups* is where the one lookup and its view are kept, for a caller
+        that takes a command apart after the entries are built.
 
         A launcher-script row (``/bin/bash <script> …``, the shape EmuDeck's
         own custom catalogue writes) is ES-DE's answer first: the second
@@ -24438,7 +24515,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         on a command the next start rewrites rides beside any verdict
         (:meth:`_systems_path_note`).
         """
-        held: list[tuple[LaunchLookup, _HostLaunchView]] = []
+        held: list[tuple[LaunchLookup, _HostLaunchView]] = [] if lookups is None else lookups
         resolve = _launch_for(lambda: self._lookup(snapshot), held)
 
         def launch_for(spec: EmulatorSpec) -> LaunchResolution:
@@ -24559,21 +24636,29 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     def _deployed_esde_build(self) -> str | None:
-        """The ES-DE build the AppImage states, ``None`` where it states none this read can take.
+        """The ES-DE build the AppImage states, ``None`` where it states none this read can take
+        (:meth:`_deployed_esde_build_read`).
+        """
+        return self._deployed_esde_build_read().stamp
+
+    def _deployed_esde_build_read(self) -> AppImageStampResult:
+        """The read of the ES-DE build the AppImage states — its status beside the stamp.
 
         Read off ``usr/bin/es-de`` with :data:`ESDE_VERSION_STAMP`, which
         needs the image's codec (a zstd provider, :mod:`atlas.squashfs`), and
         kept under the AppImage's stat stamp: a replaced image is read again.
+        The status keeps a runtime without that codec
+        (``capability-missing``) apart from an image that states no build.
         """
         path = self._esde_appimage_path()
         machine = self._machine
         stamp = machine.file_stamp(path) if isinstance(machine, StampingMachine) else None
         held = self._build_held
         if stamp is not None and held is not None and held[0] == stamp:
-            return held[1].stamp
+            return held[1]
         read = machine.read_appimage_stamp(path, self.ESDE_BINARY_ENTRY, self.ESDE_VERSION_STAMP)
         self._build_held = None if stamp is None else (stamp, read)
-        return read.stamp
+        return read
 
     def _gamelist_selections(self, system: str) -> GamelistSelections:
         """The gamelist's emulator selections — EmuDeck seeds these itself.
@@ -24981,6 +25066,122 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             ),
             version,
         )
+
+    def _launch_command_answer(
+        self, system: str, content_path: str, label: str | None
+    ) -> tuple[LaunchCommandAnswer, str | None]:
+        """EmuDeck's launch command — the snapshot its launchability answer takes, the entry's own lookup.
+
+        The entry's verdict and the texts its command is built from come out of
+        one :class:`~atlas.launch.LaunchLookup` over one read of the find rules
+        and the host, as on RetroDECK. ES-DE runs on the host here, so the
+        program is the file ES-DE runs: ``native`` with its path — a Flatpak
+        export on the ``PATH`` among them, the wrapper a caller can start
+        unchanged — or ``appimage`` where the file is named as one. ``~`` is
+        the lookup's home, the user's own, and ``%ESPATH%``, ES-DE's directory
+        inside the AppImage's mount, is not established
+        (``launch-path-unestablished``). A command that runs one of EmuDeck's
+        launcher scripts (:meth:`_launcher_script_run`) is refused with
+        ``launcher-script-unpinned`` whatever the build: what a script does
+        around the emulator is read per script, at a copy it is pinned to, and
+        no script is pinned. Any other command is taken apart only for the
+        ES-DE build the reading is pinned to (:data:`ESDE_APPIMAGE_BUILD`, read
+        off the image): a runtime without the image's codec answers
+        ``frontend-build-sealed``, and any other build, or none the image
+        states, ``frontend-build-unpinned``.
+        """
+        version = self._observed_backend_head()
+        snapshot = self._esde_snapshot(system)
+        if snapshot.refusal is not None:
+            return LaunchCommandAnswer(caveats=snapshot.refusal), version
+        if system not in snapshot.by_system and not snapshot.complete:
+            return self._derived_launch_command(snapshot, system, label), version
+        anchor = self._esde_system_dir(snapshot.by_system, system, complete=snapshot.complete)
+        lookups: list[tuple[LaunchLookup, _HostLaunchView]] = []
+        entries = _entries_from(
+            self,
+            _declared_entries(snapshot.by_system, system),
+            self._gamelist_selections(system),
+            system_roms_dir=anchor.directory,
+            content_path=content_path,
+            launch_for=self._launch_for(snapshot, lookups),
+        )
+        sources = (self._catalogue_provenance(snapshot.exclusive),)
+        caveats = (*snapshot.findings, *snapshot.tail, *anchor.caveats)
+        chosen = _chosen_entry(entries, label, system)
+        if isinstance(chosen, Caveat):
+            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, chosen)), version
+        if chosen is None or chosen.availability != AVAILABILITY_STARTABLE or not lookups:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
+        lookup, view = lookups[0]
+        script = self._launcher_script_run(chosen, snapshot.settings, view)
+        if script is not None:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _script_unpinned(script))), version
+        build = self._deployed_esde_build_read()
+        if build.status == APPIMAGE_CAPABILITY_MISSING:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _build_sealed())), version
+        if build.stamp != self.ESDE_APPIMAGE_BUILD:
+            return (
+                LaunchCommandAnswer(chosen, sources=sources, caveats=(*caveats, _build_unpinned(build.stamp))),
+                version,
+            )
+        parts = lookup.command_parts(chosen.command, loads_core=chosen.kind == KIND_LIBRETRO)
+        if parts is None:
+            return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
+        inputs = CommandInputs(
+            content_path=content_path,
+            parts=parts,
+            home=view.home,
+            es_path=None,
+            rom_directory=self._launch_rom_directory(),
+        )
+        taken = take_apart(chosen.command, inputs, view)
+        return LaunchCommandAnswer(chosen, taken.command, sources, (*caveats, *taken.caveats)), version
+
+    def _derived_launch_command(self, snapshot: _EsdeSnapshot, system: str, label: str | None) -> LaunchCommandAnswer:
+        """A system only the installed cores declare while the bundled layer is sealed: its entries are derived from
+        the cores, carry no command, and each answers its own ``launch-resolution-unsupported``.
+        """
+        context = self._derived_context(snapshot)
+        entries, derived = _derived_catalogue_entries(self, context, system)
+        caveats = (*snapshot.findings, *snapshot.tail, *derived)
+        chosen = _chosen_entry(entries, label, system)
+        if isinstance(chosen, Caveat):
+            return LaunchCommandAnswer(sources=context.sources, caveats=(*caveats, chosen))
+        return LaunchCommandAnswer(chosen, sources=context.sources, caveats=caveats)
+
+    def _launcher_script_run(
+        self, entry: EmulatorEntry, settings: Mapping[str, str], view: _HostLaunchView
+    ) -> str | None:
+        """The EmuDeck launcher script *entry*'s command runs, spelled as the command or the find rule spells it —
+        ``None`` where it runs none.
+
+        A launcher script is a file under ``<toolsPath>/launchers``, and the
+        comparison follows the links on the way to both
+        (:meth:`_HostLaunchView.beneath`): SteamOS mounts a card through
+        udisks as the deck user, under ``/run/media/deck/``, and links
+        ``/run/media/<label>`` to that mount point — ``/run/media/<device>``
+        for a card without a label (/usr/lib/hwsupport/steamos-automount.sh:88-113)
+        — and a find rule or a command may spell either. Two commands run one:
+        a ``/bin/bash <script> …`` row whose second word is such a file
+        (:func:`_launcher_script`, ``~`` read as ES-DE reads it in the
+        command), and an ``%EMULATOR_X%`` token whose find rule found one —
+        the entries EmuDeck's launcher writes into the custom find rules
+        (emuDeckESDE.sh:524-553 at 863ab69). Any other ``/bin/bash`` row, a
+        ``-c`` string or a script of the user's own elsewhere, is an ordinary
+        command.
+        """
+        launchers = os.path.join(self._setting_path(dict(settings), "toolsPath", "tools")[0], "launchers")
+        script = _launcher_script(entry.command)
+        if script is not None:
+            readable = not any(mark in script for mark in _SCRIPT_UNREADABLE)
+            if readable and view.beneath(expand_home_path(script, view.home), launchers):
+                return script
+            return None
+        launcher = entry.launcher
+        if launcher is not None and view.beneath(launcher.path, launchers):
+            return launcher.path
+        return None
 
     def _rom_location_answer(self, system: str) -> tuple[RomPlacement, str | None]:
         """EmuDeck's ROM placement — the overlay's declaration, resolved ES-DE's way.
