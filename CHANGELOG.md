@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.29.0](https://github.com/danielcopper/emu-atlas/compare/v0.28.0...v0.29.0) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **launch:** every serialized launch_command command carries a new key, launcher_script: null where the command runs no EmuDeck launcher script, and otherwise {path, variant, steps: [{code, runs}], pinned_at}. An EmuDeck command that runs a launcher script whose script and sourced and executed files all hash to their pins no longer answers launcher-script-unpinned; it answers the command with launcher_script. Where only a sourced or executed file differs, launcher-script-unpinned carries a new data key, helper. A port must emit both to match the vectors.
+* **launch:** a startable EmuDeck entry's launch_command answer no longer carries launch-resolution-unsupported naming the installation. A command that runs an EmuDeck launcher script carries launcher-script-unpinned with its path, whatever the build. Any other command carries frontend-build-sealed where the runtime lacks the codec the AppImage needs, frontend-build-unpinned where the image states another build or none that can be read (with version where one was read), and for ES-DE build 3.4.1 the command taken apart, or launch-path-unestablished with path %ESPATH% where it hands over %ESPATH%. launcher-script-unpinned and frontend-build-sealed are new caveat codes. A port must emit all of these to match the vectors.
+* **saves:** every serialized save answer (savefile_location and entry_savefile_location, alone or inside an aggregate) carries a new redirects key: a list of {via, name, argument, moves} for a standalone emulator, [] where none exists, and null where nothing is stated, as on every answer from a RetroArch core. Standalone save answers whose configuration outranks a stated route also carry the new caveat code redirect-outranked, with data token, via, name, argument, file and key. A port must emit both to match the vectors.
+* **saves:** the citation data of the file-names-unestablished and save-id-candidates caveats now names the build each standalone save card pins and that build's lines: Dolphin 2609 instead of 2603a, Azahar 2126.1.1 instead of 2125.1.1, PCSX2 v2.8.2 instead of v2.6.3 and RPCS3 d5213de6 instead of 7c6b3dcd. Only the citation string changes; paths, codes and every other data key stay as they were.
+* **firmware:** pcsx2_libretro.so's firmware answer moves locating from 'unestablished' to 'by-name-then-content'. A stored pcsx2_bios name LRPS2's listing would not offer (a file outside 4-8 MiB, a file failing the header test, a directory, a hidden name, a name with a separator, including one climbing out of the firmware root) now answers the pcsx2/bios folder verdict with firmware-configured-image-not-offered instead of the named path with firmware-image-configured, firmware-path-obstructed or firmware-path-escapes-root; a file such a name would reach outside the folder is stated as unclaimed. Under verify a configured file whose header has no answer now carries firmware-unreadable beside the named requirement. FIRMWARE_DECLARED_DIRECTORY_VERSION moves from 5 to 6, so table_version on firmware-directory-holds-no-candidate, firmware-directory-holds-no-image, firmware-image-contradicted and firmware-path-not-a-directory reads '6' for LRPS2 and PCEE2 alike. LRPS2's save answer in its shared mode can carry save-files-shared-with-core {core: pcee2, dir}.
+* **saves:** pcee2_libretro.so's save answer moves from RetroArch's save folder with core-unaudited to <system>/pcsx2/memcards, root_kind system_directory, with its memory cards as shared-card groups, granularity modes both-slots, slot-1, slot-2, no-slot, folder-unlisted and standalone-ini, and unverified-version in place of core-unaudited. The new caveat save-files-shared-with-core {core, dir} can appear on it.
+* **firmware:** pcee2_libretro.so, deployed without its .info, now answers declaration 'packaged' instead of 'unreadable', carries core-info-packaged {core_so} instead of core-info-unreadable, states the pcsx2/bios folder as a required requirement, and answers locating 'by-name-then-content' instead of 'unestablished'. The new caveat firmware-configured-image-not-offered {core, key, name, dir} can appear on it. FIRMWARE_DECLARED_DIRECTORY_VERSION moves from 4 to 5, so table_version on firmware-directory-holds-no-candidate, firmware-directory-holds-no-image, firmware-image-contradicted and firmware-path-not-a-directory reads '5'.
+
+### Features
+
+* **firmware:** answer PCEE2's BIOS from a packaged declaration ([#702](https://github.com/danielcopper/emu-atlas/issues/702)) ([69934f4](https://github.com/danielcopper/emu-atlas/commit/69934f46a7b2950a4588f97e3c6643277d872d37))
+* **launch:** answer EmuDeck's launch command for exports and AppImages ([#718](https://github.com/danielcopper/emu-atlas/issues/718)) ([efef36e](https://github.com/danielcopper/emu-atlas/commit/efef36e0bdd9a0c110707af15be0cffea0b7ff53))
+* **launch:** state what an EmuDeck launcher script runs ([#719](https://github.com/danielcopper/emu-atlas/issues/719)) ([b852888](https://github.com/danielcopper/emu-atlas/commit/b8528880b80a1f5bb29715e7bf62b12f7388338f))
+* **saves:** pin every standalone save card to its deployed build ([#711](https://github.com/danielcopper/emu-atlas/issues/711)) ([2b31e83](https://github.com/danielcopper/emu-atlas/commit/2b31e83dc6de6a7c8336d7159ad2ca152a968946))
+* **saves:** state how a standalone emulator's saves move for a launch ([#713](https://github.com/danielcopper/emu-atlas/issues/713)) ([cfd98cf](https://github.com/danielcopper/emu-atlas/commit/cfd98cf14b587ce1a60ba55394af0d959ed47f5e))
+* **saves:** state PCEE2's memory cards where it writes them ([#705](https://github.com/danielcopper/emu-atlas/issues/705)) ([3fc9db9](https://github.com/danielcopper/emu-atlas/commit/3fc9db9208a7d2bba810085cb8378e1cc31a6798))
+
+
+### Bug Fixes
+
+* **firmware:** answer LRPS2's BIOS through RetroArch's option guard ([#707](https://github.com/danielcopper/emu-atlas/issues/707)) ([910ff60](https://github.com/danielcopper/emu-atlas/commit/910ff60537e064508736cbe1ef8255cc56a67226))
+
+
+### Documentation
+
+* speak of the first consumer as it is now ([#709](https://github.com/danielcopper/emu-atlas/issues/709)) ([5a259d9](https://github.com/danielcopper/emu-atlas/commit/5a259d9cac87601db62dc4d126d19d8e3b56c094))
+* **vectors:** describe every query field and hold it with one registry ([#708](https://github.com/danielcopper/emu-atlas/issues/708)) ([bd52dec](https://github.com/danielcopper/emu-atlas/commit/bd52dec879f62996b6bfff0d42adf6effb6710e5))
+
 ## [0.28.0](https://github.com/danielcopper/emu-atlas/compare/v0.27.0...v0.28.0) (2026-10-24)
 
 
