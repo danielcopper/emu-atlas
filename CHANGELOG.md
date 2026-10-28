@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.30.0](https://github.com/danielcopper/emu-atlas/compare/v0.29.0...v0.30.0) (2026-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **launch:** every serialized launch_command command carries a new key, distribution_environment: a list of {name, value, set_by, provided}, [] on EmuDeck, or null where what the program reads is not stated. A RetroDECK command whose program is no pinned launcher, or whose start file differs, carries the new note launch-environment-unpinned with path and, where taken, blob (and start_file and start_blob). The 19 existing RetroDECK launch-command vectors run stub launchers, so each gains null and that note: a-libretro-entry-runs-retroarch-with-its-core-and-the-file, a-leading-env-becomes-the-environment, startdir-is-the-working-folder-under-the-frontends-home, startdir-gamedir-is-the-files-own-folder, inject-splices-the-files-text, inject-absent-injects-nothing, an-unknown-placeholder-stays-as-written, enableshortcuts-without-a-desktop-file-is-dropped, a-directory-taken-as-a-file-launches-the-file-of-its-name-inside, a-per-game-override-chooses-the-entry, a-label-chooses-the-entry, a-command-without-a-token-runs-its-first-word-as-found, romraw-unquoted-breaks-on-a-space-and-is-answered-as-meant, an-escaped-path-handed-to-a-second-shell-keeps-its-backslashes, a-raw-path-quoted-for-a-core-is-no-second-shell-matter, an-empty-replacement-runs-the-path-it-found, a-command-string-for-a-core-keeps-its-nested-quotes, a-file-name-escaping-misses-is-answered-as-meant and
+
+### Features
+
+* **launch:** state what a launcher needs from the distribution's start ([#720](https://github.com/danielcopper/emu-atlas/issues/720)) ([63e8852](https://github.com/danielcopper/emu-atlas/commit/63e8852132fab19efe2d7b1165d64a567e1da7c8))
+
 ## [0.29.0](https://github.com/danielcopper/emu-atlas/compare/v0.28.0...v0.29.0) (2026-10-27)
 
 
