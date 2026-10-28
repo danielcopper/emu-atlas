@@ -470,6 +470,74 @@ class TestLaunchable:
         assert atlas.CAVEAT_ARCHIVE_CONTENTS_UNREAD in [c.code for c in lower.caveats]
         assert atlas.CAVEAT_ENTRY_FORMAT_UNCLAIMED in [c.code for c in upper.caveats]
 
+    CITRA_EXTRACTING = {
+        f"{DEPLOY_CORES}/citra_libretro.so": {
+            "library_name": "Citra",
+            "valid_extensions": "3ds|3dsx|cia|elf",
+            "block_extract": False,
+        }
+    }
+
+    def test_a_label_judges_the_entry_it_names(self):
+        # Issue #715: without the label the default Azahar refuses the zip
+        # (test_a_recorded_standalone_refusal_flips_the_verdict); a caller
+        # that starts the game through Citra asks about Citra, which RetroArch
+        # opens the container for.
+        answer = self._n3ds(self.CITRA_EXTRACTING).launchable(
+            "n3ds", "/roms/n3ds/Game.zip", label="Citra"
+        )
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert answer.entry is not None
+        assert answer.entry.label == "Citra"
+        assert answer.alternatives == ()
+
+    def test_a_label_naming_a_refusing_entry_offers_the_default_as_an_alternative(self):
+        # The default (Citra, declared first) takes the zip and the named
+        # Azahar does not: the verdict is about Azahar, and the alternatives
+        # are the other entries — the one that would run among them.
+        citra_first = self.N3DS.replace(
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n', ""
+        ).replace(
+            "  </system>",
+            '    <command label="Azahar">%EMULATOR_AZAHAR% %ROM%</command>\n  </system>',
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: citra_first},
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
+            cores=self.CITRA_EXTRACTING,
+        )
+        assert rd.launchable("n3ds", "/roms/n3ds/Game.zip").verdict == atlas.VERDICT_LAUNCHABLE
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.zip", label="Azahar")
+        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
+        assert answer.entry is not None
+        assert answer.entry.label == "Azahar"
+        assert answer.alternatives == ("Citra",)
+
+    @pytest.mark.parametrize("name", ["Game.3ds", "Game.cia"])
+    def test_an_unknown_label_is_refused_whatever_the_file(self, name):
+        # Accepted or not, the file is judged by no entry: the caller named one
+        # the system does not carry, and the refusal is the launch command's.
+        answer = self._n3ds().launchable("n3ds", f"/roms/n3ds/{name}", label="Citra (Standalone)")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert answer.entry is None
+        assert answer.alternatives == ()
+        assert answer.accepted == (".3ds", ".zip", ".7z")
+        assert [(c.code, c.data) for c in answer.caveats] == [
+            (
+                atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
+                {"system": "n3ds", "label": "Citra (Standalone)"},
+            )
+        ]
+
+    def test_a_label_on_an_undeclared_system_is_the_systems_unknown(self):
+        # No entries at all: the launch command's helper has nothing to look
+        # the label up in, and the system's own refusal is the answer.
+        answer = self._rd().launchable("wonderswan", "/roms/wonderswan/Game.ws", label="Mednafen")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        codes = [c.code for c in answer.caveats]
+        assert atlas.CAVEAT_SYSTEM_UNKNOWN in codes
+        assert atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN not in codes
+
     def test_a_catalogue_less_arrangement_answers_unknown(self):
         machine = FixtureMachine(
             {f"{HOME}/.config/retroarch/retroarch.cfg": 'savefile_directory = "~/saves"\n'}
@@ -556,6 +624,41 @@ class TestADerivedEmulatorList:
         assert answer.entries == ()
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
 
+    def test_a_label_no_derived_entry_carries_is_refused_beside_the_absence(self):
+        # Issue #715: the launch command looks a label up among the derived
+        # entries, so launchability refuses the same label the same way; the
+        # verdict stays the catalogue absence's unknown either way.
+        bare = self._bare()
+        plain = bare.launchable("gba", "/roms/gba/Game.gba")
+        refused = bare.launchable("gba", "/roms/gba/Game.gba", label="VBA-M")
+        assert refused.verdict == plain.verdict == atlas.VERDICT_UNKNOWN
+        unknown = atlas.Caveat(
+            atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
+            "no catalogue entry of system 'gba' is labelled 'VBA-M'",
+            {"system": "gba", "label": "VBA-M"},
+        )
+        assert [c for c in refused.caveats if c != unknown] == list(plain.caveats)
+        assert unknown in refused.caveats
+        assert unknown in bare.launch_command("gba", "/roms/gba/Game.gba", label="VBA-M").caveats
+
+    def test_a_label_a_derived_entry_carries_leaves_the_answer_as_it_was(self):
+        bare = self._bare()
+        assert bare.launchable("gba", "/roms/gba/Game.gba", label="mGBA") == bare.launchable(
+            "gba", "/roms/gba/Game.gba"
+        )
+
+    def test_the_catalogue_less_default_refuses_an_unknown_label_too(self):
+        # Every handle overrides the default launchability answer today; it is
+        # asked here directly, over the derived entries, so the refusal it
+        # shares with the launch command's default is executed rather than
+        # assumed.
+        default = atlas.installations._CatalogueQueries._launchable_answer  # pyright: ignore[reportPrivateUsage]
+        answer, _ = default(self._bare(), "gba", "/roms/gba/Game.gba", "VBA-M")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert answer.caveats[-1].code == atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN
+        answer, _ = default(self._bare(), "gba", "/roms/gba/Game.gba", "mGBA")
+        assert atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN not in [c.code for c in answer.caveats]
+
     def test_emudeck_derives_where_the_readable_layers_are_silent(self):
         machine = FixtureMachine(
             {
@@ -573,6 +676,43 @@ class TestADerivedEmulatorList:
         codes = [c.code for c in answer.caveats]
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in codes
+
+    def _sealed_emudeck(self):
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'savesPath="$HOME/Emulation/saves"\n',
+                STANDALONE_CFG: self.CFG,
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": (
+                    '<?xml version="1.0"?><systemList></systemList>'
+                ),
+                f"{self.CORES_DIR}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
+        )
+        return atlas.EmuDeck(HOME, machine)
+
+    def test_a_sealed_emudeck_refuses_a_label_no_derived_entry_carries(self):
+        # Issue #715: a system only the installed cores declare, while the
+        # bundled layer is sealed, is answered by the launch command from the
+        # derived entries — so launchability looks the label up there too.
+        emudeck = self._sealed_emudeck()
+        plain = emudeck.launchable("gba", "/roms/gba/Game.gba")
+        refused = emudeck.launchable("gba", "/roms/gba/Game.gba", label="VBA-M")
+        assert refused.verdict == plain.verdict == atlas.VERDICT_UNKNOWN
+        unknown = atlas.Caveat(
+            atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
+            "no catalogue entry of system 'gba' is labelled 'VBA-M'",
+            {"system": "gba", "label": "VBA-M"},
+        )
+        assert [c for c in refused.caveats if c != unknown] == list(plain.caveats)
+        assert unknown in refused.caveats
+        assert unknown in emudeck.launch_command("gba", "/roms/gba/Game.gba", label="VBA-M").caveats
+
+    def test_a_sealed_emudeck_leaves_the_answer_as_it_was_for_a_derived_label(self):
+        emudeck = self._sealed_emudeck()
+        assert emudeck.launchable("gba", "/roms/gba/Game.gba", label="mGBA") == emudeck.launchable(
+            "gba", "/roms/gba/Game.gba"
+        )
 
     def test_emudecks_systems_list_joins_the_derived_ones_while_sealed(self):
         overlay = (
@@ -11722,6 +11862,18 @@ class TestARowNamingACoreFileOfAnotherHost:
         )
         assert answer.verdict == "entry-not-accepted"
         assert list(answer.alternatives) == ["Azahar (Standalone)"]
+
+    def test_a_label_judges_the_sibling_it_names(self):
+        # Issue #715 on EmuDeck: the caller starts the game through the
+        # standalone row, so the verdict is about that row, which reads the
+        # file — and the foreign row that would run is no alternative.
+        answer = self._emudeck(self.FOREIGN_ROW + self.AZAHAR_ROW).launchable(
+            system="n3ds", content_path=self.ROM, label="Azahar (Standalone)"
+        )
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert answer.entry is not None
+        assert answer.entry.label == "Azahar (Standalone)"
+        assert answer.alternatives == ()
 
     def _retrodeck(self, rows: str):
         """The same row on RetroDECK, whose overlay ES-DE reads exactly as EmuDeck's.

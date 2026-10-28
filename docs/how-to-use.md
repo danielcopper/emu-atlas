@@ -3137,6 +3137,22 @@ answer.alternatives  # entry labels established to take the file — on 'entry-n
 too: whether the frontend finds what it launches is a different question from whether it takes this file, and both are
 answered.
 
+`label` names the entry to judge, for a client that starts the game through an entry of its own choice rather than the
+one the frontend would pick:
+
+```python
+answer = inst.launchable("n3ds", "/roms/n3ds/Game.zip", label="Citra")
+```
+
+The entry is chosen exactly as [`launch_command`](#what-would-the-frontend-run--launch_command) chooses it, and the
+verdict, `entry` and `alternatives` are then about the named entry — `alternatives` names the other entries established
+to take the file, the one the frontend would pick included. On a system ES-DE loads, a label the system's entries do not
+carry is refused as `launch_command` refuses it: verdict `unknown` with `launch-command-label-unknown`, whatever the
+file, since a verdict about another entry would answer a question nobody asked. A bare RetroArch, which has no
+catalogue, and a sealed EmuDeck asked about a system only its installed cores declare answer `unknown` with or without a
+label, and refuse a label their core-derived entries do not carry the same way. Without `label` the entry that would run
+is judged.
+
 The match is exactly ES-DE's: the file name's token from its **last** dot, case preserved, compared **exactly** against
 the declared tokens — which is why catalogues list `.z64` and `.Z64` separately, and why a `.CHD` file on a `.chd`-only
 list is genuinely `not-accepted` (the frontend never scans it). A name without a dot yields `"."`, ES-DE's own sentinel.
@@ -3158,9 +3174,10 @@ The five verdicts never collapse:
   anything launches: recorded world knowledge with its citation in the sources (`atlas/data/launch_formats.json` — a PSN
   `.pkg` is the case that founded it). Never collapsed into `not-accepted`, because "find another file" is the wrong
   advice for a digital-only title whose only form is the package.
-- **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, or (EmuDeck) the layer
-  that might declare it is sealed inside the AppImage. A statement about the look, never about the file — the riding
-  caveats say which, and a client that treated it as either 'no' would be told something nobody checked.
+- **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, (EmuDeck) the layer
+  that might declare it is sealed inside the AppImage, or a `label` names no entry of the system. A statement about the
+  look, never about the file — the riding caveats say which, and a client that treated it as either 'no' would be told
+  something nobody checked.
 
 **The per-entry judgment** splits along the boundary rule. A **libretro** entry's formats are read live off the
 installed core, and they are _claims_, not gates: RetroArch checks nothing on a direct load and hands the file over, so

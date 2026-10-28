@@ -22,6 +22,7 @@ from atlas.contract import (
     installation_answers_contract,
     savefile_answer_contract,
     installation_contract,
+    launchable_contract,
     savefile_placement_contract,
     rom_locations_contract,
     rom_placement_contract,
@@ -148,6 +149,30 @@ class TestItDelegates:
             "emulator-catalogue-unreadable",
             "emulator-catalogue-unavailable",
         ]
+
+    def test_launchable_with_a_label(self):
+        # The label reaches every handle: the native install derives a gba
+        # entry from its core, and none labelled so, so its answer refuses
+        # the label — which an aggregate that dropped it would not.
+        info_dir = f"{HOME}/.config/retroarch/info"
+        cores_dir = f"{HOME}/.config/retroarch/cores"
+        machine = FixtureMachine(
+            {
+                **COEXISTENCE_FILES,
+                NATIVE_CFG: (
+                    f'savefile_directory = "~/ra-saves"\n{FLAT_LAYOUT}'
+                    f'libretro_directory = "{cores_dir}"\nlibretro_info_path = "{info_dir}"\n'
+                ),
+                f"{info_dir}/mgba_libretro.info": 'corename = "mGBA"\nsystemname = "Game Boy Advance"\n',
+            },
+            cores={f"{cores_dir}/mgba_libretro.so": {"library_name": "mGBA"}},
+            dirs=COEXISTENCE_DIRS,
+        )
+        handles = _handles(machine)
+        asked = [a.answer for a in atlas.EveryInstallation(handles).launchable("gba", ROM, label="VBA-M")]
+        direct = [handle.launchable("gba", ROM, label="VBA-M") for handle in handles]
+        assert [launchable_contract(a) for a in asked] == [launchable_contract(a) for a in direct]
+        assert atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN in [c.code for c in asked[-1].caveats]
 
     def test_systems(self):
         asked, direct = self._pairs(lambda h: h.systems())

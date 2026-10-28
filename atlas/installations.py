@@ -20699,7 +20699,7 @@ def _launch_command_with_caveats(
 def _chosen_entry(
     entries: tuple[EmulatorEntry, ...], label: str | None, system: str
 ) -> EmulatorEntry | Caveat | None:
-    """The entry a launch command is asked of: the one *label* names, or the frontend's first.
+    """The entry a launch command or a launchability verdict is about: the one *label* names, or the frontend's first.
 
     ``None`` where there are no entries at all — the catalogue answer's own
     caveats say why — and ``launch-command-label-unknown`` where there are and
@@ -20945,6 +20945,7 @@ def _launchability_verdict(
     entries: tuple[EmulatorEntry, ...],
     complete: bool,
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
+    label: str | None,
 ) -> tuple[str, EmulatorEntry | None, tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
     """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
 
@@ -20959,6 +20960,18 @@ def _launchability_verdict(
     the union over every entry, and the machine then does nothing at all. The
     other declared entries are judged only then, because ``alternatives`` is
     that verdict's remedy and nobody else's read.
+
+    The entry judged is the one *label* names, or without one the entry that
+    would run — chosen by :func:`_chosen_entry`, the choice the launch command
+    makes, so the two questions can never judge different entries for one
+    label. On a system ES-DE loads, a label none of *entries* carries refuses
+    the verdict with that helper's ``launch-command-label-unknown``, whatever
+    the extension: the caller named an entry this system does not have, and a
+    verdict about another entry, or about none, would answer a question nobody
+    asked. A system no layer declares, or one ES-DE skips, is answered below
+    before any label is looked up; where a sealed read leaves an undeclared
+    system to the entries derived from the installed cores, the handle looks
+    the label up among those itself (:meth:`EmuDeck._derived_label_refusal`).
 
     The unknowns split three ways and only one earns ``system-unknown``: a
     catalogue read **completely** that declares no such system. An incomplete
@@ -21003,6 +21016,9 @@ def _launchability_verdict(
                 ),
             ),
         )
+    entry = _chosen_entry(entries, label, system)
+    if isinstance(entry, Caveat):
+        return VERDICT_UNKNOWN, None, (), (), (entry,)
     if extension in declaration.extensions:
         match_source = (
             f"accept-list match: the file yields {extension!r} (its name from the last dot, "
@@ -21010,7 +21026,6 @@ def _launchability_verdict(
             "<extension> list declares that exact token (the scan compares exactly, "
             "SystemData.cpp:669)"
         )
-        entry = entries[0] if entries else None
         if entry is None:
             return VERDICT_LAUNCHABLE, None, (), (match_source,), ()
         stance, entry_sources, entry_caveats = _entry_reading(
@@ -21019,8 +21034,9 @@ def _launchability_verdict(
         if stance == _ENTRY_REFUSES:
             alternatives = tuple(
                 other.label
-                for other in entries[1:]
-                if _entry_reading(other, extension=extension, core_info_for=core_info_for)[0]
+                for other in entries
+                if other is not entry
+                and _entry_reading(other, extension=extension, core_info_for=core_info_for)[0]
                 == _ENTRY_ACCEPTS
             )
             return (
@@ -21669,7 +21685,7 @@ class _CatalogueQueries:
         )
 
     @one_question
-    def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer:
+    def launchable(self, system: str, content_path: str, *, label: str | None = None) -> LaunchabilityAnswer:
         """Whether *content_path* launches as *system* content here — and why not, when not.
 
         The positive half is a read: the frontend's own accept-list for the
@@ -21694,8 +21710,21 @@ class _CatalogueQueries:
         command per *emulator*, so a file the list accepts may still be one
         the entry that runs cannot read (issue #66 tracks resolving that per
         entry).
+
+        *label* names the entry to judge instead of the one that would run —
+        a caller that starts the game through an entry of its own choice asks
+        about that entry. It is chosen the way :meth:`launch_command` chooses
+        it, and the verdict, ``entry`` and ``alternatives`` are then about the
+        named entry: ``alternatives`` names the other entries established to
+        take the file. On a system ES-DE loads, a label the system's entries
+        do not carry answers ``unknown`` with ``launch-command-label-unknown``,
+        the refusal :meth:`launch_command` gives it. Where the entries are
+        derived from the installed cores — a bare RetroArch's, and those of a
+        system only the cores declare while EmuDeck's bundled layer is
+        sealed — a label none of them carries is refused the same way, beside
+        the unknown verdict that answer always states.
         """
-        answer, version = self._launchable_answer(system, content_path)
+        answer, version = self._launchable_answer(system, content_path, label)
         return _launchable_with_caveats(
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
@@ -21730,18 +21759,20 @@ class _CatalogueQueries:
         return CatalogueAnswer(caveats=(*self.health().issues, self._catalogue_absence())), None
 
     def _launchable_answer(
-        self, system: str, content_path: str
+        self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
         # The accept-list lives in the catalogue this arrangement does not
         # have, so the verdict is unknown for the same reason the entry list
         # is empty — the refusal is the catalogue question's own, worn by
-        # this answer's shape.
+        # this answer's shape. A label is looked up the way the launch command
+        # looks it up, so one no entry carries is refused here as there.
         answer, version = self._catalogue_answer(system, content_path=content_path)
+        chosen = _chosen_entry(answer.entries, label, system)
         return (
             LaunchabilityAnswer(
                 verdict=VERDICT_UNKNOWN,
                 extension=esde_extension(content_path),
-                caveats=answer.caveats,
+                caveats=(*answer.caveats, *((chosen,) if isinstance(chosen, Caveat) else ())),
             ),
             version,
         )
@@ -22861,7 +22892,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         )
 
     def _launchable_answer(
-        self, system: str, content_path: str
+        self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
         """RetroDECK's launchability answer — the same snapshot its catalogue answer takes.
 
@@ -22913,6 +22944,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             entries=entries,
             complete=True,
             core_info_for=core_reader,
+            label=label,
         )
         return (
             LaunchabilityAnswer(
@@ -25199,7 +25231,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
 
     def _launchable_answer(
-        self, system: str, content_path: str
+        self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
         """EmuDeck's launchability answer — the same snapshot its catalogue answer takes.
 
@@ -25209,7 +25241,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         alone rather than claiming the frontend knows no such system. An
         overlay-declared system answers fully — per ES-DE's merge semantics
         the overlay replaces a same-name bundled system entirely, so its
-        accept-list is exactly what the frontend uses.
+        accept-list is exactly what the frontend uses. A label on a system
+        only the installed cores declare is looked up among the entries
+        derived from them (:meth:`_derived_label_refusal`), where the launch
+        command looks it up.
         """
         extension = esde_extension(content_path)
         version = self._observed_backend_head()
@@ -25241,6 +25276,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             entries=entries,
             complete=snapshot.complete,
             core_info_for=core_reader,
+            label=label,
         )
         return (
             LaunchabilityAnswer(
@@ -25254,10 +25290,31 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                     *core_reader.sources,
                     *sources,
                 ),
-                caveats=(*snapshot.findings, *snapshot.tail, *own, *anchor.caveats),
+                caveats=(
+                    *snapshot.findings,
+                    *snapshot.tail,
+                    *own,
+                    *self._derived_label_refusal(snapshot, system, label),
+                    *anchor.caveats,
+                ),
             ),
             version,
         )
+
+    def _derived_label_refusal(self, snapshot: _EsdeSnapshot, system: str, label: str | None) -> tuple[Caveat, ...]:
+        """The refusal of a label no core-derived entry carries, on a system only the installed cores declare.
+
+        The sealed snapshot's verdict on such a system is unknown with no entry
+        judged, and the launch command answers it from the derived entries
+        (:meth:`_derived_launch_command`) — so a label is looked up among them
+        here too, and one none of them carries is refused as there. Anywhere
+        else the verdict helper has already looked the label up.
+        """
+        if label is None or system in snapshot.by_system or snapshot.complete:
+            return ()
+        entries, _ = _derived_catalogue_entries(self, self._derived_context(snapshot), system)
+        chosen = _chosen_entry(entries, label, system)
+        return (chosen,) if isinstance(chosen, Caveat) else ()
 
     def _launch_command_answer(
         self, system: str, content_path: str, label: str | None
@@ -26985,18 +27042,27 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         )
 
     def _launchable_answer(
-        self, system: str, content_path: str
+        self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
         # The derived entries do not change this refusal: the accept-list is
         # catalogue knowledge, and no core's self-declaration states which
         # files a frontend would scan — the verdict stays a statement about
-        # the look.
-        cfg_status = self._machine.read_text(self._cfg_path()).status
+        # the look. A label is the one reason to enumerate them: the launch
+        # command looks a label up among the derived entries, so one none of
+        # them carries is refused here as there.
+        if label is None:
+            health = self._health_from(self._machine.read_text(self._cfg_path()).status)
+            refusal: tuple[Caveat, ...] = ()
+        else:
+            context, health = self._derived_context()
+            entries = _derived_catalogue_entries(self, context, system)[0] if context.cores_read else ()
+            chosen = _chosen_entry(entries, label, system)
+            refusal = (chosen,) if isinstance(chosen, Caveat) else ()
         return (
             LaunchabilityAnswer(
                 verdict=VERDICT_UNKNOWN,
                 extension=esde_extension(content_path),
-                caveats=(*self._health_from(cfg_status).issues, self._catalogue_absence()),
+                caveats=(*health.issues, self._catalogue_absence(), *refusal),
             ),
             None,
         )
@@ -27221,7 +27287,9 @@ class Installation(Protocol):
 
     def emulators_for(self, system: str, *, content_path: str | None = None) -> CatalogueAnswer: ...
 
-    def launchable(self, system: str, content_path: str) -> LaunchabilityAnswer: ...
+    def launchable(
+        self, system: str, content_path: str, *, label: str | None = None
+    ) -> LaunchabilityAnswer: ...
 
     def launch_command(
         self, system: str, content_path: str, *, label: str | None = None
