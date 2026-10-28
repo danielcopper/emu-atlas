@@ -114,7 +114,7 @@ def _question_argv(question: str, query) -> list[str]:
     if question == "rom_locations":
         return ["rom-locations"]
     if question == "launchable":
-        return ["launchable", query["system"], query["content_path"]]
+        return ["launchable", query["system"], query["content_path"]] + _flag("--label", query.get("label"))
     if question == "launch_command":
         return ["launch-command", "--system", query["system"], "--content", query["content_path"]] + _flag(
             "--label", query.get("label")

@@ -177,7 +177,9 @@ def _platform_ids(installs, query, name):
 
 def _launchable(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return launchable_contract(install.launchable(query["system"], query["content_path"]))
+    return launchable_contract(
+        install.launchable(query["system"], query["content_path"], label=query.get("label"))
+    )
 
 
 def _launch_command(installs, query, name):

@@ -110,7 +110,9 @@ QUERY_FAMILY_FIELDS: dict[str, frozenset[str]] = {
     "catalogue_query": frozenset({"installation", "system", "content_path"}),
     # The systems question takes no arguments — only which handle answers it.
     "systems_query": frozenset({"installation"}),
-    "launchable_query": frozenset({"installation", "system", "content_path"}),
+    # A label names the entry to judge instead of the one that would run
+    # (issue #715), as it names the launch command's entry.
+    "launchable_query": frozenset({"installation", "system", "content_path", "label"}),
     # The launch command question (issue #573) is asked of one file as one
     # system's content, optionally of the entry a label names; the file is the
     # frontend's spelling and absolute, as the question requires.
@@ -976,7 +978,7 @@ def _validate_launchable_query(name: str, query: Any) -> None:
     if not {"system", "content_path"} <= keys or not keys <= QUERY_FAMILY_FIELDS["launchable_query"]:
         fail(
             f"{name}: input.launchable_query must carry 'system' and 'content_path' plus "
-            "optional 'installation'"
+            "optional 'label' and 'installation'"
         )
     for key in keys:
         if not isinstance(query[key], str) or not query[key]:
