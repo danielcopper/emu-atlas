@@ -41,6 +41,7 @@ INPUT_FIELDS_OPTIONAL = {
     "appimages",
     "appimage_stamps",
     "ps2_bios_headers",
+    "ps3_files",
     "disc_identities",
     "archives",
     "archive_texts",
@@ -720,6 +721,24 @@ KNOWN_CAVEAT_CODES = {
     "entry-format-unclaimed",
     "archive-contents-unread",
     "entry-format-unestablished",
+    "boot-path-missing",
+    "boot-path-unestablished",
+    "boot-nothing-found",
+    "boot-file-unbootable",
+    "boot-disc-root-missing",
+    "boot-registry-unread",
+    "boot-category-unestablished",
+    "boot-inside-internal-drive",
+    "boot-drive-unresolved",
+    "boot-savestate-unread",
+    "boot-iso-regions-invalid",
+    "boot-iso-encryption-unread",
+    "boot-iso-key-untested",
+    "boot-key-folder-unresolved",
+    "boot-disc-key-missing",
+    "boot-disc-dir-configured",
+    "boot-disc-dir-unresolved",
+    "entry-takes-no-directory",
     "platform-unmapped",
     "platform-unknown",
     "platform-scraping-ignored",
@@ -1305,6 +1324,7 @@ def _validate_input(name: str, inp: Any) -> None:
     _validate_input_appimages(name, inp.get("appimages", {}))
     _validate_input_appimage_stamps(name, inp.get("appimage_stamps", {}), inp.get("appimages", {}))
     _validate_input_ps2_bios_headers(name, inp.get("ps2_bios_headers", {}), inp["files"])
+    _validate_input_ps3_files(name, inp.get("ps3_files", {}), inp["files"])
     _validate_input_archives(name, inp.get("archives", {}), inp["files"])
     _validate_input_disc_identities(name, inp.get("disc_identities", {}), inp["files"], inp.get("archives", {}))
     _validate_input_archive_texts(name, inp.get("archive_texts", {}), inp.get("archives", {}))
@@ -1446,6 +1466,68 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
         fail(f"{name}: ps2 bios header {path!r} serial must be at most {PS2_BIOS_SERIAL_LENGTH} characters")
     if "\x00" in spec["serial"]:
         fail(f"{name}: ps2 bios header {path!r} serial must carry no NUL, which a C string cannot hold")
+
+
+# What RPCS3's boot reads of a file — mirrored from FixtureMachine
+# (atlas/machine.py, atlas/ps3_file.py): the leading bytes, the image header
+# where the file is an ISO, and the category the PARAM.SFO loader keeps, which
+# only a file opening with the PARAM.SFO magic can carry and only one of the
+# loader's own (PSF.cpp:274 at RPCS3 d5213de6).
+PS3_FILE_FIELDS = {"magic", "iso", "category"}
+PS3_ISO_FIELDS = {"regions", "watermark"}
+PS3_ISO_OPTIONAL = {"blocks"}
+PS3_ISO_BLOCKS = {"clear", "encrypted", "none"}
+PS3_ISO_WATERMARKS = {"encrypted", "decrypted"}
+PS3_PSF_MAGIC = "\x00PSF"
+PS3_PSF_CATEGORIES = {
+    "GD", "DG", "HG", "AM", "AP", "AS", "AT", "AV", "BV", "WT", "HM",
+    "CB", "SF", "2P", "2G", "1P", "PP", "MN", "PE", "2D", "SD", "MS",
+}  # fmt: skip
+
+
+def _validate_input_ps3_files(name: str, declared: Any, files: Any) -> None:
+    if not isinstance(declared, dict):
+        fail(f"{name}: input.ps3_files must be an object")
+    for path, spec in declared.items():
+        if not isinstance(path, str) or path not in files:
+            fail(f"{name}: ps3 file {path!r} must name a declared file")
+        file_spec = files[path]
+        if isinstance(file_spec, dict) and file_spec.get("status") == "unreadable":
+            fail(f"{name}: ps3 file {path!r} sits on an unreadable file, whose bytes state nothing")
+        _validate_ps3_file_spec(name, path, spec)
+
+
+def _validate_ps3_file_spec(name: str, path: str, spec: Any) -> None:
+    if not isinstance(spec, dict) or "magic" not in spec or not set(spec) <= PS3_FILE_FIELDS:
+        fail(f"{name}: ps3 file {path!r} must be an object with magic and optionally iso and category")
+    magic, category = spec["magic"], spec.get("category", "")
+    if not isinstance(magic, str) or len(magic) > 4 or any(ord(char) > 0xFF for char in magic):
+        fail(f"{name}: ps3 file {path!r} magic must be at most four one-byte characters (latin-1)")
+    if not isinstance(category, str):
+        fail(f"{name}: ps3 file {path!r} category must be a string")
+    if category and (magic != PS3_PSF_MAGIC or category not in PS3_PSF_CATEGORIES):
+        fail(
+            f"{name}: ps3 file {path!r} states a category only beside the PARAM.SFO magic, and only one "
+            "the loader keeps"
+        )
+    _validate_ps3_iso(name, path, spec.get("iso"))
+
+
+def _validate_ps3_iso(name: str, path: str, iso: Any) -> None:
+    if iso is None:
+        return
+    if not isinstance(iso, dict) or not PS3_ISO_FIELDS <= set(iso) <= PS3_ISO_FIELDS | PS3_ISO_OPTIONAL:
+        fail(
+            f"{name}: ps3 file {path!r} iso must be null or an object with regions and watermark, "
+            "and optionally blocks"
+        )
+    regions = iso["regions"]
+    if not isinstance(regions, int) or isinstance(regions, bool) or not 0 <= regions <= 0xFFFFFFFF:
+        fail(f"{name}: ps3 file {path!r} iso regions must be the u32 the header holds")
+    if iso["watermark"] is not None and iso["watermark"] not in PS3_ISO_WATERMARKS:
+        fail(f"{name}: ps3 file {path!r} iso watermark must be null or one of {sorted(PS3_ISO_WATERMARKS)}")
+    if iso.get("blocks") is not None and iso["blocks"] not in PS3_ISO_BLOCKS:
+        fail(f"{name}: ps3 file {path!r} iso blocks must be null or one of {sorted(PS3_ISO_BLOCKS)}")
 
 
 # The disc identity modeling vocabulary — mirrored from FixtureMachine
@@ -3705,8 +3787,10 @@ def _validate_launchable(name: str, answer: Any) -> None:
     (and may be empty even there — none established is a legal answer).
     ``installers`` is ``needs-installation``'s, a list there (empty where
     nothing here installs the file) and ``null`` on every other verdict.
+    ``boots`` is ``launchable``'s alone, and ``null`` there too wherever the
+    entry's own boot was not read.
     """
-    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "caveats"}
+    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "boots", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
     if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
@@ -3718,6 +3802,7 @@ def _validate_launchable(name: str, answer: Any) -> None:
             isinstance(token, str) and token for token in answer[list_key]
         ):
             fail(f"{name}: expected.launchable.{list_key} must be a list of non-empty strings")
+    _validate_boots(name, answer)
     entry_verdicts = {"launchable", "entry-not-accepted"}
     if (answer["entry"] is not None) != (answer["verdict"] in entry_verdicts):
         fail(f"{name}: expected.launchable.entry travels with {sorted(entry_verdicts)} alone")
@@ -3727,6 +3812,23 @@ def _validate_launchable(name: str, answer: Any) -> None:
         _validate_emulator(name, answer["entry"])
     _validate_installers(name, answer["verdict"], answer["installers"])
     _validate_caveats(name, answer["caveats"])
+
+
+def _validate_boots(name: str, answer: dict[str, Any]) -> None:
+    """What the judged entry boots: ``null``, or a file beside a disc root or ``null`` — on a launchable verdict
+    about an entry alone, the coupling the answer type holds. Checked before the entry's own coupling, so a boot
+    stated without its entry is named as that."""
+    boots = answer["boots"]
+    if boots is None:
+        return
+    if answer["verdict"] != "launchable" or answer["entry"] is None:
+        fail(f"{name}: expected.launchable.boots travels with a 'launchable' verdict about an entry alone")
+    _require_exact(name, boots, {"file", "disc_root"}, "expected.launchable.boots")
+    if not isinstance(boots["file"], str) or not boots["file"].startswith("/"):
+        fail(f"{name}: expected.launchable.boots.file must be an absolute path")
+    root = boots["disc_root"]
+    if root is not None and (not isinstance(root, str) or not root.startswith("/")):
+        fail(f"{name}: expected.launchable.boots.disc_root must be an absolute path or null")
 
 
 def _validate_installers(name: str, verdict: Any, installers: Any) -> None:

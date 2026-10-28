@@ -1254,6 +1254,7 @@
           },
           "alternatives": [],
           "installers": null,
+          "boots": null,
           "caveats": [
             {
               "code": "entry-format-unestablished",

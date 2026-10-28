@@ -347,10 +347,19 @@ def _base_launchable(**overrides) -> Vector:
             {"emulator": "RPCS3", "entry": _installer_entry()},
             {"emulator": "AZAHARPLUS", "entry": None},
         ],
+        "boots": None,
         "caveats": [],
         **overrides,
     }
     return _vector({"launchable": block}, installed=True, launchable_query={"system": SYSTEM, "content_path": ROM})
+
+
+BOOT_FILE = "/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN"
+
+
+def _launchable_boot(**overrides) -> Vector:
+    """A launchable verdict about an entry, the one place a boot may stand."""
+    return _base_launchable(verdict="launchable", entry=_installer_entry(), installers=None, **overrides)
 
 
 def _base_systems(**overrides) -> Vector:
@@ -643,6 +652,36 @@ INPUT_PS2_BIOS_HEADER_CASES = [
          "serial must be one byte per character (latin-1)", id="header-serial-not-latin1"),
     case(_with(_vector(), files={"/a": A_BLOB}, ps2_bios_headers={"/a": {"romver": A_ROMVER, "serial": "SCPH\x00"}}),
          "serial must carry no NUL", id="header-serial-nul"),
+]
+
+A_PS3_FILE = "/roms/ps3/Game.ps3/PARAM.SFO"
+A_PS3_FILES = {A_PS3_FILE: A_BLOB}
+
+# What RPCS3's boot reads of a file (#618): the leading bytes, an image header
+# or null, and a category only beside the PARAM.SFO magic.
+INPUT_PS3_FILE_CASES = [
+    case(_with(_vector(), ps3_files=[]), "input.ps3_files must be an object", id="ps3-files-not-object"),
+    case(_with(_vector(), ps3_files={A_PS3_FILE: {"magic": ".SFB"}}), "must name a declared file",
+         id="ps3-file-on-undeclared-file"),
+    case(_with(_vector(), files={A_PS3_FILE: {"status": "unreadable"}}, ps3_files={A_PS3_FILE: {"magic": ".SFB"}}),
+         "sits on an unreadable file", id="ps3-file-on-unreadable-file"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"category": "HG"}}),
+         "must be an object with magic", id="ps3-file-without-magic"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "SCE\x00\x00"}}),
+         "magic must be at most four one-byte characters", id="ps3-file-magic-too-long"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": ".SFB", "category": "HG"}}),
+         "states a category only beside the PARAM.SFO magic", id="ps3-file-category-beside-another-magic"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "\x00PSF", "category": "XX"}}),
+         "states a category only beside the PARAM.SFO magic", id="ps3-file-category-the-loader-drops"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "", "iso": {"regions": 1}}}),
+         "iso must be null or an object with regions and watermark", id="ps3-file-iso-shape"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "", "iso": {"regions": True, "watermark": None}}}),
+         "iso regions must be the u32", id="ps3-file-iso-regions"),
+    case(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "", "iso": {"regions": 2, "watermark": "maybe"}}}),
+         "iso watermark must be null or one of", id="ps3-file-iso-watermark"),
+    case(_with(_vector(), files=A_PS3_FILES,
+               ps3_files={A_PS3_FILE: {"magic": "", "iso": {"regions": 2, "watermark": None, "blocks": "maybe"}}}),
+         "iso blocks must be null or one of", id="ps3-file-iso-blocks"),
 ]
 
 A_DISC = "/roms/psx/Game.cue"
@@ -1259,6 +1298,16 @@ LAUNCHABLE_CASES = [
          "an installer's entry must run the emulator it is named for", id="launchable-installer-entry-elsewhere"),
     case(_base_launchable(installers=[{"emulator": "RPCS3", "entry": _installer_entry(label="")}]),
          "emulator label must be a non-empty string", id="launchable-installer-entry-invalid"),
+    case(_base_launchable(boots={"file": BOOT_FILE, "disc_root": None}),
+         "boots travels with a 'launchable' verdict about an entry alone", id="launchable-boots-off-their-verdict"),
+    case(_base_launchable(verdict="launchable", installers=None, boots={"file": BOOT_FILE, "disc_root": None}),
+         "boots travels with a 'launchable' verdict about an entry alone", id="launchable-boots-without-an-entry"),
+    case(_launchable_boot(boots={"file": BOOT_FILE}),
+         "expected.launchable.boots must be exactly the fields", id="launchable-boots-shape"),
+    case(_launchable_boot(boots={"file": "Game.ps3/EBOOT.BIN", "disc_root": None}),
+         "boots.file must be an absolute path", id="launchable-boots-relative-file"),
+    case(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": ""}),
+         "boots.disc_root must be an absolute path or null", id="launchable-boots-empty-root"),
 ]
 
 SYSTEMS_CASES = [
@@ -1885,6 +1934,7 @@ ALL_CASES = [
     *INPUT_FILE_CASES,
     *INPUT_PATH_CASES,
     *INPUT_PS2_BIOS_HEADER_CASES,
+    *INPUT_PS3_FILE_CASES,
     *INPUT_DISC_IDENTITY_CASES,
     *INPUT_ARCHIVE_TEXT_CASES,
     *INPUT_APPIMAGE_STAMP_CASES,
@@ -2200,6 +2250,15 @@ ACCEPTED_CASES = [
                  id="an-unchecked-option-without-identity-on-a-content-recognising-route"),
     pytest.param(_base_launchable(installers=[]), id="a-needs-installation-verdict-nothing-here-installs"),
     pytest.param(_base_launchable(verdict="unknown", installers=None), id="no-installers-off-their-verdict"),
+    pytest.param(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": "/roms/ps3/Game.ps3"}),
+                 id="a-launchable-entry-boots-a-file-from-its-disc"),
+    pytest.param(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": None}),
+                 id="a-launchable-entry-boots-a-file-without-a-disc"),
+    pytest.param(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "\x00PSF", "category": "HG"}}),
+                 id="a-param-sfo-states-its-category"),
+    pytest.param(_with(_vector(), files=A_PS3_FILES,
+                       ps3_files={A_PS3_FILE: {"magic": "", "iso": {"regions": 2, "watermark": "decrypted"}}}),
+                 id="an-image-states-its-header"),
 ]
 
 
