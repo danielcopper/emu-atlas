@@ -51,6 +51,7 @@ from .installations import (
     EmulatorEntry,
     Health,
     Installation,
+    Installer,
     LaunchabilityAnswer,
     LaunchCommandAnswer,
     PlatformSystemsAnswer,
@@ -757,8 +758,13 @@ def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
     ``null`` on the rest: an emulator for a file nothing launches would
     answer a different question. ``alternatives`` is ``entry-not-accepted``'s
     remedy alone: the declared entries established to take the file.
-    ``accepted`` stays the declared tokens verbatim, the same non-vocabulary
-    the ROM placement's ``extensions`` field carries.
+    ``installers`` is ``needs-installation``'s remedy, and ``null`` on every
+    other verdict: each emulator that installs the file, with the system's
+    entry that runs it through the same form as ``entry``, or ``null`` where
+    the system declares none — an empty list says that no emulator RetroDECK
+    or EmuDeck sets up installs it. ``accepted`` stays the declared tokens
+    verbatim, the same non-vocabulary the ROM placement's ``extensions``
+    field carries.
     """
     return {
         "verdict": answer.verdict,
@@ -766,7 +772,16 @@ def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
         "accepted": list(answer.accepted),
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
         "alternatives": list(answer.alternatives),
+        "installers": None if answer.installers is None else [_installer_body(i) for i in answer.installers],
         "caveats": _caveats_contract(answer.caveats),
+    }
+
+
+def _installer_body(installer: Installer) -> dict[str, Any]:
+    """One emulator that installs the file, and the system's entry that runs it or ``null``."""
+    return {
+        "emulator": installer.emulator,
+        "entry": emulator_contract(installer.entry) if installer.entry is not None else None,
     }
 
 

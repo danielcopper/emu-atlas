@@ -1242,6 +1242,13 @@ keyed by the atlas system id and the exact extension token ES-DE would derive (c
 with its statement and its citation. The table is consulted only where the extension is already outside the machine's
 own accept-list — what the catalogue declares launchable, is launchable, and this file never overrides a read.
 
+Each entry also names its `installers` (schema 2, issue #717): the emulators that install the format, each by the token
+ES-DE's own commands spell it with (the `X` of `%EMULATOR_X%`), so the verdict can name them as data and join each to
+the system's entry that runs it. The citation in `source` covers every token. An empty list is a statement, not a gap:
+the format has to be installed and nothing RetroDECK or EmuDeck sets up installs it (a PS4 `.pkg`, since shadPS4 removed
+its package installer). The loader refuses an entry without the key, a value that is not a list, a token that is not a
+non-empty string, and a token listed twice.
+
 The `emulators` block is the per-entry half of the same question (issue #66): what a **standalone** launch entry's own
 loader reads, keyed by the `%EMULATOR_…%` token the way every standalone card family is. It exists because the two kinds
 of entry that launch something split along the boundary rule — a libretro entry's claims are read live off the installed
