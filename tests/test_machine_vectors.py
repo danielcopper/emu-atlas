@@ -955,6 +955,8 @@ class TestTheGrammarRefusesContradictions:
     def test_no_command_and_no_reason_is_refused(self):
         vector = self._command_vector()
         vector["expected"]["launch_command"]["command"] = None
+        # The vector's stub launcher is unpinned, and that note would count as the reason, so the caveats go too.
+        vector["expected"]["launch_command"]["caveats"] = []
         with pytest.raises(validate_vectors.VectorError, match="without a command states why"):
             validate_vectors.validate_machines_vector(vector)
 
@@ -968,6 +970,33 @@ class TestTheGrammarRefusesContradictions:
         vector = self._command_vector("launch-command-inject-absent-injects-nothing")
         vector["expected"]["launch_command"]["command"]["injections"][0]["outcome"] = "missing"
         with pytest.raises(validate_vectors.VectorError, match="injection's outcome"):
+            validate_vectors.validate_machines_vector(vector)
+
+    _ENVIRONMENT_VECTOR = "launch-command-a-pinned-launcher-states-what-it-reads-from-retrodecks-start"
+
+    def test_the_distribution_environment_vector_these_tests_break_is_valid(self):
+        validate_vectors.validate_machines_vector(self._command_vector(self._ENVIRONMENT_VECTOR))
+
+    @pytest.mark.parametrize(
+        ("change", "message"),
+        [
+            ({"provided": "yes"}, "provided is true or false"),
+            ({"value": 3}, "value is a string or null"),
+            ({"set_by": ""}, "names the start file that sets it"),
+            ({"name": ""}, "has a non-empty name"),
+            ({"extra": 1}, "each distribution_environment variable"),
+        ],
+    )
+    def test_a_malformed_distribution_variable_is_refused(self, change: dict[str, object], message: str):
+        vector = self._command_vector(self._ENVIRONMENT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["distribution_environment"][0].update(change)
+        with pytest.raises(validate_vectors.VectorError, match=message):
+            validate_vectors.validate_machines_vector(vector)
+
+    def test_a_distribution_environment_that_is_no_list_is_refused(self):
+        vector = self._command_vector(self._ENVIRONMENT_VECTOR)
+        vector["expected"]["launch_command"]["command"]["distribution_environment"] = {}
+        with pytest.raises(validate_vectors.VectorError, match="distribution_environment is a list or null"):
             validate_vectors.validate_machines_vector(vector)
 
     _SCRIPT_VECTOR = "launch-command-an-emudeck-pinned-launcher-script-states-its-steps"

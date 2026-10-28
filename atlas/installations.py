@@ -136,6 +136,7 @@ from .find_rules import (
     CAVEAT_FRONTEND_BUILD_UNPINNED,
     CAVEAT_FRONTEND_BUILD_SEALED,
     CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
+    CAVEAT_LAUNCH_ENVIRONMENT_UNPINNED,
     CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
     Availability,
@@ -158,12 +159,14 @@ from .launch import (
 from .launch_command import (
     TOO_LARGE,
     CommandInputs,
+    DistributionVariable,
     LaunchCommand,
     LauncherScript,
     LauncherStep,
     TooLarge,
     take_apart,
 )
+from .launch_environment import SOURCE_PATHS, environment_rules, line_variable, paths_variable
 from .launcher_scripts import (
     BACKEND_ROOT,
     EMULATION_ROOT,
@@ -21652,7 +21655,11 @@ class _CatalogueQueries:
         command carries the launcher script it runs, with the script's steps,
         or is refused where no reading is pinned for that script and the files
         it rests on (``launcher-script-unpinned``); a bare RetroArch has no
-        frontend catalogue at all.
+        frontend catalogue at all. A command carries what its program reads
+        from the distribution's own start (``distribution_environment``):
+        RetroDECK's through the reading pinned for its component launcher,
+        ``null`` beside ``launch-environment-unpinned`` where none is, and
+        EmuDeck's empty.
         """
         if not os.path.isabs(content_path):
             raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
@@ -21840,6 +21847,49 @@ def _script_unpinned(path: str, helper: str | None = None) -> Caveat:
     )
 
 
+def _environment_unpinned(
+    program: str, blob: str | None, start_file: str | None = None, start_blob: str | None = None
+) -> Caveat:
+    """The note beside a RetroDECK command whose program no reading of RetroDECK's start is pinned for — the program
+    itself, or *start_file*, a start file the reading rests on that is not the one it was made from.
+
+    A hash atlas could not take — a program that is no file it can hash, a
+    start file the sandbox does not show — is left out of the data, as a value
+    nothing was read for is everywhere else.
+    """
+    data = {"path": program}
+    if blob is not None:
+        data["blob"] = blob
+    if start_file is None:
+        return Caveat(
+            CAVEAT_LAUNCH_ENVIRONMENT_UNPINNED,
+            f"the command runs {program}, and atlas states what a program reads from RetroDECK's own start only for a "
+            "component launcher its reading is pinned to — none is pinned for this one, so what it needs beyond the "
+            "command is not stated",
+            data,
+        )
+    data["start_file"] = start_file
+    if start_blob is not None:
+        data["start_blob"] = start_blob
+    return Caveat(
+        CAVEAT_LAUNCH_ENVIRONMENT_UNPINNED,
+        f"the command runs {program}, whose reading of RetroDECK's start is pinned together with the start files that "
+        f"define what it reads, and {start_file} is not the file that reading was made from — what the program needs "
+        "beyond the command is not stated",
+        data,
+    )
+
+
+def _sandbox_directory(view: _SandboxLaunchView) -> Callable[[str], bool]:
+    """Whether the sandbox shows a directory at a path — a miss and what atlas cannot see alike are no."""
+    return lambda path: view.is_directory(path) == PROBE_HIT
+
+
+def _sandbox_path_exists(view: _SandboxLaunchView) -> Callable[[str], bool]:
+    """Whether the sandbox shows a directory or a file at a path — a miss and what atlas cannot see alike are no."""
+    return lambda path: PROBE_HIT in (view.is_directory(path), view.regular_file(path))
+
+
 def _not_set_up(marker_issues: tuple[Caveat, ...]) -> Caveat | None:
     """The ``not-set-up`` finding among one marker read's issues, or ``None``."""
     return next((issue for issue in marker_issues if issue.code == HEALTH_ISSUE_NOT_SET_UP), None)
@@ -21880,6 +21930,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # The one parse this handle keeps between questions: each find-rules
         # file's, under the stat stamp it was read at.
         self._find_rules_files = _FindRulesFiles(machine)
+        self._blob_hashes = _BlobHashes(machine)
 
     def _marker_path(self) -> str:
         return os.path.join(self._home, RETRODECK_JSON_SUFFIX)
@@ -22942,7 +22993,66 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             rom_directory=self._launch_rom_directory(),
         )
         taken = take_apart(chosen.command, inputs, view)
-        return LaunchCommandAnswer(chosen, taken.command, sources, (*caveats, *taken.caveats)), version
+        command, unpinned = self._with_distribution_environment(taken.command, view, config)
+        return LaunchCommandAnswer(chosen, command, sources, (*caveats, *taken.caveats, *unpinned)), version
+
+    def _with_distribution_environment(
+        self, command: LaunchCommand | None, view: _SandboxLaunchView, config: Mapping[str, Any]
+    ) -> tuple[LaunchCommand | None, tuple[Caveat, ...]]:
+        """*command* with what its program reads from RetroDECK's start — or as it is, with the note that this is
+        not stated (:meth:`_distribution_environment`).
+        """
+        if command is None:
+            return None, ()
+        stated = self._distribution_environment(command.program.command or "", view, config)
+        if isinstance(stated, Caveat):
+            return command, (stated,)
+        return cast(LaunchCommand, _dc_replace(command, distribution_environment=stated)), ()
+
+    def _distribution_environment(
+        self, program: str, view: _SandboxLaunchView, config: Mapping[str, Any]
+    ) -> tuple[DistributionVariable, ...] | Caveat:
+        """What *program* reads from RetroDECK's start, read through the launcher pinned for it — the note where none is.
+
+        The program is matched by the git blob hash of the file the sandbox
+        shows at its path; every start file the reading rests on — the one that
+        defines each variable the launcher reads — must hash to its pin, or the
+        first that does not is named. A program that is no file atlas can hash
+        (a bare name, a path the sandbox does not show) is pinned by nothing.
+        The values are read live: a start file's own line, and RetroDECK's
+        configuration for the folders ``conf_read`` exports from it.
+        """
+        rules = environment_rules()
+        blob = self._sandbox_blob(program, view)
+        rule = rules.by_blob.get(blob or "")
+        if rule is None:
+            return _environment_unpinned(program, blob)
+        for start_file, pin in rules.pins(rule).items():
+            found = self._sandbox_blob(start_file, view)
+            if found != pin:
+                return _environment_unpinned(program, blob, start_file, found)
+        texts: dict[str, str | None] = {}
+        stated: list[DistributionVariable] = []
+        for read in rule.reads:
+            variable = rules.variables[read.name]
+            if variable.source == SOURCE_PATHS:
+                stated.append(paths_variable(read.name, variable, config.get("paths"), _sandbox_directory(view)))
+                continue
+            if variable.defined_in not in texts:
+                texts[variable.defined_in] = self._sandbox_text(variable.defined_in, view)
+            text = texts[variable.defined_in]
+            stated.append(line_variable(read.name, variable.defined_in, text, _sandbox_path_exists(view)))
+        return tuple(stated)
+
+    def _sandbox_blob(self, path: str, view: _SandboxLaunchView) -> str | None:
+        """The git blob hash of the file the sandbox shows at *path* — ``None`` where it shows none atlas can hash."""
+        host = view.host_path(path)
+        return None if host is None else self._blob_hashes.hash(host)
+
+    def _sandbox_text(self, path: str, view: _SandboxLaunchView) -> str | None:
+        """The text of the file the sandbox shows at *path* — ``None`` where it shows none atlas can read."""
+        host = view.host_path(path)
+        return None if host is None else self._machine.read_text(host).text
 
     def _deployed_esde_build(self) -> str | None:
         """The ES-DE build the running deploy states, ``None`` where no deploy runs or the file cannot be read."""
@@ -25221,8 +25331,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         )
         taken = take_apart(chosen.command, inputs, view)
         command = taken.command
-        if command is not None and launcher is not None:
-            command = cast(LaunchCommand, _dc_replace(command, launcher_script=launcher))
+        if command is not None:
+            # EmuDeck's builds and launcher scripts need nothing from a start of
+            # EmuDeck's own beyond the command and the user's session.
+            command = cast(LaunchCommand, _dc_replace(command, launcher_script=launcher, distribution_environment=()))
         return LaunchCommandAnswer(chosen, command, sources, (*caveats, *taken.caveats)), version
 
     def _launcher_script_answer(

@@ -163,7 +163,15 @@ KNOWN_LAUNCH_VERDICTS = {
 # A command taken apart, mirrored from atlas.launch_command: the program's four
 # keys whatever its variant, and the closed sets of variants and of what one
 # %INJECT% did.
-LAUNCH_COMMAND_FIELDS = {"program", "arguments", "environment", "working_folder", "injections", "launcher_script"}
+LAUNCH_COMMAND_FIELDS = {
+    "program",
+    "arguments",
+    "environment",
+    "working_folder",
+    "injections",
+    "launcher_script",
+    "distribution_environment",
+}
 PROGRAM_FIELDS = {"variant", "app_id", "command", "path"}
 KNOWN_PROGRAM_VARIANTS = {"flatpak", "appimage", "native"}
 WORKING_FOLDER_FIELDS = {"frontend_path", "host_path", "created_if_missing"}
@@ -172,6 +180,9 @@ KNOWN_INJECTION_OUTCOMES = {"injected", "absent", "empty", "oversized"}
 # atlas.launch_command: its keys, the closed set of builds it starts and the
 # closed set of steps, in the order a script runs them.
 LAUNCHER_SCRIPT_FIELDS = {"path", "variant", "steps", "pinned_at"}
+# One variable a program reads from its distribution's start, mirrored from
+# atlas.launch_command.DistributionVariable.
+DISTRIBUTION_VARIABLE_FIELDS = {"name", "value", "set_by", "provided"}
 KNOWN_EMUDECK_VARIANTS = {"appimage", "binary", "flatpak", "proton", "unestablished"}
 LAUNCHER_STEP_ORDER = (
     "backend-update",
@@ -561,6 +572,7 @@ KNOWN_CAVEAT_CODES = {
     "frontend-build-unpinned",
     "frontend-build-sealed",
     "launcher-script-unpinned",
+    "launch-environment-unpinned",
     "launch-command-placeholder-unknown",
     "launch-command-argument-broken",
     "launch-command-second-shell-unsafe",
@@ -3753,6 +3765,24 @@ def _validate_command_body(name: str, command: Any) -> None:
             fail(f"{name}: an injection's outcome must be one of {sorted(KNOWN_INJECTION_OUTCOMES)}")
     if command["launcher_script"] is not None:
         _validate_launcher_script(name, command["launcher_script"])
+    if command["distribution_environment"] is not None:
+        _validate_distribution_environment(name, command["distribution_environment"])
+
+
+def _validate_distribution_environment(name: str, variables: Any) -> None:
+    """What the program reads from its distribution's start: named variables, each set by a file, provided or not."""
+    if not isinstance(variables, list):
+        fail(f"{name}: distribution_environment is a list or null")
+    for variable in variables:
+        _require_exact(name, variable, DISTRIBUTION_VARIABLE_FIELDS, "each distribution_environment variable")
+        if not (isinstance(variable["name"], str) and variable["name"]):
+            fail(f"{name}: a distribution_environment variable has a non-empty name")
+        if variable["value"] is not None and not isinstance(variable["value"], str):
+            fail(f"{name}: a distribution_environment variable's value is a string or null")
+        if not (isinstance(variable["set_by"], str) and variable["set_by"]):
+            fail(f"{name}: a distribution_environment variable names the start file that sets it")
+        if not isinstance(variable["provided"], bool):
+            fail(f"{name}: a distribution_environment variable's provided is true or false")
 
 
 def _validate_launcher_script(name: str, script: Any) -> None:

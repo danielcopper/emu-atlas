@@ -780,6 +780,8 @@ def launch_command_contract(answer: LaunchCommandAnswer) -> dict[str, Any]:
     the order the command sets the variables, because the order is the
     command's. ``working_folder`` is ``null`` where the command names none, and
     ``launcher_script`` where the command runs no EmuDeck launcher script.
+    ``distribution_environment`` is a list in the order the program first reads
+    the variables, and ``null`` where what it reads is not stated.
     """
     return {
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
@@ -810,6 +812,12 @@ def _launch_command_body(command: LaunchCommand) -> dict[str, Any]:
         },
         "injections": [{"file": injection.file, "outcome": injection.outcome} for injection in command.injections],
         "launcher_script": None if command.launcher_script is None else _launcher_script_body(command.launcher_script),
+        "distribution_environment": None
+        if command.distribution_environment is None
+        else [
+            {"name": variable.name, "value": variable.value, "set_by": variable.set_by, "provided": variable.provided}
+            for variable in command.distribution_environment
+        ],
     }
 
 

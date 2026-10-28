@@ -2941,11 +2941,13 @@ program its first word names — in the frontend's own spelling:
 
 A path is valid only where `app_id` says: where `replacement_command` is `null`, a RetroDECK launcher starts with
 `flatpak run --command=<path> <app_id>`, never from the host; where it is set, that command is what ES-DE runs and
-`path` only selected it. The environment the launcher expects from its distribution is not part of this answer (#574).
-`~` in a rule is ES-DE's home, which RetroDECK sets with `--home "${XDG_CONFIG_HOME}"` — the app's config directory, not
-the user's — so an AppImage in the user's own `~/Applications` is not one RetroDECK's frontend finds. For a libretro
-entry the launcher is RetroArch, the runner, and **`core_path`** names the core file `launchGame`'s core lookup finds in
-the `corepath` directories, in the same spelling (`/var/config/retroarch/cores/<core>.so` for RetroDECK).
+`path` only selected it. What the launcher reads from RetroDECK's own start — a variable such as `rd_shared_libs`, which
+`flatpak run --command` does not set — is part of the launch command answer (`distribution_environment`,
+[below](#what-would-the-frontend-run--launch_command)), not of this one. `~` in a rule is ES-DE's home, which RetroDECK
+sets with `--home "${XDG_CONFIG_HOME}"` — the app's config directory, not the user's — so an AppImage in the user's own
+`~/Applications` is not one RetroDECK's frontend finds. For a libretro entry the launcher is RetroArch, the runner, and
+**`core_path`** names the core file `launchGame`'s core lookup finds in the `corepath` directories, in the same spelling
+(`/var/config/retroarch/cores/<core>.so` for RetroDECK).
 
 **On EmuDeck** the frontend is upstream ES-DE as an AppImage, running on the host: `app_id` is `null` and `path` is the
 host's own, and `~` is the user's home, because EmuDeck starts ES-DE with no `--home`. Its find rules come in three
@@ -3185,6 +3187,9 @@ answer.command.arguments           # ('-b', '-e', '/roms/gc/Game.iso')
 answer.command.environment         # (EnvironmentVariable(name='QT_QPA_PLATFORM', value='xcb'),)
 answer.command.working_folder      # WorkingFolder(frontend_path=..., host_path=..., created_if_missing=True) or None
 answer.command.injections          # (Injection(file='/roms/xbox/Game.esprefix', outcome='absent'),) …
+answer.command.distribution_environment
+    # (DistributionVariable(name='rd_shared_libs', value='/app/retrodeck/components/shared-libs',
+    #                       set_by='/app/libexec/all_vars.sh:49', provided=True), ...), () or None
 ```
 
 `label` names the entry: labels are unique per system and are what ES-DE stores for a per-game choice. Without it the
@@ -3275,12 +3280,64 @@ backend file it sources and every file it runs or copies on its launch path by t
 it rests on, is not one a reading is pinned for, the command is refused with `launcher-script-unpinned`, whatever the
 frontend build: `path` names the script, and `helper` the first file that differs, is missing or cannot be read.
 
-**Two notes beside an answered command.** `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve
-and leaves in the argument as written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself).
-`launch-command-argument-broken` names a placeholder whose value ES-DE's own substitution does not carry through the
-shell — `getEscapedPath` leaves `|`, backticks, tabs and line breaks alone and turns a `\` into a `/`, and `%ROMRAW%` is
-not escaped at all — and the argument then carries the value the placeholder stands for, which the frontend itself would
-not pass.
+**What the program reads from its distribution's start.** Started from the frontend, a program inherits whatever its
+distribution's own start exported before the frontend ran. A caller that starts the program itself starts it outside
+that start, so `distribution_environment` lists what the program reads from it, in the order it first reads it — a
+variable the caller passes for the program to find (`flatpak run --env=NAME=value --command=…`):
+
+```python
+for variable in answer.command.distribution_environment or ():
+    variable.name      # 'rd_shared_libs'
+    variable.value     # '/app/retrodeck/components/shared-libs', or None where the start computes it
+    variable.set_by    # '/app/libexec/all_vars.sh:49' — the start file and line, in the sandbox's spelling
+    variable.provided  # whether this installation provides it
+```
+
+On RetroDECK the program is a component launcher (`/app/retrodeck/components/<component>/component_launcher.sh`), and
+the start is `bin/retrodeck`, which sources `global.sh`: `all_vars.sh` under `allexport`, `conf_read`, which exports
+every key of `retrodeck.json`'s `paths`, and every component's `component_functions.sh`, under `allexport` too. The
+launchers read `rd_shared_libs`, the folder of libraries RetroDECK ships beside its components, and
+`DEFAULT_LD_LIBRARY_PATH`, and compose `LD_LIBRARY_PATH` out of them themselves — most overwrite a caller's own
+`LD_LIBRARY_PATH`, so passing `rd_shared_libs` is what takes effect; started without it, Dolphin, PPSSPP, Cemu, xemu,
+PrimeHack, OpenBOR and Solarus lack libraries they load, and melonDS loads the runtime's Qt instead of the one RetroDECK
+ships. Some read a folder from RetroDECK's settings: PICO-8 `bios_path` and `screenshots_path`, Ruffle `saves_path`,
+PortMaster `roms_path`. XRoar's launcher also reads `xroar_config`, which its own `component_functions.sh` sets, in a
+line it logs. A variable the start writes as a literal carries it as `value`; one it computes
+(`DEFAULT_LD_LIBRARY_PATH`, which `all_vars.sh` sets from the sandbox's own `LD_LIBRARY_PATH`) carries `null`, because
+atlas does not derive what the sandbox's library path would be. A folder from the settings carries the setting's value,
+and `null` where `retrodeck.json` holds no string under the key. `provided` is `true` where the start file defines the
+variable and a path it names is there as the sandbox reaches it: a value that names no path is provided by its line
+alone, a folder from the settings only where it is set and there. Whether the libraries under `rd_shared_libs` then load
+is not judged in the answer; a development tripwire holds that against the deployed release.
+
+What a launcher reads is read off its text at one release and pinned (`atlas/data/retrodeck_launchers.json`): the
+launcher by the git blob hash of its deployed copy, and the start file that defines each variable it reads by its own —
+`all_vars.sh` for `rd_shared_libs` and `DEFAULT_LD_LIBRARY_PATH`, `other_functions.sh` for a folder, the component's own
+`component_functions.sh` for `xroar_config`. Values are always read live. Where the program is no launcher a reading is
+pinned for — a launcher of another release, an external component under `/var/data`, `bash` or any other program — or a
+start file it rests on is not the one the reading was made from, the command is still answered,
+`distribution_environment` is `null`, and the note `launch-environment-unpinned` says so: `path` names the program and
+`blob` its hash, and `start_file` and `start_blob` the start file that differs and its hash. A hash atlas could not take
+— a program named by a bare name, a file the sandbox does not show — is absent from the data.
+
+On EmuDeck the list is empty: its Flatpak exports, its AppImages and its launcher scripts need nothing beyond the
+command and a normal user session. A bare RetroArch has no frontend command, so no list.
+
+Never stated: a variable a launcher reads that no start provides (`ffmpeg_path`, which five RetroDECK launchers read and
+nothing defines; PortMaster's `component_path`, which it never sets), a function (`log`, which the start exports and a
+launcher without it reports as missing and goes on past; Ruffle's `check_desktop_mode`, which the start does not
+export), and the session's own variables — `HOME`, `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`,
+`DBUS_SESSION_BUS_ADDRESS` and the like — which any start inside a user's session carries. What a program the launcher
+runs reads is not the launcher's own read and is not stated either: GZDoom's launcher runs `bin/gzdoom.sh`, which runs
+RetroDECK's start (`global.sh`) itself where `GLOBAL_SOURCED` is not set, and no variable a caller could pass avoids
+that usefully.
+
+**Three notes beside an answered command.** `launch-environment-unpinned` is the one above.
+`launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve and leaves in the argument as written
+(RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself). `launch-command-argument-broken` names a placeholder whose
+value ES-DE's own substitution does not carry through the shell — `getEscapedPath` leaves `|`, backticks, tabs and line
+breaks alone and turns a `\` into a `/`, and `%ROMRAW%` is not escaped at all — and the argument then carries the value
+the placeholder stands for, which the frontend itself would not pass.
 
 **A second shell.** An escaped path inside quotes keeps ES-DE's backslashes, because they are there for the shell the
 argument is handed to: `bash -c "%ROM%"` passes `My\ Game.sh`, and the second shell reads it as `My Game.sh`. That
