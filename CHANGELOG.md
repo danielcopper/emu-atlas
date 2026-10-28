@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.31.0](https://github.com/danielcopper/emu-atlas/compare/v0.30.0...v0.31.0) (2026-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **launch:** every serialized launchable answer carries a new key, installers: null on every verdict but needs-installation, and there a list of {emulator, entry}, entry in the catalogue entry's form or null. The PS3 .edat, the PS Vita .vpk, .zip, .pkg and .rif, the 3DS .cia and .zcia and the PS4 .pkg, outside their systems' accept-lists, now answer needs-installation where they answered not-accepted; a 3DS .cia or .zcia a catalogue does accept answers entry-not-accepted on Azahar where it answered launchable. A vendored launch_formats.json has to be schema 2. In Python, InstallFirstFormat gains a required installers field, and constructing a LaunchabilityAnswer with verdict needs-installation and no installers, or with installers on any other verdict, now raises ValueError. The 18 existing launchable vectors gain the key: RPCS3 with its entry on a-psn-package-needs-installation-first and a-launchability-judgment-that-reads-no-cfg-carries-no-cfg-finding, null on the other 16. A port must emit it to match them.
+
+### Features
+
+* **launch:** judge the entry a caller names by label in launchable ([#722](https://github.com/danielcopper/emu-atlas/issues/722)) ([15714d0](https://github.com/danielcopper/emu-atlas/commit/15714d00a45820e56511c07cb4da6018f58ce69f))
+* **launch:** name the emulators that install a needs-installation file ([#725](https://github.com/danielcopper/emu-atlas/issues/725)) ([574ca75](https://github.com/danielcopper/emu-atlas/commit/574ca75ed56c4dd82fe25787f5807a54b8cb279f))
+
 ## [0.30.0](https://github.com/danielcopper/emu-atlas/compare/v0.29.0...v0.30.0) (2026-10-28)
 
 
