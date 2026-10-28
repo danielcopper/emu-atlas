@@ -1297,6 +1297,32 @@ variable it is spelled with — `$emudeckBackend/` (the checkout under `~/.confi
 deployed backend. EmuDeck's housekeeping inside its own trees — its backend checkout, `~/.config/EmuDeck`, logs in its
 tools folder — is not stated as a step.
 
+## `retrodeck_launchers.json` — what a RetroDECK component launcher reads from RetroDECK's start
+
+Read by `atlas.launch_environment`, behind the `distribution_environment` a RetroDECK launch command carries (issue
+#574). ES-DE inside RetroDECK runs an emulator through `/app/retrodeck/components/<component>/component_launcher.sh`,
+and the launcher reads variables RetroDECK's own start exported before ES-DE ran (`retrodeck.start` cites the chain:
+`bin/retrodeck` sources `global.sh`, which sources `all_vars.sh` under `allexport` and runs `conf_read`, which exports
+every key of `retrodeck.json`'s `paths` and `options`, and sources every component's `component_functions.sh` under
+`allexport`; ES-DE's start runs in a child bash that inherits all of it). Which of those variables each launcher reads
+is read off its text at one release (`retrodeck.version`, provenance only) and packaged per launcher (`launchers`): the
+launcher's path in the sandbox, the git blob hash of its deployed copy (`blob`, which is also how a launcher is
+recognised, whatever its path), and its `reads` — each a variable with the lines that read it, in the order the launcher
+first reads them, and an empty list for a launcher that reads none.
+
+`variables` defines each variable once: the start file that defines it (`defined_in`), pinned by its own blob hash in
+`start_files`, and how its value is read live — `line`, off its assignment in that start file (the last one at the start
+of a line; a value written as a literal is the value, one the line computes is `null`), or `paths`, off the key of the
+same name in `retrodeck.json`'s `paths`, which `conf_read` sets at `line`. No value is packaged. A launcher's reading
+holds together with the start file of every variable it reads — `all_vars.sh` for `rd_shared_libs` and
+`DEFAULT_LD_LIBRARY_PATH`, `other_functions.sh` only for a launcher that reads a folder, XRoar's
+`component_functions.sh` for `xroar_config` — so an answer hashes those and states `launch-environment-unpinned` instead
+of the list where one differs; `global.sh` and ES-DE's start are cited, not pinned. Left out of every list: a variable
+no start provides (`ffmpeg_path`, which five launchers read and nothing defines), the `log` function the start exports,
+and the session's own variables. `tests/test_launch_environment_tripwire.py` holds the pins, the reads and the
+definitions against the deployed release, and walks the libraries each launcher that reads `rd_shared_libs` loads over
+the path it composes — file presence only, so [D].
+
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 
 One record per installation kind, saying whether a live installation of that arrangement has ever confirmed atlas's
