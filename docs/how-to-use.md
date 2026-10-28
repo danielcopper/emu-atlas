@@ -3131,6 +3131,7 @@ answer.extension     # '.bin' — the token ES-DE derives (name from the last do
 answer.accepted      # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
 answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted', with its launch answer
 answer.alternatives  # entry labels established to take the file — on 'entry-not-accepted' alone
+answer.installers    # the emulators that install the file — on 'needs-installation' alone, None on every other
 ```
 
 `entry` carries the catalogue entry's [launch answer](#does-it-start-and-with-what--availability-launcher-core_path)
@@ -3173,11 +3174,37 @@ The five verdicts never collapse:
 - **`needs-installation`** — the format is real content for the platform and an installation step has to run before
   anything launches: recorded world knowledge with its citation in the sources (`atlas/data/launch_formats.json` — a PSN
   `.pkg` is the case that founded it). Never collapsed into `not-accepted`, because "find another file" is the wrong
-  advice for a digital-only title whose only form is the package.
+  advice for a digital-only title whose only form is the package. `installers` names who installs it (see below).
 - **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, (EmuDeck) the layer
   that might declare it is sealed inside the AppImage, or a `label` names no entry of the system. A statement about the
   look, never about the file — the riding caveats say which, and a client that treated it as either 'no' would be told
   something nobody checked.
+
+**Who installs it — `installers`.** A `needs-installation` verdict names the emulators that install the file, so a
+client can say "install it in RPCS3 first" and check that RPCS3 is there without writing the emulator in itself:
+
+```python
+answer = inst.launchable("ps3", "/roms/ps3/Game.pkg")
+for installer in answer.installers:
+    installer.emulator   # 'RPCS3' — ES-DE's own token, the X of %EMULATOR_X%, as a standalone entry's emulator spells it
+    installer.entry      # the system's declared entry that runs it, with its availability — or None
+```
+
+The list has three states, and they never collapse:
+
+- **entries** — each installing emulator the record names, in its order. Its `entry` is the system's declared entry
+  whose `emulator` is that token; where several are, the one the frontend's selection hierarchy puts first (per-game
+  override first), the same choice `emulators_for` makes. Its `availability` says whether the frontend finds the
+  emulator. `entry` is `None` where the system declares no entry running it — RetroDECK keeps AzaharPlus's command in a
+  comment, so a `.cia` names Azahar with its entry and AzaharPlus with none.
+- **`()`** — the format still has to be installed, and no emulator RetroDECK or EmuDeck sets up installs it: a PS4
+  `.pkg`, whose installer shadPS4 removed. The verdict still tells the caller it has the right file.
+- **`None`** — every verdict but `needs-installation`, which is the only one whose remedy is an emulator's.
+
+`label` plays no part in it: the remedy is to install the file, whichever entry the caller would start it through. The
+formats and their installers are recorded, each with its citation, in `atlas/data/launch_formats.json`. A `.cia` is
+recorded as an installer and not as Azahar content: booting one only offers to install it, so Azahar's loader card does
+not claim it, and a catalogue that adds `.cia` to its accept-list meets `entry-not-accepted` on Azahar.
 
 **The per-entry judgment** splits along the boundary rule. A **libretro** entry's formats are read live off the
 installed core, and they are _claims_, not gates: RetroArch checks nothing on a direct load and hands the file over, so

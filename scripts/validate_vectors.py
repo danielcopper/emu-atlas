@@ -3703,8 +3703,10 @@ def _validate_launchable(name: str, answer: Any) -> None:
     launchable verdict without the entry that would run has thrown half its
     answer away. ``alternatives`` is ``entry-not-accepted``'s remedy alone
     (and may be empty even there — none established is a legal answer).
+    ``installers`` is ``needs-installation``'s, a list there (empty where
+    nothing here installs the file) and ``null`` on every other verdict.
     """
-    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "caveats"}
+    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
     if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
@@ -3723,7 +3725,36 @@ def _validate_launchable(name: str, answer: Any) -> None:
         fail(f"{name}: expected.launchable.alternatives travels with 'entry-not-accepted' alone")
     if answer["entry"] is not None:
         _validate_emulator(name, answer["entry"])
+    _validate_installers(name, answer["verdict"], answer["installers"])
     _validate_caveats(name, answer["caveats"])
+
+
+def _validate_installers(name: str, verdict: Any, installers: Any) -> None:
+    """The emulators a needs-installation verdict names: a list there, ``null`` everywhere else.
+
+    Each names its emulator once, by a non-empty token, beside the entry that
+    runs it or ``null`` — and an entry stated there runs that very emulator,
+    since the token is what the two are joined on.
+    """
+    if verdict != "needs-installation":
+        if installers is not None:
+            fail(f"{name}: expected.launchable.installers travels with 'needs-installation' alone")
+        return
+    if not isinstance(installers, list):
+        fail(f"{name}: expected.launchable.installers must be a list on 'needs-installation'")
+    seen: set[str] = set()
+    for installer in installers:
+        _require_exact(name, installer, {"emulator", "entry"}, "each installer")
+        emulator = installer["emulator"]
+        if not isinstance(emulator, str) or not emulator or emulator in seen:
+            fail(f"{name}: an installer's emulator must be a non-empty token, named once")
+        seen.add(emulator)
+        entry = installer["entry"]
+        if entry is None:
+            continue
+        _validate_emulator(name, entry)
+        if entry.get("emulator") != emulator:
+            fail(f"{name}: an installer's entry must run the emulator it is named for")
 
 
 def _validate_launch_command(name: str, answer: Any) -> None:

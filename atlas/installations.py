@@ -18670,6 +18670,8 @@ class SystemPlatformsAnswer:
 # nothing here will launch it. "needs-installation" is that same 'no' with its
 # reason from world knowledge: the format is real content for the platform,
 # and an installation step has to run before anything can launch (a PSN .pkg).
+# It is the one verdict that names the emulators that install the file
+# (issue #717), because it is the one whose remedy is an emulator's.
 # "unknown" is a statement about the look, never about the file: the system is
 # not one this catalogue declares, or the catalogue could not be read — a
 # client that treated it as either of the other two would be told something
@@ -18726,6 +18728,26 @@ _ENTRY_UNESTABLISHED = "unestablished"
 
 
 @dataclass(frozen=True, slots=True)
+class Installer:
+    """One emulator that installs a file the ``needs-installation`` verdict was given for (issue #717).
+
+    The emulator is named by the install-first record, which is world
+    knowledge; the entry is read off this machine's catalogue, so a client
+    can say "install it in RPCS3 first" and check that RPCS3 is there in one
+    step.
+    """
+
+    emulator: str
+    """The installing emulator, by the token ES-DE's own commands spell it with (the ``X`` of ``%EMULATOR_X%``) — the
+    spelling a standalone catalogue entry's ``emulator`` carries, so the two join on it.
+    """
+    entry: EmulatorEntry | None = None
+    """The system's declared entry that runs this emulator, with its availability — the one the frontend's own
+    selection hierarchy puts first where several do — and ``None`` where the system declares none.
+    """
+
+
+@dataclass(frozen=True, slots=True)
 class LaunchabilityAnswer:
     """Whether one file launches as one system's content here — and why not, when not.
 
@@ -18739,6 +18761,8 @@ class LaunchabilityAnswer:
     where the entry *is* the finding. ``alternatives`` travels with the
     latter alone: the labels of the declared entries established to take the
     file, which is one of the two remedies that verdict leaves open.
+    ``installers`` travels with ``needs-installation`` alone, whose remedy it
+    is, and is ``None`` on every other verdict.
     """
 
     verdict: str
@@ -18759,11 +18783,25 @@ class LaunchabilityAnswer:
     """The labels of the declared entries established to take this file — one of the two
     remedies the entry-not-accepted verdict leaves open, and empty on every other.
     """
+    installers: tuple[Installer, ...] | None = None
+    """The emulators that install this file, in the order the install-first record names them — on the
+    needs-installation verdict alone, where an empty tuple says that no emulator RetroDECK or EmuDeck sets up
+    installs it, and ``None`` on every other.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
     """Every degradation of this answer, stated structurally so a client branches on the
     code rather than on prose.
     """
+
+    def __post_init__(self) -> None:
+        # None and the empty tuple are two statements: "not this verdict's
+        # question" and "nothing here installs it". Only needs-installation
+        # asks the question, so every other verdict carries None.
+        if (self.installers is not None) != (self.verdict == VERDICT_NEEDS_INSTALLATION):
+            raise ValueError(
+                "LaunchabilityAnswer: installers stand exactly where the verdict is needs-installation"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -20946,10 +20984,12 @@ def _launchability_verdict(
     complete: bool,
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
     label: str | None,
-) -> tuple[str, EmulatorEntry | None, tuple[str, ...], tuple[str, ...], tuple[Caveat, ...]]:
+) -> tuple[
+    str, EmulatorEntry | None, tuple[str, ...], tuple[Installer, ...] | None, tuple[str, ...], tuple[Caveat, ...]
+]:
     """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
 
-    Returns ``(verdict, entry, alternatives, sources, own caveats)``.
+    Returns ``(verdict, entry, alternatives, installers, sources, own caveats)``.
     Module-level for the reason :func:`_entries_from` is: the match is
     ES-DE's, not an arrangement's, and two copies of it are how "launchable
     here" and "launchable there" would silently mean different comparisons.
@@ -20960,6 +21000,11 @@ def _launchability_verdict(
     the union over every entry, and the machine then does nothing at all. The
     other declared entries are judged only then, because ``alternatives`` is
     that verdict's remedy and nobody else's read.
+
+    A ``needs-installation`` verdict names the emulators its record says
+    install the file, each with the system's entry that runs it
+    (:func:`_installers`). *label* plays no part in that: the remedy is to
+    install the file, whichever entry the caller would start it through.
 
     The entry judged is the one *label* names, or without one the entry that
     would run — chosen by :func:`_chosen_entry`, the choice the launch command
@@ -20984,11 +21029,12 @@ def _launchability_verdict(
     """
     if declaration is None:
         if not complete:
-            return VERDICT_UNKNOWN, None, (), (), ()
+            return VERDICT_UNKNOWN, None, (), None, (), ()
         return (
             VERDICT_UNKNOWN,
             None,
             (),
+            None,
             (),
             (
                 Caveat(
@@ -21005,6 +21051,7 @@ def _launchability_verdict(
             VERDICT_UNKNOWN,
             None,
             (),
+            None,
             (),
             (
                 Caveat(
@@ -21018,7 +21065,7 @@ def _launchability_verdict(
         )
     entry = _chosen_entry(entries, label, system)
     if isinstance(entry, Caveat):
-        return VERDICT_UNKNOWN, None, (), (), (entry,)
+        return VERDICT_UNKNOWN, None, (), None, (), (entry,)
     if extension in declaration.extensions:
         match_source = (
             f"accept-list match: the file yields {extension!r} (its name from the last dot, "
@@ -21027,7 +21074,7 @@ def _launchability_verdict(
             "SystemData.cpp:669)"
         )
         if entry is None:
-            return VERDICT_LAUNCHABLE, None, (), (match_source,), ()
+            return VERDICT_LAUNCHABLE, None, (), None, (match_source,), ()
         stance, entry_sources, entry_caveats = _entry_reading(
             entry, extension=extension, core_info_for=core_info_for
         )
@@ -21043,16 +21090,18 @@ def _launchability_verdict(
                 VERDICT_ENTRY_NOT_ACCEPTED,
                 entry,
                 alternatives,
+                None,
                 (match_source, *entry_sources),
                 entry_caveats,
             )
-        return VERDICT_LAUNCHABLE, entry, (), (match_source, *entry_sources), entry_caveats
+        return VERDICT_LAUNCHABLE, entry, (), None, (match_source, *entry_sources), entry_caveats
     record = lookup_install_first(system, extension)
     if record is not None:
         return (
             VERDICT_NEEDS_INSTALLATION,
             None,
             (),
+            _installers(record.installers, entries),
             (f"install-first format {extension!r} for {system}: {record.statement} — {record.source}",),
             (),
         )
@@ -21060,6 +21109,7 @@ def _launchability_verdict(
         VERDICT_NOT_ACCEPTED,
         None,
         (),
+        None,
         (
             f"the file yields {extension!r} and the system's <extension> list "
             f"({' '.join(declaration.extensions)}) carries no such token — the comparison is "
@@ -21067,6 +21117,22 @@ def _launchability_verdict(
             "file and nothing here launches it",
         ),
         (),
+    )
+
+
+def _installers(emulators: tuple[str, ...], entries: tuple[EmulatorEntry, ...]) -> tuple[Installer, ...]:
+    """Each installing emulator with the system's entry that runs it, ``None`` where it declares none.
+
+    *entries* are in the frontend's effective order — the selection
+    hierarchy :func:`_entries_from` applies, per-game override first — so
+    where several entries run one emulator, the first one found is the one
+    that hierarchy ranks first. The match is on the entry's ``emulator``,
+    which spells a standalone entry by the same ``%EMULATOR_X%`` token the
+    record does.
+    """
+    return tuple(
+        Installer(emulator, next((entry for entry in entries if entry.emulator == emulator), None))
+        for emulator in emulators
     )
 
 
@@ -21701,6 +21767,9 @@ class _CatalogueQueries:
         - ``needs-installation`` — the format is real content for the platform
           and an installation step has to run before anything launches (a PSN
           ``.pkg``): recorded world knowledge, cited in the sources.
+          ``installers`` names the emulators that install it, each with the
+          system's entry that runs it — empty where no emulator RetroDECK or
+          EmuDeck sets up installs it.
         - ``unknown`` — the system is not one this catalogue declares, or the
           catalogue could not be read: a statement about the look, never about
           the file, and never collapsed into either 'no'.
@@ -22937,7 +23006,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             self._cfg_sandbox,
             findings=self._cfg_findings,
         )
-        verdict, entry, alternatives, sources, own = _launchability_verdict(
+        verdict, entry, alternatives, installers, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
@@ -22953,6 +23022,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 accepted=declaration.extensions if declaration is not None else (),
                 entry=entry,
                 alternatives=alternatives,
+                installers=installers,
                 sources=(
                     _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
                     *core_reader.sources,
@@ -25269,7 +25339,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         core_reader = _EntryCoreReader(
             self._machine, self._companion_cfg_path(), self._cfg_sandbox
         )
-        verdict, entry, alternatives, sources, own = _launchability_verdict(
+        verdict, entry, alternatives, installers, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
@@ -25285,6 +25355,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 accepted=declaration.extensions if declaration is not None else (),
                 entry=entry,
                 alternatives=alternatives,
+                installers=installers,
                 sources=(
                     self._catalogue_provenance(snapshot.exclusive),
                     *core_reader.sources,

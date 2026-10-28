@@ -249,6 +249,33 @@ class TestAnUnwiredContentTreeIsAFinding:
         assert self._findings(rd) == []
 
 
+def _installers(answer: atlas.LaunchabilityAnswer) -> list[tuple[str, str | None]]:
+    """Each installer as (emulator, its entry's label or None) — the pair a client reads."""
+    assert answer.installers is not None
+    return [
+        (installer.emulator, None if installer.entry is None else installer.entry.label)
+        for installer in answer.installers
+    ]
+
+
+class TestTheInstallersTravelWithTheirVerdictAlone:
+    """``None`` and ``()`` are two statements, and only needs-installation makes either (#717)."""
+
+    def test_installers_beside_another_verdict_are_refused(self):
+        with pytest.raises(ValueError, match="exactly where the verdict is needs-installation"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".iso", installers=())
+
+    def test_needs_installation_without_installers_is_refused(self):
+        with pytest.raises(ValueError, match="exactly where the verdict is needs-installation"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_NEEDS_INSTALLATION, extension=".pkg")
+
+    def test_an_empty_tuple_is_needs_installations_statement(self):
+        answer = atlas.LaunchabilityAnswer(
+            verdict=atlas.VERDICT_NEEDS_INSTALLATION, extension=".pkg", installers=()
+        )
+        assert answer.installers == ()
+
+
 class TestLaunchable:
     """Issue #36: whether a file launches as a system's content — and why not, when not.
 
@@ -302,6 +329,67 @@ class TestLaunchable:
         assert answer.verdict == atlas.VERDICT_NEEDS_INSTALLATION
         assert answer.extension == ".pkg"
         assert answer.entry is None
+
+    def test_a_psn_package_names_its_installer_with_the_entry_that_runs_it(self):
+        # Issue #717: RPCS3 is data, joined to the system's declared entry on
+        # the token both spell it with.
+        answer = self._rd().launchable("ps3", "/roms/ps3/Game.pkg")
+        assert _installers(answer) == [("RPCS3", "RPCS3")]
+
+    PS3_TWO_ENTRIES = (
+        '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>ps3</name>\n'
+        "    <path>%ROMPATH%/ps3</path>\n    <extension>.iso .ps3</extension>\n"
+        '    <command label="RPCS3 Directory">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n'
+        '    <command label="RPCS3 ISO">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n'
+        "  </system>\n</systemList>\n"
+    )
+    PS3_GAMELIST = "/mnt/sd/retrodeck/ES-DE/gamelists/ps3/gamelist.xml"
+    PS3_PACKAGE = "/mnt/sd/retrodeck/roms/ps3/Game.pkg"
+
+    def test_of_several_entries_the_installer_takes_the_one_the_frontend_ranks_first(self):
+        # Two entries run RPCS3: without a choice the first declared answers,
+        # and a per-game choice of the second moves it first — the selection
+        # hierarchy the launch command uses, not a second ranking.
+        files = {
+            RD_BUNDLED_ESDE: self.PS3_TWO_ENTRIES,
+            self.PS3_PACKAGE: "",
+            ESDE_SETTINGS: '<string name="ROMDirectory" value="/mnt/sd/retrodeck/roms" />\n',
+        }
+        plain = self._rd(files).launchable("ps3", self.PS3_PACKAGE)
+        assert _installers(plain) == [("RPCS3", "RPCS3 Directory")]
+        chosen = self._rd(
+            {
+                **files,
+                self.PS3_GAMELIST: (
+                    "<gameList><game><path>./Game.pkg</path>"
+                    "<altemulator>RPCS3 ISO</altemulator></game></gameList>"
+                ),
+            }
+        ).launchable("ps3", self.PS3_PACKAGE)
+        assert _installers(chosen) == [("RPCS3", "RPCS3 ISO")]
+
+    def test_a_ps4_package_needs_installation_with_no_installer(self):
+        # Issue #717 (D3): the right file, and nothing here installs it — an
+        # empty list, which is not the None every other verdict carries.
+        ps4 = self.DREAMCAST.replace("<name>ps3</name>", "<name>ps4</name>").replace(
+            "<extension>.iso .ps3 .ps3dir</extension>", "<extension>.bin .desktop .ps4</extension>"
+        ).replace("%EMULATOR_RPCS3%", "%EMULATOR_SHADPS4%")
+        answer = self._rd({RD_BUNDLED_ESDE: ps4}).launchable("ps4", "/roms/ps4/Game.pkg")
+        assert answer.verdict == atlas.VERDICT_NEEDS_INSTALLATION
+        assert answer.installers == ()
+
+    @pytest.mark.parametrize(
+        ("system", "name", "verdict"),
+        [
+            ("dreamcast", "Game.chd", atlas.VERDICT_LAUNCHABLE),
+            ("dreamcast", "Game (Track 1).bin", atlas.VERDICT_NOT_ACCEPTED),
+            ("wonderswan", "Game.ws", atlas.VERDICT_UNKNOWN),
+        ],
+    )
+    def test_every_other_verdict_carries_no_installers(self, system, name, verdict):
+        answer = self._rd().launchable(system, f"/roms/{system}/{name}")
+        assert answer.verdict == verdict
+        assert answer.installers is None
 
     def test_an_undeclared_system_is_unknown_not_refused_as_content(self):
         answer = self._rd().launchable("wonderswan", "/roms/wonderswan/Game.ws")
@@ -438,6 +526,43 @@ class TestLaunchable:
         answer = rd.launchable("n3ds", "/roms/n3ds/Game.3ds")
         assert answer.verdict == atlas.VERDICT_LAUNCHABLE
         assert atlas.CAVEAT_ENTRY_FORMAT_UNESTABLISHED in [c.code for c in answer.caveats]
+
+    def test_a_3ds_archive_names_both_installers_and_only_the_declared_one_has_an_entry(self):
+        # AzaharPlus installs a .cia as Azahar does, but this catalogue does
+        # not declare it: named, with no entry.
+        answer = self._n3ds().launchable("n3ds", "/roms/n3ds/Game.cia")
+        assert answer.verdict == atlas.VERDICT_NEEDS_INSTALLATION
+        assert _installers(answer) == [("AZAHAR", "Azahar"), ("AZAHARPLUS", None)]
+
+    def test_a_label_leaves_the_installers_as_they_are(self):
+        # The remedy is to install the file, whichever entry the caller would
+        # start it through — Citra, a libretro entry, installs nothing.
+        rd = self._n3ds()
+        named = rd.launchable("n3ds", "/roms/n3ds/Game.cia", label="Citra")
+        assert named.verdict == atlas.VERDICT_NEEDS_INSTALLATION
+        assert _installers(named) == [("AZAHAR", "Azahar"), ("AZAHARPLUS", None)]
+
+    def test_a_list_that_accepts_a_3ds_archive_meets_azahars_refusal(self):
+        # Issue #717 (D4): booting a .cia only offers to install it, so the
+        # card no longer claims it. A catalogue that scans one runs an entry
+        # established not to read it, and no install-first record is asked.
+        catalogue = self.N3DS.replace(
+            "<extension>.3ds .zip .7z</extension>", "<extension>.3ds .cia</extension>"
+        )
+        rd = _retrodeck(
+            {**self.FILES, RETRODECK_CFG: self.CFG_WITH_CORES, RD_BUNDLED_ESDE: catalogue},
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
+        )
+        answer = rd.launchable("n3ds", "/roms/n3ds/Game.cia")
+        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
+        assert answer.entry is not None
+        assert answer.entry.label == "Azahar"
+        assert answer.installers is None
+
+    def test_an_entry_not_accepted_verdict_carries_no_installers(self):
+        answer = self._n3ds().launchable("n3ds", "/roms/n3ds/Game.zip")
+        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
+        assert answer.installers is None
 
     def test_the_recorded_azahar_card_confirms_its_own_formats(self):
         answer = self._n3ds().launchable("n3ds", "/roms/n3ds/Game.3ds")

@@ -332,6 +332,27 @@ def _base_catalogue(**overrides) -> Vector:
     return _vector({"catalogue": block}, installed=True, catalogue_query={"system": SYSTEM})
 
 
+def _installer_entry(**overrides) -> Vector:
+    return _emulator(**{"label": "RPCS3", "kind": "standalone", "core_so": None, "emulator": "RPCS3", **overrides})
+
+
+def _base_launchable(**overrides) -> Vector:
+    block = {
+        "verdict": "needs-installation",
+        "extension": ".pkg",
+        "accepted": [".iso"],
+        "entry": None,
+        "alternatives": [],
+        "installers": [
+            {"emulator": "RPCS3", "entry": _installer_entry()},
+            {"emulator": "AZAHARPLUS", "entry": None},
+        ],
+        "caveats": [],
+        **overrides,
+    }
+    return _vector({"launchable": block}, installed=True, launchable_query={"system": SYSTEM, "content_path": ROM})
+
+
 def _base_systems(**overrides) -> Vector:
     block = {"systems": [SYSTEM], "caveats": [], **overrides}
     return _vector({"systems": block}, installed=True, systems_query={})
@@ -488,6 +509,7 @@ BASES = {
     "firmware": _base_firmware,
     "identification": _base_identification,
     "catalogue": _base_catalogue,
+    "launchable": _base_launchable,
     "systems": _base_systems,
     "rom_locations": _base_rom_locations,
     "platform_systems": _base_platform_systems,
@@ -1220,6 +1242,25 @@ CATALOGUE_CASES = [
          "is derived and still states a declared_index", id="catalogue-derived-entry-with-a-position"),
 ]
 
+# The emulators a needs-installation verdict names (#717): a list there, null
+# on every other verdict, each emulator once and beside an entry that runs it.
+LAUNCHABLE_CASES = [
+    case(_base_launchable(verdict="not-accepted"),
+         "installers travels with 'needs-installation' alone", id="launchable-installers-off-their-verdict"),
+    case(_base_launchable(installers=None),
+         "installers must be a list on 'needs-installation'", id="launchable-installers-null-on-their-verdict"),
+    case(_base_launchable(installers=[{"emulator": "RPCS3"}]),
+         "each installer must be exactly the fields", id="launchable-installer-shape"),
+    case(_base_launchable(installers=[{"emulator": "", "entry": None}]),
+         "an installer's emulator must be a non-empty token, named once", id="launchable-installer-empty-token"),
+    case(_base_launchable(installers=[{"emulator": "RPCS3", "entry": None}, {"emulator": "RPCS3", "entry": None}]),
+         "an installer's emulator must be a non-empty token, named once", id="launchable-installer-repeated"),
+    case(_base_launchable(installers=[{"emulator": "RPCS3", "entry": _emulator()}]),
+         "an installer's entry must run the emulator it is named for", id="launchable-installer-entry-elsewhere"),
+    case(_base_launchable(installers=[{"emulator": "RPCS3", "entry": _installer_entry(label="")}]),
+         "emulator label must be a non-empty string", id="launchable-installer-entry-invalid"),
+]
+
 SYSTEMS_CASES = [
     case(_vector({"systems": []}, installed=True, systems_query={}),
          "expected.systems must be", id="systems-not-object"),
@@ -1861,6 +1902,7 @@ ALL_CASES = [
     *SOFT_PATCH_CANDIDATE_CASES,
     *ENTRY_CASES,
     *CATALOGUE_CASES,
+    *LAUNCHABLE_CASES,
     *SYSTEMS_CASES,
     *ROM_LOCATIONS_CASES,
     *PLATFORM_SYSTEMS_CASES,
@@ -2156,6 +2198,8 @@ ACCEPTED_CASES = [
     # once they are read, so without a content check no identity is pinned.
     pytest.param(_base_firmware(cores=[_unchecked_option_core("by-name-then-content")]),
                  id="an-unchecked-option-without-identity-on-a-content-recognising-route"),
+    pytest.param(_base_launchable(installers=[]), id="a-needs-installation-verdict-nothing-here-installs"),
+    pytest.param(_base_launchable(verdict="unknown", installers=None), id="no-installers-off-their-verdict"),
 ]
 
 
