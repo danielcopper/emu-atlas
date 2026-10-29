@@ -15,9 +15,11 @@ packaged read (the systems vocabulary).
 
 The zstd probe (``atlas/squashfs.py``) stays name-based deliberately — it probes
 *foreign* module names (``compression.zstd``, ``backports.zstd``), not this
-package's own. The core-probe spawn (``atlas/machine.py``) keeps its literal
-``"atlas._core_probe"`` argv deliberately too: ``_probe_environment`` prepends
-the copy's own parent directory to the child's ``PYTHONPATH``, so the child
+package's own. The core-probe spawn (``atlas/machine.py``) names no module
+where the copy is on disk: it runs the copy's own ``_core_probe.py`` by path.
+Where the copy has no file to run, it keeps its literal
+``"atlas._core_probe"`` argv deliberately: ``_probe_environment`` prepends the
+copy's own parent directory to the child's ``PYTHONPATH``, so the child
 resolves the copy as top-level ``atlas`` whatever the host calls it — that
 literal is compensated at runtime, not swept here.
 """
