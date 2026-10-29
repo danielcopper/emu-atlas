@@ -1266,6 +1266,24 @@ the PARAM.SFO's category — not on an extension, so `atlas.rpcs3_boot` reads th
 Serial entry answers that RPCS3's game registry is not read. No RPCS3 card stands here, so an RPCS3 entry of any other
 shape — one without `--no-gui`, say — keeps `entry-format-unestablished`.
 
+A card may state three things more (schema 3, issue #618): Dolphin's states the first two, PrimeHack's all three.
+
+- `arguments` — the argument lists the card was read for: the words a command hands the emulator after its token, each
+  list handing it `%ROM%` exactly once. An entry whose command hands the emulator anything else is one the card does not
+  answer for, and keeps `entry-format-unestablished`. In front of the token, a leading `env` with its `NAME=value` words
+  and ES-DE's `%INJECT%` words are passed over: they set up what runs the emulator, and the injected per-game text is
+  not read. A card without the key — Azahar's — answers for every command naming its token.
+- `content_checked` — `true` where the loader reads the file's content once the extension has passed, which the card
+  does not: an accepted extension then answers `launchable` with `entry-format-content-unread`. Absent is not stated.
+- `build_dependent` — an object of the extensions the builds the card serves disagree on, each with the citation naming
+  the builds; an extension listed here is not in `accepts`. It answers `entry-format-build-dependent`, unestablished,
+  because a refusal would not hold on every machine the card serves: PrimeHack's `.bin`, in the disc set of the Flathub
+  build EmuDeck installs and not in the one RetroDECK ships.
+
+The loader refuses any other key, an `arguments` that is not a non-empty list of distinct word lists each handing
+`%ROM%` once, a `content_checked` that is not a boolean, and a `build_dependent` that is empty, keys an extension the
+way `accepts` may not, or names one `accepts` already carries.
+
 ## `frontend_path.json` — the `PATH` a frontend on the host searches, and the directory it runs in
 
 Read by `atlas.frontend_path`, behind each catalogue entry's launch answer on an arrangement whose ES-DE runs on the

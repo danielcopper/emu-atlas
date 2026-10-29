@@ -721,6 +721,8 @@ KNOWN_CAVEAT_CODES = {
     "entry-format-unclaimed",
     "archive-contents-unread",
     "entry-format-unestablished",
+    "entry-format-content-unread",
+    "entry-format-build-dependent",
     "boot-path-missing",
     "boot-path-unestablished",
     "boot-nothing-found",
