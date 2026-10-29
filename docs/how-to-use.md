@@ -3132,6 +3132,7 @@ answer.accepted      # ('.chd', '.cue', '.gdi') — the system's declared list, 
 answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted', with its launch answer
 answer.alternatives  # entry labels established to take the file — on 'entry-not-accepted' alone
 answer.installers    # the emulators that install the file — on 'needs-installation' alone, None on every other
+answer.boots         # what the judged entry boots — on 'launchable' alone, where its emulator's own boot was read
 ```
 
 `entry` carries the catalogue entry's [launch answer](#does-it-start-and-with-what--availability-launcher-core_path)
@@ -3215,6 +3216,88 @@ the claims, so the verdict stands with `archive-contents-unread` (what is inside
 **standalone** entry opens the file itself: its recorded loader decides (`launch_formats.json`'s `emulators` block,
 matched case-insensitively — the gate is the loader, not ES-DE's case-exact scan), and an emulator without a card earns
 `entry-format-unestablished` — never "refuses", because an entry nobody read is not an entry known to refuse the file.
+RPCS3 has no card and is read anyway, for the command shapes below; an RPCS3 entry of any other shape, such as one
+without `--no-gui`, is an entry nobody read and keeps `entry-format-unestablished`.
+
+**What it boots — `boots`.** For some entries atlas reads the emulator's own boot of the file rather than a loader card,
+and judges the file itself instead of its extension: whether the entry boots it, and what. A `launchable` verdict on
+such an entry states the answer, so one call tells a client both that the file launches through the entry and what to
+place or bake:
+
+```python
+answer = inst.launchable("ps3", "/roms/ps3/Game.ps3", label="RPCS3 Directory (Standalone)")
+answer.boots.file       # '/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN' — what the emulator's loader is handed
+answer.boots.disc_root  # '/roms/ps3/Game.ps3' — what it mounts as the disc, or None for a game booted without one
+```
+
+`boots` is `None` on every other verdict and on every entry whose emulator's boot atlas does not read — a `launchable`
+verdict with `boots` `None` says nothing about what boots. Where the reading cannot reach a verdict, the stance is
+unestablished as for an entry without a card: the verdict stays `launchable` on the accept-list, `boots` is `None`, and
+a caveat names the step that stopped it. Where it establishes a refusal, the verdict is `entry-not-accepted` with the
+reason as a caveat, and `alternatives` names the entries the same reading establishes to boot the file.
+
+**RPCS3's boot.** The entries that hand RPCS3 the file's path — ES-DE's `RPCS3 Directory` and `RPCS3 ISO`, both
+`%EMULATOR_RPCS3% --no-gui %ROM%` — are judged the way RPCS3 d5213de6 boots that path: the build RetroDECK ships and the
+RPCS3 save card pins. EmuDeck's RPCS3 is an AppImage atlas does not open, so its build is not pinned, and the reading is
+applied to it as RPCS3 at that revision boots (`atlas/rpcs3_boot.py` carries every citation). `%ROM%` is ES-DE's: a
+`.ps3` folder holding a file of its own name hands RPCS3 that file. Then:
+
+- **A folder** is searched for exactly four boot files, in order: `EBOOT.BIN`, `USRDIR/EBOOT.BIN`,
+  `USRDIR/ISO.BIN.EDAT`, `PS3_GAME/USRDIR/EBOOT.BIN`. None of them is nothing to boot (`boot-nothing-found`) — RPCS3
+  looks no further down, so a folder holding the game one level deeper refuses. Where a downloaded game is placed stays
+  the client's own rule.
+- **An image** is recognised by its content (`CD001`), not its name. One declaring a single region, or carrying the 3k3y
+  mark of a decrypted dump, boots, and `boots` names the image as both file and disc. One declaring encrypted regions is
+  judged as RPCS3's key check judges it: atlas follows the image's ISO 9660 tree to the licence
+  (`PS3_GAME/LICDIR/LIC.DAT`) and the executable (`PS3_GAME/USRDIR/EBOOT.BIN`) and reads their first 16 bytes. Both in
+  the clear, it boots. Otherwise the key file RPCS3 looks for decides — the image's name with `.dkey` or `.key` beside
+  it, then the same names in the `data/redump` folder of RPCS3's configuration directory. One found is tested by AES
+  decryption, which atlas does not run — or, where the image holds neither block, applied untested — so the answer is
+  not established (`boot-iso-key-untested`, naming the file). With none, an image that carries its own key in its 3k3y
+  sector, or one holding neither block to judge, boots, and an encrypted one refuses (`boot-disc-key-missing`). Where
+  the redump folder cannot be told, nothing is stated (`boot-key-folder-unresolved`), and an image whose tree atlas does
+  not follow — past its bounds of 32 volume descriptors and 1 MiB per directory, or with a record RPCS3 refuses — is not
+  established either (`boot-iso-encryption-unread`). One whose region count is out of range is not followed
+  (`boot-iso-regions-invalid`). RPCS3 also reads the rest of the image's tree before it boots, which atlas does not
+  check. An image that would boot meets the configured disc directory below as a boot file does.
+- **A boot file** — a SELF or an ELF by its first four bytes — is mounted with its disc: the outermost directory above
+  it named `PS3_GAME` or `PS3_GMnn` whose parent holds a `PS3_DISC.SFB` opening with `.SFB` makes that parent
+  `disc_root`. Without one, the PARAM.SFO decides: a disc game (`DG`) fails to mount and refuses
+  (`boot-disc-root-missing`); game data (`GD`) boots through RPCS3's game registry, which atlas does not read
+  (`boot-registry-unread`); `1P` and `PE` are not followed (`boot-category-unestablished`); every other category, and a
+  PARAM.SFO that is missing or that RPCS3's loader keeps nothing of, boots with no disc (`disc_root` `None`). A boot
+  file inside RPCS3's own `dev_hdd0/game` takes other routes and is not followed (`boot-inside-internal-drive`), and
+  where that drive is cannot be told, nothing is stated (`boot-drive-unresolved`).
+- **The configured disc directory** stands in front of any disc a boot would mount, an image's own included: the one
+  `vfs.yml` names as `/dev_bdvd/`, or RPCS3's compiled default `$(EmulatorDir)dev_bdvd/`. Where it holds a
+  `PS3_DISC.SFB`, RPCS3 mounts it as the disc instead, which is not followed (`boot-disc-dir-configured`, naming the
+  directory). Where it cannot be told — RPCS3's configuration tree is not established or `vfs.yml` is not read,
+  `vfs.yml` states it as a construct atlas does not read or more than once, or the default is composed off a
+  `$(EmulatorDir)` atlas does not read — nothing is stated (`boot-disc-dir-unresolved`). A boot file meets
+  `boot-drive-unresolved` first where the tree or `vfs.yml` is not read, so this code reaches it only through the
+  directory's own statement; a bootable image meets this code itself. A refusal of the image's key check comes first and
+  stands whatever the directory holds.
+- **Any other file** — the serial text a `.ps3` folder carries for the Game Serial entry, a stray PARAM.SFO — refuses
+  (`boot-file-unbootable`). A `.SAVESTAT`, `.zst` or `.gz` file is one RPCS3 opens as a savestate where it carries the
+  RPCS3SAV magic, which is not followed (`boot-savestate-unread`).
+- **Nothing at the path** is never a refusal: what the entry boots once the content is there is not established
+  (`boot-path-missing`), so a client can ask before it places a file. A path atlas cannot tell, or a file on the way it
+  cannot read — a PARAM.SFO among them, and one larger than the 64 KiB atlas parses — is not established either
+  (`boot-path-unestablished`).
+
+Two failures stay outside the reading: a boot file is taken by its first four bytes, so a SELF that needs a licence
+RPCS3 does not find fails later on decryption, and an ELF none of its loaders takes is refused there too.
+
+The Game Serial entry (`%EMULATOR_RPCS3% --no-gui %RPCS3_GAMEID%:%INJECT%=%BASENAME%.ps3`) hands RPCS3 a serial it
+resolves through its own game registry, which atlas does not read: the verdict stays `launchable` on the accept-list
+with `boots` `None` and `boot-registry-unread`, whose `registry` names the file. Reading that registry is issue #727.
+
+**The shell entry.** An entry that runs `%ROM%` through the shell — ES-DE's `RPCS3 Shortcut`,
+`%EMULATOR_OS-SHELL%
+%ROM%` — refuses a `%ROM%` that is a directory (`entry-takes-no-directory`): the shell cannot run
+one. That entry is the one ES-DE puts first for `ps3`, so a disc dump folder asked about without a label answers
+`entry-not-accepted`, with the Directory and ISO entries as `alternatives`. Every other file stays as the entry answers
+it without a card.
 
 ## What would the frontend run? — `launch_command`
 

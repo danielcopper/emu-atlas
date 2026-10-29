@@ -1257,7 +1257,14 @@ not know, and that knowledge is written nowhere on the machine atlas can read as
 recorded lowercase and matched case-insensitively (the gate is the emulator's loader, not ES-DE's case-exact scan);
 `archives` is whether the loader opens containers at all — no RetroArch stands in front of a standalone to pick a file
 out of a zip. An emulator absent from the block is one whose loader nobody has read: the answer states
-`entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out.
+`entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out. RPCS3 is the
+exception the next paragraph names: absent from the block, and read all the same.
+
+RPCS3's entries in the catalogue's own command shapes are not judged by this block at all (issue #618). What the
+Directory and ISO entries boot depends on the content — the folder's layout, the image's header and the files inside it,
+the PARAM.SFO's category — not on an extension, so `atlas.rpcs3_boot` reads the content the way RPCS3 boots it; the Game
+Serial entry answers that RPCS3's game registry is not read. No RPCS3 card stands here, so an RPCS3 entry of any other
+shape — one without `--no-gui`, say — keeps `entry-format-unestablished`.
 
 ## `frontend_path.json` — the `PATH` a frontend on the host searches, and the directory it runs in
 

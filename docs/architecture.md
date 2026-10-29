@@ -259,6 +259,7 @@ classDiagram
         +extension / accepted / alternatives
         +entry: EmulatorEntry|None
         +installers: tuple~Installer~|None
+        +boots: Boot|None
         +caveats: tuple~Caveat~
     }
     class Caveat {

@@ -276,6 +276,23 @@ class TestTheInstallersTravelWithTheirVerdictAlone:
         assert answer.installers == ()
 
 
+class TestTheBootTravelsWithALaunchableEntryAlone:
+    """What an entry boots is a statement about a launch that happens (#618)."""
+
+    BOOT = atlas.Boot("/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN", "/roms/ps3/Game.ps3")
+
+    def test_a_boot_beside_another_verdict_is_refused(self):
+        with pytest.raises(ValueError, match="boots stand only on a launchable verdict about an entry"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_ENTRY_NOT_ACCEPTED, extension=".ps3", boots=self.BOOT)
+
+    def test_a_boot_without_an_entry_is_refused(self):
+        with pytest.raises(ValueError, match="boots stand only on a launchable verdict about an entry"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".ps3", boots=self.BOOT)
+
+    def test_no_boot_is_every_verdicts_default(self):
+        assert atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".iso").boots is None
+
+
 class TestLaunchable:
     """Issue #36: whether a file launches as a system's content — and why not, when not.
 
@@ -8818,6 +8835,9 @@ class _CountingMachine:
 
     def read_ps2_bios_header(self, path):
         return self._inner.read_ps2_bios_header(path)
+
+    def read_ps3_file(self, path):
+        return self._inner.read_ps3_file(path)
 
     def read_disc_identity(self, path, *, extracted=None):
         return self._inner.read_disc_identity(path, extracted=extracted)

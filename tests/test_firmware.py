@@ -157,6 +157,7 @@ from atlas.machine import (
     PathKind,
     ArchiveListResult,
     Ps2BiosHeaderResult,
+    Ps3FileResult,
     ReadResult,
     WhdloadSlaveResult,
 )
@@ -6118,6 +6119,10 @@ class _CountingMachine:
     def read_ps2_bios_header(self, path: str) -> Ps2BiosHeaderResult:
         self._count("read_ps2_bios_header")
         return self._inner.read_ps2_bios_header(path)
+
+    def read_ps3_file(self, path: str) -> Ps3FileResult:
+        self._count("read_ps3_file")
+        return self._inner.read_ps3_file(path)
 
     def read_disc_identity(self, path: str, *, extracted: ExtractedEntry | None = None) -> DiscIdentityResult:
         self._count("read_disc_identity")
