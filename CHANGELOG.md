@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.32.0](https://github.com/danielcopper/emu-atlas/compare/v0.31.0...v0.32.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* **launch:** a Dolphin or PrimeHack entry whose command hands the emulator -b -e %ROM% after its token, with nothing in front of the token but env NAME=value words or %INJECT% words, no longer answers launchable with entry-format-unestablished. An extension its loader takes answers launchable with entry-format-content-unread; one it refuses, .zip and .7z among them, answers entry-not-accepted; and .bin on PrimeHack answers launchable with entry-format-build-dependent. The existing vector launch-the-launchability-entry-carries-the-same-answer (a Dolphin entry handed an .iso) now expects entry-format-content-unread where it expected entry-format-unestablished. In Python, the two codes are exported as CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD and CAVEAT_ENTRY_FORMAT_BUILD_DEPENDENT, StandaloneLaunchCard gains arguments, content_checked and build_dependent, and launch_formats.json is schema 3, which the loader requires.
+* **launch:** every serialized launchable answer carries a new key, boots: null, or {file, disc_root} with disc_root a path or null, on a launchable verdict whose entry's boot atlas read. The RPCS3 Directory and ISO entries (%EMULATOR_RPCS3% --no-gui %ROM%) and the Game Serial entry no longer answer launchable with entry-format-unestablished. The first two answer from RPCS3's boot of the content: launchable with boots, entry-not-accepted with a boot-* caveat, or launchable with boots null and a boot-* caveat. The Game Serial entry answers launchable with boots null and boot-registry-unread. An entry running %ROM% through the OS shell answers entry-not-accepted with entry-takes-no-directory for a directory. In Python, LaunchabilityAnswer gains boots, and constructing one with boots beside another verdict or without an entry raises ValueError; a Machine implementation must provide read_ps3_file. The 23 existing launchable vectors gain boots: null; a port must emit it to match them.
+
+### Features
+
+* **launch:** judge Dolphin and PrimeHack entries by their loaders ([#733](https://github.com/danielcopper/emu-atlas/issues/733)) ([a92b008](https://github.com/danielcopper/emu-atlas/commit/a92b008cbbd29e658fbe1b95c8e4d5b046af05c1))
+* **launch:** judge the RPCS3 entries by what RPCS3 boots ([#728](https://github.com/danielcopper/emu-atlas/issues/728)) ([7d7446b](https://github.com/danielcopper/emu-atlas/commit/7d7446b3cfc0abdeae19bb6900fa5ed0de5ca2de))
+
+
+### Performance Improvements
+
+* **probe:** run the core probe without importing the whole package ([#734](https://github.com/danielcopper/emu-atlas/issues/734)) ([dcaf073](https://github.com/danielcopper/emu-atlas/commit/dcaf073192a604718a53dd0c561c478d97060b63))
+
 ## [0.31.0](https://github.com/danielcopper/emu-atlas/compare/v0.30.0...v0.31.0) (2026-10-28)
 
 
