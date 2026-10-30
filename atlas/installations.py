@@ -142,6 +142,7 @@ from .find_rules import (
     Availability,
 )
 from .launch import (
+    ENABLESHORTCUTS,
     PROBE_HIT,
     PROBE_MISS,
     PROBE_UNKNOWN,
@@ -151,6 +152,7 @@ from .launch import (
     LaunchView,
     LayeredFindRules,
     Probe,
+    RUNINBACKGROUND,
     command_unsupported,
     program_word,
     unsupported,
@@ -18805,6 +18807,15 @@ LAUNCH_VERDICTS = (
 CAVEAT_ENTRY_FORMAT_UNCLAIMED = "entry-format-unclaimed"
 CAVEAT_ARCHIVE_CONTENTS_UNREAD = "archive-contents-unread"
 CAVEAT_ENTRY_FORMAT_UNESTABLISHED = "entry-format-unestablished"
+# Two more statements a standalone card makes (issue #618). A loader that
+# takes the extension and then reads the file's content — a disc's magic, a
+# WAD's header, a playlist's entries — has passed the file only as far as the
+# card reads it, so the launchable verdict says the content was not read. And
+# an extension the builds a card serves disagree on is taken on one machine and
+# refused on the next, which is neither a refusal nor a take: unestablished,
+# under a code of its own that names the reason.
+CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD = "entry-format-content-unread"
+CAVEAT_ENTRY_FORMAT_BUILD_DEPENDENT = "entry-format-build-dependent"
 
 _ENTRY_ACCEPTS = "accepts"
 _ENTRY_REFUSES = "refuses"
@@ -21079,18 +21090,42 @@ def _libretro_entry_reading(
 def _standalone_entry_reading(
     entry: EmulatorEntry, *, extension: str
 ) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
-    """The standalone half of :func:`_entry_reading` — the recorded loader decides."""
+    """The standalone half of :func:`_entry_reading` — the recorded loader decides.
+
+    A card answers only for the commands it was read for: one whose emulator
+    is handed something other than the card's arguments is an entry nobody
+    read, whatever its token.
+    """
     card = lookup_standalone_launch(emulator_token(entry.command))
-    if card is None:
+    if card is None or not card.covers(_emulator_arguments(entry.command)):
+        why = (
+            "no card covers this standalone emulator's loader"
+            if card is None
+            else "its command hands the emulator arguments its loader card was not read for"
+        )
         return (
             _ENTRY_UNESTABLISHED,
             (),
             (
                 Caveat(
                     CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
-                    f"what {entry.label!r} reads is not established — no card covers this "
-                    "standalone emulator's loader, which says nothing about whether it takes "
-                    f"{extension!r}",
+                    f"what {entry.label!r} reads is not established — {why}, which says nothing "
+                    f"about whether it takes {extension!r}",
+                    {"entry": entry.label, "extension": extension},
+                ),
+            ),
+        )
+    build_note = card.build_note(extension)
+    if build_note is not None:
+        return (
+            _ENTRY_UNESTABLISHED,
+            (f"entry {entry.label!r}: {build_note}",),
+            (
+                Caveat(
+                    CAVEAT_ENTRY_FORMAT_BUILD_DEPENDENT,
+                    f"whether {entry.label!r} reads {extension!r} depends on the build of the emulator "
+                    "that runs: the builds its loader card was read at disagree on it, so neither a "
+                    "take nor a refusal holds on every machine",
                     {"entry": entry.label, "extension": extension},
                 ),
             ),
@@ -21099,7 +21134,7 @@ def _standalone_entry_reading(
         return (
             _ENTRY_ACCEPTS,
             (f"entry {entry.label!r}: its own loader reads {extension!r} — {card.source}",),
-            (),
+            _content_unread(entry.label, extension) if card.content_checked else (),
         )
     archive_note = (
         " (an archive container, and this loader opens none — no RetroArch stands in front of "
@@ -21115,6 +21150,46 @@ def _standalone_entry_reading(
         ),
         (),
     )
+
+
+def _content_unread(label: str, extension: str) -> tuple[Caveat, ...]:
+    """A loader that takes *extension* and then reads the content, which its card does not."""
+    return (
+        Caveat(
+            CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD,
+            f"{label!r} takes {extension!r} by its extension, and its loader then reads the file's "
+            "content, which atlas does not — whether the content passes is not established",
+            {"entry": label, "extension": extension},
+        ),
+    )
+
+
+# What a leading ``env`` assigns: ``NAME=value``, the name a shell variable's
+# — ASCII letters, digits and underscores, so ``\w`` is held to ASCII.
+_ENV_ASSIGNMENT_RE = re.compile(r"[A-Za-z_]\w*=", re.ASCII)
+_INJECT_WORD = "%INJECT%="
+
+
+def _emulator_arguments(command: str) -> tuple[str, ...] | None:
+    """The words *command* hands its ``%EMULATOR_…%`` token, or ``None`` where that cannot be told.
+
+    ES-DE removes its two flags before it runs anything (``FileData.cpp:1057-1093``
+    @ v3.4.1). In front of the token only what sets up the emulator's run is
+    passed over: a leading ``env`` with its ``NAME=value`` words, which
+    ``env`` sets as the environment before it runs the rest, and ``%INJECT%`` words, whose
+    per-game text ES-DE places where the word stood (``:1672-1791``) and which
+    is not read here. Anything else in front of the token runs something whose
+    arguments this reading does not know.
+    """
+    words = [word for word in command.split() if word not in (ENABLESHORTCUTS, RUNINBACKGROUND)]
+    token = emulator_token(command)
+    if token is None or f"%EMULATOR_{token}%" not in words:
+        return None
+    at = words.index(f"%EMULATOR_{token}%")
+    prefix = [word for word in words[:at] if not word.startswith(_INJECT_WORD)]
+    if prefix and (prefix[0] != "env" or not all(_ENV_ASSIGNMENT_RE.match(word) for word in prefix[1:])):
+        return None
+    return tuple(words[at + 1 :])
 
 
 class _EntryBootReader:

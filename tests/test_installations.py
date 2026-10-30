@@ -710,6 +710,49 @@ class TestLaunchable:
         assert atlas.CAVEAT_SYSTEM_UNKNOWN not in codes
 
 
+class TestTheArgumentsACommandHandsItsEmulator:
+    """Issue #618: a loader card answers for the arguments it was read for, whatever only sets up the run."""
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "%EMULATOR_DOLPHIN% -b -e %ROM%",
+            # RetroDECK's catalogue: the environment, then the emulator.
+            "env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%",
+            # ES-DE's own: a per-game prefix file's text, placed where the word stood.
+            "%INJECT%=%BASENAME%.esprefix %EMULATOR_DOLPHIN% -b -e %ROM%",
+            "%RUNINBACKGROUND% env A=1 B=2 %EMULATOR_DOLPHIN% -b -e %ROM%",
+        ],
+    )
+    def test_what_only_sets_up_the_run_leaves_the_arguments(self, command):
+        from atlas.installations import (
+            _emulator_arguments,  # pyright: ignore[reportPrivateUsage] - the reading of the command is the unit under test
+        )
+
+        assert _emulator_arguments(command) == ("-b", "-e", "%ROM%")
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            # Something else runs first, with arguments of its own.
+            "gamemoderun %EMULATOR_DOLPHIN% -b -e %ROM%",
+            "env -i %EMULATOR_DOLPHIN% -b -e %ROM%",
+            "env QT_QPA_PLATFORM=xcb nice %EMULATOR_DOLPHIN% -b -e %ROM%",
+            # A name outside a shell variable's is not passed over: nothing is stated.
+            "env NAMÉ=1 %EMULATOR_DOLPHIN% -b -e %ROM%",
+            # The token is not a word of its own.
+            '"%EMULATOR_DOLPHIN%" -b -e %ROM%',
+            "/usr/bin/dolphin-emu -b -e %ROM%",
+        ],
+    )
+    def test_anything_else_in_front_leaves_them_untold(self, command):
+        from atlas.installations import (
+            _emulator_arguments,  # pyright: ignore[reportPrivateUsage] - the reading of the command is the unit under test
+        )
+
+        assert _emulator_arguments(command) is None
+
+
 class TestADerivedEmulatorList:
     """Issue #133: a catalogue-less arrangement's emulator list, from the cores' own .info."""
 

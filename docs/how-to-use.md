@@ -1311,6 +1311,8 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `entry-format-unclaimed`                   | launchable: the running core does not claim this format — attempted, never refused                                                                               |
 | `archive-contents-unread`                  | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread                                                                  |
 | `entry-format-unestablished`               | launchable: what the running entry reads was never established — not the same as "refuses"                                                                       |
+| `entry-format-content-unread`              | launchable: the running entry's loader takes the extension and then reads the content, which atlas does not                                                      |
+| `entry-format-build-dependent`             | launchable: the builds the running entry's loader card serves disagree on this extension — neither a take nor a refusal holds                                    |
 | `emulator-list-derived`                    | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                                                              |
 | `platform-unmapped`                        | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                                                              |
 | `platform-unknown`                         | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                                                               |
@@ -3218,6 +3220,24 @@ matched case-insensitively — the gate is the loader, not ES-DE's case-exact sc
 `entry-format-unestablished` — never "refuses", because an entry nobody read is not an entry known to refuse the file.
 RPCS3 has no card and is read anyway, for the command shapes below; an RPCS3 entry of any other shape, such as one
 without `--no-gui`, is an entry nobody read and keeps `entry-format-unestablished`.
+
+**Dolphin and PrimeHack** have cards read at the builds RetroDECK ships, Dolphin f84df020 and PrimeHack 81bfb96 (issue
+#618), for every entry ES-DE's and RetroDECK's catalogues declare for them — gc, wii, triforce, primehack, and ES-DE's
+consolearcade. Both loaders take a file by its extension, folding its ASCII case: the disc images `.gcm` `.iso` `.tgc`
+`.wbfs` `.ciso` `.gcz` `.wia` `.rvz` `.nfs`, the executables `.dol` and `.elf`, a `.dff` FIFO log, a `.wad`, a `.json`
+game-mod descriptor and a `.m3u` or `.m3u8` list. Neither opens an archive, so a `.zip` or `.7z` a system's list
+declares answers `entry-not-accepted` on both. Past the extension both loaders read the content — the disc's magic, the
+WAD's header, the list's entries, the descriptor — and atlas does not: an accepted extension answers `launchable` with
+`entry-format-content-unread`, and `boots` stays `None`. Reading the content, and what a list, a descriptor, an
+extracted disc or a split image boots, is issue #732. `.bin` is where the builds part. Dolphin's disc set carries it;
+PrimeHack's carries it at the build EmuDeck installs from Flathub (53f53e0f) and not at RetroDECK's, so on PrimeHack a
+`.bin` stays `launchable` on the accept-list with `entry-format-build-dependent`, since a refusal would not hold on
+every machine the card serves.
+
+Both cards answer for the command those catalogues give the emulator, `-b -e %ROM%` after its token. A leading
+`env NAME=value…` (RetroDECK's) or an `%INJECT%` of a per-game prefix file (ES-DE's own) in front of the token leaves
+those arguments as they are: the injected text is placed in front of the emulator, and atlas does not read it. An entry
+handing the emulator anything else keeps `entry-format-unestablished`.
 
 **What it boots — `boots`.** For some entries atlas reads the emulator's own boot of the file rather than a loader card,
 and judges the file itself instead of its extension: whether the entry boots it, and what. A `launchable` verdict on

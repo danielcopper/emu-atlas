@@ -126,7 +126,138 @@ class TestTheStandaloneLaunchCards:
 
     def test_a_card_names_exactly_its_three_fields(self):
         table = _card_table({"accepts": [".3ds"], "archives": False})
-        with pytest.raises(ValueError, match="exactly"):
+        with pytest.raises(ValueError, match="may also name"):
+            load_standalone_launch(table)
+
+    def test_a_card_naming_a_key_outside_the_six_fails(self):
+        table = _card_table({**CARD, "boots": True})
+        with pytest.raises(ValueError, match="may also name"):
+            load_standalone_launch(table)
+
+
+CARD = {"accepts": [".iso"], "archives": False, "source": "[V] cited"}
+DOLPHIN_ARGUMENTS = ("-b", "-e", "%ROM%")
+
+
+class TestTheDolphinAndPrimeHackCards:
+    """Issue #618 (D6): both loaders take a file by extension, case folded, and open no archive."""
+
+    @pytest.mark.parametrize("token", ["DOLPHIN", "PRIMEHACK"])
+    @pytest.mark.parametrize("extension", [".zip", ".7z", ".ZIP"])
+    def test_neither_loader_takes_an_archive(self, token, extension):
+        card = lookup_standalone_launch(token)
+        assert card is not None
+        assert not card.archives
+        assert not card.takes(extension)
+        assert card.build_note(extension) is None
+
+    @pytest.mark.parametrize("token", ["DOLPHIN", "PRIMEHACK"])
+    @pytest.mark.parametrize("extension", [".rvz", ".ISO", ".wbfs", ".m3u8", ".nfs", ".json", ".dff", ".wad"])
+    def test_both_loaders_take_their_extensions_and_read_the_content_after(self, token, extension):
+        card = lookup_standalone_launch(token)
+        assert card is not None
+        assert card.takes(extension)
+        assert card.content_checked
+
+    def test_dolphin_takes_a_bin_at_every_build_it_serves(self):
+        card = lookup_standalone_launch("DOLPHIN")
+        assert card is not None
+        assert card.takes(".bin")
+        assert card.build_note(".bin") is None
+
+    @pytest.mark.parametrize("extension", [".bin", ".BIN"])
+    def test_primehack_leaves_a_bin_to_the_build(self, extension):
+        # RetroDECK's build leaves .bin out of the disc set and the one EmuDeck
+        # installs carries it: neither a take nor a refusal holds everywhere.
+        card = lookup_standalone_launch("PRIMEHACK")
+        assert card is not None
+        assert not card.takes(extension)
+        note = card.build_note(extension)
+        assert note is not None
+        assert "81bfb96" in note
+        assert "53f53e0f" in note
+
+    @pytest.mark.parametrize("token", ["DOLPHIN", "PRIMEHACK"])
+    def test_both_cards_answer_for_the_command_their_loader_was_read_for(self, token):
+        card = lookup_standalone_launch(token)
+        assert card is not None
+        assert card.covers(DOLPHIN_ARGUMENTS)
+        assert not card.covers(("%ROM%",))
+        assert not card.covers(None)
+
+    @pytest.mark.skipif(not DEPLOYED_SYSTEMS.is_file(), reason="RetroDECK is not deployed here")
+    def test_every_deployed_command_running_a_card_is_one_it_answers_for(self):
+        # A card read for one command shape answers nothing for another, so a
+        # deployed catalogue that changes the shape turns this red instead of
+        # quietly leaving its entries unestablished.
+        from atlas.installations import (
+            _emulator_arguments,  # pyright: ignore[reportPrivateUsage] - the catalogue's commands are read as the answer reads them
+        )
+
+        text = DEPLOYED_SYSTEMS.read_text(encoding="utf-8")
+        for token in ("DOLPHIN", "PRIMEHACK"):
+            card = lookup_standalone_launch(token)
+            assert card is not None
+            commands = re.findall(rf"<command[^>]*>([^<]*%EMULATOR_{token}%[^<]*)</command>", text)
+            assert commands, token
+            for command in commands:
+                assert card.covers(_emulator_arguments(command)), command
+
+    def test_the_azahar_card_states_none_of_the_three(self):
+        # Azahar's card is read as it was before issue #618: every command
+        # naming its token, and no statement about the content.
+        card = lookup_standalone_launch("AZAHAR")
+        assert card is not None
+        assert card.arguments is None
+        assert card.covers(None)
+        assert not card.content_checked
+        assert card.build_dependent == ()
+
+
+class TestTheCardKeysOfIssue618:
+    def test_the_three_keys_load(self):
+        (card,) = load_standalone_launch(
+            _card_table(
+                {
+                    **CARD,
+                    "arguments": [list(DOLPHIN_ARGUMENTS)],
+                    "content_checked": True,
+                    "build_dependent": {".bin": "[V] two builds disagree"},
+                }
+            )
+        )
+        assert card.arguments == (DOLPHIN_ARGUMENTS,)
+        assert card.content_checked
+        assert card.build_note(".BIN") == "[V] two builds disagree"
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [[], "-e %ROM%", [[]], [["-e", ""]], [["-e", 3]], [["-b"]], [["%ROM%", "%ROM%"]], [["%ROM%"], ["%ROM%"]]],
+    )
+    def test_arguments_name_distinct_lists_handing_the_file_once(self, arguments):
+        table = _card_table({**CARD, "arguments": arguments})
+        with pytest.raises(ValueError, match="arguments"):
+            load_standalone_launch(table)
+
+    def test_content_checked_must_be_a_boolean(self):
+        table = _card_table({**CARD, "content_checked": "yes"})
+        with pytest.raises(ValueError, match="content_checked"):
+            load_standalone_launch(table)
+
+    @pytest.mark.parametrize(
+        ("build_dependent", "match"),
+        [
+            ({}, "non-empty object"),
+            ([".bin"], "non-empty object"),
+            ({"bin": "cited"}, "'.'"),
+            ({".BIN": "cited"}, "lowercase"),
+            ({".bin": ""}, "non-empty string"),
+            ({".iso": "cited"}, "also in accepts"),
+        ],
+    )
+    def test_build_dependent_names_extensions_outside_accepts_with_a_citation(self, build_dependent, match):
+        table = _card_table({**CARD, "build_dependent": build_dependent})
+        with pytest.raises(ValueError, match=match):
             load_standalone_launch(table)
 
 
