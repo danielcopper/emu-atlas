@@ -7,9 +7,11 @@ whole-machine model if both agree on every operation outcome.
 
 from __future__ import annotations
 
+import ast
 import contextlib
 import glob as glob_module
 import hashlib
+import json
 import os
 import random
 import re
@@ -26,6 +28,7 @@ import pytest
 
 import atlas.lha
 import atlas.machine
+from atlas import _core_probe
 from atlas.machine import (
     ARCHIVE_MISSING,
     ARCHIVE_NOT_ARCHIVE,
@@ -999,6 +1002,15 @@ def _fake_core(tmp_path):
     return str(so)
 
 
+# The probe module's file as the spawn names it: beside atlas/machine.py.
+_PROBE_FILE = os.path.join(os.path.dirname(os.path.abspath(atlas.machine.__file__)), "_core_probe.py")
+
+# The probe's two dump guards, called on their own so that this process is
+# never made undumpable or given a lowered hard limit itself.
+_clear_dumpable = _core_probe._clear_dumpable  # pyright: ignore[reportPrivateUsage]
+_zero_core_file_limit = _core_probe._zero_core_file_limit  # pyright: ignore[reportPrivateUsage]
+
+
 def _stub_probe(monkeypatch, *, stdout=b"", returncode=0, raises=None):
     """Answer the probe spawn without running it; returns the captured calls."""
     calls = []
@@ -1412,16 +1424,175 @@ class TestCoreProbeMemory:
         assert len(calls) == 2
 
 
+class TestCoreProbeRoute:
+    """The child runs the probe's own file wherever it has one, the module by name otherwise.
+
+    Run by path, the child loads ``_core_probe.py`` and nothing else of this
+    package; run as ``-m atlas._core_probe`` it imports ``atlas/__init__.py``
+    and everything that pulls in first, which was most of a cold probe's cost
+    (issue #731). A module with no file on disk — a frozen build, a zip
+    import — has nothing to hand the child by path and keeps the route by name.
+    """
+
+    def test_a_probe_file_on_disk_runs_by_path_isolated(self, tmp_path, monkeypatch):
+        calls = _stub_probe(monkeypatch, stdout=b"")
+        so = _fake_core(tmp_path)
+        RealMachine().query_core(so)
+        assert calls[0]["argv"] == [sys.executable, "-I", _PROBE_FILE, so]
+        # -I ignores every PYTHON* variable, so there is nothing to point the
+        # child at: it inherits the rest of the environment unchanged.
+        assert calls[0]["env"] is None
+
+    def test_a_probe_with_no_file_on_disk_runs_by_name(self, tmp_path, monkeypatch):
+        # A zip import: the package's location is a path inside an archive,
+        # which names no file the child could be handed — and the archive is
+        # what the child's PYTHONPATH must lead to.
+        archive = tmp_path / "bundle.zip"
+        archive.write_bytes(b"PK\x05\x06" + bytes(18))
+        monkeypatch.setattr(atlas.machine, "__file__", str(archive / "atlas" / "machine.py"))
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        calls = _stub_probe(monkeypatch, stdout=b"")
+        so = _fake_core(tmp_path)
+        RealMachine().query_core(so)
+        assert calls[0]["argv"] == [sys.executable, "-m", "atlas._core_probe", so]
+        assert calls[0]["env"]["PYTHONPATH"] == str(archive)
+
+    def test_the_probe_imports_only_the_standard_library(self):
+        """Run by path, the probe is the child's only atlas code — so it may import no other.
+
+        Every ``import`` statement anywhere in the file, a function-local one
+        included, names a standard-library module, and none is relative. A name
+        built at run time (``importlib.import_module``) is not an import
+        statement and is not seen here; the isolated run below is what would
+        catch one that runs.
+        """
+        tree = ast.parse(Path(_PROBE_FILE).read_text(encoding="utf-8"))
+        imported: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(alias.name.partition(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                assert node.level == 0, f"relative import at line {node.lineno}"
+                imported.add((node.module or "").partition(".")[0])
+        assert imported, "no import statement was seen — the walk is inert"
+        assert sorted(imported - sys.stdlib_module_names) == []
+
+    def test_the_probe_answers_with_no_atlas_importable(self, tmp_path):
+        # -S on top of -I takes site-packages away too, so no installed atlas
+        # is reachable: the probe file has to stand on its own. The loader's
+        # refusal of a file that is no library is its whole answer here.
+        not_a_core = tmp_path / "fake.so"
+        not_a_core.write_text("not an ELF")
+        proc = subprocess.run(
+            [sys.executable, "-I", "-S", _PROBE_FILE, str(not_a_core)],
+            capture_output=True,
+            timeout=60,
+        )
+        lines = proc.stdout.decode().splitlines()
+        assert proc.returncode == 1, proc.stderr.decode()
+        assert lines, proc.stderr.decode()
+        assert str(not_a_core) in json.loads(lines[-1])["unloadable"]
+
+
+class TestCoreProbeLeavesNoCoreDump:
+    """A core that crashes the probe must not have the kernel dump the child.
+
+    The crash is an outcome the child exists to absorb. Both settings are
+    read back from a real child rather than by crashing a core: what they
+    make the kernel do on a crash is cited in the probe, not exercised here.
+    The guards are called on their own in this process with the platform
+    calls replaced, so the test process is never made undumpable itself;
+    where a platform lacks a setting, or refuses it, the probe goes on.
+    """
+
+    PR_GET_DUMPABLE = 3  # include/uapi/linux/prctl.h @ v6.18
+
+    @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="prctl is Linux-only")
+    def test_the_probe_is_undumpable_with_a_zero_core_file_limit(self, tmp_path):
+        # In a child of its own: both settings belong to the process, and a
+        # lowered hard limit cannot be raised again.
+        not_a_core = tmp_path / "fake.so"
+        not_a_core.write_text("not an ELF")
+        program = (
+            "import ctypes, json, resource, runpy, sys\n"
+            f"sys.argv = ['probe', {str(not_a_core)!r}]\n"
+            "try:\n"
+            f"    runpy.run_path({_PROBE_FILE!r}, run_name='__main__')\n"
+            "except SystemExit:\n"
+            "    pass\n"
+            f"dumpable = ctypes.CDLL(None).prctl({self.PR_GET_DUMPABLE}, 0, 0, 0, 0)\n"
+            "print(json.dumps([dumpable, *resource.getrlimit(resource.RLIMIT_CORE)]))\n"
+        )
+        proc = subprocess.run([sys.executable, "-I", "-c", program], capture_output=True, timeout=60)
+        lines = proc.stdout.decode().splitlines()
+        assert lines, proc.stderr.decode()
+        assert json.loads(lines[-1]) == [0, 0, 0]
+
+    def test_a_libc_without_prctl_is_skipped(self, monkeypatch):
+        monkeypatch.setattr(_core_probe.ctypes, "CDLL", lambda *_args, **_kwargs: SimpleNamespace())
+        _clear_dumpable()
+
+    def test_a_libc_that_cannot_be_opened_is_skipped(self, monkeypatch):
+        def refuse(*_args, **_kwargs):
+            raise OSError("cannot open the running program")
+
+        monkeypatch.setattr(_core_probe.ctypes, "CDLL", refuse)
+        _clear_dumpable()
+
+    def test_a_failing_prctl_is_not_read(self, monkeypatch):
+        # -1 is how prctl fails (an argument it refuses, a kernel without
+        # it); the probe runs either way, so nothing raises.
+        calls = []
+        monkeypatch.setattr(
+            _core_probe.ctypes,
+            "CDLL",
+            lambda *_args, **_kwargs: SimpleNamespace(prctl=lambda *args: calls.append(args) or -1),
+        )
+        _clear_dumpable()
+        assert calls == [(4, 0, 0, 0, 0)]
+
+    def test_a_platform_other_than_linux_is_left_alone(self, monkeypatch):
+        def must_not_open(*_args, **_kwargs):
+            raise AssertionError("libc opened on a platform without prctl")
+
+        monkeypatch.setattr(_core_probe.sys, "platform", "darwin")
+        monkeypatch.setattr(_core_probe.ctypes, "CDLL", must_not_open)
+        _clear_dumpable()
+
+    def test_a_platform_without_resource_is_skipped(self, monkeypatch):
+        # None in sys.modules makes the import raise ImportError, as on a
+        # platform that has no such module.
+        monkeypatch.setitem(sys.modules, "resource", None)
+        _zero_core_file_limit()
+
+    @pytest.mark.parametrize("refusal", [ValueError("invalid limit"), OSError("not permitted")])
+    def test_a_refused_limit_is_skipped(self, monkeypatch, refusal):
+        import resource
+
+        def refuse(*_args):
+            raise refusal
+
+        monkeypatch.setattr(resource, "setrlimit", refuse)
+        _zero_core_file_limit()
+
+
 class TestCoreProbeEnvironment:
-    """The probe child must reach the atlas that spawned it.
+    """A child that imports the probe by name must reach the atlas that spawned it.
 
     Vendoring is a directory copy the host puts on ``sys.path`` at runtime —
     nothing on the child's default path leads back to it. A child that cannot
     import ``atlas._core_probe`` answers *unknown* for every core, for a reason
-    that has nothing to do with the cores.
+    that has nothing to do with the cores. Only the route by name needs this;
+    the tests that are about it put the spawn on that route.
     """
 
+    @staticmethod
+    def _by_name(monkeypatch):
+        """Take the route a module with no file on disk takes, while the package keeps its location."""
+        monkeypatch.setattr(atlas.machine, "_probe_script", lambda: None)
+
     def test_child_is_pointed_at_this_package(self, tmp_path, monkeypatch):
+        self._by_name(monkeypatch)
         monkeypatch.delenv("PYTHONPATH", raising=False)
         monkeypatch.setenv("ATLAS_UNRELATED_VARIABLE", "kept")
         calls = _stub_probe(monkeypatch, stdout=b"")
@@ -1432,6 +1603,7 @@ class TestCoreProbeEnvironment:
         assert env["ATLAS_UNRELATED_VARIABLE"] == "kept"
 
     def test_inherited_pythonpath_is_kept_behind_it(self, tmp_path, monkeypatch):
+        self._by_name(monkeypatch)
         inherited = os.pathsep.join(("/host/py_modules", "/host/extra"))
         monkeypatch.setenv("PYTHONPATH", inherited)
         calls = _stub_probe(monkeypatch, stdout=b"")
@@ -1553,7 +1725,8 @@ class TestChoosingTheCoreProbeInterpreter:
 
     The middle stage is deliberately narrow. ``sys.executable`` is only an
     interpreter where the running program is one; in a frozen build it is the
-    application, and ``-m atlas._core_probe`` would be ignored by its
+    application, and the probe's arguments — its file, or
+    ``-m atlas._core_probe`` on the route by name — would be ignored by its
     bootloader. The two directions the test can be wrong in are not
     symmetrical: every way it is too narrow ends here, in no interpreter and so
     in *unknown*, while the name check is what keeps the too-wide direction
@@ -1746,8 +1919,9 @@ class TestRegisteringACoreProbeInterpreter:
 class TestAFrozenHostIsNeverLaunched:
     """The regression guard for the defect: no interpreter means no process at all.
 
-    ``sys.executable`` in a frozen build is the application. Spawning it with
-    ``-m atlas._core_probe`` starts that application a second time — the
+    ``sys.executable`` in a frozen build is the application. Spawning it to
+    run the probe (its file, or ``-m atlas._core_probe`` on the route by name)
+    starts that application a second time — the
     reported consumer restarted its whole plugin host on every save question —
     and ``capture_output=True`` swallows every sign of it, so the failure
     disguises itself as a cleanly degraded answer.
@@ -1768,8 +1942,21 @@ class TestAFrozenHostIsNeverLaunched:
         calls = _stub_probe(monkeypatch, stdout=self.BASE)
         _model_a_frozen_host(monkeypatch)
         register_core_probe_interpreter("/usr/bin/python3")
-        assert RealMachine().query_core(_fake_core(tmp_path)) == self.MGBA
-        assert calls[0]["argv"][:3] == ["/usr/bin/python3", "-m", "atlas._core_probe"]
+        so = _fake_core(tmp_path)
+        assert RealMachine().query_core(so) == self.MGBA
+        # The reported shape: a frozen loader with its vendored atlas on disk
+        # as plain files, so the registered interpreter runs the probe's file.
+        assert calls[0]["argv"] == ["/usr/bin/python3", "-I", _PROBE_FILE, so]
+
+    def test_a_frozen_build_with_no_files_launches_the_module_by_name(self, tmp_path, monkeypatch):
+        # atlas frozen into the application itself: no file to run by path.
+        calls = _stub_probe(monkeypatch, stdout=self.BASE)
+        _model_a_frozen_host(monkeypatch)
+        monkeypatch.delattr(atlas.machine, "__file__")
+        register_core_probe_interpreter("/usr/bin/python3")
+        so = _fake_core(tmp_path)
+        assert RealMachine().query_core(so) == self.MGBA
+        assert calls[0]["argv"] == ["/usr/bin/python3", "-m", "atlas._core_probe", so]
 
     def test_a_plain_interpreter_still_launches_itself(self, tmp_path, monkeypatch):
         calls = _stub_probe(monkeypatch, stdout=self.BASE)

@@ -149,10 +149,11 @@ A **frozen** host is one whose program embeds the interpreter instead of being o
 all build such a program, in one of two shapes: a single self-extracting binary, or a directory holding a launcher
 beside the runtime it needs — the one-directory shape is PyInstaller's default, the only mode cx_Freeze has, and what
 py2exe produces unless told otherwise. The shape does not matter here; what matters is that in both of them
-`sys.executable` is that program and not an interpreter, so its bootloader ignores `-m atlas._core_probe <core>` and
-starts the program a second time. That is the shape of a plugin host whose loader is frozen while its vendored copy of
-atlas sits on disk beside it as plain files, and where such a host runs as a long-lived service, the second launch is a
-second copy of the whole service — started, in the worst case, by a question as innocent as where a save file lives.
+`sys.executable` is that program and not an interpreter, so its bootloader ignores the arguments that name the probe and
+the core and starts the program a second time. That is the shape of a plugin host whose loader is frozen while its
+vendored copy of atlas sits on disk beside it as plain files, and where such a host runs as a long-lived service, the
+second launch is a second copy of the whole service — started, in the worst case, by a question as innocent as where a
+save file lives.
 
 So atlas checks before it launches, and it never searches. The interpreter is decided in three stages:
 
@@ -175,20 +176,22 @@ import atlas
 atlas.register_core_probe_interpreter("/usr/bin/python3")
 ```
 
-The child is pointed back at this copy of atlas through `PYTHONPATH`, so a foreign interpreter is not a poorer answer —
-it loads the same core and returns the same name, version and options. The path must be absolute, and it must be one the
-operating system can actually be handed. Absolute, because the spawn resolves a bare name through `PATH` and a relative
-one against the process's working directory — two lookups, both guesses about the machine atlas does not make anywhere.
-Handed to the operating system, because a path it cannot take makes the spawn raise a `ValueError` where an unusable
-path raises `OSError`, and only the second degrades to _unknown_; the first would escape the question. Two spellings are
-known to do that, failing at different layers: a lone surrogate cannot be encoded at all, and a NUL byte encodes cleanly
-and is rejected by the spawn itself. A surrogate-escaped byte such as `\udcff` is neither — that is how Python spells a
-filesystem byte that is not valid text, a real machine can hand such a name back, and it is accepted and degrades like
-any other path that does not run. The same rule applies to the derived stage, so neither stage can put into the spawn
-what the other would refuse. Anything else, `None` apart, is refused with `TypeError` at the registration, where the
-caller can still see what it handed over. Whether the file exists is deliberately not checked — that is the machine's
-business at probe time, and a path that does not run yields the same _unknown_ every other probe failure yields. There
-is one slot: the last registration wins, and `atlas.register_core_probe_interpreter(None)` clears it.
+The child runs this copy's own probe: its file by path and isolated (`-I`), so nothing else of atlas is imported, or,
+where the copy has no files on disk, the module by name with this copy's location ahead of `PYTHONPATH`. A foreign
+interpreter is therefore not a poorer answer — it loads the same core and returns the same name, version and options.
+The path must be absolute, and it must be one the operating system can actually be handed. Absolute, because the spawn
+resolves a bare name through `PATH` and a relative one against the process's working directory — two lookups, both
+guesses about the machine atlas does not make anywhere. Handed to the operating system, because a path it cannot take
+makes the spawn raise a `ValueError` where an unusable path raises `OSError`, and only the second degrades to _unknown_;
+the first would escape the question. Two spellings are known to do that, failing at different layers: a lone surrogate
+cannot be encoded at all, and a NUL byte encodes cleanly and is rejected by the spawn itself. A surrogate-escaped byte
+such as `\udcff` is neither — that is how Python spells a filesystem byte that is not valid text, a real machine can
+hand such a name back, and it is accepted and degrades like any other path that does not run. The same rule applies to
+the derived stage, so neither stage can put into the spawn what the other would refuse. Anything else, `None` apart, is
+refused with `TypeError` at the registration, where the caller can still see what it handed over. Whether the file
+exists is deliberately not checked — that is the machine's business at probe time, and a path that does not run yields
+the same _unknown_ every other probe failure yields. There is one slot: the last registration wins, and
+`atlas.register_core_probe_interpreter(None)` clears it.
 
 `atlas.core_probe_interpreter()` says which interpreter a probe would run under and by which route — or `None` where
 none would, which is the diagnosis when every core comes back unqueryable. Otherwise the result is an

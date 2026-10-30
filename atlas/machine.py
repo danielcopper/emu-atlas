@@ -1519,8 +1519,8 @@ class RealMachine:
     a caller that re-detects per question pays the timeout every time, while
     one that keeps its installations, or passes its own machine, pays it once.
     Where no interpreter can be named nothing is launched at all and every core
-    answers *unknown*. The child is pointed back at this package
-    (:func:`_probe_environment`) and answers with whatever it printed before it
+    answers *unknown*. The child runs this package's own probe
+    (:func:`_probe_command`) and answers with whatever it printed before it
     stopped (:func:`_parse_probe_output`). ``read_core`` is the same read with
     the loader's refusal kept (:class:`CoreReading`), for the caller that must
     tell a core it could not open from one that answered nothing.
@@ -1986,12 +1986,13 @@ class RealMachine:
             # Nothing ran, so nothing timed out: the next question asks again,
             # and it is free — an interpreter may be registered by then.
             return _ProbeResult(CoreReading(CORE_READ_NO_INTERPRETER), timed_out=False)
+        argv, env = _probe_command(interpreter.path, so_path)
         try:
             proc = subprocess.run(
-                [interpreter.path, "-m", "atlas._core_probe", so_path],
+                argv,
                 capture_output=True,
                 timeout=_CORE_PROBE_TIMEOUT_SECONDS,
-                env=_probe_environment(),
+                env=env,
             )
         except subprocess.TimeoutExpired as expired:
             # A core that hangs in the option-capture phase printed its base
@@ -2073,8 +2074,39 @@ def _parse_probe_output(stdout: bytes | None, ended: CoreUnansweredStatus) -> Co
     )
 
 
+def _probe_command(interpreter: str, so_path: str) -> tuple[list[str], dict[str, str] | None]:
+    """The probe child's argument vector and environment: the probe's own file wherever it has one.
+
+    Run by path, the child loads ``_core_probe.py`` and nothing else of this
+    package — the probe needs only the standard library, while ``-m`` imports
+    ``atlas/__init__.py`` and everything it pulls in first, which is most of a
+    cold probe's cost. ``-I`` keeps the script's directory off ``sys.path``,
+    so no module of this package can stand in for a standard-library one, and
+    ignores every ``PYTHON*`` variable; the rest of the environment, which the
+    core's own library lookup reads, is inherited unchanged.
+
+    Where the probe has no file on disk (a frozen build, a zip import) there
+    is nothing to run by path, and the child imports the module by name in
+    the environment :func:`_probe_environment` builds — the route every probe
+    took before.
+    """
+    script = _probe_script()
+    if script is not None:
+        return [interpreter, "-I", script, so_path], None
+    return [interpreter, "-m", "atlas._core_probe", so_path], _probe_environment()
+
+
+def _probe_script() -> str | None:
+    """The probe module's file beside this one — ``None`` where it is not a file on disk."""
+    location = globals().get("__file__")
+    if not isinstance(location, str) or not location:
+        return None
+    script = os.path.join(os.path.dirname(os.path.abspath(location)), "_core_probe.py")
+    return script if os.path.isfile(script) else None
+
+
 def _probe_environment() -> dict[str, str] | None:
-    """The probe child's environment: this package's location ahead of ``PYTHONPATH``.
+    """The environment of a probe child that imports the module by name.
 
     The child imports ``atlas._core_probe`` by name, and under the vendoring
     model — this package copied into a host that puts it on ``sys.path`` at
@@ -2153,12 +2185,11 @@ def register_core_probe_interpreter(path: str | None) -> None:
     in a child process; that child is a Python interpreter running
     ``atlas._core_probe``. A frozen host (PyInstaller, cx_Freeze, py2exe) has
     no interpreter to offer as ``sys.executable`` — there that path is the
-    *application*, whose bootloader ignores ``-m atlas._core_probe`` and starts
+    *application*, whose bootloader ignores the probe's arguments and starts
     the application a second time — so a host that knows where a real
     interpreter lives says so here, and atlas launches that one instead. The
-    environment the child receives points it back at this package (see
-    :func:`_probe_environment`), so a foreign interpreter is not a poorer
-    answer: it is the same answer.
+    child runs this package's own probe (see :func:`_probe_command`), so a
+    foreign interpreter is not a poorer answer: it is the same answer.
 
     The path must be absolute, and it must be one the operating system can
     actually be handed — :func:`_is_spawnable_interpreter_path` carries the
@@ -2202,9 +2233,9 @@ class CoreProbeInterpreter(NamedTuple):
 def _running_python_interpreter() -> str | None:
     """``sys.executable``, but only where the running program is plainly an interpreter.
 
-    Launching ``sys.executable -m atlas._core_probe`` is a probe only where
-    that executable *is* an interpreter. In a frozen build it is the
-    application: the bootloader ignores the module arguments and starts the
+    Launching the probe under ``sys.executable`` is a probe only where that
+    executable *is* an interpreter. In a frozen build it is the
+    application: the bootloader ignores the probe's arguments and starts the
     application again, so asking atlas where a save lives would restart the
     host that asked — and ``capture_output`` would hide it.
 

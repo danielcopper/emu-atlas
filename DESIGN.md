@@ -287,7 +287,7 @@ class Machine(Protocol):
   (`register_core_probe_interpreter`), else `sys.executable` where the running program is plainly an interpreter — no
   `sys.frozen`, no `sys._MEIPASS`, a file name starting with `python` — else none, and then nothing is launched and
   every core answers _unknown_. In a frozen host `sys.executable` is the application, whose bootloader would ignore the
-  module arguments and start the host a second time; atlas never searches for an interpreter instead, because a
+  probe's arguments and start the host a second time; atlas never searches for an interpreter instead, because a
   `PATH`-resolved `python3` is an assumption about the machine. Both stages apply one shape rule — an absolute string
   the operating system can actually be handed — so neither can hand the spawn what the other would refuse, and
   `PYTHONEXECUTABLE` makes the derived case real rather than theoretical. The middle test's two error directions are not
