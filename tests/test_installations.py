@@ -293,6 +293,23 @@ class TestTheBootTravelsWithALaunchableEntryAlone:
         assert atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".iso").boots is None
 
 
+class TestTheOpensTravelWithAnEntryAlone:
+    """What an emulator opens is a statement about an entry, a refusal included (#716)."""
+
+    OPENS = (atlas.Opened("/roms/psx/Game (Track 1).bin", atlas.HOW_NAMED, "/roms/psx/Game.cue", True),)
+
+    def test_opens_beside_a_verdict_that_names_no_entry_are_refused(self):
+        with pytest.raises(ValueError, match="opens stand only on a verdict about an entry"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_NOT_ACCEPTED, extension=".cue", opens=self.OPENS)
+
+    def test_opens_without_an_entry_are_refused(self):
+        with pytest.raises(ValueError, match="opens stand only on a verdict about an entry"):
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".cue", opens=self.OPENS)
+
+    def test_no_opens_is_every_verdicts_default(self):
+        assert atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".cue").opens is None
+
+
 class TestLaunchable:
     """Issue #36: whether a file launches as a system's content — and why not, when not.
 

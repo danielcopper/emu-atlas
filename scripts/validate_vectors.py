@@ -555,6 +555,9 @@ KNOWN_GRANULARITIES = {
 KNOWN_ROLES = {"battery", "memory-card", "disk-diff", "high-score", "settings", "notes", "unknown"}
 KNOWN_FILE_SET_STATES = {"observed", "declared", "unknown"}
 KNOWN_EMULATOR_KINDS = {"libretro", "standalone", "retroarch-foreign-core"}
+# How a file an entry's emulator opens came to be opened (atlas.OPENED_HOWS).
+KNOWN_OPENED_HOWS = {"named", "name-derived"}
+
 KNOWN_CAVEAT_CODES = {
     "core-rules-missing",
     "emulator-not-found",
@@ -727,6 +730,17 @@ KNOWN_CAVEAT_CODES = {
     "entry-format-unestablished",
     "entry-format-content-unread",
     "entry-format-build-dependent",
+    "opens-file-missing",
+    "opens-track-refused",
+    "opens-sheet-refused",
+    "opens-format-refused",
+    "opens-format-unread",
+    "opens-playlist-refused",
+    "opens-content-unread",
+    "opens-file-unread",
+    "opens-setting-unread",
+    "opens-bound-exceeded",
+    "opens-path-too-long",
     "boot-path-missing",
     "boot-path-unestablished",
     "boot-nothing-found",
@@ -3801,9 +3815,11 @@ def _validate_launchable(name: str, answer: Any) -> None:
     ``installers`` is ``needs-installation``'s, a list there (empty where
     nothing here installs the file) and ``null`` on every other verdict.
     ``boots`` is ``launchable``'s alone, and ``null`` there too wherever the
-    entry's own boot was not read.
+    entry's own boot was not read. ``opens`` rides the two verdicts that name
+    an entry, and is ``null`` there too wherever the entry's own open was not
+    read.
     """
-    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "boots", "caveats"}
+    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "boots", "opens", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
     if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
@@ -3816,6 +3832,7 @@ def _validate_launchable(name: str, answer: Any) -> None:
         ):
             fail(f"{name}: expected.launchable.{list_key} must be a list of non-empty strings")
     _validate_boots(name, answer)
+    _validate_opens(name, answer)
     entry_verdicts = {"launchable", "entry-not-accepted"}
     if (answer["entry"] is not None) != (answer["verdict"] in entry_verdicts):
         fail(f"{name}: expected.launchable.entry travels with {sorted(entry_verdicts)} alone")
@@ -3842,6 +3859,29 @@ def _validate_boots(name: str, answer: dict[str, Any]) -> None:
     root = boots["disc_root"]
     if root is not None and (not isinstance(root, str) or not root.startswith("/")):
         fail(f"{name}: expected.launchable.boots.disc_root must be an absolute path or null")
+
+
+def _validate_opens(name: str, answer: dict[str, Any]) -> None:
+    """What the entry's emulator opens: ``null``, or a list of files — on a verdict that names an entry alone, the
+    coupling the answer type holds. Each file is an absolute path, how it came to be opened, the absolute path of
+    the file that names it or whose name it derives from, and whether it is there: ``true``, ``false`` or
+    ``null``."""
+    opens = answer["opens"]
+    if opens is None:
+        return
+    if answer["verdict"] not in ("launchable", "entry-not-accepted") or answer["entry"] is None:
+        fail(f"{name}: expected.launchable.opens travels with a verdict about an entry alone")
+    if not isinstance(opens, list):
+        fail(f"{name}: expected.launchable.opens must be a list or null")
+    for opened in opens:
+        _require_exact(name, opened, {"path", "how", "by", "present"}, "each expected.launchable.opens entry")
+        for key in ("path", "by"):
+            if not isinstance(opened[key], str) or not opened[key].startswith("/"):
+                fail(f"{name}: expected.launchable.opens.{key} must be an absolute path")
+        if opened["how"] not in KNOWN_OPENED_HOWS:
+            fail(f"{name}: expected.launchable.opens.how must be one of {sorted(KNOWN_OPENED_HOWS)}")
+        if opened["present"] not in (True, False, None):
+            fail(f"{name}: expected.launchable.opens.present must be true, false or null")
 
 
 def _validate_installers(name: str, verdict: Any, installers: Any) -> None:

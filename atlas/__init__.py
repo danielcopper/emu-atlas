@@ -126,6 +126,27 @@ from .rpcs3_boot import (
     CAVEAT_ENTRY_TAKES_NO_DIRECTORY,
 )
 
+# What an entry's emulator opens through a launched disc file (issue #716):
+# each file it opens, how it came to be opened, and why a reading refuses or
+# stops short.
+from .disc_opens import (
+    CAVEAT_OPENS_BOUND_EXCEEDED,
+    CAVEAT_OPENS_CONTENT_UNREAD,
+    CAVEAT_OPENS_FILE_MISSING,
+    CAVEAT_OPENS_FILE_UNREAD,
+    CAVEAT_OPENS_FORMAT_REFUSED,
+    CAVEAT_OPENS_FORMAT_UNREAD,
+    CAVEAT_OPENS_PATH_TOO_LONG,
+    CAVEAT_OPENS_PLAYLIST_REFUSED,
+    CAVEAT_OPENS_SETTING_UNREAD,
+    CAVEAT_OPENS_SHEET_REFUSED,
+    CAVEAT_OPENS_TRACK_REFUSED,
+    HOW_NAME_DERIVED,
+    HOW_NAMED,
+    OPENED_HOWS,
+    Opened,
+)
+
 # --- The handles every question is asked of ----------------------------------
 from .installations import (
     EmuDeck,
@@ -940,6 +961,21 @@ __all__ = [
     "CAVEAT_BOOT_DISC_DIR_CONFIGURED",
     "CAVEAT_BOOT_DISC_DIR_UNRESOLVED",
     "CAVEAT_ENTRY_TAKES_NO_DIRECTORY",
+    "Opened",
+    "OPENED_HOWS",
+    "HOW_NAMED",
+    "HOW_NAME_DERIVED",
+    "CAVEAT_OPENS_FILE_MISSING",
+    "CAVEAT_OPENS_TRACK_REFUSED",
+    "CAVEAT_OPENS_SHEET_REFUSED",
+    "CAVEAT_OPENS_FORMAT_REFUSED",
+    "CAVEAT_OPENS_FORMAT_UNREAD",
+    "CAVEAT_OPENS_PLAYLIST_REFUSED",
+    "CAVEAT_OPENS_CONTENT_UNREAD",
+    "CAVEAT_OPENS_FILE_UNREAD",
+    "CAVEAT_OPENS_SETTING_UNREAD",
+    "CAVEAT_OPENS_BOUND_EXCEEDED",
+    "CAVEAT_OPENS_PATH_TOO_LONG",
     "InstallFirstFormat",
     "StandaloneLaunchCard",
     "load_launch_formats",

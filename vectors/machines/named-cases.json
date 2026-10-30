@@ -3721,6 +3721,7 @@
           ],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
@@ -3809,6 +3810,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
@@ -3871,6 +3873,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
@@ -16906,6 +16909,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -16987,6 +16991,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-config-missing",
@@ -17050,6 +17055,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17124,6 +17130,7 @@
             }
           ],
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17204,6 +17211,7 @@
             }
           ],
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17306,6 +17314,7 @@
             }
           ],
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17380,6 +17389,7 @@
             }
           ],
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17463,6 +17473,7 @@
             }
           ],
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17524,6 +17535,7 @@
           "alternatives": [],
           "installers": [],
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
@@ -17602,6 +17614,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17651,6 +17664,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-sealed",
@@ -17735,6 +17749,7 @@
           ],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17811,6 +17826,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "archive-contents-unread",
@@ -17897,6 +17913,7 @@
           ],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": []
         }
       }
@@ -17954,6 +17971,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "launch-command-label-unknown",
@@ -18037,6 +18055,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "archive-contents-unread",
@@ -18120,6 +18139,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "entry-format-unclaimed",
@@ -18197,6 +18217,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "entry-format-unestablished",
@@ -18333,6 +18354,7 @@
           "alternatives": [],
           "installers": null,
           "boots": null,
+          "opens": null,
           "caveats": [
             {
               "code": "emulator-catalogue-unavailable",
