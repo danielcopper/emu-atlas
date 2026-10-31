@@ -272,6 +272,7 @@ from .placement import (
     CAVEAT_CORE_SAVESTATES_UNSUPPORTED,
     CAVEAT_DEAD_SYMLINK,
     CAVEAT_OPTION_ENTRY_RETIRED,
+    CAVEAT_FILE_MEMBERSHIP_BY_HEADER,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FILE_SET_ACROSS_SYSTEMS,
     CAVEAT_FILE_SET_CLAIMS_MERGED,
@@ -353,7 +354,10 @@ from .placement import (
     TEMPLATE_REGION,
     TEMPLATE_ROM_STEM,
     TEMPLATE_SAVE_ID,
+    SAVE_ID_SPELLING_GAME_CODE,
     SAVE_ID_SPELLING_PATH_SEGMENT,
+    MEMBERSHIP_LIMIT_MAKER_CODE_NOT_COMPARED,
+    MEMBERSHIP_LIMIT_OTHER_GAMES_LOADED,
     SAVE_ID_SPELLING_TITLE_ID_WORDS,
     FILE_SET_DECLARED,
     FILE_SET_OBSERVED,
@@ -8247,6 +8251,7 @@ _DOLPHIN_CITATION_SLOTS = frozenset(
         "slot_parse",  # how a SlotA/SlotB value is parsed, and when the default wins
         "session_overrides",  # the GCIFolder*PathOverride keys a session sets
         "gci_names",  # how a .gci file inside a folder card is named
+        "gci_members",  # which .gci files of a folder a running game is given: by the header's game code
         "nand_tree",  # the Wii NAND's title/<hi>/<lo>/data shape
         "title_id",  # where a disc's title id comes from: its game partition's ticket
         "title_created",  # the disc boot that creates title/<hi>/<lo>/data
@@ -8783,10 +8788,13 @@ def _dolphin_folder_slot(
     """A GCI folder in one slot: one directory per region, files unnamed.
 
     An empty path defaults to ``<GC user>/<region>/Card <slot>``
-    (MainSettings.cpp:851-857 at dolphin 2609). The ``.gci`` names inside
-    come from the save's own directory entry — makercode, gamecode and the
-    save's internal filename (GCMemcardDirectory.cpp:57-61) — none of which
-    any read of the content path recovers, so the groups stay unnamed.
+    (MainSettings.cpp:851-857 at dolphin 2609). A ``.gci`` Dolphin writes is
+    named from the save's own directory entry — makercode, gamecode and the
+    save's internal filename (GCMemcardDirectory.cpp:53-61) — and one it finds
+    keeps whatever name it has, none of which any read of the content path
+    recovers, so the groups stay unnamed. Which of the files are one game's
+    is decided by their header, and the answer states that rule beside the
+    groups (:func:`_dolphin_folder_caveats`).
     """
     if configured:
         resolved = sandbox.host(f"GCIFolder{letter}Path", configured)
@@ -9275,29 +9283,16 @@ def _dolphin_gc_answer(
     if groups:
         value = groups[0].granularity
         directory = template or groups[0].dir
-        needs = (HOLE_REGION,) if template else ()
+        folders = [g for g in groups if g.files is None]
+        # A GCI folder's files are one game's by the game code in their header,
+        # so the answer holding one holds that code as a hole beside the region.
+        needs = (*((HOLE_REGION,) if template else ()), *((HOLE_SAVE_ID,) if folders else ()))
         named_first = groups[0].files is not None
         files = tuple(
             name for g in groups if g.dir == groups[0].dir and g.files for name in g.files
         ) if named_first else ()
         state = FILE_SET_DECLARED
-        if any(g.files is None for g in groups):
-            caveats.extend(
-                Caveat(
-                    CAVEAT_FILE_NAMES_UNESTABLISHED,
-                    "the .gci files here are named from the save's own directory entry — "
-                    "makercode, gamecode and the save's internal filename — which follow from "
-                    "nothing atlas reads; back the directory up whole",
-                    {
-                        "token": card.token,
-                        "dir": g.dir,
-                        "role": g.role,
-                        "citation": f"{cite('gci_names')} at {cite('build')}",
-                    },
-                )
-                for g in groups
-                if g.files is None
-            )
+        caveats.extend(_dolphin_folder_caveats(folders, card=card, cite=cite))
     else:
         # No slot carries a group: either no slot holds a card or a save, and
         # no save data lands anywhere until the configuration changes, or a
@@ -9349,6 +9344,72 @@ def _dolphin_gc_answer(
             ),
         ),
     )
+
+
+def _dolphin_folder_caveats(
+    folders: Sequence[FileGroup], *, card: StandaloneSaveCard, cite: _Cite
+) -> list[Caveat]:
+    """What a GCI folder's unnamed groups say about their files: no names, and a member rule.
+
+    Every ``file-names-unestablished`` first, then every
+    ``file-membership-by-header``, each in the groups' order. The names follow
+    from nothing atlas reads — Dolphin names a ``.gci`` it writes from the
+    save's directory entry and keeps the name of one it finds — while which
+    files are the running game's follows from four bytes of their header: the
+    folder's ``*.gci`` are listed, not recursively and with the extension in
+    any case, and a game is given those whose game code equals the first four
+    characters of its disc's game id. Dolphin compares the game code alone,
+    not the maker code beside it, and outside netplay it loads the other
+    games' files from the folder too, so the hole covers the disc's own code
+    and no other (#615 D2).
+    """
+    names = [
+        Caveat(
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            "Dolphin names a .gci it writes here from the save's own directory entry — "
+            "makercode, gamecode and the save's internal filename — and keeps the name of one "
+            "it finds; neither follows from anything atlas reads, so no name is stated, and "
+            "file-membership-by-header states which files are one game's",
+            {
+                "token": card.token,
+                "dir": g.dir,
+                "role": g.role,
+                "citation": f"{cite('gci_names')} at {cite('build')}",
+            },
+        )
+        for g in folders
+    ]
+    members = [
+        Caveat(
+            CAVEAT_FILE_MEMBERSHIP_BY_HEADER,
+            "Dolphin gives a running game the .gci files here whose header begins with its "
+            "disc's game code, whatever their names: list *.gci (not recursively, the extension "
+            "in any case) and keep the files whose first four bytes equal the save_id. The hole "
+            "covers the files carrying the disc's own game code only. Two limits ride in limits: "
+            "Dolphin compares the game code alone, not the maker code, and outside netplay it "
+            "loads the other games' files from this folder as well, so the folder is not one "
+            "game's alone",
+            {
+                "token": card.token,
+                "dir": g.dir,
+                "pattern": "*.gci",
+                "offset": "0",
+                "length": "4",
+                "save_id": (
+                    "the disc's game code: the first four characters of its game id, as the "
+                    "disc header states it"
+                ),
+                "save_id_spelling": SAVE_ID_SPELLING_GAME_CODE,
+                "limits": (
+                    MEMBERSHIP_LIMIT_OTHER_GAMES_LOADED,
+                    MEMBERSHIP_LIMIT_MAKER_CODE_NOT_COMPARED,
+                ),
+                "citation": f"{cite('gci_members')} at {cite('build')}",
+            },
+        )
+        for g in folders
+    ]
+    return [*names, *members]
 
 
 def _dolphin_size_evidence(

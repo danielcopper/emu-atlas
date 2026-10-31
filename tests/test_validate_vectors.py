@@ -416,6 +416,26 @@ def _save_id_caveat(**data) -> Vector:
     }
 
 
+def _membership_caveat(**data) -> Vector:
+    """A GCI folder's member rule beside its ``save_id`` hole; a key given as ``None`` is left out."""
+    stated = {
+        "token": "DOLPHIN",
+        "dir": f"{HOME}/GC/USA/Card A",
+        "pattern": "*.gci",
+        "offset": "0",
+        "length": "4",
+        "save_id": "the disc's game code",
+        "save_id_spelling": "game-code",
+        "limits": ["other-games-loaded", "maker-code-not-compared"],
+        "citation": "GCMemcardDirectory.cpp:209 at dolphin 2609",
+        **data,
+    }
+    return {
+        "code": "file-membership-by-header",
+        "data": {key: value for key, value in stated.items() if value is not None},
+    }
+
+
 def _base_texture(**overrides) -> Vector:
     return _vector(
         {"texture_pack_location": _texture(**overrides)},
@@ -1033,6 +1053,14 @@ PLACEMENT_CASES = [
          "states one of 'save_id' and 'save_id_spelling' without the other", id="placement-save-id-without-spelling"),
     case(_base_placement(needs=["save_id"], caveats=[_save_id_caveat(save_id_spelling="serial")]),
          "save_id_spelling must be one of", id="placement-save-id-spelling-outside-the-vocabulary"),
+    # A membership rule's limits are words of their vocabulary, as a list, and
+    # always stated (#615).
+    case(_base_placement(needs=["save_id"], caveats=[_membership_caveat(limits=["nope"])]),
+         "file-membership-by-header.limits must be a list of", id="placement-membership-limit-outside-the-vocabulary"),
+    case(_base_placement(needs=["save_id"], caveats=[_membership_caveat(limits="other-games-loaded")]),
+         "file-membership-by-header.limits must be a list of", id="placement-membership-limits-a-bare-string"),
+    case(_base_placement(needs=["save_id"], caveats=[_membership_caveat(limits=None)]),
+         "file-membership-by-header.limits must be a list of", id="placement-membership-limits-missing"),
     case(_base_placement(fallback_dir=""), "must be null or a non-empty string", id="placement-empty-fallback"),
     case(_base_placement(physical_dir=7), "must be null or a non-empty string", id="placement-physical-type"),
     case(_vector({"savefile_location": {**_placement(), "stray": 1}}, installed=True, savefile_query={"content_path": ROM}),
@@ -2120,6 +2148,9 @@ ACCEPTED_CASES = [
     # hole rides in the caveat's names alone, and its fill beside it.
     pytest.param(_base_placement(needs=["content_dir"], caveats=[_save_id_caveat()]),
                  id="a-save-id-hole-named-only-in-the-caveat-that-fills-it"),
+    # A GCI folder's save_id hole is a membership rule, named in no path.
+    pytest.param(_base_placement(needs=["save_id"], caveats=[_membership_caveat()]),
+                 id="a-save-id-hole-a-membership-rule-fills"),
     pytest.param(_base_placement(granularity=_granularity(value="per-game-files")),
                  id="a-granularity-with-alternatives"),
     pytest.param(_base_placement(redirects=[]), id="a-standalone-save-answer-with-no-redirect"),
@@ -2522,6 +2553,10 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_save_id_spelling_vocabularies_match(self):
         assert validate_vectors.KNOWN_SAVE_ID_SPELLINGS == set(atlas.SAVE_ID_SPELLINGS)
+
+    def test_the_file_membership_limit_vocabularies_match(self):
+        assert validate_vectors.KNOWN_FILE_MEMBERSHIP_LIMITS == set(atlas.FILE_MEMBERSHIP_LIMITS)
+        assert validate_vectors.KNOWN_FILE_MEMBERSHIP_LIMITS == self._exported("MEMBERSHIP_LIMIT_")
 
     def test_the_root_kind_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROOT_KINDS == set(atlas.ROOT_KINDS)

@@ -1307,6 +1307,12 @@ word alone, in lower case, `usage` `folder-exact` (`src/wii.c:75-77`, `:178-180`
 (`save-id-candidates`), so a client holding the low word reads the high word off the one entry that matches, and two
 matches leave the hole unfilled.
 
+**Dolphin (I12).** Past atlas's pin, #615 gives I12 a hole: atlas's GameCube answer in GCI-folder mode still states no
+`.gci` name, and declares the game code as `save_id` beside the region, spelled `game-code`. A file is the game's where
+the first four bytes of its header equal that code, the rule Dolphin loads the folder by, and
+`file-membership-by-header` states it per region folder; atlas reads no header itself. sigil's GameCube `save_id` is
+those four characters (§1.4), so it fills the hole as it stands.
+
 ## Open items
 
 Each **[O]** above, with what would close it:

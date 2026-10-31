@@ -9,6 +9,7 @@ from atlas.placement import (
     CAVEAT_CORE_MODE_UNESTABLISHED,
     CAVEAT_CORE_UNQUERYABLE,
     CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+    CAVEAT_FILE_MEMBERSHIP_BY_HEADER,
     CAVEAT_FILE_NAMES_UNESTABLISHED,
     CAVEAT_FIRMWARE_SEARCH_CANDIDATES,
     CAVEAT_INVALID_SAVE_DIRECTORY,
@@ -17,6 +18,8 @@ from atlas.placement import (
     ENUMERATED_DATA,
     FIRMWARE_SEARCH_READINGS,
     REASON_ACTIVE_USER_UNRECORDED,
+    MEMBERSHIP_LIMIT_OTHER_GAMES_LOADED,
+    SAVE_ID_SPELLING_GAME_CODE,
     SAVE_ID_SPELLING_PATH_SEGMENT,
     SAVE_ID_SPELLING_TITLE_ID_WORDS,
     UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
@@ -608,6 +611,29 @@ class TestASaveIdIsCheckedAgainstItsSpelling:
         with pytest.raises(ValueError, match="path-segment"):
             checked_save_id(SAVE_ID_SPELLING_PATH_SEGMENT, value)
 
+    @pytest.mark.parametrize("value", ["GMSE", "G4ZE", "0000"])
+    def test_a_game_code_is_taken(self, value):
+        assert checked_save_id(SAVE_ID_SPELLING_GAME_CODE, value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("GMSE01", id="the-whole-game-id"),
+            pytest.param("GMS", id="three-characters"),
+            pytest.param("gmse", id="lowercase"),
+            pytest.param("GM-E", id="punctuation"),
+            pytest.param("GM E", id="a-space"),
+            pytest.param("GMSÉ", id="not-ascii"),
+            pytest.param("ＧＭＳＥ", id="fullwidth-letters"),
+            pytest.param("GMSE\n", id="a-trailing-newline"),
+            pytest.param("GM\x00E", id="a-nul"),
+            pytest.param("", id="empty"),
+        ],
+    )
+    def test_a_game_code_of_another_shape_raises(self, value):
+        with pytest.raises(ValueError, match="game-code"):
+            checked_save_id(SAVE_ID_SPELLING_GAME_CODE, value)
+
     def test_a_spelling_outside_the_vocabulary_raises(self):
         with pytest.raises(ValueError, match="spelling must be one of"):
             checked_save_id("serial", "SLUS-20062")
@@ -637,10 +663,31 @@ class TestTheSaveIdHoleAndItsFillRideTogether:
                 {"save_id_spelling": SAVE_ID_SPELLING_PATH_SEGMENT},
             )
 
-    @pytest.mark.parametrize("code", [CAVEAT_FILENAMES_CONTENT_CONDITIONAL, CAVEAT_FILE_NAMES_UNESTABLISHED])
+    @pytest.mark.parametrize(
+        "code",
+        [
+            CAVEAT_FILENAMES_CONTENT_CONDITIONAL,
+            CAVEAT_FILE_NAMES_UNESTABLISHED,
+            CAVEAT_FILE_MEMBERSHIP_BY_HEADER,
+        ],
+    )
     def test_a_spelling_outside_the_vocabulary_is_refused(self, code):
         with pytest.raises(ValueError, match=f"{code}.save_id_spelling"):
             Caveat(code, "a message", {"save_id": "the serial", "save_id_spelling": "serial"})
+
+    def test_a_membership_limit_outside_the_vocabulary_is_refused(self):
+        # #615: the limits are words a sync client decides on, so a sentence
+        # slipped in among them is refused like any other stray value.
+        with pytest.raises(ValueError, match="file-membership-by-header.limits"):
+            Caveat(
+                CAVEAT_FILE_MEMBERSHIP_BY_HEADER,
+                "a message",
+                {
+                    "save_id": "the game code",
+                    "save_id_spelling": SAVE_ID_SPELLING_GAME_CODE,
+                    "limits": (MEMBERSHIP_LIMIT_OTHER_GAMES_LOADED, "the maker code is not compared"),
+                },
+            )
 
     def test_a_hole_in_needs_without_a_fill_is_refused(self):
         with pytest.raises(ValueError, match="no caveat states its fill"):

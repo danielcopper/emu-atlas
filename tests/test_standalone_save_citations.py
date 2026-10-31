@@ -87,6 +87,7 @@ class TestTheCardStatesWhatTheReadingNames:
 SLOTS_THE_PROSE_REPEATS = (
     "agp_paths",
     "agp_save",
+    "gci_members",
     "gci_names",
     "nand_tree",
     "slot_defaults",

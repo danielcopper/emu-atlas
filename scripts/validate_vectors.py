@@ -281,6 +281,9 @@ FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role", "size_fixed"}
 # The byte a fixed-size save may be padded with at its end
 # (size-fixed-except-trailing-fill's data["fill"]).
 KNOWN_SIZE_FILLS = {"0xff", "0x00"}
+# How far a file-membership-by-header rule reaches: the ways the emulator's
+# handling of the directory goes past the files the rule picks.
+KNOWN_FILE_MEMBERSHIP_LIMITS = {"other-games-loaded", "maker-code-not-compared"}
 # Named once because three rules read it: an entry's own check types the value,
 # wherever the entry appears, the catalogue answer's check reads the whole list of
 # them at once, and a firmware core carries the position of the catalogue row it was
@@ -541,7 +544,7 @@ KNOWN_STATE_ROOT_KINDS = {
 KNOWN_HOLES = {"content_dir", "content_dir_name", "cwd", "library_name", "region", "rom_stem", "save_id"}
 # How a ``save_id`` fill is spelled — the value of a caveat's
 # ``save_id_spelling``, which rides beside its ``save_id`` fill sentence.
-KNOWN_SAVE_ID_SPELLINGS = {"title-id-words", "path-segment"}
+KNOWN_SAVE_ID_SPELLINGS = {"title-id-words", "path-segment", "game-code"}
 KNOWN_GRANULARITIES = {
     "shared-card",
     "shared-file",
@@ -591,6 +594,7 @@ KNOWN_CAVEAT_CODES = {
     "filenames-unverified",
     "filenames-content-conditional",
     "file-names-unestablished",
+    "file-membership-by-header",
     "file-set-across-systems",
     "file-set-claims-merged",
     "file-set-directories-unread",
@@ -1889,6 +1893,13 @@ def _validate_caveats(name: str, caveats: Any) -> None:
         _validate_save_id_fill(name, caveat["code"], data)
         if caveat["code"] == "size-fixed-except-trailing-fill" and data.get("fill") not in KNOWN_SIZE_FILLS:
             fail(f"{name}: size-fixed-except-trailing-fill.fill must be one of {sorted(KNOWN_SIZE_FILLS)}")
+        if caveat["code"] == "file-membership-by-header" and not (
+            isinstance(data.get("limits"), list) and set(data["limits"]) <= KNOWN_FILE_MEMBERSHIP_LIMITS
+        ):
+            fail(
+                f"{name}: file-membership-by-header.limits must be a list of "
+                f"{sorted(KNOWN_FILE_MEMBERSHIP_LIMITS)}"
+            )
 
 
 def _validate_save_id_fill(name: str, code: str, data: dict[str, Any]) -> None:
