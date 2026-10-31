@@ -1590,6 +1590,8 @@ class TestTheDataRegistryReading:
             ),
             ("filenames-content-conditional", "save_id_spelling"): "SAVE_ID_SPELLINGS",
             ("file-names-unestablished", "save_id_spelling"): "SAVE_ID_SPELLINGS",
+            ("file-membership-by-header", "save_id_spelling"): "SAVE_ID_SPELLINGS",
+            ("file-membership-by-header", "limits"): "FILE_MEMBERSHIP_LIMITS",
             ("find-rules-unreadable", "layer"): "FIND_RULES_LAYERS",
             ("firmware-search-candidates", "readings"): "FIRMWARE_SEARCH_READINGS",
             ("region-property-unconfirmed", "region"): "DISC_REGIONS",

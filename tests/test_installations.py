@@ -2433,7 +2433,7 @@ class TestDolphinStandaloneSaves:
         p = self._answer(None)
         assert not isinstance(p, atlas.Unresolved)
         assert p.root_kind == atlas.ROOT_EMULATOR_DIRECTORY
-        assert p.needs == (atlas.HOLE_REGION,)
+        assert p.needs == (atlas.HOLE_REGION, atlas.HOLE_SAVE_ID)
         assert p.granularity is not None
         assert p.granularity.mode == "folder+none"
 
@@ -2551,6 +2551,77 @@ class TestDolphinStandaloneSaves:
         dirs = {g.dir for g in p.file_set.groups if g.files is not None}
         assert dirs == {DOLPHIN_GC_USER}
         assert len([g for g in p.file_set.groups if g.files is None]) == 3
+
+    # #615: a GCI folder's files are one game's by the game code in their
+    # header, so an answer holding a folder holds that code as a hole and
+    # states, per folder directory, the rule a caller fills it by.
+    def _members(self, p) -> list[atlas.Caveat]:
+        return [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_MEMBERSHIP_BY_HEADER]
+
+    def test_a_gci_folder_holds_the_game_code_as_a_hole(self):
+        p = self._answer("[Core]\nSlotA = 8\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.needs == (atlas.HOLE_REGION, atlas.HOLE_SAVE_ID)
+        members = self._members(p)
+        assert [c.data["dir"] for c in members] == [g.dir for g in p.file_set.groups]
+        assert {key: value for key, value in members[0].data.items() if key != "dir"} == {
+            "token": "DOLPHIN",
+            "pattern": "*.gci",
+            "offset": "0",
+            "length": "4",
+            "save_id": (
+                "the disc's game code: the first four characters of its game id, as the disc "
+                "header states it"
+            ),
+            "save_id_spelling": atlas.SAVE_ID_SPELLING_GAME_CODE,
+            "limits": (
+                atlas.MEMBERSHIP_LIMIT_OTHER_GAMES_LOADED,
+                atlas.MEMBERSHIP_LIMIT_MAKER_CODE_NOT_COMPARED,
+            ),
+            "citation": (
+                "GCMemcardDirectory.cpp:192, FileSearch.h:32-36, FileSearch.cpp:34-55, "
+                "GCMemcardDirectory.cpp:209, GCMemcard.h:245-246, EXI_DeviceMemoryCard.cpp:173-181 "
+                "at dolphin 2609"
+            ),
+        }
+
+    def test_the_hole_names_no_directory(self):
+        # The folder stays the region's: the code picks files inside it, it
+        # is never a path segment.
+        p = self._answer("[Core]\nSlotA = 8\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.dir == f"{DOLPHIN_GC_USER}/<region>/Card A"
+        assert all("<save_id>" not in g.dir for g in p.file_set.groups)
+        assert all(g.files is None for g in p.file_set.groups)
+
+    def test_the_names_stay_unstated_beside_the_rule(self):
+        p = self._answer("[Core]\nSlotA = 8\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        unnamed = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_NAMES_UNESTABLISHED]
+        assert [c.data["dir"] for c in unnamed] == [c.data["dir"] for c in self._members(p)]
+        assert all("save_id" not in c.data for c in unnamed)
+
+    def test_a_raw_card_holds_no_game_code(self):
+        p = self._answer("[Core]\nSlotA = 1\nSlotB = 255\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.needs == ()
+        assert self._members(p) == []
+
+    def test_a_folder_beside_a_card_holds_the_hole_for_its_own_directories(self):
+        p = self._answer("[Core]\nSlotA = 1\nSlotB = 8\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert p.needs == (atlas.HOLE_REGION, atlas.HOLE_SAVE_ID)
+        folders = [g.dir for g in p.file_set.groups if g.files is None]
+        assert len(folders) == 3
+        assert all(d.endswith("/Card B") for d in folders)
+        assert [c.data["dir"] for c in self._members(p)] == folders
+
+    def test_a_folder_this_host_cannot_locate_holds_no_game_code(self):
+        # No directory to list, so no rule to state and nothing to fill.
+        p = self._answer("[Core]\nSlotA = 8\nSlotB = 255\nGCIFolderAPath = /var/db/cards/Card A\n")
+        assert not isinstance(p, atlas.Unresolved)
+        assert atlas.HOLE_SAVE_ID not in p.needs
+        assert self._members(p) == []
 
     def _flip(self, ini):
         # The one alternative the card offers, as the pair a client reads:

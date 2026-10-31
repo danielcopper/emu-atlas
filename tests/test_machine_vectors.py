@@ -705,6 +705,8 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
         ),
         ("filenames-content-conditional", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
         ("file-names-unestablished", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
+        ("file-membership-by-header", "save_id_spelling"): atlas.SAVE_ID_SPELLINGS,
+        ("file-membership-by-header", "limits"): atlas.FILE_MEMBERSHIP_LIMITS,
         ("firmware-search-candidates", "readings"): atlas.FIRMWARE_SEARCH_READINGS,
         ("invalid-save-directory", "layer"): atlas.CFG_LAYER_KINDS,
         ("appended-config-overridden", "layer"): atlas.CFG_LAYER_OVERRIDE_KINDS,
@@ -774,6 +776,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
             (placement, "ESTABLISHED_FOR_", atlas.FILES_ESTABLISHED_FOR_TOKENS),
             (placement, "READING_", atlas.FIRMWARE_SEARCH_READINGS),
             (placement, "SAVE_ID_SPELLING_", atlas.SAVE_ID_SPELLINGS),
+            (placement, "MEMBERSHIP_LIMIT_", atlas.FILE_MEMBERSHIP_LIMITS),
             (retroarch_cfg, "CFG_LAYER_", atlas.CFG_LAYER_KINDS),
         ):
             declared = {
@@ -791,6 +794,7 @@ class TestEveryEnumeratedValueComesFromItsClosedVocabulary:
             (placement, "ESTABLISHED_FOR_"),
             (placement, "READING_"),
             (placement, "SAVE_ID_SPELLING_"),
+            (placement, "MEMBERSHIP_LIMIT_"),
         ):
             for name, value in vars(module).items():
                 if name.startswith(prefix) and isinstance(value, str):
