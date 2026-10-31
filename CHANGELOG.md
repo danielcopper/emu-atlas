@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.33.0](https://github.com/danielcopper/emu-atlas/compare/v0.32.0...v0.33.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** every GameCube answer of DOLPHIN and PRIMEHACK with a GCI folder in a slot carries needs [region, save_id] where it carried [region], and one file-membership-by-header caveat per folder group (token, dir, pattern, offset, length, save_id, save_id_spelling game-code, limits, citation). save_id_spelling gains the value game-code, which checked_save_id accepts. The Dolphin file-names-unestablished citation reads GCMemcardDirectory.cpp:53-61. The 16 existing vectors whose answer holds a GCI folder change accordingly; the raw-card answers do not change. A port must emit the caveat and the hole to match them.
+
+### Features
+
+* **saves:** state a GCI folder's members by their header's game code ([#738](https://github.com/danielcopper/emu-atlas/issues/738)) ([dbb4309](https://github.com/danielcopper/emu-atlas/commit/dbb43097010231028cb65b25585704e171d7bd9d))
+
 ## [0.32.0](https://github.com/danielcopper/emu-atlas/compare/v0.31.0...v0.32.0) (2026-10-30)
 
 
