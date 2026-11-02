@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 
 import pytest
 
@@ -17,9 +18,13 @@ from atlas.launch_environment import (
     SOURCE_PATHS,
     StartVariable,
     environment_rules,
+    is_search_list,
     line_variable,
     load_environment_rules,
     paths_variable,
+    shell_references,
+    shell_value,
+    start_environment,
     start_line,
 )
 
@@ -180,6 +185,152 @@ class TestTheStartLineIsReadAsTheShellReadsIt:
     def test_a_line(self, text: str, found: tuple[int, str | None] | None):
         assert start_line(text, "x") == found
 
+    def test_a_reference_to_a_known_value_is_expanded_on_the_line(self):
+        assert start_line("x=${LD_LIBRARY_PATH}\n", "x", {"LD_LIBRARY_PATH": ""}) == (1, "")
+
+
+KNOWN = {"LD_LIBRARY_PATH": "/lib/a", "XDG_CONFIG_HOME": "/home/u/.var/app/a/config", "EMPTY": ""}
+
+
+class TestTheExpansionReadsOnlyWhatAtlasReads:
+    @pytest.mark.parametrize(
+        ("rest", "value"),
+        [
+            ("${LD_LIBRARY_PATH}", "/lib/a"),
+            ("$LD_LIBRARY_PATH", "/lib/a"),
+            ("${EMPTY}", ""),
+            ('"$XDG_CONFIG_HOME/xroar/xroar.conf"', "/home/u/.var/app/a/config/xroar/xroar.conf"),
+            ('"${XDG_CONFIG_HOME}/x"', "/home/u/.var/app/a/config/x"),
+            ("$XDG_CONFIG_HOME/x", "/home/u/.var/app/a/config/x"),
+            ("/app/lib:${LD_LIBRARY_PATH}", "/app/lib:/lib/a"),
+            ("\"a\"'$b'c", "a$bc"),
+            ("${LD_LIBRARY_PATH}   # the default", "/lib/a"),
+            ("abc#def", "abc#def"),
+            ("a=b", "a=b"),
+            ("", ""),
+            ("  # only a comment", ""),
+        ],
+    )
+    def test_a_value_atlas_reads(self, rest: str, value: str):
+        assert shell_value(rest, KNOWN) == value
+
+    @pytest.mark.parametrize(
+        "rest",
+        [
+            "${HOME}",
+            '"$HOME/x"',
+            "$1",
+            "$$",
+            '"$"',
+            "$(cat f)",
+            "`cat f`",
+            "$((1 + 2))",
+            "${LD_LIBRARY_PATH:-/lib}",
+            "${#LD_LIBRARY_PATH}",
+            "${LD_LIBRARY_PATH",
+            '"a\\"b"',
+            "a\\ b",
+            "~/x",
+            "/lib/*",
+            '"unterminated',
+            "'unterminated",
+            "a b",
+            "a;b",
+            "${LD_LIBRARY_PATH}${HOME}",
+            '"$LD_LIBRARY_PATH$"',
+            '"$$LD_LIBRARY_PATH"',
+            '"${LD_LIBRARY_PATH:-/lib}"',
+        ],
+    )
+    def test_anything_else_is_not_read(self, rest: str):
+        assert shell_value(rest, KNOWN) is None
+
+    @pytest.mark.parametrize(
+        "rest",
+        [
+            '"$A' + "0$A" * 10000,
+            '"$A' + "0$A" * 10000 + '"',
+            '"$A' + "0$A" * 10000 + '"$(x)',
+            "$A" + "0$A" * 10000 + " x",
+            '"' + "${A}" * 10000 + "$",
+        ],
+    )
+    def test_a_long_adversarial_line_is_answered_at_once(self, rest: str):
+        started = time.perf_counter()
+        shell_value(rest, {"A": "x"})
+        shell_references(rest)
+        is_search_list(rest)
+        assert time.perf_counter() - started < 0.5
+
+    @pytest.mark.parametrize(
+        ("rest", "names"),
+        [
+            ("${LD_LIBRARY_PATH}", {"LD_LIBRARY_PATH"}),
+            ('"$XDG_CONFIG_HOME/x:${HOME}"', {"XDG_CONFIG_HOME", "HOME"}),
+            ("'$HOME'", set()),
+            ('"/app/x"', set()),
+            ("$(cat f)$HOME", set()),
+            ('"$(cat f) $HOME"', set()),
+        ],
+    )
+    def test_the_references_a_value_reads(self, rest: str, names: set[str]):
+        assert shell_references(rest) == names
+
+
+class TestASearchListIsAWholeElementOfTheValue:
+    @pytest.mark.parametrize(
+        "rest",
+        [
+            "${LD_LIBRARY_PATH}",
+            "$LD_LIBRARY_PATH",
+            '"${LD_LIBRARY_PATH}"',
+            "/app/lib:${LD_LIBRARY_PATH}",
+            '"$a:${LD_LIBRARY_PATH}:/x"',
+            "${LD_LIBRARY_PATH}:/app/lib",
+            "${LD_LIBRARY_PATH}   # the default",
+        ],
+    )
+    def test_a_search_list(self, rest: str):
+        assert is_search_list(rest)
+
+    @pytest.mark.parametrize(
+        "rest",
+        [
+            '"${LD_LIBRARY_PATH}/foo"',
+            "/x${LD_LIBRARY_PATH}",
+            "${XDG_CONFIG_HOME}${LD_LIBRARY_PATH}",
+            "'${LD_LIBRARY_PATH}'",
+            '"$XDG_CONFIG_HOME/x"',
+            "/app/lib",
+        ],
+    )
+    def test_no_search_list(self, rest: str):
+        assert not is_search_list(rest)
+
+
+class TestTheStartValuesStandUntilConfReadReplacesThem:
+    START = {"XDG_CONFIG_HOME": "/home/u/.var/app/a/config", "LD_LIBRARY_PATH": ""}
+
+    def test_a_start_file_before_conf_read_keeps_them_whatever_the_settings_hold(self):
+        settings = {"paths": {"LD_LIBRARY_PATH": "/x"}, "options": {"XDG_CONFIG_HOME": "/y"}}
+        assert start_environment(ALL_VARS, self.START, settings) == self.START
+
+    @pytest.mark.parametrize("section", ["paths", "options"])
+    def test_a_settings_key_of_the_same_name_replaces_one_after_conf_read(self, section: str):
+        settings = {section: {"XDG_CONFIG_HOME": "/y", "bios_path": "/b"}}
+        assert start_environment(XROAR_FUNCTIONS, self.START, settings) == {"LD_LIBRARY_PATH": ""}
+
+    def test_settings_naming_neither_keep_them(self):
+        settings = {"paths": {"bios_path": "/b"}, "options": {"cheevos": "true"}}
+        assert start_environment(XROAR_FUNCTIONS, self.START, settings) == self.START
+
+    @pytest.mark.parametrize("settings", [{"paths": []}, {"options": "x"}])
+    def test_a_section_conf_read_does_not_read_key_by_key_replaces_them_all(self, settings: dict[str, object]):
+        assert start_environment(XROAR_FUNCTIONS, self.START, settings) == {}
+
+    def test_conf_read_exports_the_version_too(self):
+        assert start_environment(XROAR_FUNCTIONS, {"version": "1"}, {}) == {}
+
 
 def _exists(*paths: str):
     return lambda path: path in paths
@@ -202,6 +353,31 @@ class TestALineVariable:
         assert line_variable("b", ALL_VARS, self.TEXT, _exists()) == DistributionVariable(
             "b", None, f"{ALL_VARS}:2", True
         )
+
+    def test_a_value_composed_of_known_values_is_stated_and_provided_by_the_line(self):
+        assert line_variable("b", ALL_VARS, self.TEXT, _exists(), {"LD_LIBRARY_PATH": ""}) == DistributionVariable(
+            "b", "", f"{ALL_VARS}:2", True
+        )
+
+    def test_a_library_search_list_names_no_path_and_is_provided_by_the_line(self):
+        assert line_variable("b", ALL_VARS, self.TEXT, _exists(), {"LD_LIBRARY_PATH": "/usr/lib/extra"}) == (
+            DistributionVariable("b", "/usr/lib/extra", f"{ALL_VARS}:2", True)
+        )
+
+    def test_a_path_composed_from_a_search_list_is_checked_as_a_path(self):
+        text = 'x="${LD_LIBRARY_PATH}/foo"\n'
+        known = {"LD_LIBRARY_PATH": "/usr/lib"}
+        assert line_variable("x", ALL_VARS, text, _exists(), known) == DistributionVariable(
+            "x", "/usr/lib/foo", f"{ALL_VARS}:1", False
+        )
+
+    def test_an_expanded_path_is_provided_where_it_is_there(self):
+        text = 'x="$XDG_CONFIG_HOME/x.conf"\n'
+        known = {"XDG_CONFIG_HOME": "/home/u/config"}
+        assert line_variable("x", XROAR_FUNCTIONS, text, _exists(), known) == DistributionVariable(
+            "x", "/home/u/config/x.conf", f"{XROAR_FUNCTIONS}:1", False
+        )
+        assert line_variable("x", XROAR_FUNCTIONS, text, _exists("/home/u/config/x.conf"), known).provided
 
     def test_a_value_naming_no_path_is_provided_by_the_line(self):
         assert line_variable("c", ALL_VARS, self.TEXT, _exists()) == DistributionVariable(

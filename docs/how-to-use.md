@@ -3552,7 +3552,7 @@ variable the caller passes for the program to find (`flatpak run --env=NAME=valu
 ```python
 for variable in answer.command.distribution_environment or ():
     variable.name      # 'rd_shared_libs'
-    variable.value     # '/app/retrodeck/components/shared-libs', or None where the start computes it
+    variable.value     # '/app/retrodeck/components/shared-libs', or None where atlas does not read what it is
     variable.set_by    # '/app/libexec/all_vars.sh:49' — the start file and line, in the sandbox's spelling
     variable.provided  # whether this installation provides it
 ```
@@ -3566,13 +3566,30 @@ launchers read `rd_shared_libs`, the folder of libraries RetroDECK ships beside 
 PrimeHack, OpenBOR and Solarus lack libraries they load, and melonDS loads the runtime's Qt instead of the one RetroDECK
 ships. Some read a folder from RetroDECK's settings: PICO-8 `bios_path` and `screenshots_path`, Ruffle `saves_path`,
 PortMaster `roms_path`. XRoar's launcher also reads `xroar_config`, which its own `component_functions.sh` sets, in a
-line it logs. A variable the start writes as a literal carries it as `value`; one it computes
-(`DEFAULT_LD_LIBRARY_PATH`, which `all_vars.sh` sets from the sandbox's own `LD_LIBRARY_PATH`) carries `null`, because
-atlas does not derive what the sandbox's library path would be. A folder from the settings carries the setting's value,
-and `null` where `retrodeck.json` holds no string under the key. `provided` is `true` where the start file defines the
-variable and a path it names is there as the sandbox reaches it: a value that names no path is provided by its line
-alone, a folder from the settings only where it is set and there. Whether the libraries under `rd_shared_libs` then load
-is not judged in the answer; a development tripwire holds that against the deployed release.
+line it logs. A variable the start writes as a literal carries it as `value`. Two are computed from what the sandbox
+starts with, and atlas reads that on the machine: `DEFAULT_LD_LIBRARY_PATH` (`all_vars.sh:54`,
+`DEFAULT_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}`) and `xroar_config` (`"$XDG_CONFIG_HOME/xroar/xroar.conf"`). `flatpak run`
+never passes the host's `LD_LIBRARY_PATH` into the sandbox — it unsets it, and the runtime's metadata, the app's and the
+overrides files then apply their `[Environment]` and `unset-environment` on top, in that order — so on a stock
+RetroDECK, where none of them sets it, `DEFAULT_LD_LIBRARY_PATH` is the empty string. Where the runtime ships no
+`ldconfig`, Flatpak puts `/app/lib` and every active extension's library folder there instead, which atlas does not
+derive, and the value is `null`; where the app's or the runtime's metadata cannot be read, the runtime's deploy is not
+there or cannot be read, or what the runtime holds at `bin/ldconfig` cannot be told, it is `null` too, beside the note
+`launch-environment-unread`, which names the variable and the file (`variable`, `file`). An overrides file that cannot
+be read counts as absent, as it does for Flatpak. `XDG_CONFIG_HOME` is the app's config home
+(`~/.var/app/net.retrodeck.retrodeck/config`), which Flatpak sets after every metadata and overrides value, so none can
+move it; but `conf_read` exports every key of `retrodeck.json`'s `paths` and `options` under its own name before the
+component functions files run, so where the settings hold a key named `XDG_CONFIG_HOME`, `xroar_config` is `null`. Any
+other computed line — another variable, a substitution, an operator — carries `null`. Not read, because they are not on
+disk: a `--env` on the `flatpak run` command that starts RetroDECK, and a `BASH_ENV` in the host's environment, which
+passes into the sandbox and which bash reads before RetroDECK's start runs. A folder from the settings carries the
+setting's value, and `null` where `retrodeck.json` holds no string under the key. `provided` is `true` where the start
+file defines the variable and a path it names is there as the sandbox reaches it: a value that names no path is provided
+by its line alone, and so is a library search list like `DEFAULT_LD_LIBRARY_PATH` — `LD_LIBRARY_PATH` standing as a
+whole element of the value — which names folders to search, none of which has to exist, since the dynamic loader skips a
+folder that is not there (#574 D14); a folder from the settings is provided only where it is set and there. Whether the
+libraries under `rd_shared_libs` then load is not judged in the answer; a development tripwire holds that against the
+deployed release.
 
 What a launcher reads is read off its text at one release and pinned (`atlas/data/retrodeck_launchers.json`): the
 launcher by the git blob hash of its deployed copy, and the start file that defines each variable it reads by its own —
@@ -3596,12 +3613,12 @@ runs reads is not the launcher's own read and is not stated either: GZDoom's lau
 RetroDECK's start (`global.sh`) itself where `GLOBAL_SOURCED` is not set, and no variable a caller could pass avoids
 that usefully.
 
-**Three notes beside an answered command.** `launch-environment-unpinned` is the one above.
-`launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve and leaves in the argument as written
-(RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself). `launch-command-argument-broken` names a placeholder whose
-value ES-DE's own substitution does not carry through the shell — `getEscapedPath` leaves `|`, backticks, tabs and line
-breaks alone and turns a `\` into a `/`, and `%ROMRAW%` is not escaped at all — and the argument then carries the value
-the placeholder stands for, which the frontend itself would not pass.
+**Four notes beside an answered command.** `launch-environment-unpinned` and `launch-environment-unread` are the two
+above. `launch-command-placeholder-unknown` names a `%NAME%` ES-DE does not resolve and leaves in the argument as
+written (RPCS3's `%RPCS3_GAMEID%`, which the emulator reads itself). `launch-command-argument-broken` names a
+placeholder whose value ES-DE's own substitution does not carry through the shell — `getEscapedPath` leaves `|`,
+backticks, tabs and line breaks alone and turns a `\` into a `/`, and `%ROMRAW%` is not escaped at all — and the
+argument then carries the value the placeholder stands for, which the frontend itself would not pass.
 
 **A second shell.** An escaped path inside quotes keeps ES-DE's backslashes, because they are there for the shell the
 argument is handed to: `bash -c "%ROM%"` passes `My\ Game.sh`, and the second shell reads it as `My Game.sh`. That
