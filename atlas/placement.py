@@ -882,7 +882,10 @@ REASON_MLC_LAUNCH_FLAG_OUTRANKS_CONFIG = "mlc-launch-flag-outranks-config"
 REASON_VIRTUAL_SD_DISABLED = "virtual-sd-disabled"
 # Which class the loaded content is, where the save story splits on it — no
 # content was named, or its extension is outside every class the card records
-# (``extension`` carries the one seen).
+# (``extension`` carries the one seen). The class can be the console, too: the
+# Dolphin core's tree splits on GameCube and Wii, which the question's system
+# names — unnamed where it named none, unrecorded where it named another
+# (``system`` carries the one named).
 REASON_CONTENT_CLASS_UNNAMED = "content-class-unnamed"
 REASON_CONTENT_CLASS_UNRECORDED = "content-class-unrecorded"
 # Which machine the core emulates decides part of the save story, and here it is

@@ -43,13 +43,13 @@ string-literal keys alone, and uses it nowhere else. :func:`_from_variable` is
 that rule.
 
 The reach is measured, not assumed: of the 341 construction sites this walk's
-own definitions find, 316 are read whole, 7 are read in part, and 18 cannot be
+own definitions find, 316 are read whole, 8 are read in part, and 18 cannot be
 read at all. The 341 and the 316 were counted when this was last updated and
-grow with the package, held by nothing here; the 25 behind the other two
+grow with the package, held by nothing here; the 26 behind the other two
 numbers are the ones that matter, and :data:`BLIND_SITES` pins them. Eight
-shapes account for those 25, in two groups. Written at the call: the argument
+shapes account for those 26, in two groups. Written at the call: the argument
 is a conditional expression (5, ``{"core_so": x} if x is not None else {}``), a
-dictionary literal holding a ``**`` entry (2, ``{"core": core, "reason":
+dictionary literal holding a ``**`` entry (3, ``{"core": core, "reason":
 reason, **facts}``), a starred call (1, ``Caveat(CODE, *_per_user_state(...))``),
 or a call's result (6, ``_vita3k_refusal_data(card, config_path, build, ...)``,
 which adds ``build`` only where a release was read).
@@ -81,7 +81,7 @@ only the corpus end can see — which is the reason the one parameter that did
 carry a card token under ``core`` was also named ``core``.
 
 A hollow pass is made visible by pinning: :data:`BLIND_SITES` is the reviewed
-census of those 25, keyed by the function that holds them, and
+census of those 26, keyed by the function that holds them, and
 :func:`test_the_blind_sites_are_the_reviewed_ones` fails when the walk's census
 differs. A new construction site the walk cannot read therefore fails loudly and
 gets reviewed, rather than quietly shrinking what the rule covers. The census is
@@ -89,7 +89,7 @@ keyed by function rather than by line so that editing a module does not churn
 it.
 
 **The corpus end** reads what answers actually carry, whatever built them, which
-is what covers the 25 sites the source end does not read whole: the keys, and
+is what covers the 26 sites the source end does not read whole: the keys, and
 for the identity keys the values as well. What separates ``core`` from ``token``
 there is the packaged card set itself — a ``core`` value is never one of those
 tokens, and a ``token`` value is always one — and neither of those two is a rule
@@ -236,6 +236,10 @@ BLIND_SITES: dict[tuple[str, str], int] = {
     ("firmware.py", "_no_declaration"): 1,
     ("firmware.py", "_no_requirement"): 1,
     ("firmware.py", "identify_firmware"): 3,
+    # The Dolphin core's respelling of the shared Dolphin readings' statements:
+    # ``{"core": core, **rest}``, where ``rest`` is a caveat those readings
+    # built at their own literal sites, read whole here, minus its ``token``.
+    ("installations.py", "_as_core_statement"): 1,
     ("installations.py", "_catalogue_exclusive_caveat"): 1,
     ("installations.py", "_catalogue_sealed_caveat"): 1,
     ("installations.py", "_catalogue_unread_caveat"): 1,

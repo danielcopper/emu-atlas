@@ -260,6 +260,10 @@
         "desmume_screens_layout": {"default": "top/bottom", "values": ["top/bottom", "bottom/top", "left/right", "right/left", "top only", "bottom only", "quick switch", "hybrid/top", "hybrid/bottom"]}
       }
     },
+    "dolphin": {
+      "build": "fd1aca3a",
+      "registration": "not-captured"
+    },
     "dosbox_pure": {
       "build": "1.0-preview4",
       "registration": "not-captured"
