@@ -281,6 +281,21 @@ class TestOneContentPath:
             reason=REASON_DISC_UNREAD, disc=str(tmp_path / "a.cue\rb.cue"), status=DISC_UNREAD_MISSING
         )
 
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_SWANSTATION, EMULATOR_BEETLE])
+    def test_a_playlist_entry_ends_at_its_first_nul(self, emulator):
+        # Each emulator hands the entry on as a C string, so the bytes after a
+        # NUL never reach the open (#716).
+        files = {"/roms/Game.m3u": "Game.cue\x00 trailing\n", GAME: "x"}
+        reading = psx_region.read_disc_region(machine(files, {GAME: FACTS}), emulator, "/roms/Game.m3u")
+        assert reading.region == NTSC_U
+
+    @pytest.mark.parametrize("emulator", [EMULATOR_DUCKSTATION, EMULATOR_BEETLE])
+    def test_a_nul_inside_an_entry_on_disk_is_a_cut_name_not_a_crash(self, tmp_path, emulator):
+        playlist = tmp_path / "Game.m3u"
+        playlist.write_bytes(b"Ga\x00me.cue\n")
+        reading = psx_region.read_disc_region(RealMachine(), emulator, str(playlist))
+        assert reading.disc == str(tmp_path / "Ga")
+
     def test_a_nested_playlist_is_followed_by_duckstation(self):
         files = {"/roms/Game.m3u": "Inner.m3u\n", "/roms/Inner.m3u": "Game.cue\n", GAME: "x"}
         reading = psx_region.read_disc_region(machine(files, {GAME: FACTS}), EMULATOR_DUCKSTATION, "/roms/Game.m3u")

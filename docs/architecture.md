@@ -260,6 +260,7 @@ classDiagram
         +entry: EmulatorEntry|None
         +installers: tuple~Installer~|None
         +boots: Boot|None
+        +opens: tuple~Opened~|None
         +caveats: tuple~Caveat~
     }
     class Caveat {

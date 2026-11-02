@@ -434,7 +434,8 @@ from .placement import (
     file_set_holes,
     needs_with_file_set,
 )
-from . import duckstation, emulator_settings, melonds, qt_ini, rpcs3_boot
+from . import disc_opens, duckstation, emulator_settings, melonds, qt_ini, rpcs3_boot
+from .disc_opens import Opened
 from .yaml_scalars import YamlScalars, read_scalars
 from .standalone_saves import (
     RedirectSetting,
@@ -18849,6 +18850,8 @@ LAUNCH_VERDICTS = (
     VERDICT_NEEDS_INSTALLATION,
     VERDICT_UNKNOWN,
 )
+# The two verdicts that name the entry that would run.
+_ENTRY_VERDICTS = (VERDICT_LAUNCHABLE, VERDICT_ENTRY_NOT_ACCEPTED)
 
 # The per-entry half of a launchability answer, three statements apart. For a
 # libretro entry the extension list is a CLAIM, not a gate: RetroArch checks
@@ -18939,7 +18942,10 @@ class LaunchabilityAnswer:
     ``installers`` travels with ``needs-installation`` alone, whose remedy it
     is, and is ``None`` on every other verdict. ``boots`` travels with
     ``launchable`` alone, and only where atlas read the judged entry's own
-    boot of the file.
+    boot of the file. ``opens`` travels with the two verdicts that name an
+    entry, and only where atlas read what that entry's emulator opens through
+    the file (issue #716) — on ``entry-not-accepted`` it lists what the
+    emulator got to before it stopped, and the file it stopped at.
     """
 
     verdict: str
@@ -18969,6 +18975,11 @@ class LaunchabilityAnswer:
     """What the judged entry boots from this file — on a launchable verdict whose entry atlas read the emulator's own
     boot for, and ``None`` everywhere else, including every entry whose emulator's boot atlas does not read.
     """
+    opens: tuple[Opened, ...] | None = None
+    """The files the judged entry's emulator opens through this file, in the order it opens them — on the two
+    verdicts that name an entry, where atlas reads that emulator's open of the file, and ``None`` everywhere else,
+    including every entry whose emulator's open atlas does not read and a file atlas could not read.
+    """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
     """Every degradation of this answer, stated structurally so a client branches on the
@@ -18987,6 +18998,10 @@ class LaunchabilityAnswer:
         # verdict that launches nothing, or names no entry, has nothing to boot.
         if self.boots is not None and (self.verdict != VERDICT_LAUNCHABLE or self.entry is None):
             raise ValueError("LaunchabilityAnswer: boots stand only on a launchable verdict about an entry")
+        # What an emulator opens is a statement about an entry: both verdicts
+        # that name one may carry it, a refusal included, and no other.
+        if self.opens is not None and (self.verdict not in _ENTRY_VERDICTS or self.entry is None):
+            raise ValueError("LaunchabilityAnswer: opens stand only on a verdict about an entry")
 
 
 @dataclass(frozen=True, slots=True)
@@ -20965,11 +20980,13 @@ class _EntryCoreReader:
         cfg_sandbox: "Callable[[], tuple[_Sandbox, tuple[str, ...]]]",
         *,
         findings: "Callable[[ReadStatus], list[Caveat]] | None" = None,
+        retroarch_config_dir: str | None = None,
     ) -> None:
         self._machine = machine
         self._cfg_path = cfg_path
         self._cfg_sandbox = cfg_sandbox
         self._findings = findings
+        self._retroarch_config_dir = retroarch_config_dir
         self._context: tuple[_Sandbox, str | None] | None = None
         self._infos: dict[str, CoreInfo | None] = {}
         self.sources: tuple[str, ...] = ()
@@ -20992,13 +21009,57 @@ class _EntryCoreReader:
         self._infos[entry.core_so] = info
         return info
 
+    def option(
+        self, entry: EmulatorEntry, content_path: str, key: str, default: str
+    ) -> tuple[str | None, tuple[str, ...], tuple[Caveat, ...]]:
+        """One core option for a launch of *content_path*, read over the files RetroArch reads — ``None`` unread.
+
+        The chain is the one the firmware route walks
+        (:func:`_firmware_core_options`) over this answer's own cfg snapshot,
+        with the game and folder ``.opt`` layers the content keys. The
+        per-core files are named for the core's ``library_name``, so a core
+        that could not be probed leaves the option unread; a key no file
+        states takes the default the core registers, or *default*.
+        """
+        info = self(entry)
+        if info is None or self._context is None or self._retroarch_config_dir is None:
+            return None, (), ()
+        sandbox, global_text = self._context
+        lookup = _core_path_from(sandbox, global_text, entry.core_so or "")
+        chain = _firmware_core_options(
+            sandbox,
+            global_text,
+            cfg_label=os.path.basename(self._cfg_path),
+            retroarch_config_dir=self._retroarch_config_dir,
+            core_dir=lookup.cores_dir,
+        )
+        registered = info.options.get(key) if info.options is not None else None
+        _, dir_name, rom_stem = split_content_path(content_path)
+        value, provenance, _, _ = core_options_value(
+            self._machine,
+            override_config_dir=chain.override_config_dir,
+            global_file=chain.global_file,
+            library_name=info.library_name,
+            content_dir_name=dir_name or None,
+            rom_stem=rom_stem or None,
+            option_key=key,
+            option_default=registered.default if registered is not None and registered.default is not None else default,
+            game_specific_options=chain.game_specific_options,
+            per_core_options=chain.per_core_options,
+        )
+        return value, (provenance,), chain.caveats
+
 
 # What one entry makes of one file: its stance, the sources and caveats that
-# say why, and what it boots where atlas read the emulator's own boot.
-_Stance = tuple[str, tuple[str, ...], tuple[Caveat, ...], Boot | None]
+# say why, what it boots where atlas read the emulator's own boot, and what it
+# opens where atlas read the emulator's own open.
+_Stance = tuple[str, tuple[str, ...], tuple[Caveat, ...], Boot | None, tuple[Opened, ...] | None]
 # The reading of an entry's own boot of the file, or None where atlas reads
 # none for that entry and its loader card decides.
 type _BootReader = Callable[[EmulatorEntry], rpcs3_boot.BootReading | None]
+# The reading of what an entry's emulator opens through the file, or None
+# where atlas reads none for that entry.
+type _OpensReader = Callable[[EmulatorEntry], disc_opens.OpensReading | None]
 
 
 def _entry_reading(
@@ -21007,6 +21068,7 @@ def _entry_reading(
     extension: str,
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
     boot_reader: _BootReader | None = None,
+    opens_reader: _OpensReader | None = None,
 ) -> _Stance:
     """One entry's stance on one file: accepts, refuses, or unestablished — and what it boots where that is read.
 
@@ -21016,9 +21078,9 @@ def _entry_reading(
     file outside them is attempted with a statement, never refused — except an
     archive, which runs through RetroArch's own hands (extracted and searched
     by the claims, or handed raw to a ``block_extract`` core that never claimed
-    it, which is the one libretro refusal this can establish). A standalone
-    entry opens the file itself: its recorded loader decides, and an
-    emulator without a card is an entry nobody read.
+    it, which is the one libretro refusal the claims can establish). A
+    standalone entry opens the file itself: its recorded loader decides, and
+    an emulator without a card is an entry nobody read.
 
     The third kind reads nothing at all, and that is a refusal rather than an
     unestablished reading: no loader was asked and no claim was weighed
@@ -21030,17 +21092,23 @@ def _entry_reading(
 
     A standalone entry whose emulator's own boot atlas reads is judged by that
     reading instead of a card (*boot_reader*, issue #618): it reads the file
-    itself rather than its extension, and where it boots it states what.
+    itself rather than its extension, and where it boots it states what. An
+    entry of either kind whose emulator's open of the file atlas reads
+    (*opens_reader*, issue #716) is judged by that reading instead of its
+    claims or its card, and states what it opens.
     """
-    if entry.kind == KIND_LIBRETRO:
-        return (*_libretro_entry_reading(entry, extension=extension, info=core_info_for(entry)), None)
-    foreign = _foreign_core_of(entry.kind, entry.command)
+    foreign = _foreign_core_of(entry.kind, entry.command) if entry.kind != KIND_LIBRETRO else None
     if foreign is not None:
-        return (*_foreign_core_entry_reading(entry, foreign), None)
+        return (*_foreign_core_entry_reading(entry, foreign), None, None)
+    opened = opens_reader(entry) if opens_reader is not None else None
+    if opened is not None:
+        return _opens_stance(entry, opened, extension=extension, core_info_for=core_info_for)
+    if entry.kind == KIND_LIBRETRO:
+        return (*_libretro_entry_reading(entry, extension=extension, info=core_info_for(entry)), None, None)
     reading = boot_reader(entry) if boot_reader is not None else None
     if reading is not None:
         return _boot_stance(reading)
-    return (*_standalone_entry_reading(entry, extension=extension), None)
+    return (*_standalone_entry_reading(entry, extension=extension), None, None)
 
 
 _BOOT_STANCES = {
@@ -21053,7 +21121,44 @@ _BOOT_STANCES = {
 def _boot_stance(reading: rpcs3_boot.BootReading) -> _Stance:
     """A boot reading as an entry's stance — what boots stated where it does."""
     boot = Boot(reading.file, reading.disc_root) if reading.file is not None else None
-    return _BOOT_STANCES[reading.outcome], reading.sources, reading.caveats, boot
+    return _BOOT_STANCES[reading.outcome], reading.sources, reading.caveats, boot, None
+
+
+_OPENS_STANCES = {
+    disc_opens.ACCEPTS: _ENTRY_ACCEPTS,
+    disc_opens.REFUSES: _ENTRY_REFUSES,
+    disc_opens.UNESTABLISHED: _ENTRY_UNESTABLISHED,
+}
+
+
+def _opens_stance(
+    entry: EmulatorEntry,
+    opened: disc_opens.OpensReading,
+    *,
+    extension: str,
+    core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
+) -> _Stance:
+    """An open reading as an entry's stance — and, for a libretro entry, whether its installed core could be read.
+
+    The reading is the open of the build atlas pins for that core. Where the
+    installed core could not be read, that build is not confirmed here, so
+    the claims route's own statement stays beside the list and a take
+    becomes unestablished; a refusal stands, since the core does not launch
+    the set either way.
+    """
+    stance = _OPENS_STANCES[opened.outcome]
+    if entry.kind != KIND_LIBRETRO or core_info_for(entry) is not None:
+        return stance, opened.sources, opened.caveats, None, opened.opens
+    unread = Caveat(
+        CAVEAT_ENTRY_FORMAT_UNESTABLISHED,
+        f"the installed core behind {entry.label!r} could not be read, so the build whose open atlas reads for "
+        f"{extension!r} is not confirmed here — what that build opens is listed, and whether this core takes the "
+        "file is not established",
+        {"entry": entry.label, "extension": extension},
+    )
+    if stance == _ENTRY_ACCEPTS:
+        stance = _ENTRY_UNESTABLISHED
+    return stance, opened.sources, (*opened.caveats, unread), None, opened.opens
 
 
 def _foreign_core_entry_reading(
@@ -21296,14 +21401,109 @@ class _EntryBootReader:
         return None
 
 
+# The arguments ES-DE's catalogues hand DuckStation's own build after its
+# token: the file's path, with or without -batch, which leaves the open as it is.
+_DUCKSTATION_ARGUMENTS = (("-batch", "%ROM%"), ("%ROM%",))
+_DUCKSTATION_PATCH_SETTING = "[CDROM] LoadImagePatches"
+_SWANSTATION_PATCH_OPTION = "swanstation_CDROM_LoadImagePatches"
+# The option's declared default and its two values (libretro_core_options.h:171-183
+# at 4d309c0), read through libretro_settings_interface.cpp:6-24.
+_SWANSTATION_PATCH_DEFAULT = "false"
+_SWANSTATION_PATCH_VALUES = {"true": True, "false": False}
+
+
+class _EntryOpensReader:
+    """What each entry's emulator opens through the file — each read once, and only once an entry asks (issue #716).
+
+    The entries atlas reads an open for are recognised by what they run:
+    DuckStation's own build handed the file's path, and the libretro cores
+    :data:`atlas.disc_opens.CORE_PROFILES` names. Every other entry answers
+    ``None`` and keeps its claims or its card. *duckstation_homes* gives the
+    XDG bases DuckStation's settings are read under for the entry, ``None``
+    where they are not established, and *core_reader* reads a core option the
+    way RetroArch would for this content.
+    """
+
+    def __init__(
+        self,
+        machine: Machine,
+        content_path: str,
+        duckstation_homes: "Callable[[EmulatorEntry], _XdgHomes | None]",
+        core_reader: "_EntryCoreReader",
+    ) -> None:
+        self._machine = machine
+        self._content_path = content_path
+        self._duckstation_homes = duckstation_homes
+        self._core_reader = core_reader
+        self._readings: dict[tuple[str, str], disc_opens.OpensReading | None] = {}
+
+    def __call__(self, entry: EmulatorEntry) -> disc_opens.OpensReading | None:
+        key = (entry.label, entry.command)
+        if key not in self._readings:
+            self._readings[key] = self._read(entry)
+        return self._readings[key]
+
+    def _read(self, entry: EmulatorEntry) -> disc_opens.OpensReading | None:
+        if entry.kind == KIND_LIBRETRO:
+            profile = disc_opens.CORE_PROFILES.get(entry.core_so or "")
+            if profile is None:
+                return None
+            return disc_opens.read_opens(
+                self._machine, profile, entry.label, self._content_path, lambda: self._swanstation_patches(entry)
+            )
+        if emulator_token(entry.command) != duckstation.TOKEN or (
+            _emulator_arguments(entry.command) not in _DUCKSTATION_ARGUMENTS
+        ):
+            return None
+        return disc_opens.read_opens(
+            self._machine,
+            disc_opens.DUCKSTATION,
+            entry.label,
+            self._content_path,
+            lambda: self._duckstation_patches(entry),
+        )
+
+    def _duckstation_patches(self, entry: EmulatorEntry) -> disc_opens.PatchSetting:
+        """``[CDROM] LoadImagePatches`` from the settings file the launch reads, off where nothing states it."""
+        homes = self._duckstation_homes(entry)
+        if homes is None:
+            return disc_opens.PatchSetting(None, _DUCKSTATION_PATCH_SETTING)
+        read = duckstation.read_settings(
+            self._machine,
+            config_home=homes.base("config"),
+            data_home=homes.base("data"),
+            flatpak=homes.flatpak,
+            xdg_pinned=homes.xdg_pinned,
+        )
+        if read.unreadable is not None:
+            return disc_opens.PatchSetting(None, _DUCKSTATION_PATCH_SETTING)
+        value = _simpleini_value(read.values, "CDROM", "LoadImagePatches")[0]
+        # A value FromChars<bool> cannot read keeps the compiled default, off
+        # (settings.cpp:338 at 1f6de046b).
+        loads = qt_ini.from_chars_bool(value) is True
+        where = read.stated_path or "no settings file"
+        return disc_opens.PatchSetting(
+            loads, _DUCKSTATION_PATCH_SETTING, (f"{where}: {_DUCKSTATION_PATCH_SETTING} = {value!r}",)
+        )
+
+    def _swanstation_patches(self, entry: EmulatorEntry) -> disc_opens.PatchSetting:
+        """``swanstation_CDROM_LoadImagePatches`` over the options files RetroArch reads for this content."""
+        value, sources, caveats = self._core_reader.option(
+            entry, self._content_path, _SWANSTATION_PATCH_OPTION, _SWANSTATION_PATCH_DEFAULT
+        )
+        loads = None if value is None else _SWANSTATION_PATCH_VALUES.get(value)
+        return disc_opens.PatchSetting(loads, _SWANSTATION_PATCH_OPTION, sources, caveats)
+
+
 # What :func:`_launchability_verdict` returns:
-# (verdict, entry, alternatives, installers, boots, sources, own caveats).
+# (verdict, entry, alternatives, installers, boots, opens, sources, own caveats).
 _Verdict = tuple[
     str,
     EmulatorEntry | None,
     tuple[str, ...],
     tuple[Installer, ...] | None,
     Boot | None,
+    tuple[Opened, ...] | None,
     tuple[str, ...],
     tuple[Caveat, ...],
 ]
@@ -21319,10 +21519,11 @@ def _launchability_verdict(
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
     label: str | None,
     boot_reader: _BootReader | None = None,
+    opens_reader: _OpensReader | None = None,
 ) -> _Verdict:
     """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
 
-    Returns ``(verdict, entry, alternatives, installers, boots, sources, own caveats)``.
+    Returns ``(verdict, entry, alternatives, installers, boots, opens, sources, own caveats)``.
     Module-level for the reason :func:`_entries_from` is: the match is
     ES-DE's, not an arrangement's, and two copies of it are how "launchable
     here" and "launchable there" would silently mean different comparisons.
@@ -21334,7 +21535,9 @@ def _launchability_verdict(
     other declared entries are judged only then, because ``alternatives`` is
     that verdict's remedy and nobody else's read. An entry whose emulator's
     own boot atlas reads (*boot_reader*) is judged by that reading of the
-    file, and a ``launchable`` verdict then states what it boots.
+    file, and a ``launchable`` verdict then states what it boots; one whose
+    emulator's open atlas reads (*opens_reader*) states what it opens, on a
+    refusal as well.
 
     A ``needs-installation`` verdict names the emulators its record says
     install the file, each with the system's entry that runs it
@@ -21364,11 +21567,12 @@ def _launchability_verdict(
     """
     if declaration is None:
         if not complete:
-            return VERDICT_UNKNOWN, None, (), None, None, (), ()
+            return VERDICT_UNKNOWN, None, (), None, None, None, (), ()
         return (
             VERDICT_UNKNOWN,
             None,
             (),
+            None,
             None,
             None,
             (),
@@ -21389,6 +21593,7 @@ def _launchability_verdict(
             (),
             None,
             None,
+            None,
             (),
             (
                 Caveat(
@@ -21402,7 +21607,7 @@ def _launchability_verdict(
         )
     entry = _chosen_entry(entries, label, system)
     if isinstance(entry, Caveat):
-        return VERDICT_UNKNOWN, None, (), None, None, (), (entry,)
+        return VERDICT_UNKNOWN, None, (), None, None, None, (), (entry,)
     if extension in declaration.extensions:
         match_source = (
             f"accept-list match: the file yields {extension!r} (its name from the last dot, "
@@ -21411,19 +21616,21 @@ def _launchability_verdict(
             "SystemData.cpp:669)"
         )
         if entry is None:
-            return VERDICT_LAUNCHABLE, None, (), None, None, (match_source,), ()
-        stance, entry_sources, entry_caveats, boots = _entry_reading(
-            entry, extension=extension, core_info_for=core_info_for, boot_reader=boot_reader
-        )
+            return VERDICT_LAUNCHABLE, None, (), None, None, None, (match_source,), ()
+
+        def judged(candidate: EmulatorEntry) -> _Stance:
+            return _entry_reading(
+                candidate,
+                extension=extension,
+                core_info_for=core_info_for,
+                boot_reader=boot_reader,
+                opens_reader=opens_reader,
+            )
+
+        stance, entry_sources, entry_caveats, boots, opens = judged(entry)
         if stance == _ENTRY_REFUSES:
             alternatives = tuple(
-                other.label
-                for other in entries
-                if other is not entry
-                and _entry_reading(
-                    other, extension=extension, core_info_for=core_info_for, boot_reader=boot_reader
-                )[0]
-                == _ENTRY_ACCEPTS
+                other.label for other in entries if other is not entry and judged(other)[0] == _ENTRY_ACCEPTS
             )
             return (
                 VERDICT_ENTRY_NOT_ACCEPTED,
@@ -21431,10 +21638,11 @@ def _launchability_verdict(
                 alternatives,
                 None,
                 None,
+                opens,
                 (match_source, *entry_sources),
                 entry_caveats,
             )
-        return VERDICT_LAUNCHABLE, entry, (), None, boots, (match_source, *entry_sources), entry_caveats
+        return VERDICT_LAUNCHABLE, entry, (), None, boots, opens, (match_source, *entry_sources), entry_caveats
     record = lookup_install_first(system, extension)
     if record is not None:
         return (
@@ -21443,6 +21651,7 @@ def _launchability_verdict(
             (),
             _installers(record.installers, entries),
             None,
+            None,
             (f"install-first format {extension!r} for {system}: {record.statement} — {record.source}",),
             (),
         )
@@ -21450,6 +21659,7 @@ def _launchability_verdict(
         VERDICT_NOT_ACCEPTED,
         None,
         (),
+        None,
         None,
         None,
         (
@@ -23348,6 +23558,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             self._cfg_path(),
             self._cfg_sandbox,
             findings=self._cfg_findings,
+            retroarch_config_dir=self._retroarch_config_dir(),
         )
 
         def view() -> CommandView:
@@ -23360,7 +23571,8 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         boot_reader = _EntryBootReader(
             self._machine, content_path, view, lambda _entry: _rpcs3_boot_dirs(self._machine, self._xdg_homes())
         )
-        verdict, entry, alternatives, installers, boots, sources, own = _launchability_verdict(
+        opens_reader = _EntryOpensReader(self._machine, content_path, lambda _entry: self._xdg_homes(), core_reader)
+        verdict, entry, alternatives, installers, boots, opens, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
@@ -23369,6 +23581,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             core_info_for=core_reader,
             label=label,
             boot_reader=boot_reader,
+            opens_reader=opens_reader,
         )
         return (
             LaunchabilityAnswer(
@@ -23379,6 +23592,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 alternatives=alternatives,
                 installers=installers,
                 boots=boots,
+                opens=opens,
                 sources=(
                     _CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,
                     *core_reader.sources,
@@ -25694,7 +25908,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         )
         declaration = snapshot.by_system.get(system)
         core_reader = _EntryCoreReader(
-            self._machine, self._companion_cfg_path(), self._cfg_sandbox
+            self._machine,
+            self._companion_cfg_path(),
+            self._cfg_sandbox,
+            retroarch_config_dir=self._retroarch_config_dir(),
         )
 
         def view() -> CommandView:
@@ -25710,7 +25927,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             view,
             lambda entry: _rpcs3_boot_dirs(self._machine, self._launch_gate(entry.command).homes),
         )
-        verdict, entry, alternatives, installers, boots, sources, own = _launchability_verdict(
+        opens_reader = _EntryOpensReader(
+            self._machine, content_path, lambda entry: self._launch_gate(entry.command).homes, core_reader
+        )
+        verdict, entry, alternatives, installers, boots, opens, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
             declaration=declaration,
@@ -25719,6 +25939,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             core_info_for=core_reader,
             label=label,
             boot_reader=boot_reader,
+            opens_reader=opens_reader,
         )
         return (
             LaunchabilityAnswer(
@@ -25729,6 +25950,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                 alternatives=alternatives,
                 installers=installers,
                 boots=boots,
+                opens=opens,
                 sources=(
                     self._catalogue_provenance(snapshot.exclusive),
                     *core_reader.sources,

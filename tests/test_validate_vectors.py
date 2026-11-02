@@ -348,6 +348,7 @@ def _base_launchable(**overrides) -> Vector:
             {"emulator": "AZAHARPLUS", "entry": None},
         ],
         "boots": None,
+        "opens": None,
         "caveats": [],
         **overrides,
     }
@@ -360,6 +361,9 @@ BOOT_FILE = "/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN"
 def _launchable_boot(**overrides) -> Vector:
     """A launchable verdict about an entry, the one place a boot may stand."""
     return _base_launchable(verdict="launchable", entry=_installer_entry(), installers=None, **overrides)
+
+
+OPENED = {"path": "/roms/ps3/Game (Track 1).bin", "how": "named", "by": "/roms/ps3/Game.cue", "present": True}
 
 
 def _base_systems(**overrides) -> Vector:
@@ -1336,6 +1340,20 @@ LAUNCHABLE_CASES = [
          "boots.file must be an absolute path", id="launchable-boots-relative-file"),
     case(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": ""}),
          "boots.disc_root must be an absolute path or null", id="launchable-boots-empty-root"),
+    case(_base_launchable(opens=[OPENED]),
+         "opens travels with a verdict about an entry alone", id="launchable-opens-off-their-verdict"),
+    case(_base_launchable(verdict="launchable", installers=None, opens=[OPENED]),
+         "opens travels with a verdict about an entry alone", id="launchable-opens-without-an-entry"),
+    case(_launchable_boot(opens={"path": OPENED["path"]}),
+         "opens must be a list or null", id="launchable-opens-not-a-list"),
+    case(_launchable_boot(opens=[{**OPENED, "kind": "file"}]),
+         "each expected.launchable.opens entry must be exactly the fields", id="launchable-opens-shape"),
+    case(_launchable_boot(opens=[{**OPENED, "by": "Game.cue"}]),
+         "opens.by must be an absolute path", id="launchable-opens-relative-by"),
+    case(_launchable_boot(opens=[{**OPENED, "how": "guessed"}]),
+         "opens.how must be one of", id="launchable-opens-how"),
+    case(_launchable_boot(opens=[{**OPENED, "present": "yes"}]),
+         "opens.present must be true, false or null", id="launchable-opens-present"),
 ]
 
 SYSTEMS_CASES = [
@@ -2283,6 +2301,9 @@ ACCEPTED_CASES = [
     pytest.param(_base_launchable(verdict="unknown", installers=None), id="no-installers-off-their-verdict"),
     pytest.param(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": "/roms/ps3/Game.ps3"}),
                  id="a-launchable-entry-boots-a-file-from-its-disc"),
+    pytest.param(_base_launchable(verdict="entry-not-accepted", entry=_installer_entry(), installers=None,
+                                  opens=[{**OPENED, "present": None}]),
+                 id="a-refusing-entry-states-what-it-opened"),
     pytest.param(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": None}),
                  id="a-launchable-entry-boots-a-file-without-a-disc"),
     pytest.param(_with(_vector(), files=A_PS3_FILES, ps3_files={A_PS3_FILE: {"magic": "\x00PSF", "category": "HG"}}),
@@ -2589,6 +2610,9 @@ class TestTheVocabularyIsOneVocabulary:
         # vocabulary grew a third word (#446), and a hand-written pair would
         # have had to be edited to keep agreeing instead of simply agreeing.
         assert validate_vectors.KNOWN_EMULATOR_KINDS == set(atlas.CATALOGUE_KINDS)
+
+    def test_the_opened_how_vocabularies_match(self):
+        assert validate_vectors.KNOWN_OPENED_HOWS == set(atlas.OPENED_HOWS)
 
     def test_the_path_kind_vocabularies_match(self):
         path_kinds = {atlas.KIND_FILE, atlas.KIND_DIRECTORY, atlas.KIND_MISSING, atlas.KIND_INACCESSIBLE}
