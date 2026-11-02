@@ -5267,6 +5267,10 @@ class TestEveryRecordedNameIsAnchoredOrMarked:
             ("cannonball", "hiscores.sav", "unprotected"),
             ("cannonball", "hiscores_continuous.sav", "unprotected"),
             ("cannonball", "hiscores_timetrial.sav", "unprotected"),
+            # The Dolphin core's user tree segment: the '/User' it joins to the
+            # save directory is stored only as the tail of the system-directory
+            # fallback's '/dolphin-emu/User', so no whole run spells it.
+            ("dolphin", "User", "unprotected"),
             # DOSBox Pure's legacy spelling is composed by a string replace; the
             # '.pure.zip' literal beside it is what the byte check watches, and
             # the '*.sav' search pattern is the legacy name's own whole trace.

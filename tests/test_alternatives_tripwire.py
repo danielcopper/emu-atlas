@@ -715,6 +715,10 @@ UNAPPLIABLE_BY_FIXTURE: frozenset[str] = frozenset(
         # the reading would remove this entry; that is a follow-up of its own.
         "standalone-saves:dolphin-without-its-ini-answers-the-default-cards-and-says-no-file-was-read"
         " | entry_savefile_location | mode 'folder+none' -> card+none [SlotA=1]",
+        # The same shape on the libretro core, whose Dolphin.ini lies in the user
+        # tree below its save directory and is not there yet either.
+        "named-cases:dolphin-core-keeps-a-gamecube-games-gci-folder-in-its-user-tree-below-the-sorted-save-directory"
+        " | entry_savefile_location | mode 'folder+none' -> card+none [SlotA=1]",
     }
 )
 

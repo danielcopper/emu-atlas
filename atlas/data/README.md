@@ -117,11 +117,12 @@ directory exists loses the player's progress on every machine with a hard disk. 
 with `files` — the field's whole reason is that no list can be given.
 
 A mode whose **every** group is unnamed is a real statement, not an empty one: it names the directory the save lives in
-and says why no file name follows from anything atlas reads. ScummVM is its one customer — the slot files land flat in
-the frontend's save directory, named per engine from the ScummVM _target_, which is launcher configuration. Such a
-mode's answer is a declared set of no statable names (`files: []`, `complete: false`) with the one `files=None` group
-and the `file-names-unestablished` caveat carrying the reason; it can never claim completeness, because the names exist
-and are simply not derivable.
+and says why no file name follows from anything atlas reads. ScummVM is the one card whose answer takes that form — the
+slot files land flat in the frontend's save directory, named per engine from the ScummVM _target_, which is launcher
+configuration; the Dolphin core's two modes are written that way too, and code states the tree below them (see the end
+of the `governing_rule` section). Such a mode's answer is a declared set of no statable names (`files: []`,
+`complete: false`) with the one `files=None` group and the `file-names-unestablished` caveat carrying the reason; it can
+never claim completeness, because the names exist and are simply not derivable.
 
 ### File names are templates in the placement's own hole vocabulary
 
@@ -299,6 +300,15 @@ the rule states the relative trees machine-readably (`save-root-unresolvable`) i
 question that names the working folder with `cwd=` settles that anchor: every relative tree is joined below it and
 stated as `save-root-redirected` too, and only a tree that carries an environment variable stays unresolvable. The card
 keeps no mode for that world — a mode whose directory nobody can state is a caveat, not a mode.
+
+One card goes a step further, because the tree below its root is one the format cannot spell at all: the libretro
+Dolphin core keeps the standalone emulator's whole user tree below its save directory, a Wii save keyed by a title id
+two segments deep and a GameCube card folder keyed by a region, both placed by a `Dolphin.ini` of the emulator's own.
+Its card states what the format can — the `savefile_directory` root, the `User` segment, and two modes of unnamed
+groups, `gamecube` and `wii`, which its rule picks by the question's system — and everything below that is code
+(`_CODE_ANSWERED_CARDS` in `atlas/installations.py`) reading the ini through the standalone Dolphin's own readings at
+the core's revision. A question that names no system leaves the rule undecided (`core-mode-unestablished`,
+`content-class-unnamed`), and the standard answer stands.
 
 ### Anchors — every recorded name, pinned to the string it was read from
 
@@ -520,7 +530,10 @@ Four cards (`azahar`, `citra`, `dolphin`, `ppsspp`) describe cores that port a s
 directory under a root nobody has watched them choose. Their answers carry `emulator-read-unestablished`, and **that
 caveat is driven by `core_audit.json`, not by this file or by a resolver**: it fires on the `suspect` verdict those
 cores already carry for their saves, so closing the verdict there retires it here, the way `arrangement_evidence.json`
-retires `arrangement-unverified`.
+retires `arrangement-unverified`. The Dolphin core is the one whose save verdict closed first (#616), on its source
+alone, and its texture and mod rows keep the caveat beside the `card` verdict until its audit record is verified on an
+arrangement: the same source places these trees, in the user directory below the save directory RetroArch hands it — the
+one content-tree root that follows RetroArch's sort redirect — and no data the core wrote has confirmed them yet.
 
 ## `standalone_saves.json` — which standalone emulators the save question answers for
 

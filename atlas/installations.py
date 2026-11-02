@@ -3210,13 +3210,16 @@ def _rule_confirmed_choice(card: CoreCard, registered: Mapping[str, CoreOption])
     )
 
 
-def _options_unaudited(card: CoreCard, core_info: CoreInfo | None) -> Caveat | None:
+def _options_unaudited(card: CoreCard | None, core_info: CoreInfo | None) -> Caveat | None:
     """The ``core-options-unaudited`` statement for an applied card, where it holds.
 
     Keys against keys: the ones the card's audit record lists and the ones the
     installed core registers. What the caveat sees, what it leaves to other
     checks and why, is stated once, at :data:`CAVEAT_CORE_OPTIONS_UNAUDITED`.
+    A card that stepped aside (``None``) states nothing.
     """
+    if card is None:
+        return None
     audit = lookup_audit(card.key)
     recorded = audit.registration if audit is not None else None
     registered = core_info.options if core_info is not None else None
@@ -3502,13 +3505,13 @@ def _apply_card(
     cfg_label: str,
     layout: RetroArchCfg,
     card: CoreCard,
-    live_option: CoreOption | None,
-    live_options: Mapping[str, CoreOption] | None,
+    choice: _CardChoice,
     library_name: str | None,
     layers: Sequence[_CfgLayer],
     content: _Content,
     gates: _OverrideGates,
     launch: _LaunchDirectory,
+    system: str | None = None,
 ) -> _CardApplication:
     """Read the option that governs this card, live, and take the mode it selects.
 
@@ -3523,7 +3526,12 @@ def _apply_card(
     that would have looked there. A card governed by a rule takes its own
     route (:func:`_apply_rule_card`): the rule reads several switches, or none
     at all, and what it needs beyond the options files is threaded there.
+
+    *choice* is what feature detection established about *card*
+    (:func:`_select_card`) — the governing option and the whole registration
+    as the installed core registers them, read here, never re-derived.
     """
+    live_option, live_options = choice.live_option, choice.live_options
     if card.rule_options is not None:
         return _apply_rule_card(
             machine,
@@ -3538,6 +3546,7 @@ def _apply_card(
             content=content,
             gates=gates,
             launch=launch,
+            system=system,
         )
     if card.option_key is None:
         # The load refuses any other shape (_expect_selectable_modes), so the
@@ -3910,6 +3919,7 @@ def _rule_reading(
     content: _Content,
     retroarch_config_dir: str,
     cwd: str | None = None,
+    system: str | None = None,
 ) -> tuple[RuleReading, _ConsultedOptions]:
     """The machine, packaged for one rule: options, content class, files, paths.
 
@@ -3928,7 +3938,7 @@ def _rule_reading(
         )
         return None if root.needs or not root.reachable else root.base
 
-    system = _SystemReads(machine, _resolve_system_base)
+    system_reads = _SystemReads(machine, _resolve_system_base)
 
     # The home the emulator's own ``$HOME`` expands to is the sandbox
     # environment's HOME, which is shared with the host — so a rule's
@@ -3937,10 +3947,10 @@ def _rule_reading(
         return _rule_file_lookup(machine, sandbox.expansion_home, name)
 
     def system_entries(name: str) -> tuple[str, ...] | None:
-        return _rule_entries(machine, system.base(), name)
+        return _rule_entries(machine, system_reads.base(), name)
 
     def system_files(name: str) -> tuple[str, ...] | None:
-        return _rule_files(machine, system.base(), name)
+        return _rule_files(machine, system_reads.base(), name)
 
     def home_entries(name: str) -> tuple[str, ...] | None:
         return _rule_entries(machine, sandbox.expansion_home, name)
@@ -3968,7 +3978,7 @@ def _rule_reading(
             option_values=recorder,
             content_extension=content.extension,
             content_stem=content.rom_stem,
-            system_file=system.file,
+            system_file=system_reads.file,
             home_file=home_file,
             system_entries=system_entries,
             home_entries=home_entries,
@@ -3980,6 +3990,7 @@ def _rule_reading(
             archive_members=reads.members,
             whdload_slave=reads.slave,
             cwd=cwd,
+            system=system,
         ),
         recorder,
     )
@@ -3999,6 +4010,7 @@ def _apply_rule_card(
     content: _Content,
     gates: _OverrideGates,
     launch: _LaunchDirectory,
+    system: str | None = None,
 ) -> _CardApplication:
     """Hand the machine to the card's selection rule and take the mode it names.
 
@@ -4034,6 +4046,7 @@ def _apply_rule_card(
         # The directory the process runs in, which inside RetroDECK's sandbox
         # need not be the caller's own (#660).
         cwd=None if cwd_templated(launch.directory) else launch.directory,
+        system=system,
     )
     choice = MODE_RULES[card.key](reading)
     caveats.extend(choice.caveats)
@@ -6627,6 +6640,36 @@ def _save_files_shared(
     return cast(SavefilePlacement, _dc_replace(placement, caveats=(*placement.caveats, shared)))
 
 
+def _coded_answer(
+    machine: Machine,
+    query: _SaveQuery,
+    *,
+    chain: _Chain,
+    card: CoreCard | None,
+    granularity: Granularity | None,
+    sources: Sequence[str],
+    caveats: Sequence[Caveat],
+) -> SavefilePlacement | Unresolved | None:
+    """The answer of a card whose tree is stated in code past its mode, or ``None`` for every other card.
+
+    Only where the card was applied and its rule chose a mode
+    (:data:`_CODE_ANSWERED_CARDS`); a card that stepped aside leaves the
+    standard answer to stand, as it does for every rule that cannot decide.
+    """
+    coded = _CODE_ANSWERED_CARDS.get(card.key) if card is not None else None
+    if card is None or coded is None or granularity is None or not granularity.mode:
+        return None
+    return coded(
+        machine,
+        query,
+        chain=chain,
+        card=card,
+        mode_name=granularity.mode,
+        sources=tuple(sources),
+        caveats=tuple(caveats),
+    )
+
+
 def _savefile_location_resolved(
     machine: Machine, query: _SaveQuery, *, check_shared: bool = True
 ) -> SavefilePlacement | Unresolved:
@@ -6681,20 +6724,24 @@ def _savefile_location_resolved(
             cfg_label=query.cfg_label,
             layout=layout,
             card=card,
-            live_option=choice.live_option,
-            live_options=choice.live_options,
+            choice=choice,
             library_name=core.library_name,
             layers=layers,
             content=content,
             gates=chain.gates,
             launch=chain.launch,
+            system=query.system,
         )
         card, card_mode, granularity = applied.card, applied.mode, applied.granularity
         caveats.extend(applied.caveats)
         caveats.extend(_unstated(applied.launch_notes, caveats))
-        if card is not None:
-            caveats.extend(_optional(_options_unaudited(card, core.info)))
+        caveats.extend(_optional(_options_unaudited(card, core.info)))
 
+    coded = _coded_answer(
+        machine, query, chain=chain, card=card, granularity=granularity, sources=sources_extra, caveats=caveats
+    )
+    if coded is not None:
+        return coded
     if card is not None and card_mode is not None and card_mode.root != ROOT_SAVEFILE_DIRECTORY:
         diverted = {
             ROOT_SYSTEM_DIRECTORY: _system_directory_placement,
@@ -7213,11 +7260,32 @@ def _read_unestablished_caveat(core_key: str) -> Caveat | None:
     record. When the audit closes it — issue #98 — the verdict changes and this
     caveat retires or converts by that edit alone, exactly the way
     ``arrangement-unverified`` retires by an edit to
-    ``arrangement_evidence.json``. No resolver names a core here, which is what
-    keeps the retirement a data change rather than a code change.
+    ``arrangement_evidence.json``.
+
+    One core keeps the caveat past that edit (#616 D2): the Dolphin core's
+    save verdict rests on its source, which also places its content trees
+    (:data:`_CORES_ON_THE_HANDED_SAVE_DIR`), and no data it wrote has
+    confirmed the tree. So for a core in that table the caveat stays while its
+    audit record is verified on no arrangement, and the first verification
+    retires it — still a data edit — with the verdict the record states and a
+    sentence saying where the arrangement links the trees instead.
     """
     entry = lookup_audit(core_key)
-    if entry is None or entry.verdict != "suspect":
+    if entry is None:
+        return None
+    linked = _CORES_ON_THE_HANDED_SAVE_DIR.get(core_key)
+    if linked is not None and entry.verdict != "suspect":
+        if any(entry.verified.values()):
+            return None
+        return Caveat(
+            CAVEAT_EMULATOR_READ_UNESTABLISHED,
+            f"core {core_key!r} builds its user directory below the save directory RetroArch hands "
+            "it, which is read from its source and not yet from data it wrote on any arrangement, "
+            "so the directory below is the one the reading derives and nothing has confirmed the "
+            f"core reads it; {linked} (docs/research/core-audit.md)",
+            {"core": core_key, "verdict": entry.verdict},
+        )
+    if entry.verdict != "suspect":
         return None
     return Caveat(
         CAVEAT_EMULATOR_READ_UNESTABLISHED,
@@ -7229,11 +7297,35 @@ def _read_unestablished_caveat(core_key: str) -> Caveat | None:
     )
 
 
+# The cores whose content trees hang off the save directory as RetroArch hands
+# it — sorted — rather than off the unsorted root every other card reads
+# (:func:`_card_root`). One today: the Dolphin core joins its whole user tree,
+# the Load tree and the configuration included, to the one directory
+# GET_SAVE_DIRECTORY returns (Boot.cpp:61-69 at libretro/dolphin fd1aca3a;
+# FileUtil.cpp:864-910 hangs every user path off it), and its save answer
+# already resolves that directory (:func:`_handed_save_dir`). Issue #616 D2.
+# The value says where an arrangement links the core's trees instead, for the
+# open-root caveat to name.
+_CORES_ON_THE_HANDED_SAVE_DIR: Mapping[str, str] = MappingProxyType(
+    {
+        "dolphin": (
+            "RetroDECK prepares this core's texture and mod links below <RetroArch config "
+            "dir>/saves/dolphin-emu/User/Load (components/retroarch/component_prepare.sh:168-169, "
+            "component_prepare.sh:226, component_prepare.sh:239), a directory the core reaches only "
+            "with that saves directory sorted by core name, which RetroDECK's shipped retroarch.cfg "
+            "never sets (rd_config/retroarch.cfg:3233, retroarch.cfg:3275-3276)"
+        ),
+    }
+)
+
+
 def _card_root(
+    machine: Machine,
     *,
     root: str,
     chain: _Chain,
     query: _SaveQuery,
+    core: str,
 ) -> _SystemRoot:
     """The directory the core builds its content tree under, resolved live.
 
@@ -7267,12 +7359,34 @@ def _card_root(
     run ever shows a texture tree under a sorted directory, this branch is the
     one to revisit.
 
+    One core leaves that rule, on source rather than on an observation: the
+    Dolphin core (:data:`_CORES_ON_THE_HANDED_SAVE_DIR`) builds its user tree
+    in one join below the directory it is handed, the Load tree and its
+    configuration with it, so its trees hang off the sorted directory its save
+    answer states — and RetroDECK's links for it sit below the config tree's
+    own saves directory, a third place neither reading reaches, so they decide
+    nothing here. Its answers keep ``emulator-read-unestablished`` until data
+    the core wrote confirms the tree (:func:`_read_unestablished_caveat`).
+
     The return type is the system route's, reused rather than copied: what a
     texture root needs from a resolution is exactly what that one already
     carries — the base, the holes it left, whether it can be looked at from
     here, and its provenance. Only ``root_kind`` goes unread, because nothing
     asked this question which root it was.
     """
+    if core in _CORES_ON_THE_HANDED_SAVE_DIR and root == ROOT_SAVEFILE_DIRECTORY:
+        handed = _handed_save_dir(machine, chain, sources=())
+        return _SystemRoot(
+            handed.directory,
+            handed.standard.root_kind,
+            needs=handed.standard.needs,
+            reachable=chain.reachable,
+            caveats=handed.caveats,
+            sources=(
+                f"{query.cfg_label} chain: the core builds its user directory under the save "
+                f"directory RetroArch hands it, sorting applied ({handed.directory})",
+            ),
+        )
     if root == ROOT_SYSTEM_DIRECTORY:
         return _core_system_root(
             sandbox=query.sandbox,
@@ -7470,7 +7584,7 @@ def _retroarch_texture_pack_location(
             {"core_so": so_basename} if so_basename is not None else {},
         )
 
-    root = _card_root(root=card.root, chain=chain, query=query)
+    root = _card_root(machine, root=card.root, chain=chain, query=query, core=card.key)
     directory = os.path.join(root.base, card.subdir)
     enabled, enabled_sources, enabled_caveats = _texture_enabled(
         machine,
@@ -8373,6 +8487,15 @@ _DOLPHIN_FAMILY = frozenset({"DOLPHIN", "PRIMEHACK"})
 # ``citations.build``.
 _DOLPHIN_BUILD = "dolphin 2609"
 
+# The libretro Dolphin core RetroDECK deploys: libretro/dolphin at
+# fd1aca3af7db75504ed7512406d8a4cf4187110a, the revision the shipped
+# ``dolphin_libretro.so`` names in its ``library_version`` and carries as one
+# whole NUL-delimited constant (``tests/test_dolphin_core_build_tripwire.py``
+# holds the deployed core to it). Every line the core's answer cites is read
+# at this revision (:data:`_DOLPHIN_CORE_LINES`).
+_DOLPHIN_CORE_REVISION = "fd1aca3a"
+_DOLPHIN_CORE_BUILD = f"libretro/dolphin {_DOLPHIN_CORE_REVISION}"
+
 # Keyed the way every standalone registry is: the token, and the flatpak app id
 # where the build differs per installation (#246). ``None`` covers an
 # arrangement's own bundled build. Stating 81bfb96's lines for the Flathub
@@ -8455,7 +8578,6 @@ def _dolphin_game_settings_caveats(
         )
     spelled = ", ".join(keys)
     plural = "keys" if len(keys) > 1 else "key"
-    are = "are" if len(keys) > 1 else "is"
     directory = os.path.join(
         homes.emulator_root(XDG_DATA, token), _DOLPHIN_GAME_SETTINGS_DIR
     )
@@ -8472,10 +8594,34 @@ def _dolphin_game_settings_caveats(
     )
     # What the USER's directory has to say comes first, where it says anything:
     # it is the layer that outranks the build's, so a reader meets the stronger
-    # statement first. The build's rides behind it unconditionally. One
-    # accumulator and one return, because the result is a homogeneous SEQUENCE
-    # of caveats and not a record whose positions mean things — the arity is the
-    # count of statements this machine earned, never a shape a caller unpacks.
+    # statement first. The build's rides behind it unconditionally.
+    return [
+        *_game_settings_listing_caveats(
+            machine, directory, token=token, layer=layer, keys=keys, governs=governs
+        ),
+        built_in,
+    ]
+
+
+def _game_settings_listing_caveats(
+    machine: Machine,
+    directory: str,
+    *,
+    token: str,
+    layer: _DolphinGameLayer,
+    keys: tuple[str, ...],
+    governs: str,
+) -> list[Caveat]:
+    """What one listable per-game directory says: files counted, a failed listing, or nothing.
+
+    One accumulator and one return, because the result is a homogeneous
+    SEQUENCE of caveats and not a record whose positions mean things — the
+    arity is the count of statements this machine earned, never a shape a
+    caller unpacks.
+    """
+    spelled = ", ".join(keys)
+    plural = "keys" if len(keys) > 1 else "key"
+    are = "are" if len(keys) > 1 else "is"
     caveats: list[Caveat] = []
     listing = machine.glob(os.path.join(directory, _ANY_INI_GLOB))
     if listing.status != GLOB_COMPLETE:
@@ -8508,7 +8654,6 @@ def _dolphin_game_settings_caveats(
                 },
             )
         )
-    caveats.append(built_in)
     return caveats
 
 
@@ -8544,6 +8689,54 @@ _DOLPHIN_DEFAULT_DEVICE_NAMES = {
     _DOLPHIN_DEVICE_FOLDER: "the GCI folder",
     _DOLPHIN_DEVICE_NONE: "no device",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class _DolphinTree:
+    """One Dolphin build's user tree, and how that build spells what it reads there.
+
+    The readings below are one emulator's code and serve every build that runs
+    it — the standalone Dolphin, its PrimeHack fork, and the libretro core —
+    but three things differ per build and are not the readings' to know: where
+    the user tree is (the XDG data tree of the standalone, the frontend's save
+    directory for the core), which source lines say what (``cite``), and the
+    small spellings a build changed — which region codes a configured card
+    path or folder may end in and which one a configured folder is rewritten
+    to (``*_spellings``, ``folder_regions``), and whether its ``strtoll``
+    reads a ``0b`` prefix (``binary_prefix``). ``label`` and ``provenance``
+    are what the answer says it was declared by; ``root_kind`` is the root
+    the tree hangs off. ``readable`` is false where the tree's own path still
+    carries a hole or lies where this host cannot read (the core's, below a
+    save directory the launch completes): then nothing below it is looked at —
+    no link walk, no title listing — the way the standard answer gates its
+    observations on reachability.
+    """
+
+    token: str
+    label: str
+    provenance: str
+    cite: _Cite
+    gc_root: str
+    nand_root: str
+    root_kind: RootKind = ROOT_EMULATOR_DIRECTORY
+    card_spellings: tuple[str, ...] = _DOLPHIN_REGION_SPELLINGS
+    folder_spellings: tuple[str, ...] = _DOLPHIN_REGION_SPELLINGS
+    folder_regions: tuple[str, ...] = _DOLPHIN_REGIONS
+    binary_prefix: bool = True
+    readable: bool = True
+
+
+def _standalone_dolphin_tree(card: StandaloneSaveCard, homes: _XdgHomes) -> _DolphinTree:
+    """The tree a standalone Dolphin-family launch reads: the emulator's own XDG data tree."""
+    user = homes.emulator_root(XDG_DATA, card.token)
+    return _DolphinTree(
+        token=card.token,
+        label=f"standalone save card '{card.token}'",
+        provenance=card.provenance,
+        cite=_cites(card, homes),
+        gc_root=os.path.join(user, "GC"),
+        nand_root=os.path.join(user, "Wii"),
+    )
 
 
 def _parse_sectioned_ini(text: str) -> dict[tuple[str, str], str]:
@@ -8613,32 +8806,36 @@ _C_INT_MIN = -(2**31)
 _C_INT_MAX = 2**31 - 1
 
 
-def _dolphin_literal_base(text: str) -> tuple[str, int]:
+def _dolphin_literal_base(text: str, *, binary_prefix: bool = True) -> tuple[str, int]:
     """Base 0's reading of an unsigned literal: its digits, and their base.
 
     ``0x``/``0X`` before a hex digit is hexadecimal, ``0b``/``0B`` before a
-    binary digit is binary, a leading ``0`` is octal (and is itself a digit,
-    so ``0`` alone reads as zero), everything else decimal. The binary prefix
-    is C23's, read here because the deployed builds call the C23 strtoll:
-    every Dolphin-family binary this answer describes — RetroDECK's
-    ``dolphin/bin/dolphin-emu`` and ``primehack/bin/primehack``, the Flathub
-    ``org.DolphinEmu.dolphin-emu`` and ``io.github.shiiion.primehack``
-    ``bin/dolphin-emu`` — imports ``__isoc23_strtoll@GLIBC_2.38`` and no
-    plain ``strtoll``. The source alone does not say it;
-    ``tests/test_dolphin_strtoll_tripwire.py`` holds the deployed binaries to
-    it and says why the import is a fact of the build.
+    binary digit is binary where *binary_prefix* holds, a leading ``0`` is
+    octal (and is itself a digit, so ``0`` alone reads as zero), everything
+    else decimal. The binary prefix is C23's, read by the standalone builds
+    because they call the C23 strtoll: every Dolphin-family binary the
+    standalone answers describe — RetroDECK's ``dolphin/bin/dolphin-emu`` and
+    ``primehack/bin/primehack``, the Flathub ``org.DolphinEmu.dolphin-emu``
+    and ``io.github.shiiion.primehack`` ``bin/dolphin-emu`` — imports
+    ``__isoc23_strtoll@GLIBC_2.38`` and no plain ``strtoll``. The libretro
+    core RetroDECK deploys imports the plain ``strtoll`` instead, which stops
+    at the ``b``, so its tree passes *binary_prefix* false and ``0b1001`` is
+    a value that does not parse. The source alone says neither;
+    ``tests/test_dolphin_strtoll_tripwire.py`` and
+    ``tests/test_dolphin_core_build_tripwire.py`` hold the deployed binaries
+    to it and say why the import is a fact of the build.
     """
     if not text.startswith("0"):
         return text, 10
     prefix, first = text[1:2], text[2:3]
     if prefix in ("x", "X") and first and first in _C_HEX_DIGITS:
         return text[2:], 16
-    if prefix in ("b", "B") and first in ("0", "1"):
+    if binary_prefix and prefix in ("b", "B") and first in ("0", "1"):
         return text[2:], 2
     return text, 8
 
 
-def _dolphin_try_parse_int(raw: str) -> int | None:
+def _dolphin_try_parse_int(raw: str, *, binary_prefix: bool = True) -> int | None:
     """What Dolphin's ``TryParse`` makes of a slot value — ``None`` where it fails.
 
     ``GetUncached`` parses the stored string and takes the setting's default
@@ -8651,7 +8848,9 @@ def _dolphin_try_parse_int(raw: str) -> int | None:
     ``strtoll`` leaves its end at the start of the string, which is its end,
     so ``SlotA =`` reads as 0. The same code is the fork's, at Config.h:82-88,
     Layer.h:36-43 and StringUtil.h:63-100 at shiiion/dolphin@53f53e0 and at
-    Config.h:83-89, Layer.h:30-37 and StringUtil.h:75-113 at @81bfb96.
+    Config.h:83-89, Layer.h:30-37 and StringUtil.h:75-113 at @81bfb96, and
+    the libretro core's at Config.h:83-90, Layer.h:26-43 and StringUtil.h:62-99
+    at libretro/dolphin@fd1aca3a.
     """
     rest = raw.lstrip(_C_WHITESPACE)
     negative = rest.startswith("-")
@@ -8659,7 +8858,7 @@ def _dolphin_try_parse_int(raw: str) -> int | None:
         rest = rest[1:]
     if not rest:
         return 0 if not raw else None
-    digits, base = _dolphin_literal_base(rest)
+    digits, base = _dolphin_literal_base(rest, binary_prefix=binary_prefix)
     allowed = _C_DIGITS[:base] + _C_DIGITS[10:base].upper()
     if not all(char in allowed for char in digits):
         return None
@@ -8700,7 +8899,9 @@ class _DolphinSlot:
     device: int | None = None
 
 
-def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
+def _dolphin_region_split(
+    value: str, *, separator: str, spellings: tuple[str, ...]
+) -> tuple[str, str]:
     """*value* with a trailing region code stripped — ``(base, suffix-after-region)``.
 
     The emulator's own move, made explicit: a configured card path is a
@@ -8708,9 +8909,11 @@ def _dolphin_region_split(value: str, *, separator: str) -> tuple[str, str]:
     MainSettings.cpp:793-835, GetGCIFolderPath :860-889, at dolphin 2609 —
     the fork's own lines live on the card, per the note above
     ``_DOLPHIN_CITATION_SLOTS``). A value that spells no region keeps its
-    tail and the region is inserted before it.
+    tail and the region is inserted before it. *spellings* are the region
+    codes the build strips (:attr:`_DolphinTree.card_spellings`,
+    :attr:`_DolphinTree.folder_spellings`).
     """
-    for region in _DOLPHIN_REGION_SPELLINGS:
+    for region in spellings:
         marker = separator + region
         if value.endswith(marker):
             return value[: -len(marker)], ""
@@ -8721,8 +8924,7 @@ def _dolphin_raw_slot(
     letter: str,
     configured: str | None,
     sandbox: _Sandbox,
-    gc_root: str,
-    cite: "_Cite",
+    tree: _DolphinTree,
     *,
     spelled: str | None = None,
 ) -> _DolphinSlot:
@@ -8734,6 +8936,7 @@ def _dolphin_raw_slot(
     unless MemoryCardSize overrides it, and the suffix only exists below
     that, MainSettings.cpp:779-781).
     """
+    cite = tree.cite
     if configured:
         resolved = sandbox.host(f"Memcard{letter}Path", configured)
         if resolved.path is None:
@@ -8754,10 +8957,10 @@ def _dolphin_raw_slot(
             )
         directory, filename = os.path.split(resolved.path)
         stem, ext = os.path.splitext(filename)
-        base, _ = _dolphin_region_split(stem, separator=".")
+        base, _ = _dolphin_region_split(stem, separator=".", spellings=tree.card_spellings)
         names = tuple(f"{base}.{region}{ext}" for region in _DOLPHIN_REGIONS)
     else:
-        directory = gc_root
+        directory = tree.gc_root
         names = tuple(f"MemoryCard{letter}.{region}.raw" for region in _DOLPHIN_REGIONS)
     return _DolphinSlot(
         mode="card",
@@ -8781,8 +8984,7 @@ def _dolphin_folder_slot(
     letter: str,
     configured: str | None,
     sandbox: _Sandbox,
-    gc_root: str,
-    cite: "_Cite",
+    tree: _DolphinTree,
     *,
     spelled: str | None = None,
 ) -> _DolphinSlot:
@@ -8797,6 +8999,7 @@ def _dolphin_folder_slot(
     is decided by their header, and the answer states that rule beside the
     groups (:func:`_dolphin_folder_caveats`).
     """
+    cite, gc_root = tree.cite, tree.gc_root
     if configured:
         resolved = sandbox.host(f"GCIFolder{letter}Path", configured)
         if resolved.path is None:
@@ -8815,8 +9018,10 @@ def _dolphin_folder_slot(
                     _dolphin_reading(f"GCIFolder{letter}Path", configured, None, cite, spelled=spelled),
                 ),
             )
-        base, _ = _dolphin_region_split(resolved.path.rstrip("/"), separator="/")
-        dirs = tuple(os.path.join(base, region) for region in _DOLPHIN_REGIONS)
+        base, _ = _dolphin_region_split(
+            resolved.path.rstrip("/"), separator="/", spellings=tree.folder_spellings
+        )
+        dirs = tuple(os.path.join(base, region) for region in tree.folder_regions)
         template = os.path.join(base, TEMPLATE_REGION)
     else:
         dirs = tuple(os.path.join(gc_root, region, f"Card {letter}") for region in _DOLPHIN_REGIONS)
@@ -8853,6 +9058,8 @@ _DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE = {
     _DOLPHIN_BUILD: False,
     "shiiion/dolphin 53f53e0": False,
     "shiiion/dolphin 81bfb96": True,
+    # The core writes it only for a non-empty stem too (EXI_DeviceAGP.cpp:44-45).
+    _DOLPHIN_CORE_BUILD: False,
 }
 
 
@@ -9061,8 +9268,7 @@ def _dolphin_carded_slot(
     device: int | None,
     values: Mapping[tuple[str, str], str],
     sandbox: _Sandbox,
-    gc_root: str,
-    cite: "_Cite",
+    tree: _DolphinTree,
 ) -> _DolphinSlot | None:
     """What slot *letter* carries with *device* in it — ``None`` where that device keeps no card.
 
@@ -9077,8 +9283,7 @@ def _dolphin_carded_slot(
             letter,
             folder_value,
             sandbox,
-            gc_root,
-            cite,
+            tree,
             spelled=folder_spelled,
         )
     if device == _DOLPHIN_DEVICE_RAW:
@@ -9087,8 +9292,7 @@ def _dolphin_carded_slot(
             letter,
             card_value,
             sandbox,
-            gc_root,
-            cite,
+            tree,
             spelled=card_spelled,
         )
     return None
@@ -9099,10 +9303,8 @@ def _dolphin_slot(
     values: Mapping[tuple[str, str], str],
     machine: Machine,
     sandbox: _Sandbox,
-    gc_root: str,
-    cite: "_Cite",
+    tree: _DolphinTree,
     *,
-    token: str,
     cwd: str | None = None,
 ) -> _DolphinSlot:
     """One slot read the way the emulator reads it: device id first, then the path.
@@ -9119,13 +9321,18 @@ def _dolphin_slot(
     slot's compiled default, as it is in the emulator — so only a value that
     parses to an id atlas does not model leaves the slot uninterpreted.
     """
+    cite, token = tree.cite, tree.token
     raw_value, slot_spelled = _simpleini_value(values, "Core", f"Slot{letter}")
-    parsed = _dolphin_try_parse_int(raw_value) if raw_value is not None else None
+    parsed = (
+        _dolphin_try_parse_int(raw_value, binary_prefix=tree.binary_prefix)
+        if raw_value is not None
+        else None
+    )
     device = parsed if parsed is not None else _DOLPHIN_SLOT_DEFAULTS[letter]
     slot_reading = _dolphin_slot_reading(letter, raw_value, parsed, cite, spelled=slot_spelled)
     if device == _DOLPHIN_DEVICE_NONE:
         return _DolphinSlot(mode="none", readings=(slot_reading,))
-    slot = _dolphin_carded_slot(letter, device, values, sandbox, gc_root, cite)
+    slot = _dolphin_carded_slot(letter, device, values, sandbox, tree)
     if slot is None and device == _DOLPHIN_DEVICE_AGP:
         slot = _dolphin_agp_slot(letter, values, machine, sandbox, cite, token=token, cwd=cwd)
     if slot is not None:
@@ -9260,8 +9467,7 @@ def _dolphin_gc_answer(
     *,
     machine: Machine,
     ini_path: str | None,
-    card: StandaloneSaveCard,
-    cite: _Cite,
+    tree: _DolphinTree,
     alternatives: tuple[ModeAlternative, ...],
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
@@ -9272,6 +9478,7 @@ def _dolphin_gc_answer(
     so the configuration this answer was read from — which the caller holds and
     this assembly does not.
     """
+    cite = tree.cite
     # Both slots can name one file — a raw card and a cartridge save on one
     # path — and the answer states it once.
     groups, merge_caveats = _one_entry_per_file([g for slot in slots for g in slot.groups])
@@ -9293,7 +9500,7 @@ def _dolphin_gc_answer(
             name for g in groups if g.dir == groups[0].dir and g.files for name in g.files
         ) if named_first else ()
         state = FILE_SET_DECLARED
-        caveats.extend(_dolphin_folder_caveats(folders, card=card, cite=cite))
+        caveats.extend(_dolphin_folder_caveats(folders, token=tree.token, cite=cite))
     else:
         # No slot carries a group: either no slot holds a card or a save, and
         # no save data lands anywhere until the configuration changes, or a
@@ -9312,26 +9519,28 @@ def _dolphin_gc_answer(
                 "sits in either one, and a GBA cartridge adapter keeps one only in a .sav that "
                 "has a size — so a GameCube game finds nowhere to save and nothing is kept; the "
                 "granularity block names the switches that would change that",
-                {"token": card.token, "mode": mode},
+                {"token": tree.token, "mode": mode},
             )
         )
     physical, link_caveats = (
-        _link_view(machine, directory) if TEMPLATE_REGION not in directory else (None, ())
+        _link_view(machine, directory)
+        if TEMPLATE_REGION not in directory and tree.readable
+        else (None, ())
     )
     caveats.extend(link_caveats)
     return SavefilePlacement(
         dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
+        root_kind=tree.root_kind,
         needs=needs,
         fallback_dir=None,
         file_set=FileSet(
             state,
             files,
-            f"declared by standalone save card '{card.token}'",
+            f"declared by {tree.label}",
             complete=False,
             groups=groups,
         ),
-        sources=_card_sources(card, _dolphin_size_evidence(slots, cite)),
+        sources=_labelled_sources(tree.label, tree.provenance, _dolphin_size_evidence(slots, cite)),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -9340,7 +9549,7 @@ def _dolphin_gc_answer(
             readings=readings,
             alternatives=alternatives,
             provenance=(
-                f"standalone save card '{card.token}': mode {mode!r} from Dolphin.ini's slot "
+                f"{tree.label}: mode {mode!r} from Dolphin.ini's slot "
                 f"devices ({cite('slot_devices')} at {cite('build')})"
             ),
         ),
@@ -9348,7 +9557,7 @@ def _dolphin_gc_answer(
 
 
 def _dolphin_folder_caveats(
-    folders: Sequence[FileGroup], *, card: StandaloneSaveCard, cite: _Cite
+    folders: Sequence[FileGroup], *, token: str, cite: _Cite
 ) -> list[Caveat]:
     """What a GCI folder's unnamed groups say about their files: no names, and a member rule.
 
@@ -9372,7 +9581,7 @@ def _dolphin_folder_caveats(
             "it finds; neither follows from anything atlas reads, so no name is stated, and "
             "file-membership-by-header states which files are one game's",
             {
-                "token": card.token,
+                "token": token,
                 "dir": g.dir,
                 "role": g.role,
                 "citation": f"{cite('gci_names')} at {cite('build')}",
@@ -9391,7 +9600,7 @@ def _dolphin_folder_caveats(
             "loads the other games' files from this folder as well, so the folder is not one "
             "game's alone",
             {
-                "token": card.token,
+                "token": token,
                 "dir": g.dir,
                 "pattern": "*.gci",
                 "offset": "0",
@@ -9455,8 +9664,7 @@ def _dolphin_alternatives(
     slots: tuple[_DolphinSlot, _DolphinSlot],
     values: Mapping[tuple[str, str], str],
     sandbox: _Sandbox,
-    gc_root: str,
-    cite: "_Cite",
+    tree: _DolphinTree,
 ) -> tuple[ModeAlternative, ...]:
     """The other card scheme for slot A — every other mode is a caveat, not a mode.
 
@@ -9490,7 +9698,7 @@ def _dolphin_alternatives(
     flip = _DOLPHIN_SLOT_A_FLIPS.get(a.mode)
     if flip is not None:
         other, device = flip
-        flipped = _dolphin_carded_slot("A", device, values, sandbox, gc_root, cite)
+        flipped = _dolphin_carded_slot("A", device, values, sandbox, tree)
         assert flipped is not None  # every device a flip writes keeps a card
         reached = (flipped, b)
         groups = tuple(g for slot in reached for g in slot.groups)
@@ -9574,15 +9782,47 @@ def _per_title_placement(
     the unit is ``per-game-directory``. *extra_groups* are directories stated
     beside it (Azahar's extdata).
     """
+    return _labelled_per_title_placement(
+        f"standalone save card '{card.token}'",
+        card.provenance,
+        directory=directory,
+        physical=physical,
+        caveats=caveats,
+        mode=mode,
+        readings=readings,
+        provenance=provenance,
+        extra_groups=extra_groups,
+    )
+
+
+def _labelled_per_title_placement(
+    label: str,
+    source: str,
+    *,
+    directory: str,
+    physical: str | None,
+    caveats: Sequence[Caveat],
+    mode: str,
+    readings: tuple[OptionReading, ...],
+    provenance: str,
+    extra_groups: tuple[FileGroup, ...] = (),
+    root_kind: RootKind = ROOT_EMULATOR_DIRECTORY,
+) -> SavefilePlacement:
+    """:func:`_per_title_placement` declared by *label*, with *source* as its evidence.
+
+    The Wii answer is the libretro Dolphin core's too, which is declared by
+    its rule card and hangs off the frontend's save directory rather than an
+    emulator directory of its own.
+    """
     return SavefilePlacement(
         dir=directory,
-        root_kind=ROOT_EMULATOR_DIRECTORY,
+        root_kind=root_kind,
         needs=(HOLE_SAVE_ID,),
         fallback_dir=None,
         file_set=FileSet(
             FILE_SET_DECLARED,
             (),
-            f"declared by standalone save card '{card.token}'",
+            f"declared by {label}",
             complete=False,
             groups=(
                 FileGroup(
@@ -9595,7 +9835,7 @@ def _per_title_placement(
                 *extra_groups,
             ),
         ),
-        sources=(f"standalone save card '{card.token}': {card.provenance}",),
+        sources=(f"{label}: {source}",),
         caveats=tuple(caveats),
         physical_dir=physical,
         granularity=Granularity(
@@ -9613,9 +9853,8 @@ def _dolphin_wii_answer(
     *,
     machine: Machine,
     sandbox: _Sandbox,
-    homes: _XdgHomes,
+    tree: _DolphinTree,
     ini_path: str | None,
-    card: StandaloneSaveCard,
     extra_caveats: tuple[Caveat, ...],
 ) -> SavefilePlacement:
     """The Wii answer: one title's save directory in the NAND, keyed by its title id.
@@ -9632,7 +9871,7 @@ def _dolphin_wii_answer(
     matches it — ASCII case-insensitively (the chain is on
     :func:`_parse_sectioned_ini`, #295).
     """
-    cite = _cites(card, homes)
+    cite = tree.cite
     configured, spelled = _simpleini_value(values, "General", "NANDRootPath")
     caveats = [*extra_caveats]
     if configured:
@@ -9648,9 +9887,9 @@ def _dolphin_wii_answer(
                     {"key": "NANDRootPath", "path": configured},
                 )
             )
-            nand_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "Wii")
+            nand_root = tree.nand_root
     else:
-        nand_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "Wii")
+        nand_root = tree.nand_root
         reading = _dolphin_reading(
             "NANDRootPath",
             None,
@@ -9662,7 +9901,7 @@ def _dolphin_wii_answer(
     # The link walk stops at the NAND root: the ``title`` tree below it is
     # created at the first Wii disc boot, so its absence is no dead link — the
     # root's own resolution is the boundary the arrangement reroutes.
-    resolved_root, link_caveats = _link_view(machine, nand_root)
+    resolved_root, link_caveats = _link_view(machine, nand_root) if tree.readable else (None, ())
     physical = (
         os.path.join(resolved_root, "title", TEMPLATE_SAVE_ID, "data") if resolved_root else None
     )
@@ -9675,7 +9914,7 @@ def _dolphin_wii_answer(
             "word then low word, each 8 lowercase hex digits, as two path segments. The high "
             "word is the title's category and part of the id, not a fixed prefix",
             {
-                "token": card.token,
+                "token": tree.token,
                 "dir": directory,
                 "role": ROLE_BATTERY,
                 "save_id": "the Wii title id: <high 8 hex>/<low 8 hex>, lowercase",
@@ -9684,18 +9923,20 @@ def _dolphin_wii_answer(
             },
         )
     )
-    listing = _wii_title_listing(machine, title_tree, token=card.token, cite=cite)
+    listing = _wii_title_listing(machine, title_tree, token=tree.token, cite=cite) if tree.readable else None
     if listing is not None:
         caveats.append(listing)
-    return _per_title_placement(
-        card,
+    return _labelled_per_title_placement(
+        tree.label,
+        tree.provenance,
+        root_kind=tree.root_kind,
         directory=directory,
         physical=physical,
         caveats=caveats,
         mode="nand",
         readings=(_reading_with_file(reading, ini_path),),
         provenance=(
-            f"standalone save card '{card.token}': a title's save directory in the Wii NAND "
+            f"{tree.label}: a title's save directory in the Wii NAND "
             f"({cite('nand_tree')} at {cite('build')})"
         ),
     )
@@ -9772,7 +10013,7 @@ def _dolphin_savefile_placement(
     about its source comes from the card being read, in the build this launch
     runs (:func:`_cites`).
     """
-    cite = _cites(card, homes)
+    tree = _standalone_dolphin_tree(card, homes)
     ini_path = _standalone_settings_path(card, homes)
     result = machine.read_text(ini_path)
     if result.status not in (READ_OK, READ_MISSING):
@@ -9799,65 +10040,448 @@ def _dolphin_savefile_placement(
         if result.status == READ_MISSING
         else ()
     )
-    if system == "wii":
+    wii = system == "wii"
+    return _dolphin_tree_answer(
+        machine,
+        values,
+        sandbox=sandbox,
+        tree=tree,
+        ini_path=stated_ini,
+        wii=wii,
+        cwd=cwd,
+        before=(*extra_caveats, *missing),
+        after=tuple(
+            _dolphin_game_settings_caveats(
+                machine,
+                token=card.token,
+                homes=homes,
+                keys=_DOLPHIN_WII_LAYER_KEYS if wii else _DOLPHIN_GC_LAYER_KEYS,
+                governs="where the Wii NAND lives" if wii else "which file or folder each slot reads",
+            )
+        ),
+    )
+
+
+def _dolphin_tree_answer(
+    machine: Machine,
+    values: Mapping[tuple[str, str], str],
+    *,
+    sandbox: _Sandbox,
+    tree: _DolphinTree,
+    ini_path: str,
+    wii: bool,
+    cwd: str | None,
+    before: tuple[Caveat, ...],
+    after: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """One Dolphin tree's save answer from its parsed Dolphin.ini: the Wii NAND, or the card slots.
+
+    What every build shares, from the point its ini is read: the standalone
+    emulator and the libretro core reach here with their own tree. *before*
+    and *after* are the caveats the caller states around the readings' own —
+    the GameCube answer puts the per-session overrides between them.
+    """
+    cite = tree.cite
+    if wii:
         return _dolphin_wii_answer(
             values,
             machine=machine,
             sandbox=sandbox,
-            homes=homes,
-            ini_path=stated_ini,
-            card=card,
-            extra_caveats=(
-                *extra_caveats,
-                *missing,
-                *_dolphin_game_settings_caveats(
-                    machine,
-                    token=card.token,
-                    homes=homes,
-                    keys=_DOLPHIN_WII_LAYER_KEYS,
-                    governs="where the Wii NAND lives",
-                ),
-            ),
+            tree=tree,
+            ini_path=ini_path,
+            extra_caveats=(*before, *after),
         )
-    gc_root = os.path.join(homes.emulator_root(XDG_DATA, card.token), "GC")
     override_caveats = tuple(
         Caveat(
             CAVEAT_CORE_MODE_UNESTABLISHED,
             f"Dolphin.ini carries {key}, a per-session override a movie or netplay session "
             f"sets ({cite('session_overrides')}) — while one runs, the cards live at its "
             "path, not at the answer's",
-            {"token": card.token, "reason": REASON_SESSION_OVERRIDE_SET, "key": key},
+            {"token": tree.token, "reason": REASON_SESSION_OVERRIDE_SET, "key": key},
         )
         for key in ("GCIFolderAPathOverride", "GCIFolderBPathOverride")
         if _simpleini_value(values, "Core", key)[0]
     )
     slots = (
-        _dolphin_slot("A", values, machine, sandbox, gc_root, cite, token=card.token, cwd=cwd),
-        _dolphin_slot("B", values, machine, sandbox, gc_root, cite, token=card.token, cwd=cwd),
+        _dolphin_slot("A", values, machine, sandbox, tree, cwd=cwd),
+        _dolphin_slot("B", values, machine, sandbox, tree, cwd=cwd),
     )
-    refusal = _dolphin_uninterpreted_refusal(slots, token=card.token, config=ini_path)
+    refusal = _dolphin_uninterpreted_refusal(slots, token=tree.token, config=ini_path)
     if refusal is not None:
         return refusal
     return _dolphin_gc_answer(
         slots,
         machine=machine,
-        ini_path=stated_ini,
-        card=card,
-        cite=cite,
-        alternatives=_dolphin_alternatives(slots, values, sandbox, gc_root, cite),
-        extra_caveats=(
-            *extra_caveats,
-            *missing,
-            *override_caveats,
-            *_dolphin_game_settings_caveats(
-                machine,
-                token=card.token,
-                homes=homes,
-                keys=_DOLPHIN_GC_LAYER_KEYS,
-                governs="which file or folder each slot reads",
-            ),
+        ini_path=ini_path,
+        tree=tree,
+        alternatives=_dolphin_alternatives(slots, values, sandbox, tree),
+        extra_caveats=(*before, *override_caveats, *after),
+    )
+
+
+# ---------------------------------------------------------------------------
+# The libretro Dolphin core — the same emulator inside RetroArch, keeping its
+# whole user tree below the directory RetroArch hands it as the save
+# directory: ``<save dir>/User`` (Boot.cpp:61-69 at libretro/dolphin
+# fd1aca3a; the system directory stands in only where the save directory is
+# empty, which RetroArch never hands a core). That directory is the standard
+# rule's redirected one — sorting and the content-directory flag applied
+# before the core asks (runloop.c:2001, :8977) — so the tree is anchored
+# exactly where the standard answer points, one segment deeper. Inside it the
+# standalone layout holds unchanged: Dolphin.ini at User/Config governs the
+# slots and the NAND (the core's own option handling sets no such key,
+# Boot.cpp:115-345; the ini is the base layer, UICommon.cpp:142), GameCube
+# cards under User/GC, the Wii NAND under User/Wii. The readings above serve
+# it through a tree of its own (:func:`_dolphin_core_tree`); what the core
+# changed is the line numbers, three region spellings and the strtoll it
+# links. RetroArch writes no ``.srm`` beside it: the core answers system RAM
+# alone through ``retro_get_memory_*``.
+# ---------------------------------------------------------------------------
+
+# The core's evidence, slot for slot the standalone card's
+# ``citations`` (:data:`_DOLPHIN_CITATION_SLOTS`), read at fd1aca3a.
+_DOLPHIN_CORE_LINES: Mapping[str, str] = MappingProxyType(
+    {
+        "build": _DOLPHIN_CORE_BUILD,
+        "slot_devices": "EXI_Device.h:25-45",
+        "slot_defaults": "MainSettings.cpp:122-125",
+        "slot_parse": "Config.h:83-90, Layer.h:26-43, StringUtil.h:62-99",
+        "session_overrides": "MainSettings.cpp:105-108",
+        "gci_names": "GCMemcardDirectory.cpp:43-62",
+        "gci_members": (
+            "GCMemcardDirectory.cpp:193, FileSearch.h:13-15, FileSearch.cpp:32-63, :86-91, "
+            "GCMemcardDirectory.cpp:210, GCMemcard.h:245-246, EXI_DeviceMemoryCard.cpp:177-183"
+        ),
+        "nand_tree": "NandPaths.cpp:63-72",
+        "title_id": "VolumeWii.cpp:270-276",
+        "title_created": "ES.cpp:823-860, Boot_BS2Emu.cpp:616",
+        "wii_dir": "FileUtil.cpp:865 with CommonPaths.h:48",
+        "agp_paths": "MainSettings.cpp:81-82",
+        "agp_save": "EXI_DeviceAGP.cpp:35-46, :74-86, :108-167",
+        "split_path": "StringUtil.cpp:296-329",
+        "card_size": "GCMemcardRaw.cpp:38-60, :120-154",
+    }
+)
+
+# The two per-game layers, installed for the running disc at
+# ConfigManager.cpp:270-271 like the standalone's — but the build's own one
+# lies below ``<system dir>/dolphin-emu/Sys`` (Boot.cpp:71-72), a directory
+# the machine spells, so both are listings here and neither is unread by
+# construction.
+_DOLPHIN_CORE_LAYER = _DolphinGameLayer(
+    name="the Dolphin core",
+    build=_DOLPHIN_CORE_BUILD,
+    loader="GameConfigLoader.cpp:187-199",
+    unfiltered="GameConfigLoader.cpp:263-279, the IsSettingSaveable filter being Save's own at :296",
+    order="Enums.h:11-21",
+    sys_dir="<system dir>/dolphin-emu/Sys, Boot.cpp:71-72",
+)
+_DOLPHIN_CORE_USER = "User"
+_DOLPHIN_CORE_SYS = ("dolphin-emu", "Sys")
+# What GetDirectoryForRegion spells: a raw card name and a default folder in
+# the Legacy style, a configured folder rewritten in the Modern one, and the
+# codes each configured value is stripped of (MainSettings.cpp:626-651,
+# :697-715, :756-781).
+_DOLPHIN_CORE_CARD_SPELLINGS = ("USA", "JAP", "EUR")
+_DOLPHIN_CORE_FOLDER_SPELLINGS = ("USA", "JPN", "EUR")
+_DOLPHIN_CORE_FOLDER_REGIONS = ("USA", "EUR", "JPN")
+# The card rule's mode name for the part of the tree a Wii game saves into.
+_DOLPHIN_CORE_WII = "wii"
+
+
+def _dolphin_core_cite(slot: str) -> str:
+    return _DOLPHIN_CORE_LINES[slot]
+
+
+def _dolphin_core_tree(
+    card: CoreCard, user_dir: str, root_kind: RootKind, *, readable: bool
+) -> _DolphinTree:
+    """The core's tree: the user directory below the save directory, at fd1aca3a's spellings."""
+    return _DolphinTree(
+        token=card.key,
+        label=f"rule card '{card.key}'",
+        provenance=card.provenance,
+        cite=_dolphin_core_cite,
+        gc_root=os.path.join(user_dir, "GC"),
+        nand_root=os.path.join(user_dir, "Wii"),
+        root_kind=root_kind,
+        card_spellings=_DOLPHIN_CORE_CARD_SPELLINGS,
+        folder_spellings=_DOLPHIN_CORE_FOLDER_SPELLINGS,
+        folder_regions=_DOLPHIN_CORE_FOLDER_REGIONS,
+        binary_prefix=False,
+        readable=readable,
+    )
+
+
+def _as_core_statement(caveat: Caveat, core: str) -> Caveat:
+    """*caveat* naming the core under ``core`` where the shared readings wrote ``token``.
+
+    The readings are the standalone emulator's, and they name what runs the
+    way a standalone answer does; a libretro core is named by its short name
+    under ``core`` instead (``tests/test_caveat_data_names_no_emulator_tripwire.py``),
+    so the core's answer carries each of their statements with that one key
+    respelled and every other value as it was.
+    """
+    if "token" not in caveat.data:
+        return caveat
+    rest = {key: value for key, value in caveat.data.items() if key != "token"}
+    return Caveat(caveat.code, caveat.message, {"core": core, **rest})
+
+
+def _dolphin_core_unresolved(refusal: Unresolved, core: str) -> Unresolved:
+    """The one refusal the shared readings return, naming the core under ``core``.
+
+    Only :func:`_dolphin_uninterpreted_refusal` refuses past the ini read, so
+    its data is respelled key for key rather than through a generic rewrite.
+    """
+    if refusal.code != UNRESOLVED_SLOT_DEVICE_UNINTERPRETED:
+        raise ValueError(
+            f"the Dolphin readings refused with {refusal.code!r}, which the core's answer does "
+            "not respell — the readings and the core route shipped out of step"
+        )
+    data = refusal.data
+    return Unresolved(
+        refusal.code,
+        refusal.message,
+        {"core": core, "slot": data["slot"], "value": data["value"], "config": data["config"]},
+    )
+
+
+def _dolphin_core_layer_caveats(
+    machine: Machine,
+    *,
+    user_dir: str,
+    system_root: _SystemRoot,
+    listable: bool,
+    core: str,
+    keys: tuple[str, ...],
+    governs: str,
+) -> list[Caveat]:
+    """Both per-game layers the core loads, one statement per layer where one is earned.
+
+    The user's ``GameSettings`` below the core's user tree, then the build's
+    below ``<system dir>/dolphin-emu/Sys`` — both listings, counted the way
+    the standalone counts its user layer (:func:`_game_settings_listing_caveats`).
+    A directory whose path is still a template, or lies where this host cannot
+    read, is a listing that did not happen, and says so.
+    """
+    layers = (
+        (os.path.join(user_dir, _DOLPHIN_GAME_SETTINGS_DIR), listable),
+        (
+            os.path.join(system_root.base, *_DOLPHIN_CORE_SYS, _DOLPHIN_GAME_SETTINGS_DIR),
+            not system_root.needs and system_root.reachable,
         ),
     )
+    caveats: list[Caveat] = []
+    for directory, readable in layers:
+        if readable:
+            caveats.extend(
+                _game_settings_listing_caveats(
+                    machine, directory, token=core, layer=_DOLPHIN_CORE_LAYER, keys=keys, governs=governs
+                )
+            )
+            continue
+        caveats.append(
+            Caveat(
+                CAVEAT_PER_GAME_LAYER_UNREAD,
+                f"{directory} could not be listed — its path is completed by what the launch "
+                "loads, or lies where this host cannot read — so whether any game carries a "
+                f"per-game settings file there is unknown; {_DOLPHIN_CORE_LAYER.name} layers such "
+                f"a file over the whole configuration while that game runs, above every value "
+                f"Dolphin.ini states ({_DOLPHIN_CORE_LAYER.loader}, {_DOLPHIN_CORE_LAYER.order} "
+                f"at {_DOLPHIN_CORE_BUILD}), and {', '.join(keys)} — {governs} — would be read "
+                "through it",
+                {"core": core, "dir": directory, "key": keys},
+            )
+        )
+    return caveats
+
+
+def _dolphin_core_ini(
+    machine: Machine, *, ini_path: str, readable: bool, core: str
+) -> tuple[Mapping[tuple[str, str], str], tuple[Caveat, ...]] | Unresolved:
+    """The core's Dolphin.ini as the emulator reads it, or why nothing could be read.
+
+    A missing file is the compiled defaults, said as such; a file that exists
+    and does not read is a refusal, as it is for the standalone; and an ini
+    whose directory is a template or out of reach is never opened — the
+    defaults are stated and the caveat says the file was not read.
+    """
+    if not readable:
+        return {}, (
+            Caveat(
+                CAVEAT_EMULATOR_CONFIG_UNREAD,
+                f"the Dolphin core's configuration ({ini_path}) lies below the save directory "
+                "the launch completes, or where this host cannot read, so it was not read — the "
+                "answer states the compiled defaults for the card slots and the NAND",
+                {"core": core, "config": ini_path},
+            ),
+        )
+    result = machine.read_text(ini_path)
+    if result.status not in (READ_OK, READ_MISSING):
+        return Unresolved(
+            UNRESOLVED_EMULATOR_CONFIG_UNREADABLE,
+            f"the Dolphin core's configuration ({ini_path}) exists and could not be read — which "
+            "devices sit in the card slots and where the NAND lives is unknowable here",
+            {"core": core, "config": ini_path},
+        )
+    if result.status == READ_MISSING:
+        return {}, (
+            _settings_missing(
+                core,
+                ini_path,
+                emulator="the Dolphin core",
+                governs="where the cards and the NAND live",
+            ),
+        )
+    return (_parse_sectioned_ini(result.text) if result.text else {}), ()
+
+
+@dataclass(frozen=True, slots=True)
+class _HandedSaveDir:
+    """The save directory RetroArch hands a core, resolved the way the standard answer resolves it.
+
+    ``standard`` is the standard rule's path math (root kind, holes,
+    sources); ``directory`` is that directory once the filesystem has had its
+    say — a sorted directory still to be created stays the answer and
+    ``fallback`` is where RetroArch reverts if it cannot create it, a sorted
+    directory a file blocks is the root itself. ``listable`` is false where
+    the directory still carries a hole or lies where this host cannot read,
+    and then nothing below it is read. ``caveats`` are the save root's rider
+    and the sorted directory's statements.
+    """
+
+    standard: SavefilePlacement
+    directory: str
+    fallback: str | None
+    listable: bool
+    caveats: tuple[Caveat, ...]
+
+
+def _handed_save_dir(machine: Machine, chain: _Chain, *, sources: Sequence[str]) -> _HandedSaveDir:
+    """``RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY`` as the core receives it: the redirected directory.
+
+    The redirect — sorting, the content-directory flag, mkdir-or-revert — runs
+    before the core asks (runloop.c:2001, :8977), so this is the standard
+    answer's own directory, resolved by the same steps
+    (:func:`_standard_placement`, :func:`_against_the_filesystem`).
+    """
+    content = chain.content
+    standard = build_savefile_placement(
+        layout=chain.layout,
+        platform_default_dir=chain.platform_default_dir,
+        content_dir_path=content.dir_path,
+        content_dir_name=content.dir_name,
+        library_name=chain.core.library_name,
+        extra_sources=tuple(sources),
+    )
+    caveats = list(_rooted_rider(chain.save_root_rider, standard.root_kind))
+    directory, fallback = standard.dir, None
+    listable = not standard.needs and chain.reachable
+    if listable:
+        effective_root = (
+            content.dir_path
+            if standard.root_kind == ROOT_CONTENT_DIRECTORY
+            else chain.layout.directory or chain.platform_default_dir
+        )
+        directory, fallback, sorted_caveats = _sorted_dir_fallback(
+            machine, intended_dir=directory, effective_root=effective_root
+        )
+        caveats.extend(sorted_caveats)
+    return _HandedSaveDir(standard, directory, fallback, listable, tuple(caveats))
+
+
+def _dolphin_core_placement(
+    machine: Machine,
+    query: _SaveQuery,
+    *,
+    chain: _Chain,
+    card: CoreCard,
+    mode_name: str,
+    sources: tuple[str, ...],
+    caveats: tuple[Caveat, ...],
+) -> SavefilePlacement | Unresolved:
+    """The Dolphin core's save answer: its user tree below the redirected save directory.
+
+    The directory the core is handed is the standard rule's, resolved the way
+    the standard answer resolves it — path math, then a sorted directory that
+    may still have to be created and its fallback — and the answer is the
+    standalone Dolphin's, read in ``User`` below it (:func:`_dolphin_core_tree`).
+    The root kind is the standard rule's, ``fallback_dir`` the same subtree
+    below the directory RetroArch falls back to, and the holes the save
+    directory still carries ride beside the tree's own.
+    """
+    content = chain.content
+    handed = _handed_save_dir(machine, chain, sources=sources)
+    standard, save_dir, fallback, listable = (
+        handed.standard,
+        handed.directory,
+        handed.fallback,
+        handed.listable,
+    )
+    notes = [*caveats, *handed.caveats]
+    user_dir = os.path.join(save_dir, _DOLPHIN_CORE_USER)
+    tree = _dolphin_core_tree(card, user_dir, standard.root_kind, readable=listable)
+    ini_path = os.path.join(user_dir, "Config", "Dolphin.ini")
+    read = _dolphin_core_ini(machine, ini_path=ini_path, readable=listable, core=card.key)
+    if isinstance(read, Unresolved):
+        return read
+    values, ini_caveats = read
+    system_root = _core_system_root(
+        sandbox=query.sandbox,
+        cfg_label=query.cfg_label,
+        layers=chain.layers,
+        content=content,
+        retroarch_config_dir=chain.retroarch_config_dir,
+    )
+    wii = mode_name == _DOLPHIN_CORE_WII
+    layer_caveats = _dolphin_core_layer_caveats(
+        machine,
+        user_dir=user_dir,
+        system_root=system_root,
+        listable=listable,
+        core=card.key,
+        keys=_DOLPHIN_WII_LAYER_KEYS if wii else _DOLPHIN_GC_LAYER_KEYS,
+        governs="where the Wii NAND lives" if wii else "which file or folder each slot reads",
+    )
+    placement = _dolphin_tree_answer(
+        machine,
+        values,
+        sandbox=query.sandbox,
+        tree=tree,
+        ini_path=ini_path,
+        wii=wii,
+        cwd=query.cwd,
+        before=ini_caveats,
+        after=tuple(layer_caveats),
+    )
+    if isinstance(placement, Unresolved):
+        return _dolphin_core_unresolved(placement, card.key)
+    return cast(
+        SavefilePlacement,
+        _dc_replace(
+            placement,
+            needs=(*standard.needs, *placement.needs),
+            fallback_dir=_below(placement.dir, save_dir, fallback),
+            sources=(*standard.sources, *placement.sources),
+            caveats=(*notes, *(_as_core_statement(c, card.key) for c in placement.caveats)),
+        ),
+    )
+
+
+def _below(directory: str, root: str, other: str | None) -> str | None:
+    """*directory* moved from below *root* to below *other* — ``None`` where it is not below *root*."""
+    if other is None or not (directory == root or directory.startswith(root.rstrip("/") + "/")):
+        return None
+    return os.path.join(other, os.path.relpath(directory, root))
+
+
+# Rule cards whose answer is built in code past the mode their rule selects,
+# keyed by the card: the card states the root and the modes, and the function
+# states the tree below them, which the card format cannot carry.
+_CODE_ANSWERED_CARDS: Mapping[str, "Callable[..., SavefilePlacement | Unresolved]"] = MappingProxyType(
+    {"dolphin": _dolphin_core_placement}
+)
 
 
 # ---------------------------------------------------------------------------
@@ -15225,7 +15849,18 @@ def _card_sources(
     card's provenance, and only where one of its groups states ``size_fixed``
     true.
     """
-    sources = [f"standalone save card '{card.token}': {card.provenance}"]
+    return _labelled_sources(f"standalone save card '{card.token}'", card.provenance, evidence)
+
+
+def _labelled_sources(
+    label: str, provenance: str, evidence: Sequence[tuple[Sequence[FileGroup], str]]
+) -> tuple[str, ...]:
+    """:func:`_card_sources` for a declaration whose label is not a standalone card's.
+
+    The Dolphin readings answer for the libretro core too, whose answer is
+    declared by its rule card, so the label travels with the tree instead.
+    """
+    sources = [f"{label}: {provenance}"]
     sources.extend(
         sentence for groups, sentence in evidence if any(group.size_fixed for group in groups)
     )
@@ -17381,7 +18016,7 @@ def _retroarch_mod_location(machine: Machine, query: _SaveQuery) -> ModPlacement
             {"core_so": so_basename} if so_basename is not None else {},
         )
 
-    root = _card_root(root=card.root, chain=chain, query=query)
+    root = _card_root(machine, root=card.root, chain=chain, query=query, core=card.key)
     trees, tree_sources, tree_caveats = _mod_trees(machine, card=card, root=root)
     enabled, enabled_sources, enabled_caveats = _mod_enabled(
         machine,

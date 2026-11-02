@@ -78,9 +78,10 @@ Small branches from main, one concern each, per-branch PRs.
 ### 1. Core-by-core audit (continuous)
 
 The grind toward "libretro complete" — queue and current audited count in the coverage matrix. Method pinned in
-`docs/research/core-audit.md`. Next: cores whose options scan shows save-related keys; the suspect trio
-(dolphin/azahar/ppsspp-libretro) needs one live run each (user). Multi-option cores (Beetle family, ReARMed,
-SwanStation) need the code-rule-plus-card route for file-set/granularity precision.
+`docs/research/core-audit.md`. Next: cores whose options scan shows save-related keys; the suspect pair
+(azahar/ppsspp-libretro) needs one live run each (user), and the Dolphin core, carded from its binary and source, waits
+on one with GameCube and Wii data for the points its answer states as not yet observed. Multi-option cores (Beetle
+family, ReARMed, SwanStation) need the code-rule-plus-card route for file-set/granularity precision.
 
 ### 2. Remaining resolver gaps (docs/tasks/save-detection.md)
 

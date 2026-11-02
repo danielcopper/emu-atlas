@@ -2312,9 +2312,12 @@ Three caveats are this question's own:
 
 The first rides the three cores that port a standalone emulator into a libretro core (Azahar, Dolphin, PPSSPP): they
 build a user directory under a root nobody has watched them choose, which is the same open question atlas's audit
-already carries for their saves. Take it as "install here, and verify before you trust it". The symlink and read caveats
-you already know (`dead-symlink`, `symlink-loop`, `sandbox-path-untranslated`, the health findings) mean here exactly
-what they mean on a save placement.
+already carries for their saves. The Dolphin core's save question is answered from its source, and its texture and mod
+trees are placed by the same reading — below the save directory RetroArch hands it, sorting applied, in `User` — but no
+data it wrote has confirmed them, so the caveat stays there too, and says where RetroDECK links those trees instead.
+Take it as "install here, and verify before you trust it". The symlink and read caveats you already know
+(`dead-symlink`, `symlink-loop`, `sandbox-path-untranslated`, the health findings) mean here exactly what they mean on a
+save placement.
 
 The second rides every standalone row, always with `enabled` at `None`, and its `data` names the emulator and the file:
 `{'emulator': 'DOLPHIN', 'config': '…/dolphin-emu/GFX.ini'}`. Read it as "the directory is right, go look in that file
