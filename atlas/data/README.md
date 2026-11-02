@@ -1363,16 +1363,18 @@ first reads them, and an empty list for a launcher that reads none.
 
 `variables` defines each variable once: the start file that defines it (`defined_in`), pinned by its own blob hash in
 `start_files`, and how its value is read live — `line`, off its assignment in that start file (the last one at the start
-of a line; a value written as a literal is the value, one the line computes is `null`), or `paths`, off the key of the
-same name in `retrodeck.json`'s `paths`, which `conf_read` sets at `line`. No value is packaged. A launcher's reading
-holds together with the start file of every variable it reads — `all_vars.sh` for `rd_shared_libs` and
+of a line; a value written as a literal is the value, one the line computes from the sandbox's config home or library
+path is what those are on the machine, read live, and any other computed value is `null`), or `paths`, off the key of
+the same name in `retrodeck.json`'s `paths`, which `conf_read` sets at `line`. No value is packaged. A launcher's
+reading holds together with the start file of every variable it reads — `all_vars.sh` for `rd_shared_libs` and
 `DEFAULT_LD_LIBRARY_PATH`, `other_functions.sh` only for a launcher that reads a folder, XRoar's
 `component_functions.sh` for `xroar_config` — so an answer hashes those and states `launch-environment-unpinned` instead
 of the list where one differs; `global.sh` and ES-DE's start are cited, not pinned. Left out of every list: a variable
 no start provides (`ffmpeg_path`, which five launchers read and nothing defines), the `log` function the start exports,
 and the session's own variables. `tests/test_launch_environment_tripwire.py` holds the pins, the reads and the
-definitions against the deployed release, and walks the libraries each launcher that reads `rd_shared_libs` loads over
-the path it composes — file presence only, so [D].
+definitions against the deployed release, holds that no file of the start writes the config home or the library path
+before those lines read them, and walks the libraries each launcher that reads `rd_shared_libs` loads over the path it
+composes — file presence only, so [D].
 
 ## `arrangement_evidence.json` — which arrangements have been seen alive
 

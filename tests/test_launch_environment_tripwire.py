@@ -31,6 +31,11 @@ RetroDECK is deployed this turns that silence red:
    and every launcher that reads ``rd_shared_libs`` must have one, except
    the ones :data:`NOT_WALKED` names with the reason the walk cannot reach
    what they run.
+4. No file the start runs before ES-DE assigns, unsets or reads into
+   ``LD_LIBRARY_PATH`` or ``XDG_CONFIG_HOME``, and the shipped settings name
+   neither (#742): an answer states ``DEFAULT_LD_LIBRARY_PATH`` and
+   ``xroar_config`` from what the sandbox starts with, which holds only while
+   the start leaves those two alone up to the lines that read them.
 
 Skipped where RetroDECK is not deployed. The message names what to re-read
 before a pin moves.
@@ -162,6 +167,103 @@ class TestTheDeployedRetroDeckHoldsThePinnedFiles:
                 assert variable.line is not None
                 # conf_read's assignment, which sets every key under its own name.
                 assert lines[variable.line - 1].strip() == 'printf -v "$name" \'%s\' "$value"', _REREAD
+
+
+# --- the values the sandbox starts with -------------------------------------------------------------------------
+
+# The values a start line may expand from what the sandbox starts RetroDECK
+# with (#742): an answer states DEFAULT_LD_LIBRARY_PATH (all_vars.sh:54) and
+# xroar_config (xroar's component_functions.sh:3) from them, which holds only
+# while nothing the start runs before those lines changes them. Every file it
+# sources up to them is searched whole (:func:`_start_chain`), which covers
+# more than the lines before them.
+_START_VALUES = ("LD_LIBRARY_PATH", "XDG_CONFIG_HOME")
+_START_CHAIN_REREAD = (
+    "re-read RetroDECK's start up to all_vars.sh:54 and xroar's component_functions.sh:3 — what changes the value "
+    "there — before stating DEFAULT_LD_LIBRARY_PATH or xroar_config from what the sandbox starts with"
+)
+
+
+def start_value_writes(text: str) -> list[str]:
+    """The lines of *text* — a comment line aside — that assign, default, unset, un-export, read into or name-ref
+    one of :data:`_START_VALUES`."""
+    names = "|".join(_START_VALUES)
+    write = re.compile(
+        rf"\b(?:{names})\+?="
+        rf"|\$\{{(?:{names}):?="
+        rf"|\b(?:unset|export\s+-n|declare\s+\+x|readonly|read|mapfile|readarray|(?:declare|local|typeset)\s+-n)\b"
+        rf"[^#\n]*\b(?:{names})\b"
+        rf"|\bprintf\s+-v\s+[\"']?(?:{names})\b"
+    )
+    return [line for line in text.splitlines() if not line.lstrip().startswith("#") and write.search(line)]
+
+
+def _start_chain() -> list[Path]:
+    """The files RetroDECK's start sources up to xroar's ``component_functions.sh``: ``bin/retrodeck``, every
+    ``libexec`` script (global.sh sources them all, :116-125), every component's ``component_prepare.sh``
+    (``prepare_component "postmove" "all"`` at global.sh:219 sources each, framework.sh:660-671), and every
+    component's ``component_functions.sh`` (:232-233)."""
+    return [
+        FILES / "bin" / "retrodeck",
+        *sorted((FILES / "libexec").glob("*.sh")),
+        *sorted(COMPONENTS.glob("*/component_prepare.sh")),
+        *sorted(COMPONENTS.glob("*/component_functions.sh")),
+    ]
+
+
+class TestTheStartLeavesTheSandboxsValuesAlone:
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "LD_LIBRARY_PATH=/x",
+            "export LD_LIBRARY_PATH=/x:$LD_LIBRARY_PATH",
+            "  XDG_CONFIG_HOME+=/x",
+            "unset LD_LIBRARY_PATH",
+            "export -n XDG_CONFIG_HOME",
+            "printf -v XDG_CONFIG_HOME '%s' /x",
+            "read -r XDG_CONFIG_HOME < f",
+            ': "${LD_LIBRARY_PATH:=/x}"',
+            'echo "${XDG_CONFIG_HOME=/x}"',
+            "mapfile -t XDG_CONFIG_HOME < f",
+            "readarray XDG_CONFIG_HOME < f",
+            "declare -n ref=LD_LIBRARY_PATH",
+            "local -n ref=XDG_CONFIG_HOME",
+        ],
+    )
+    def test_a_write_is_found(self, line: str):
+        assert start_value_writes(f"#!/bin/bash\n{line}\n") == [line]
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "DEFAULT_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}",
+            'rd_conf="$XDG_CONFIG_HOME/retrodeck/retrodeck.json"',
+            '# export LD_LIBRARY_PATH="/app/retrodeck/lib:$LD_LIBRARY_PATH"',
+            ': "${rd_logging_level:=info}"',
+            'x="${XDG_CONFIG_HOME:-/x}"',
+        ],
+    )
+    def test_a_read_or_a_comment_is_no_write(self, line: str):
+        assert start_value_writes(f"{line}\n") == []
+
+    @pytest.mark.skipif(not _deployed(), reason="RetroDECK is not deployed on this machine")
+    def test_no_file_of_the_deployed_start_writes_them(self):
+        writes = {
+            str(path.relative_to(FILES)): found
+            for path in _start_chain()
+            if (found := start_value_writes(path.read_text(encoding="utf-8")))
+        }
+        assert writes == {}, _START_CHAIN_REREAD
+
+    @pytest.mark.skipif(not _deployed(), reason="RetroDECK is not deployed on this machine")
+    def test_the_shipped_settings_name_neither(self):
+        # conf_read exports every key of paths and options under its own name
+        # (other_functions.sh:148-190); the answer refuses where the machine's
+        # own settings hold such a key, and the shipped defaults must not.
+        shipped = FILES / "retrodeck" / "config" / "retrodeck" / "retrodeck.json"
+        defaults = json.loads(shipped.read_text(encoding="utf-8"))
+        keys = {*defaults.get("paths", {}), *defaults.get("options", {})}
+        assert keys & set(_START_VALUES) == set(), _START_CHAIN_REREAD
 
 
 # --- the libraries ---------------------------------------------------------------------------------------------

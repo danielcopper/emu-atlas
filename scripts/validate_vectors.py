@@ -582,6 +582,7 @@ KNOWN_CAVEAT_CODES = {
     "frontend-build-sealed",
     "launcher-script-unpinned",
     "launch-environment-unpinned",
+    "launch-environment-unread",
     "launch-command-placeholder-unknown",
     "launch-command-argument-broken",
     "launch-command-second-shell-unsafe",

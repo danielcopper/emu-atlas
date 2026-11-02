@@ -32,6 +32,7 @@ from types import MappingProxyType
 from typing import (
     Any,
     Callable,
+    Iterable,
     Iterator,
     Literal,
     Mapping,
@@ -137,6 +138,7 @@ from .find_rules import (
     CAVEAT_FRONTEND_BUILD_SEALED,
     CAVEAT_LAUNCHER_SCRIPT_UNPINNED,
     CAVEAT_LAUNCH_ENVIRONMENT_UNPINNED,
+    CAVEAT_LAUNCH_ENVIRONMENT_UNREAD,
     CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
     CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
     Availability,
@@ -169,7 +171,15 @@ from .launch_command import (
     TooLarge,
     take_apart,
 )
-from .launch_environment import SOURCE_PATHS, environment_rules, line_variable, paths_variable
+from .launch_environment import (
+    SOURCE_PATHS,
+    environment_rules,
+    line_variable,
+    paths_variable,
+    shell_references,
+    start_assignment,
+    start_environment,
+)
 from .launcher_scripts import (
     BACKEND_ROOT,
     EMULATION_ROOT,
@@ -23167,6 +23177,63 @@ def _environment_unpinned(
     )
 
 
+def _environment_unread(variable: str, file: str) -> Caveat:
+    """The note beside a RetroDECK command whose start variable *variable* carries no value because *file*, which
+    the value rests on, could not be read."""
+    return Caveat(
+        CAVEAT_LAUNCH_ENVIRONMENT_UNREAD,
+        f"{variable} is computed at RetroDECK's start from what the sandbox starts with, and {file}, which that rests "
+        "on, could not be read — its value is not stated",
+        {"variable": variable, "file": file},
+    )
+
+
+# The two values the sandbox starts RetroDECK with that a start line may expand
+# and atlas reads on the machine (:meth:`RetroDeck._start_values`).
+_XDG_CONFIG_HOME = "XDG_CONFIG_HOME"
+_LD_LIBRARY_PATH = "LD_LIBRARY_PATH"
+_CONFIG_HOME_SOURCE = (
+    "XDG_CONFIG_HOME as the sandbox starts: {}, the app's config home — flatpak run sets it after every metadata, "
+    "overrides and --env value (flatpak-context.c:3175, reached from flatpak-run.c:3574 after :3352 @ 1.16.6)"
+)
+_LIBRARY_PATH_UNSET_SOURCE = (
+    "LD_LIBRARY_PATH as the sandbox starts: {state}, so empty — flatpak run unsets it (flatpak-run.c:547, applied at "
+    ":3351 @ 1.16.6), the runtime's metadata, the app's and the overrides files apply on top in that order "
+    "(:3137, :3144, :3352; read live: {read}), and the runtime keeps its own ld.so.cache ({ldconfig}, :3336-3346), "
+    "so no extension's library folder joins it (:197-211)"
+)
+_LIBRARY_PATH_SET_SOURCE = (
+    "LD_LIBRARY_PATH as the sandbox starts: {value!r}, set by {set_by} — the runtime's metadata, the app's and the "
+    "overrides files apply in that order on top of flatpak run's unset (flatpak-run.c:547, :3137, :3144, :3352 "
+    "@ 1.16.6; read live: {read})"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _StartValue:
+    """One value the sandbox starts RetroDECK with, as atlas reads it on the machine.
+
+    ``value`` is ``None`` where it is not established; ``source`` cites the
+    reading a stated value rests on; ``unread`` names the file whose read
+    failed where that is why the value is not established.
+    """
+
+    value: str | None
+    source: str = ""
+    unread: str | None = None
+
+
+def _runtime_sought(metadata: Mapping[str, Mapping[str, str]], deploy: _Deploy, home: str) -> str | None:
+    """Where the runtime the app's *metadata* names would be deployed in the installation that carries *deploy* —
+    ``None`` where the metadata names none."""
+    ref = _gkeyfile_string(metadata.get("Application", {}).get("runtime", "")) or ""
+    parts = ref.split("/")
+    if len(parts) != 3 or not all(parts):
+        return None
+    base = _FLATPAK_RUNTIME_SYSTEM if deploy.system else os.path.join(home, _FLATPAK_RUNTIME_USER)
+    return os.path.join(base, *parts, "active")
+
+
 def _sandbox_directory(view: _SandboxLaunchView) -> Callable[[str], bool]:
     """Whether the sandbox shows a directory at a path — a miss and what atlas cannot see alike are no."""
     return lambda path: view.is_directory(path) == PROBE_HIT
@@ -24300,25 +24367,26 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             rom_directory=self._launch_rom_directory(),
         )
         taken = take_apart(chosen.command, inputs, view)
-        command, unpinned = self._with_distribution_environment(taken.command, view, config)
-        return LaunchCommandAnswer(chosen, command, sources, (*caveats, *taken.caveats, *unpinned)), version
+        command, read, notes = self._with_distribution_environment(taken.command, view, config)
+        return LaunchCommandAnswer(chosen, command, (*sources, *read), (*caveats, *taken.caveats, *notes)), version
 
     def _with_distribution_environment(
         self, command: LaunchCommand | None, view: _SandboxLaunchView, config: Mapping[str, Any]
-    ) -> tuple[LaunchCommand | None, tuple[Caveat, ...]]:
-        """*command* with what its program reads from RetroDECK's start — or as it is, with the note that this is
-        not stated (:meth:`_distribution_environment`).
+    ) -> tuple[LaunchCommand | None, tuple[str, ...], tuple[Caveat, ...]]:
+        """*command* with what its program reads from RetroDECK's start, the readings its values rest on and the
+        notes beside them — or as it is, with the note that this is not stated (:meth:`_distribution_environment`).
         """
         if command is None:
-            return None, ()
+            return None, (), ()
         stated = self._distribution_environment(command.program.command or "", view, config)
         if isinstance(stated, Caveat):
-            return command, (stated,)
-        return cast(LaunchCommand, _dc_replace(command, distribution_environment=stated)), ()
+            return command, (), (stated,)
+        variables, sources, caveats = stated
+        return cast(LaunchCommand, _dc_replace(command, distribution_environment=variables)), sources, caveats
 
     def _distribution_environment(
         self, program: str, view: _SandboxLaunchView, config: Mapping[str, Any]
-    ) -> tuple[DistributionVariable, ...] | Caveat:
+    ) -> tuple[tuple[DistributionVariable, ...], tuple[str, ...], tuple[Caveat, ...]] | Caveat:
         """What *program* reads from RetroDECK's start, read through the launcher pinned for it — the note where none is.
 
         The program is matched by the git blob hash of the file the sandbox
@@ -24326,8 +24394,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         defines each variable the launcher reads — must hash to its pin, or the
         first that does not is named. A program that is no file atlas can hash
         (a bare name, a path the sandbox does not show) is pinned by nothing.
-        The values are read live: a start file's own line, and RetroDECK's
-        configuration for the folders ``conf_read`` exports from it.
+        The values are read live: a start file's own line, expanding the values
+        the sandbox starts with that atlas reads (:meth:`_start_values`), and
+        RetroDECK's configuration for the folders ``conf_read`` exports from it.
+        Beside the list: the reading each expanded value rests on, and a
+        ``launch-environment-unread`` note for each value a file it rests on
+        could not be read for.
         """
         rules = environment_rules()
         blob = self._sandbox_blob(program, view)
@@ -24340,6 +24412,9 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 return _environment_unpinned(program, blob, start_file, found)
         texts: dict[str, str | None] = {}
         stated: list[DistributionVariable] = []
+        starts: dict[str, _StartValue] = {}
+        sources: dict[str, None] = {}
+        caveats: list[Caveat] = []
         for read in rule.reads:
             variable = rules.variables[read.name]
             if variable.source == SOURCE_PATHS:
@@ -24347,9 +24422,114 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 continue
             if variable.defined_in not in texts:
                 texts[variable.defined_in] = self._sandbox_text(variable.defined_in, view)
-            text = texts[variable.defined_in]
-            stated.append(line_variable(read.name, variable.defined_in, text, _sandbox_path_exists(view)))
-        return tuple(stated)
+            line, read_from, unread = self._line_variable(
+                read.name, variable.defined_in, texts[variable.defined_in], view, config, starts
+            )
+            stated.append(line)
+            sources.update(dict.fromkeys(read_from))
+            caveats.extend(unread)
+        return tuple(stated), tuple(sources), tuple(caveats)
+
+    def _line_variable(
+        self,
+        name: str,
+        defined_in: str,
+        text: str | None,
+        view: _SandboxLaunchView,
+        config: Mapping[str, Any],
+        starts: dict[str, _StartValue],
+    ) -> tuple[DistributionVariable, tuple[str, ...], tuple[Caveat, ...]]:
+        """*name* off its line in *defined_in*, the values the sandbox starts with expanded where atlas reads them
+        and conf_read has not replaced them by then (:func:`start_environment`) — with the readings a stated value
+        rests on, and a note for each value it reads that a file could not be read for. *starts* caches each start
+        value across the launcher's reads.
+        """
+        found = None if text is None else start_assignment(text, name)
+        references = sorted(shell_references(found[1])) if found is not None else []
+        starts.update(self._start_values(reference for reference in references if reference not in starts))
+        established = {reference: starts[reference].value for reference in references}
+        known = start_environment(
+            defined_in, {reference: value for reference, value in established.items() if value is not None}, config
+        )
+        line = line_variable(name, defined_in, text, _sandbox_path_exists(view), known)
+        sources = tuple(starts[reference].source for reference in references) if line.value is not None else ()
+        unread = tuple(
+            _environment_unread(name, file)
+            for reference in references
+            if (file := starts[reference].unread) is not None
+        )
+        return line, sources, unread
+
+    def _start_values(self, names: Iterable[str]) -> dict[str, _StartValue]:
+        """Each of *names* as the sandbox starts RetroDECK with it, as far as atlas reads that on the machine.
+
+        Two are read: ``XDG_CONFIG_HOME``, which flatpak sets to the app's
+        config home after every metadata, overrides and ``--env`` value
+        (:meth:`_esde_config_home`), and ``LD_LIBRARY_PATH``
+        (:meth:`_start_library_path`). Every other name is not established.
+        """
+        values: dict[str, _StartValue] = {}
+        for name in names:
+            if name == _XDG_CONFIG_HOME:
+                home = self._esde_config_home()
+                values[name] = _StartValue(home, _CONFIG_HOME_SOURCE.format(home))
+            elif name == _LD_LIBRARY_PATH:
+                values[name] = self._start_library_path()
+            else:
+                values[name] = _StartValue(None)
+        return values
+
+    def _start_library_path(self) -> _StartValue:
+        """``LD_LIBRARY_PATH`` as ``flatpak run`` starts RetroDECK's sandbox with it (flatpak 1.16.6).
+
+        flatpak unsets it first (``default_exports``, flatpak-run.c:547,
+        applied at :3351 by :722-728), then applies the context's environment
+        per key (:3352, :741-757): the runtime's metadata, then the app's
+        (``flatpak_app_compute_permissions``, :1061-1086, called at :3137),
+        then the overrides files (:3143-3144, :func:`_flatpak_override_files_for`)
+        — in each, ``[Environment]`` and ``unset-environment`` on top
+        (:func:`_environment_overrides`). An extension's metadata sets no
+        variable (``flatpak_run_add_extension_args``, :116-245). Where the
+        runtime has no ``bin/ldconfig`` of its own, flatpak keeps no
+        ld.so.cache (:3336-3346) and sets ``/app/lib`` and every extension's
+        library folder instead (:605-607, :212-217, :3473-3477), which atlas
+        does not derive. An overrides file that cannot be read is read as
+        absent, as flatpak reads it (``flatpak_dir_load_override``,
+        flatpak-dir.c:2879-2884, ignored at :2927); a metadata, a runtime or
+        an ``ldconfig`` that cannot be read leaves the value unread.
+        """
+        deploy = _running_deploy(self._machine, self._home, self._APP_ID)
+        if deploy is None:
+            return _StartValue(None)
+        metadata_path = _flatpak_metadata_path(deploy)
+        metadata = self._machine.read_text(metadata_path).text
+        if metadata is None:
+            return _StartValue(None, unread=metadata_path)
+        groups = _keyfile_groups(metadata)
+        runtime = _runtime_files(self._machine, self._home, groups)
+        if runtime is None:
+            return _StartValue(None, unread=_runtime_sought(groups, deploy, self._home) or metadata_path)
+        runtime_metadata_path = os.path.join(os.path.dirname(runtime), "metadata")
+        runtime_metadata = self._machine.read_text(runtime_metadata_path).text
+        if runtime_metadata is None:
+            return _StartValue(None, unread=runtime_metadata_path)
+        ldconfig = os.path.join(runtime, "bin", "ldconfig")
+        kind = self._machine.path_kind(ldconfig)
+        if kind == KIND_INACCESSIBLE:
+            return _StartValue(None, unread=ldconfig)
+        if kind != KIND_FILE:
+            return _StartValue(None)
+        overrides = tuple(
+            (path, self._machine.read_text(path).text)
+            for path in _flatpak_override_files_for(deploy, self._home, self._APP_ID)
+        )
+        layers = ((runtime_metadata_path, runtime_metadata), (metadata_path, metadata), *overrides)
+        value, set_by = _flatpak_environment_from(layers).get(_LD_LIBRARY_PATH, (None, None))
+        read = ", ".join(path for path, text in layers if text is not None)
+        if set_by is None or value is None:
+            state = "unset" if set_by is None else f"unset by {set_by}"
+            return _StartValue("", _LIBRARY_PATH_UNSET_SOURCE.format(state=state, read=read, ldconfig=ldconfig))
+        return _StartValue(value, _LIBRARY_PATH_SET_SOURCE.format(value=value, set_by=set_by, read=read))
 
     def _sandbox_blob(self, path: str, view: _SandboxLaunchView) -> str | None:
         """The git blob hash of the file the sandbox shows at *path* — ``None`` where it shows none atlas can hash."""
