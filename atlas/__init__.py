@@ -132,6 +132,7 @@ from .rpcs3_boot import (
 from .disc_opens import (
     CAVEAT_OPENS_BOUND_EXCEEDED,
     CAVEAT_OPENS_CONTENT_UNREAD,
+    CAVEAT_OPENS_ENTRY_IGNORED,
     CAVEAT_OPENS_FILE_MISSING,
     CAVEAT_OPENS_FILE_UNREAD,
     CAVEAT_OPENS_FORMAT_REFUSED,
@@ -977,6 +978,7 @@ __all__ = [
     "CAVEAT_OPENS_SETTING_UNREAD",
     "CAVEAT_OPENS_BOUND_EXCEEDED",
     "CAVEAT_OPENS_PATH_TOO_LONG",
+    "CAVEAT_OPENS_ENTRY_IGNORED",
     "InstallFirstFormat",
     "StandaloneLaunchCard",
     "load_launch_formats",
