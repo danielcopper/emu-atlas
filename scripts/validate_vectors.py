@@ -742,6 +742,7 @@ KNOWN_CAVEAT_CODES = {
     "opens-setting-unread",
     "opens-bound-exceeded",
     "opens-path-too-long",
+    "opens-entry-ignored",
     "boot-path-missing",
     "boot-path-unestablished",
     "boot-nothing-found",
