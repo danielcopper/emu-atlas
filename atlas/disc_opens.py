@@ -158,13 +158,14 @@ cue sheet's bound is :data:`atlas.psx_disc.MAX_CUE_BYTES`, a playlist's
 it, every disc path a mednafen playlist names while its list is read, every
 playlist entry, sheet track and refused sheet's file and type DuckStation and
 SwanStation keep, and every caveat and source is charged to the output bound,
-and a caveat is stated once per code and file — remembered by its path, or
-past :data:`MAX_SHOWN` characters by the shown form and a digest, which is
-charged with it. So what one reading holds is bounded three ways: the texts on
-its current path of reads, at most :data:`MAX_READ_BYTES` of file bytes
-together (up to four times that in memory for text outside Latin-1); its
-answer with everything it remembers to build it, at most :data:`MAX_OUTPUT`
-characters; and one parse at a time of at most :data:`MAX_STEPS` lines.
+and a caveat is stated once per code, file and effect — remembered by its
+path, or past :data:`MAX_SHOWN` characters by the shown form and a digest,
+which is charged with it. So what one reading holds is bounded three ways:
+the texts on its current path of reads, at most :data:`MAX_READ_BYTES` of
+file bytes together (up to four times that in memory for text outside
+Latin-1); its answer with everything it remembers to build it, at most
+:data:`MAX_OUTPUT` characters; and one parse at a time of at most
+:data:`MAX_STEPS` lines.
 
 A NUL cannot reach a path: both emulators hand a name on as a C string, so a
 playlist entry ends at its first NUL (:mod:`atlas.psx_region`) and a cue
@@ -182,6 +183,24 @@ from typing import Final, Literal
 
 from . import psx_disc, psx_region
 from .machine import KIND_FILE, KIND_MISSING, READ_OK, BoundedReadingMachine, Machine, ReadResult
+from .opens_codes import (
+    CAVEAT_OPENS_BOUND_EXCEEDED,
+    CAVEAT_OPENS_CONTENT_UNREAD,
+    CAVEAT_OPENS_ENTRY_IGNORED,
+    CAVEAT_OPENS_FILE_MISSING,
+    CAVEAT_OPENS_FILE_UNREAD,
+    CAVEAT_OPENS_FORMAT_REFUSED,
+    CAVEAT_OPENS_FORMAT_UNREAD,
+    CAVEAT_OPENS_PATH_TOO_LONG,
+    CAVEAT_OPENS_PLAYLIST_REFUSED,
+    CAVEAT_OPENS_SETTING_UNREAD,
+    CAVEAT_OPENS_SHEET_REFUSED,
+    CAVEAT_OPENS_TRACK_REFUSED,
+    EFFECT_GOES_ON,
+    EFFECT_STOPS,
+    EFFECT_UNESTABLISHED,
+    OpensEffect,
+)
 from .placement import Caveat
 
 OpenedHow = Literal["named", "name-derived"]
@@ -228,21 +247,6 @@ Outcome = Literal["accepts", "refuses", "unestablished"]
 ACCEPTS: Outcome = "accepts"
 REFUSES: Outcome = "refuses"
 UNESTABLISHED: Outcome = "unestablished"
-
-# The reasons, one code each. A refusal is the emulator's own stop; the same
-# code on a launchable answer is a file the emulator goes on without.
-CAVEAT_OPENS_FILE_MISSING: Final = "opens-file-missing"
-CAVEAT_OPENS_TRACK_REFUSED: Final = "opens-track-refused"
-CAVEAT_OPENS_SHEET_REFUSED: Final = "opens-sheet-refused"
-CAVEAT_OPENS_FORMAT_REFUSED: Final = "opens-format-refused"
-CAVEAT_OPENS_PLAYLIST_REFUSED: Final = "opens-playlist-refused"
-CAVEAT_OPENS_FORMAT_UNREAD: Final = "opens-format-unread"
-CAVEAT_OPENS_CONTENT_UNREAD: Final = "opens-content-unread"
-CAVEAT_OPENS_FILE_UNREAD: Final = "opens-file-unread"
-CAVEAT_OPENS_SETTING_UNREAD: Final = "opens-setting-unread"
-CAVEAT_OPENS_BOUND_EXCEEDED: Final = "opens-bound-exceeded"
-CAVEAT_OPENS_PATH_TOO_LONG: Final = "opens-path-too-long"
-CAVEAT_OPENS_ENTRY_IGNORED: Final = "opens-entry-ignored"
 
 # atlas's own bounds on a walk the content drives: the files one reading lists,
 # how deep playlists may nest, the tracks one sheet may declare (a disc holds
@@ -530,7 +534,8 @@ class _Walk:
         self.steps = 0
         self.bytes_read = 0
         self.output = 0
-        self._said: set[tuple[str, str]] = set()
+        # What each code and file was stated as: once per effect.
+        self._said: dict[tuple[str, str], set[OpensEffect | None]] = {}
 
     def charge(self, path: str, size: int) -> None:
         """*size* characters more in the answer; past :data:`MAX_OUTPUT` the walk stops short."""
@@ -591,28 +596,42 @@ class _Walk:
         return found
 
     def caveat(
-        self, code: str, path: str, message: str, kind: str | None = None, *, free: bool = False, key: str | None = None
+        self,
+        code: str,
+        path: str,
+        message: str,
+        kind: str | None = None,
+        *,
+        free: bool = False,
+        key: str | None = None,
+        effect: OpensEffect | None = None,
     ) -> None:
-        """One caveat about *path*, once per code and file; *kind* is the track type a refusal names (``type``).
+        """One caveat about *path*, once per code, file and effect; *kind* is the track type a refusal names (``type``).
 
         *message* spells the file ``{file}``, which becomes the path as shown
         (:func:`_shown`) — so a path longer than that is never copied whole.
         Each is charged to :data:`MAX_OUTPUT`, save the one statement that the
         walk stopped at a bound (*free*). A reading remembers which it stated
-        by the path's :func:`_said_key`, or by *key* where only that is kept.
+        by the path's :func:`_said_key`, or by *key* where only that is kept,
+        and by its *effect*, so a stop is stated even where the same file went
+        on under the same code before it (D2 of #750).
         """
         said = (code, key or _said_key(path))
-        if said in self._said:
+        effects = self._said.setdefault(said, set())
+        if effect in effects:
             return
         shown = _shown(path)
         message = message.replace("{file}", shown)
         if not free:
-            self.charge(path, len(message) + len(shown) + len(self.label) + len(kind or "") + len(said[1]))
-        self._said.add(said)
-        if kind is None:
-            self.caveats.append(Caveat(code, message, {"entry": self.label, "file": shown}))
-        else:
-            self.caveats.append(Caveat(code, message, {"entry": self.label, "file": shown, "type": kind}))
+            size = len(message) + len(shown) + len(self.label) + len(kind or "") + len(said[1]) + len(effect or "")
+            self.charge(path, size)
+        effects.add(effect)
+        data: dict[str, str] = {"entry": self.label, "file": shown}
+        if kind is not None:
+            data["type"] = kind
+        if effect is not None:
+            data["effect"] = effect
+        self.caveats.append(Caveat(code, message, data))
 
     def fail(
         self, mode: _Mode, code: str, path: str, what: str, kind: str | None = None, *, key: str | None = None
@@ -627,18 +646,22 @@ class _Walk:
             code, what = CAVEAT_OPENS_PATH_TOO_LONG, _TOO_LONG
         if mode.stops:
             self.caveat(code, path, f"{self.emulator} {what}, and its open stops there — {self.label!r} does not "
-                        "launch this set", kind, key=key)
+                        "launch this set", kind, key=key, effect=EFFECT_STOPS)
             self.refused = True
         else:
-            self.caveat(code, path, f"{self.emulator} {what}, and {mode.goes_on}", kind, key=key)
+            self.caveat(code, path, f"{self.emulator} {what}, and {mode.goes_on}", kind, key=key, effect=EFFECT_GOES_ON)
 
-    def unsure(self, mode: _Mode, code: str, path: str, what: str) -> None:
-        """Something the take depends on that atlas does not read; it decides the take where the mode says so."""
+    def unsure(self, mode: _Mode, code: str, path: str, what: str, *, effect: OpensEffect | None = None) -> None:
+        """Something the take depends on that atlas does not read; it decides the take where the mode says so.
+
+        *effect* is stated where *code* is one a failure of the open is stated
+        under (:data:`~atlas.opens_codes.OPENS_FAILURE_CODES`).
+        """
         if mode.decisive:
             self.unestablished = True
         if code == CAVEAT_OPENS_FILE_UNREAD and path == self.launched:
             self.launched_unread = True
-        self.caveat(code, path, f"{what} — what {self.emulator} makes of it is not established here")
+        self.caveat(code, path, f"{what} — what {self.emulator} makes of it is not established here", effect=effect)
 
     def reading(self) -> OpensReading:
         outcome = ACCEPTS
@@ -2235,9 +2258,11 @@ class _GpgxReader:
             # The sheet itself opens whole (cdd.c:405) — a playlist's disc keeps its
             # full path (libretro.c:3594-3598), a launched one 255 bytes of it
             # (:3423, :3463) — but the copy its track paths are built from does not.
+            # A disc switch that does not mount leaves the launch as it was.
             self.walk.unsure(mode, CAVEAT_OPENS_PATH_TOO_LONG, path,
                              "{file} is 255 bytes or longer, and the copy cdd_load builds its track paths from "
-                             "keeps 255 of them and one byte it never sets (cdd.c:583-584)")
+                             "keeps 255 of them and one byte it never sets (cdd.c:583-584)",
+                             effect=EFFECT_GOES_ON if _switching(mode) else EFFECT_UNESTABLISHED)
             return False
         return _GpgxSheet(self, path, mode).open()
 
