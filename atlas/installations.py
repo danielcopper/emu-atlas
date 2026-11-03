@@ -9952,28 +9952,52 @@ def _dolphin_wii_answer(
     )
 
 
-# The shape Dolphin gives each word of a title directory's name: eight
-# lowercase hex digits (``{:08x}``, NandPaths.cpp:63-67 at 2609). A name of
-# any other shape is no directory the emulator created for a title.
-_WII_TITLE_WORD_PATTERN = "[0-9a-f]" * 8
+# The shape Dolphin and Cemu give each word of a title directory's name:
+# eight lowercase hex digits (``{:08x}``, NandPaths.cpp:63-67 at Dolphin 2609;
+# ``%08x``, nn_save.cpp:331-333 at Cemu 2.6). A name of any other shape is no
+# directory the emulator created for a title.
+_TITLE_WORD_PATTERN = "[0-9a-f]" * 8
 
 
 def _wii_title_listing(
     machine: Machine, title_tree: str, *, token: str, cite: _Cite
 ) -> Caveat | None:
-    """Every title directory below the NAND's ``title`` tree, spelled like the hole it fills.
+    """Every title directory below the NAND's ``title`` tree (:func:`_title_directory_listing`).
 
-    A caller whose source names a Wii disc by its low word alone finds that
-    word here and reads the high word off the entry, rather than assuming
-    one. Dolphin creates ``title/<hi>/<lo>/data`` every time it boots a disc
-    (the ES DIVerify the emulated boot ends with), so a game started once is
-    listed whether or not it has saved. An absent or empty tree states
-    nothing; a tree that could not be listed in full states what it could
-    read beside where the listing stopped.
+    Dolphin creates ``title/<hi>/<lo>/data`` every time it boots a disc (the
+    ES DIVerify the emulated boot ends with), so a game started once is
+    listed whether or not it has saved.
     """
-    pattern = os.path.join(
-        _glob_escape(title_tree), _WII_TITLE_WORD_PATTERN, _WII_TITLE_WORD_PATTERN, ""
+    return _title_directory_listing(
+        machine,
+        title_tree,
+        token=token,
+        created="when it boots the disc",
+        none_means="no disc of that word was started here",
+        citation=f"{cite('title_created')} at {cite('build')}",
     )
+
+
+def _title_directory_listing(
+    machine: Machine,
+    title_tree: str,
+    *,
+    token: str,
+    created: str,
+    none_means: str,
+    citation: str,
+) -> Caveat | None:
+    """Every ``<hi>/<lo>`` title directory below *title_tree*, spelled like the hole it fills.
+
+    A caller whose source names a title by its low word alone finds that word
+    here and reads the high word off the entry, rather than assuming one.
+    *created* says when the emulator creates a title's directory and
+    *none_means* what a low word matching no entry then tells; *citation* is
+    the source for both. An absent or empty tree states nothing; a tree that
+    could not be listed in full states what it could read beside where the
+    listing stopped.
+    """
+    pattern = os.path.join(_glob_escape(title_tree), _TITLE_WORD_PATTERN, _TITLE_WORD_PATTERN, "")
     listing = machine.glob(pattern)
     if not listing.matches and not listing.unreadable:
         return None
@@ -9988,18 +10012,19 @@ def _wii_title_listing(
     return Caveat(
         CAVEAT_SAVE_ID_CANDIDATES,
         f"{title_tree} {found}, each spelled as the <save_id> it fills{stopped}. The emulator "
-        "creates a title's directory when it boots the disc, so a low word that matches one "
-        "entry names the whole id, two entries leave it ambiguous, and none means no disc of "
-        "that word was started here",
+        f"creates a title's directory {created}, so a low word that matches one entry names "
+        f"the whole id, two entries leave it ambiguous, and none means {none_means}",
         {
             "token": token,
             "dir": title_tree,
             "titles": titles,
             # Where the walk stopped, and empty where it read everything: a
             # listing that holds nothing because nothing could be read is never
-            # mistaken for a tree no disc was started in.
+            # mistaken for a tree no title ever made its directory in — no
+            # disc booted in Dolphin's NAND, no title that set up its save in
+            # Cemu's MLC.
             "unreadable": listing.unreadable,
-            "citation": f"{cite('title_created')} at {cite('build')}",
+            "citation": citation,
         },
     )
 
@@ -10919,9 +10944,11 @@ def _xemu_savefile_placement(
 # Cemu 2.6 — the Wii U's internal storage (MLC) holds every save, and where
 # the MLC lives is: a --mlc launch flag, else settings.xml's mlc_path, else
 # <user data>/mlc01 (ActiveSettings.cpp:242-268). The save tree inside it is
-# usr/save/<title id hi>/<title id lo>/user/ — the shipped binary carries
-# that scheme as the whole literal 'usr/save/{:08X}/{:08X}/user/' — one
-# subtree per title, the id the game's own.
+# usr/save/<title id hi>/<title id lo>/user/, one subtree per title, the id
+# the game's own. The shipped binary carries the scheme as the whole literal
+# 'usr/save/{:08X}/{:08X}/user/', but that one is the log line naming a
+# title's save path (CafeSystem.cpp:202); the directories are created and
+# written in lowercase (SaveInfo.cpp:16, nn_save.cpp:331-333).
 # ---------------------------------------------------------------------------
 
 
@@ -11044,6 +11071,23 @@ def _cemu_savefile_placement(
             },
         )
     )
+    # Beside the hole, the titles the tree already holds. A title's
+    # usr/save/<hi>/<lo>/ (and meta/ below it) is created when the title
+    # initialises its save library, before its first save read or write
+    # (SAVEInit, nn_save.cpp:305-336), under the id of the base title — an
+    # update's or a DLC's id resolves to it before the boot
+    # (TitleList.cpp:614-627) — and Cemu creates Mii Maker's three when it
+    # sets up the MLC (CemuApp.cpp:471-482).
+    listing = _title_directory_listing(
+        machine,
+        tree,
+        token=card.token,
+        created="when the title initialises its save library, before its first save",
+        none_means="no title of that word has set up its save here",
+        citation="nn_save.cpp:305-336, TitleList.cpp:614-627, CemuApp.cpp:471-482 at Cemu 2.6",
+    )
+    if listing is not None:
+        caveats.append(listing)
     stated_xml = xml_path if result.status == READ_OK else None
     return _per_title_placement(
         card,
