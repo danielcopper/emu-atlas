@@ -38,6 +38,7 @@ from .contract import (
     installation_contract,
     launch_command_contract,
     launchable_contract,
+    save_portability_contract,
     mod_answer_contract,
     platform_systems_contract,
     rom_locations_contract,
@@ -127,6 +128,17 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
     "launch-command": (
         lambda target, args: target.launch_command(args.system, args.content, label=args.label),
         launch_command_contract,
+    ),
+    "save-portability": (
+        lambda target, args: target.save_portability(
+            args.system,
+            source=args.source,
+            target=args.target,
+            content_path=args.content,
+            cwd=args.cwd,
+            appendconfig=args.appendconfig,
+        ),
+        save_portability_contract,
     ),
     "firmware-for-core": (
         lambda target, args: target.firmware_for_core(
@@ -356,6 +368,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--content", required=True, type=_absolute_argument, help="absolute path of the content file"
     )
     command.add_argument("--label", help="the catalogue entry's label; default: the frontend's own choice")
+
+    portability = commands.add_parser(
+        "save-portability",
+        parents=[common, selecting],
+        help="whether one entry reads the save another entry of the system wrote, part by part",
+    )
+    portability.add_argument("system", help=_SYSTEM_ID_HELP)
+    portability.add_argument("--source", required=True, help="the label of the catalogue entry that wrote the save")
+    portability.add_argument("--target", required=True, help="the label of the catalogue entry that would read it")
+    portability.add_argument("--content", help="path of the content file the save is for")
+    _add_cwd(portability)
+    _add_appendconfig(portability)
 
     for_core = commands.add_parser(
         "firmware-for-core",

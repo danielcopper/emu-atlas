@@ -254,6 +254,7 @@ from .oddities import (
     lookup_card,
 )
 from .save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
+from .save_portability import PORTABILITY_VERDICTS, SavePart, portability_answer
 from .squashfs import zstd_provider
 from .textures import (
     XDG_CONFIG,
@@ -2311,6 +2312,48 @@ def _identify_core(
             " (retro_get_system_info)",
         ),
     )
+
+
+def _core_library_version(machine: Machine, query: "_SaveQuery", core_so: str) -> str | None:
+    """The ``library_version`` of the core the save route loads for *core_so*, or ``None`` where it is not read.
+
+    The same lookup :func:`_identify_core` makes — the path the configuration
+    resolves, or the caller's own where *core_so* is one — and the same probe,
+    which the machine keeps per path, so the save answer and this reading are
+    one observation of one file.
+    """
+    lookup = _CoreLookup(core_so) if os.sep in core_so else query.core_path_resolver(core_so)
+    if lookup.so_path is None:
+        return None
+    info = machine.read_core(lookup.so_path).info
+    return info.library_version if info is not None else None
+
+
+# Where a RetroDECK deploy states the build of a component it ships: the
+# component recipe writes the release it downloaded beside the binary
+# (``component_version``), which is what a standalone card's pinned build
+# states as its ``release`` (atlas.standalone_saves.StandaloneBuild).
+_COMPONENT_VERSION = "/app/retrodeck/components/{component}/component_version"
+
+
+def _component_release(machine: Machine, sandbox: "_Sandbox", token: str | None) -> str | None:
+    """The release a RetroDECK deploy states for the standalone emulator *token*, or ``None``.
+
+    The component's directory is the first segment of the binary the settings
+    table anchors the emulator's name to (``duckstation/bin/duckstation-qt``),
+    so the record read is the one beside the binary that runs. An emulator the
+    table does not carry, a deploy tree that holds no such file and a file that
+    cannot be read all leave the build unread.
+    """
+    try:
+        binary = emulator_settings.emulator_directory(token).stated(None).binary
+    except ValueError:
+        return None
+    path = sandbox.bundled(_COMPONENT_VERSION.format(component=binary.split("/", 1)[0]))
+    if path is None:
+        return None
+    result = machine.read_text(path)
+    return (result.text or "").strip() if result.status == READ_OK else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -19697,6 +19740,36 @@ class LaunchabilityAnswer:
 
 
 @dataclass(frozen=True, slots=True)
+class SavePortabilityAnswer:
+    """Whether the target entry reads what the source entry wrote, part by part (#577).
+
+    ``verdict`` is the most severe verdict of the parts (D9) — never milder than
+    ``unestablished`` where the answer has no part to judge or a caveat says a
+    part could not be told apart. ``source`` and ``target`` are the two entries
+    the labels named, ``None`` where a label names none. How the parts are found
+    and judged is :mod:`atlas.save_portability`'s.
+    """
+
+    verdict: str
+    """The pair's summary, one of :data:`~atlas.save_portability.PORTABILITY_VERDICTS`: the most severe of the parts."""
+    source: EmulatorEntry | None = None
+    """The entry that wrote the save, and ``None`` where its label is not in the catalogue."""
+    target: EmulatorEntry | None = None
+    """The entry that would read it, and ``None`` where its label is not in the catalogue."""
+    parts: tuple[SavePart, ...] = ()
+    """One entry per part of the source's save, in the order its save answer states them."""
+    sources: tuple[str, ...] = ()
+    caveats: tuple[Caveat, ...] = ()
+    """Every degradation of this answer, stated structurally so a client branches on the code rather than on prose."""
+
+    def __post_init__(self) -> None:
+        if self.verdict not in PORTABILITY_VERDICTS:
+            raise ValueError(
+                f"SavePortabilityAnswer: verdict must be one of {PORTABILITY_VERDICTS}, got {self.verdict!r}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class LaunchCommandAnswer:
     """The command the frontend would run for one file, taken apart — or why it is not.
 
@@ -21612,6 +21685,13 @@ def _catalogue_with_caveats(answer: CatalogueAnswer, caveats: tuple[Caveat, ...]
     return cast(CatalogueAnswer, _dc_replace(answer, caveats=caveats))
 
 
+def _portability_with_caveats(
+    answer: SavePortabilityAnswer, caveats: tuple[Caveat, ...]
+) -> SavePortabilityAnswer:
+    """*answer* with *caveats* as its caveat list — ``dataclasses.replace`` behind a concrete signature."""
+    return cast(SavePortabilityAnswer, _dc_replace(answer, caveats=caveats))
+
+
 def _launchable_with_caveats(
     answer: LaunchabilityAnswer, caveats: tuple[Caveat, ...]
 ) -> LaunchabilityAnswer:
@@ -23061,6 +23141,95 @@ class _CatalogueQueries:
         return _launchable_with_caveats(
             answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
         )
+
+    @one_question
+    def save_portability(
+        self,
+        system: str,
+        *,
+        source: str,
+        target: str,
+        content_path: str | None = None,
+        cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
+    ) -> SavePortabilityAnswer:
+        """Whether the entry labelled *target* reads what the one labelled *source* wrote (#577).
+
+        Both entries are this system's, named by their catalogue labels the way
+        :meth:`launch_command` names one, and the question is directed: the
+        source wrote the save, the target would read it. Each entry's own save
+        question (:meth:`EmulatorEntry.savefile_location`) is asked with
+        *content_path*, *cwd* and *appendconfig*, exactly as it takes them, and
+        the answer compares the two part by part — see
+        :class:`SavePortabilityAnswer`. A label no entry
+        carries answers ``unestablished`` with ``entry-label-unknown``; naming
+        one entry twice is not a question and raises ``ValueError``.
+        """
+        checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
+        if source == target:
+            raise ValueError(f"source and target name the same entry ({source!r}) — a save is not moved to itself")
+        answer, version = self._save_portability_answer(
+            system, source=source, target=target, content_path=content_path, cwd=cwd, appendconfig=files
+        )
+        return _portability_with_caveats(
+            answer, (*answer.caveats, *arrangement_caveats(self.kind, observed_version=version))
+        )
+
+    def _save_portability_answer(
+        self,
+        system: str,
+        *,
+        source: str,
+        target: str,
+        content_path: str | None,
+        cwd: str | None,
+        appendconfig: tuple[str, ...],
+    ) -> tuple[SavePortabilityAnswer, str | None]:
+        """The pair over one catalogue read: both entries' save answers, weighed by their records."""
+        catalogue, version = self._catalogue_answer(system, content_path=content_path)
+        outcome = portability_answer(
+            system,
+            source=source,
+            target=target,
+            entries=catalogue.entries,
+            ask=lambda entry: entry.savefile_location(content_path=content_path, cwd=cwd, appendconfig=appendconfig),
+            running=self._portability_build,
+            token=lambda entry: self.standalone_firmware_token(entry.command),
+            caveats=catalogue.caveats,
+        )
+        answer = SavePortabilityAnswer(
+            verdict=outcome.verdict,
+            source=outcome.source,
+            target=outcome.target,
+            parts=outcome.parts,
+            sources=outcome.sources,
+            caveats=outcome.caveats,
+        )
+        return answer, version
+
+    def _portability_build(self, entry: EmulatorEntry) -> str | None:
+        """The build this machine names for *entry* — what a save-format record's pin is held against (#577 D5)."""
+        if entry.kind == KIND_LIBRETRO and entry.core_so is not None:
+            return self._portability_core_version(entry.core_so)
+        if entry.kind == KIND_STANDALONE:
+            return self._portability_standalone_release(self.standalone_firmware_token(entry.command))
+        return None
+
+    def _portability_core_version(self, core_so: str) -> str | None:
+        """The ``library_version`` the core the save route loads answers — ``None`` on a handle with no RetroArch."""
+        del core_so
+        return None
+
+    def _portability_standalone_release(self, token: str | None) -> str | None:
+        """The release a deploy states for a standalone emulator's build — ``None`` where no deploy tree states one.
+
+        Only RetroDECK writes one (its components' ``component_version``);
+        EmuDeck runs what it downloaded without such a record, and a bare
+        RetroArch launches no standalone emulator.
+        """
+        del token
+        return None
 
     # The public questions above are the whole catalogue surface, and a
     # handle overrides the ``_…_answer`` methods below instead: what it
@@ -24762,6 +24931,14 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 appendconfig=appendconfig,
             ),
         )
+
+    def _portability_core_version(self, core_so: str) -> str | None:
+        config, marker_issues = self._read_marker()
+        query = self._query_from(config, marker_issues, content_path=None, core_so=core_so)
+        return _core_library_version(self._machine, query, core_so)
+
+    def _portability_standalone_release(self, token: str | None) -> str | None:
+        return _component_release(self._machine, self._sandbox(), token)
 
     def _savestate_location_from(
         self,
@@ -27807,6 +27984,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         """
         return _flatpak_cfg_sandbox(self._machine, self._home, self._RA_APP_ID)
 
+    def _portability_core_version(self, core_so: str) -> str | None:
+        return _core_library_version(self._machine, self._query(content_path=None, core_so=core_so), core_so)
+
     def _query(
         self,
         *,
@@ -28276,6 +28456,9 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         this with the Flatpak composition (issue #101).
         """
         return self._sandbox(), ()
+
+    def _portability_core_version(self, core_so: str) -> str | None:
+        return _core_library_version(self._machine, self._query(content_path=None, core_so=core_so), core_so)
 
     def _query(
         self,
@@ -28846,6 +29029,17 @@ class Installation(Protocol):
     def launch_command(
         self, system: str, content_path: str, *, label: str | None = None
     ) -> LaunchCommandAnswer: ...
+
+    def save_portability(
+        self,
+        system: str,
+        *,
+        source: str,
+        target: str,
+        content_path: str | None = None,
+        cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
+    ) -> SavePortabilityAnswer: ...
 
     def rom_location(self, system: str) -> RomPlacement: ...
 

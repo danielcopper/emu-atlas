@@ -60,6 +60,7 @@ from .installations import (
     RomLocationsAnswer,
     RomPlacement,
     RootsAnswer,
+    SavePortabilityAnswer,
     SystemPlatformsAnswer,
     SystemsAnswer,
 )
@@ -68,6 +69,7 @@ from .launch_command import LaunchCommand, LauncherScript
 from .platforms import PlatformIdentities
 from .placement import (
     Caveat,
+    FileGroup,
     ModPlacement,
     SavefilePlacement,
     SavestateAbsence,
@@ -107,6 +109,17 @@ def _caveats_contract(caveats: Sequence[Caveat]) -> list[dict[str, Any]]:
     return [{"code": c.code, "data": data_contract(c.data)} for c in caveats]
 
 
+def _group_contract(group: FileGroup) -> dict[str, Any]:
+    """One file group — the one serialization a group has, in a save answer and in a part of a pair."""
+    return {
+        "dir": group.dir,
+        "files": None if group.files is None else list(group.files),
+        "granularity": group.granularity,
+        "role": group.role,
+        "size_fixed": group.size_fixed,
+    }
+
+
 def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[str, Any]:
     """The fields both placement questions answer, in one shape.
 
@@ -125,16 +138,7 @@ def _placement_core(placement: SavefilePlacement | SavestatePlacement) -> dict[s
             "state": placement.file_set.state,
             "files": list(placement.file_set.files),
             "complete": placement.file_set.complete,
-            "groups": [
-                {
-                    "dir": group.dir,
-                    "files": None if group.files is None else list(group.files),
-                    "granularity": group.granularity,
-                    "role": group.role,
-                    "size_fixed": group.size_fixed,
-                }
-                for group in placement.file_set.groups
-            ],
+            "groups": [_group_contract(group) for group in placement.file_set.groups],
         },
         "caveats": _caveats_contract(placement.caveats),
     }
@@ -992,6 +996,40 @@ def roots_contract(answer: RootsAnswer) -> dict[str, Any]:
                 "caveats": _caveats_contract(entry.caveats),
             }
             for entry in answer.roots
+        ],
+        "caveats": _caveats_contract(answer.caveats),
+    }
+
+
+def save_portability_contract(answer: SavePortabilityAnswer) -> dict[str, Any]:
+    """The stable form of a save-portability answer — the pair's verdict, and one verdict per part (#577).
+
+    ``source`` and ``target`` travel in the catalogue entry's own form, ``null``
+    where a label names no entry. Each part names the memory it holds and its
+    ``slot``, and carries both entries' file groups in the form their save
+    answers serialize a group, narrowed to the files that are this part —
+    ``target_group`` is ``null`` where the target's answer states none.
+    ``moves`` lists what differs on a ``same-data`` part and is empty on every
+    other; ``conversion`` is the rule a ``convertible`` part's source pins, and
+    ``null`` wherever no plain rule is stated.
+    """
+    return {
+        "verdict": answer.verdict,
+        "source": None if answer.source is None else emulator_contract(answer.source),
+        "target": None if answer.target is None else emulator_contract(answer.target),
+        "parts": [
+            {
+                "memory": part.memory,
+                "slot": part.slot,
+                "verdict": part.verdict,
+                "source_group": _group_contract(part.source_group),
+                "target_group": None if part.target_group is None else _group_contract(part.target_group),
+                "moves": list(part.moves),
+                "conversion": None
+                if part.conversion is None
+                else {"rule": part.conversion.rule, "length": part.conversion.length},
+            }
+            for part in answer.parts
         ],
         "caveats": _caveats_contract(answer.caveats),
     }

@@ -46,6 +46,7 @@ _QUERY_KEY = {
     "soft_patch_candidates": "soft_patch_query",
     "mod_location": "mod_query",
     "launch_command": "launch_command_query",
+    "save_portability": "save_portability_query",
 }
 
 # Questions the corpus asks that the CLI deliberately does not carry: the
@@ -118,6 +119,13 @@ def _question_argv(question: str, query) -> list[str]:
     if question == "launch_command":
         return ["launch-command", "--system", query["system"], "--content", query["content_path"]] + _flag(
             "--label", query.get("label")
+        )
+    if question == "save_portability":
+        return (
+            ["save-portability", query["system"], "--source", query["source"], "--target", query["target"]]
+            + _flag("--content", query.get("content_path"))
+            + _flag("--cwd", query.get("cwd"))
+            + _flag("--appendconfig", query.get("appendconfig"))
         )
     if question == "firmware":
         return _firmware_argv(query)

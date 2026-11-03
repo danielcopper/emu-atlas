@@ -55,6 +55,7 @@ from .installations import (
     LaunchCommandAnswer,
     PlatformSystemsAnswer,
     RomLocationsAnswer,
+    SavePortabilityAnswer,
     RomPlacement,
     SystemPlatformsAnswer,
     SystemsAnswer,
@@ -303,6 +304,33 @@ class EveryInstallation:
         if not os.path.isabs(content_path):
             raise ValueError(f"content_path must be an absolute path, got {content_path!r}")
         return self._ask(lambda installation: installation.launch_command(system, content_path, label=label))
+
+    def save_portability(
+        self,
+        system: str,
+        *,
+        source: str,
+        target: str,
+        content_path: str | None = None,
+        cwd: str | None = None,
+        appendconfig: Sequence[str] = (),
+    ) -> tuple[InstallationAnswer[SavePortabilityAnswer], ...]:
+        """Whether each installation's *target* entry reads what its *source* entry wrote.
+
+        ``cwd`` and ``appendconfig`` are checked here as :meth:`savefile_location`
+        checks them, and naming one entry twice raises the way each handle
+        raises it, so a malformed question fails even with no installation to
+        ask.
+        """
+        checked_cwd(cwd)
+        files = checked_appendconfig(appendconfig)
+        if source == target:
+            raise ValueError(f"source and target name the same entry ({source!r}) — a save is not moved to itself")
+        return self._ask(
+            lambda installation: installation.save_portability(
+                system, source=source, target=target, content_path=content_path, cwd=cwd, appendconfig=files
+            )
+        )
 
     def firmware_for_core(
         self,

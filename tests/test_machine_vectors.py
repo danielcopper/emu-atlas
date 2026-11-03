@@ -39,6 +39,7 @@ from atlas.contract import (
     systems_contract,
     launchable_contract,
     launch_command_contract,
+    save_portability_contract,
     firmware_contract,
     identification_contract,
     installation_answers_contract,
@@ -190,6 +191,20 @@ def _launch_command(installs, query, name):
     )
 
 
+def _save_portability(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    return save_portability_contract(
+        install.save_portability(
+            query["system"],
+            source=query["source"],
+            target=query["target"],
+            content_path=query.get("content_path"),
+            cwd=query.get("cwd"),
+            appendconfig=_appendconfig(query),
+        )
+    )
+
+
 def _appendconfig(query) -> tuple[str, ...]:
     """The appended files as the question takes them — the vector spells RetroArch's one '|'-joined value."""
     return (query["appendconfig"],) if "appendconfig" in query else ()
@@ -330,6 +345,7 @@ QUESTIONS = {
     "roots": ("roots_query", _roots),
     "launchable": ("launchable_query", _launchable),
     "launch_command": ("launch_command_query", _launch_command),
+    "save_portability": ("save_portability_query", _save_portability),
     "rom_location": ("rom_location_query", _rom_location),
     "rom_locations": ("rom_locations_query", _rom_locations),
     "aggregate": ("aggregate_query", _aggregate),

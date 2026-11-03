@@ -1862,6 +1862,33 @@ Shape:
   `standalone_firmware.json` card — a `search` card is `by-name-then-content`, a `files` or `config_files` card is
   `by-name` — because the shape already is the statement.
 
+## `save_formats.json` — what each emulator's save files hold, for the portability question
+
+One record per emulator — keyed like the save card it labels: a core's short name, a standalone emulator's catalogue
+token — read by `atlas.save_formats.load_save_formats` and compared by `atlas.save_portability` (issue #577). The method
+and the evidence behind every record are in `docs/research/save-portability.md`.
+
+- **`formats`** names each layout once, with a sentence saying what it is. Two parts are the same data exactly where
+  their records name the same format, so a format is an identity, never a description to compare.
+- **`conversions`** are the ways one format becomes another that a source states: `from`, `to`, `rule` (`null` where a
+  program performs the conversion without a rule a client could apply) and the citation.
+- **A record** states its `kind`, the `build` it was read at — `pins`, the strings the machine names that build by (a
+  core's `library_version`, a standalone emulator's RetroDECK `component_version`), what such a string `names`
+  (`commit`, `release` or `channel`) and the `revision` — and, per system, its `parts`. A system whose files are exactly
+  another's says `same_as` instead of repeating them.
+- **A part rule** states the `memory` it holds (closed: `SAVE_MEMORIES`), its `slot`, its `format`, the `names` the save
+  card spells for it (holes match whatever filled them), optionally the `modes` it speaks for (a pattern over the save
+  answer's live mode), a `reading` whose value names the file where the answer states one, and `folder` for a card kept
+  as a directory, and `frontend` for a file RetroArch writes for the core through a memory id — the files RetroArch's
+  `save_file_compression` turns into RZIP streams, whose citation `retroarch.compressed` states once. Its `citation`
+  names the revision it was read at, and the loader refuses one that does not. `ignore` sets aside what of the save
+  answer is no part of a game's save on the system — a directory (`dir_suffix`) or files by name (`names`), exactly one
+  of the two — with its citation, which the answer states among its sources.
+
+`tests/test_save_formats.py` holds each core's pins to the build `tests/data/core_registrations.json` captured and each
+standalone emulator's to its save card's pinned release, and holds every file a covered core's card spells to a rule
+that claims it — so a recaptured core or an edited card fails until its record is read again.
+
 ## `core_declarations.json` — the declaration of a core shipped without its `.info`
 
 A libretro core declares its firmware in its `.info` and nowhere else on the machine. Where a distribution deploys the
