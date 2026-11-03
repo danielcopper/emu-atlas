@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.34.0](https://github.com/danielcopper/emu-atlas/compare/v0.33.0...v0.34.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **launch:** the caveats coded opens-file-missing, opens-track-refused, opens-sheet-refused, opens-format-refused, opens-path-too-long and opens-playlist-refused carry a new data key, effect (stops, goes-on or unestablished), so a client comparing caveat data exactly sees a key it did not see before. In Python, OPENS_EFFECTS, EFFECT_STOPS, EFFECT_GOES_ON and EFFECT_UNESTABLISHED are exported.
+* **launch:** the Flycast entries no longer answer a .gdi, .cue or .m3u, nor the Genesis Plus GX entries a .cue, an .m3u or a bare .bin or .iso, by the core's claims alone: their launchable answers carry opens as a list where they were null, a set the emulator stops on answers entry-not-accepted with an opens-* caveat, and a Genesis Plus GX .bin or .iso carries opens-content-unread, a Mega Drive cartridge's included, which leaves the take unestablished only where a .cue of its name is there or the file is past 10 MiB. In Python, CAVEAT_OPENS_ENTRY_IGNORED is exported, and the code opens-entry-ignored joins the caveat vocabulary.
+
+### Features
+
+* **launch:** name the files Flycast and Genesis Plus GX open ([#746](https://github.com/danielcopper/emu-atlas/issues/746)) ([1008b01](https://github.com/danielcopper/emu-atlas/commit/1008b01d47e63e9960ab8fdcc8e706546fed98e8))
+* **launch:** state which opens caveat stops the open ([#751](https://github.com/danielcopper/emu-atlas/issues/751)) ([e4dc0b3](https://github.com/danielcopper/emu-atlas/commit/e4dc0b33e517714f5e136f5166c5b0765bcc0a99))
+
 ## [0.33.0](https://github.com/danielcopper/emu-atlas/compare/v0.32.0...v0.33.0) (2026-11-02)
 
 

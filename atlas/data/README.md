@@ -1269,10 +1269,12 @@ core and its archives RetroArch opens for it, while a standalone opens the file 
 not know, and that knowledge is written nowhere on the machine atlas can read as text. `accepts` are extension tokens
 recorded lowercase and matched case-insensitively (the gate is the emulator's loader, not ES-DE's case-exact scan);
 `archives` is whether the loader opens containers at all — no RetroArch stands in front of a standalone to pick a file
-out of a zip. An emulator absent from the block is one whose loader nobody has read: the answer states
-`entry-format-unestablished`, never "refuses" — the same absence discipline the mods table spells out. RPCS3 and
-DuckStation are the exceptions the next two paragraphs name: absent from the block, and read all the same, RPCS3 by its
-boot and DuckStation by its open of a disc file.
+out of a zip. Where the loader does open them, as PPSSPP opens a `.zip` and boots the image inside it (issue #744), an
+archive the card takes answers `launchable` with `archive-contents-unread` rather than `entry-format-content-unread`:
+what loads is inside the archive, which atlas does not read. An emulator absent from the block is one whose loader
+nobody has read: the answer states `entry-format-unestablished`, never "refuses" — the same absence discipline the mods
+table spells out. RPCS3 is the exception the next paragraph names: absent from the block, and read all the same, by its
+boot.
 
 RPCS3's entries in the catalogue's own command shapes are not judged by this block at all (issue #618). What the
 Directory and ISO entries boot depends on the content — the folder's layout, the image's header and the files inside it,
@@ -1280,12 +1282,25 @@ the PARAM.SFO's category — not on an extension, so `atlas.rpcs3_boot` reads th
 Serial entry answers that RPCS3's game registry is not read. No RPCS3 card stands here, so an RPCS3 entry of any other
 shape — one without `--no-gui`, say — keeps `entry-format-unestablished`.
 
-DuckStation has no card either, and its entries that hand it the file's path (`-batch %ROM%` and `%ROM%`) are judged for
-a disc file by what DuckStation opens through it (issue #716): `atlas.disc_opens` reads a `.cue`, an `.m3u`, a bare
-image and an `.mds` the way DuckStation opens them. Every other file, and a DuckStation entry of another shape, keeps
-`entry-format-unestablished`.
+DuckStation's entries that hand it the file's path (`-batch %ROM%` and `%ROM%`) are judged for a disc file by what
+DuckStation opens through it (issue #716): `atlas.disc_opens` reads a `.cue`, an `.m3u`, a bare image and an `.mds` the
+way DuckStation opens them, and that reading answers before the card is asked. DuckStation's card (issue #744) answers
+every other file for the `-batch %ROM%` entries; a DuckStation entry of another shape, a bare `%ROM%` among them, keeps
+`entry-format-unestablished` for those files.
 
-A card may state three things more (schema 3, issue #618): Dolphin's states the first two, PrimeHack's all three.
+PCSX2's, PPSSPP's and DuckStation's cards (issue #744) are read at the builds RetroDECK ships, PCSX2 v2.8.2, PPSSPP
+v1.20.4 and DuckStation 1f6de046b. PCSX2 boots any file with no extension check and picks its reader by the extension,
+so the card takes what a reader opens as a disc image and refuses what PCSX2 never reads as a game — an archive, a
+`.ciso` or `.isz` it reads unopened and boots its BIOS from with no game, and a `.cue`, `.m3u` or `.desktop` shortcut
+too small to be an image. PPSSPP decides by the file's bytes, so its card takes the psp list's formats and refuses only
+`.7z`, an archive it identifies and never boots; it opens a `.zip` itself. DuckStation refuses every extension its disc
+open does not know, archives among them. Every take reads the content after, which the cards do not. The builds EmuDeck
+installs were read too: PCSX2's newest release and PPSSPP's Flathub build decide nothing differently, and upstream
+DuckStation takes `.ccd`, `.cpe` and `.elf`, which its card states as `build_dependent`.
+
+A card may state four things more: `arguments`, `content_checked` and `build_dependent` (schema 3, issue #618) and
+`build` (schema 4, issue #744). Dolphin's states the first two, PrimeHack's the first three, PCSX2's and PPSSPP's all
+but `build_dependent`, and DuckStation's all four.
 
 - `arguments` — the argument lists the card was read for: the words a command hands the emulator after its token, each
   list handing it `%ROM%` exactly once. An entry whose command hands the emulator anything else is one the card does not
@@ -1298,10 +1313,17 @@ A card may state three things more (schema 3, issue #618): Dolphin's states the 
   the builds; an extension listed here is not in `accepts`. It answers `entry-format-build-dependent`, unestablished,
   because a refusal would not hold on every machine the card serves: PrimeHack's `.bin`, in the disc set of the Flathub
   build EmuDeck installs and not in the one RetroDECK ships.
+- `build` — the revision the card was read at, one of the builds the emulator's save card pins in
+  `standalone_saves.json`. The stamp that holds a pin against the deployed binary stays there, so the pin has one home;
+  `tests/test_launch_formats.py` fails where a card names a revision its save card does not pin, or one its `source`
+  does not cite, and, where the emulator is deployed, where the build whose stamp the deployed binary carries is not the
+  one the card names. Azahar's, Dolphin's and PrimeHack's cards, read before the key, state their revision in `source`
+  alone.
 
 The loader refuses any other key, an `arguments` that is not a non-empty list of distinct word lists each handing
 `%ROM%` once, a `content_checked` that is not a boolean, and a `build_dependent` that is empty, keys an extension the
-way `accepts` may not, or names one `accepts` already carries.
+way `accepts` may not, or names one `accepts` already carries, and a `build` that is not a non-blank string without
+surrounding space.
 
 ## `frontend_path.json` — the `PATH` a frontend on the host searches, and the directory it runs in
 

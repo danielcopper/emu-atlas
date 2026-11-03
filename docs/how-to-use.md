@@ -3257,9 +3257,10 @@ not ES-DE's case-exact scan), and an emulator without a card earns `entry-format
 because an entry nobody read is not an entry known to refuse the file. Two routes stand beside the claims and the cards:
 an entry whose emulator's own boot atlas reads (RPCS3, for the command shapes below) and one whose emulator's open of a
 disc file atlas reads (DuckStation, SwanStation and the mednafen cores, see
-[what it opens](#is-this-file-launchable-here)) is judged by that reading. RPCS3 and DuckStation have no card and are
-read anyway; an entry of either in any other command shape, such as an RPCS3 entry without `--no-gui`, is an entry
-nobody read and keeps `entry-format-unestablished`.
+[what it opens](#is-this-file-launchable-here)) is judged by that reading, which answers before any card. RPCS3 has no
+card and is read anyway; an RPCS3 entry in any other command shape, such as one without `--no-gui`, is an entry nobody
+read and keeps `entry-format-unestablished`. A standalone loader that opens an archive itself answers a taken archive
+`launchable` with `archive-contents-unread`, the statement RetroArch's archive hands earn: what loads is inside it.
 
 **Dolphin and PrimeHack** have cards read at the builds RetroDECK ships, Dolphin f84df020 and PrimeHack 81bfb96 (issue
 #618), for every entry ES-DE's and RetroDECK's catalogues declare for them — gc, wii, triforce, primehack, and ES-DE's
@@ -3278,6 +3279,30 @@ Both cards answer for the command those catalogues give the emulator, `-b -e %RO
 `env NAME=value…` (RetroDECK's) or an `%INJECT%` of a per-game prefix file (ES-DE's own) in front of the token leaves
 those arguments as they are: the injected text is placed in front of the emulator, and atlas does not read it. An entry
 handing the emulator anything else keeps `entry-format-unestablished`.
+
+**PCSX2, PPSSPP and DuckStation** have cards read at the builds RetroDECK ships, PCSX2 v2.8.2, PPSSPP v1.20.4 and
+DuckStation 1f6de046b (issue #744). Each card names the build it was read at, one its save card pins, and where the
+emulator is deployed a test fails unless the binary carries that build's stamp. Every take reads the content after,
+which atlas does not, so a taken extension answers `launchable` with `entry-format-content-unread` — except an archive a
+loader opens itself, PPSSPP's `.zip`, which answers with `archive-contents-unread` instead.
+
+- **PCSX2** (ps2, `-batch %ROM%`) boots any file with no extension check and picks its reader by the extension. It takes
+  `.iso` `.bin` `.img` `.mdf` `.nrg` (and the list's `.ngr`) `.chd` `.cso` `.zso` `.gz` `.dump` and `.elf`. It refuses
+  what it never reads as a game: a `.zip`, `.7z`, `.ciso` or `.isz` goes to the flat reader unopened and boots the BIOS
+  with no game, and a `.cue`, `.m3u` or `.desktop` shortcut is too small to be an image, so the start fails.
+- **PPSSPP** (psp, `%ROM%`) identifies a file by its bytes. It takes `.chd` `.cso` `.iso` `.pbp` `.elf` and `.prx`, and
+  refuses `.7z`, an archive it identifies and never boots. It opens a `.zip` itself and boots the first image inside, so
+  a `.zip` answers `launchable` with `archive-contents-unread`.
+- **DuckStation** (psx, `-batch %ROM%`) answers only where the open reading above does not read the file: it takes
+  `.chd` `.ecm` `.pbp`, the executables `.exe` `.psexe` (and `.ps-exe` `.psx`) and the PSF files `.psf` `.minipsf`, and
+  refuses every extension its disc open does not know — `.toc` `.mdf` `.cbn` `.z` `.znx` `.7z` `.zip`. The upstream
+  build EmuDeck installs also opens a `.ccd` and boots a `.cpe` or `.elf`, so those answer
+  `entry-format-build-dependent`. A DuckStation entry handed a bare `%ROM%` keeps the open reading and answers
+  `entry-format-unestablished` for the card's formats.
+
+PCSX2's newest release and PPSSPP's Flathub build, the ones EmuDeck installs, decide no extension differently. The files
+those formats open in turn — a CHD's parent, `libps.exe`, a PSF's libraries, a PBP's per-disc SBI — and DuckStation's
+LibCrypt check are not read.
 
 **What it boots — `boots`.** For some entries atlas reads the emulator's own boot of the file rather than a loader card,
 and judges the file itself instead of its extension: whether the entry boots it, and what. A `launchable` verdict on
@@ -3402,19 +3427,57 @@ each at the build atlas pins for it (`atlas/disc_opens.py` carries every citatio
   the file's bytes (`opens-content-unread`), and every other type, MP3 among them, ends the sheet
   (`opens-track-refused`). A playlist's discs are all opened at load. Beetle PSX loads the `.toc` of the content's name
   in place of the content where one is there, which this reading does not follow (`opens-format-unread`).
+- **Flycast** reads a `.gdi`, a `.cue` and an `.m3u` with parsers of its own. A `.gdi` opens each track whose sector
+  size is not 0; a `.cue` opens a track's file at its `INDEX 01` line, never checks the `FILE` type and checks the track
+  mode after the file opened. Either sheet joins every name onto its own directory with a `/`, an absolute name too, and
+  needs three tracks — a `.cue` none where it has a `REM SESSION` line. A `.gdi` past 8192 bytes and a `.cue` past 65535
+  are refused by their size. A playlist is one only where the file's name, cut to its first 127 bytes, ends in `.m3u` or
+  `.M3U`; a `#` in the first column skips a line, one leading and one trailing `"` are dropped, a relative line joins
+  the content's directory, and its first disc is opened at launch, every other only on a disc switch. A disc named in
+  the playlist that is an arcade cartridge or an executable is not followed (`opens-format-unread`).
+- **Genesis Plus GX** reads a `.cue`, an `.m3u` of any case, and a bare `.bin` or `.iso`. A cue sheet is read in
+  127-byte pieces, only spaces leading a line; a `FILE` name is written after the last separator of the path built
+  before it and cut where the whole path reaches 255 bytes, a file that will not open ends the parse, a type other than
+  `BINARY` or `MOTOROLA` is decided by the file's bytes (`opens-content-unread`), and 99 tracks end it. The `.sub` it
+  looks for is the last path it built with its last four bytes replaced, so for a sheet of several files it follows the
+  last track's name. Any other file is a CD data track or a cartridge by its first bytes, which atlas does not read, and
+  the `.cue` of its name is listed. Without that `.cue` both load — a data track mounts alone, a file of up to 10 MiB
+  loads as a cartridge — so such a file stays `launchable` with an `opens-content-unread` caveat that leaves the take as
+  it is; with the `.cue`, or past the cartridge size, its bytes decide what opens or whether it launches, and the take
+  is not established. A file atlas reads as text, such as a `.Cue` a playlist names, is no CD (`opens-format-refused`):
+  at launch the core loads it as a cartridge. A playlist names at most four discs, each joined onto the content's
+  directory with a `/` whatever it holds — a blank line too, which names the directory itself; the lines past the fourth
+  are never read (`opens-entry-ignored`, whose `data.limit` states that number, `"4"`). The first disc is loaded at
+  launch, the others only on a disc switch, which runs `cdd_load` alone: no cartridge loads there, and a disc that
+  mounts no track fails the switch.
 
 Where the emulator itself stops opening the set, the entry answers `entry-not-accepted` with the reason: a file that is
 not there (`opens-file-missing`), a track type its reader refuses (`opens-track-refused`), a sheet or playlist its
 parser refuses or a playlist that reaches itself again (`opens-sheet-refused`), an image of no suffix it opens
 (`opens-format-refused`), a path too long to open (`opens-path-too-long`). That is DuckStation and SwanStation for the
-disc opened at launch, and Beetle PSX for a directly launched file. Where the emulator goes on without the file, the
-entry stays `launchable` with the file listed and the same caveat naming it: DuckStation and SwanStation for discs after
-the first, which they open only on a disc switch; Beetle PSX for a disc inside a playlist, which it loads whether it
-opened or not; and Beetle Saturn, PCE, PCE Fast and PC-FX for every cue track and disc, because their loader discards
-what the sheet's read returns. A playlist that reaches itself again through another stops every mednafen core alike,
-which recurses into it without end. Beetle PCE and PCE Fast never load an `.m3u` at all: their loader marks a load good
-only in its single-disc branch, so every playlist answers `entry-not-accepted` with `opens-playlist-refused`, after the
-discs it opened.
+disc opened at launch, and Beetle PSX for a directly launched file; Flycast for the disc opened at launch; Genesis Plus
+GX where no track of the disc loaded at launch mounts — its first file missing, a sheet with no track, a file that is no
+cue sheet and no CD — because it then loads that file as a cartridge instead, and where a sheet it parses at launch, the
+`.cue` of a cartridge's name included, crashes it (`opens-sheet-refused`) — a `TRACK` line naming `MODE1/2048`,
+`MODE1/2352` or `MODE2/2352` or an `INDEX 01` before any `FILE` line opened the first track's file makes it read or seek
+on a stream it never opened — and a content path of 256 bytes or more, of which it keeps 255 and opens that other path.
+Where the emulator goes on without the file, the entry stays `launchable` with the file listed and the same caveat
+naming it: DuckStation and SwanStation for discs after the first, which they open only on a disc switch; Beetle PSX for
+a disc inside a playlist, which it loads whether it opened or not; Beetle Saturn, PCE, PCE Fast and PC-FX for every cue
+track and disc, because their loader discards what the sheet's read returns; Flycast for discs after the first; and
+Genesis Plus GX for a later track of a sheet, whose disc mounts with the tracks before it, and for discs after the
+first. A playlist that reaches itself again through another stops every mednafen core alike, which recurses into it
+without end. Beetle PCE and PCE Fast never load an `.m3u` at all: their loader marks a load good only in its single-disc
+branch, so every playlist answers `entry-not-accepted` with `opens-playlist-refused`, after the discs it opened.
+
+Which of the two a caveat of these six codes is stands in its data key `effect` (`atlas.OPENS_EFFECTS`): `stops` where
+the emulator stops there, the refusal an `entry-not-accepted` answer of this reading always holds, and `goes-on` where
+it goes on without the file. A refusal can carry go-on caveats of the same codes ahead of its stop — Beetle PCE's
+playlist whose second disc is not there states that disc as `opens-file-missing` with `goes-on` before its
+`opens-playlist-refused` with `stops` — so neither the code nor the order tells the stop; `effect` does. A third word,
+`unestablished`, rides one caveat alone: Genesis Plus GX's `opens-path-too-long` at a sheet path of 255 bytes or more
+opened at launch, where what the core does next is not established (below), so the take is unestablished rather than
+refused; at a disc switch the same caveat goes on.
 
 What atlas does not read is stated rather than guessed and, where the emulator needs it to launch, leaves the take
 unestablished on a `launchable` verdict: a file whose bytes the emulator decides by — an audio track an audio reader
@@ -3432,9 +3495,11 @@ is every line of a playlist read and of a cue sheet parsed or walked. A mednafen
 afresh on every visit; DuckStation and SwanStation read a nested playlist or a sheet once per spelling of its path and
 keep only its first entry, cut short where it is too long to open, or its tracks. Every read is charged to the byte
 bound, a read that comes back without text by the file's size up to its bound, and the bound is checked after each read,
-so a reading stops at most one read past it; a caveat is stated once per code and file. Past any bound the answer stops
-short (`opens-bound-exceeded`). `boots` stays `None` for these entries. Flycast and Genesis Plus GX, each with readers
-of its own, are the next cut of #716; PCSX ReARMed, PicoDrive, Opera and the other alternatives are issue #736.
+so a reading stops at most one read past it; a caveat is stated once per code, file and `effect`. Past any bound the
+answer stops short (`opens-bound-exceeded`). `boots` stays `None` for these entries. Where an emulator's parser reads a
+value it never set — Flycast's at a `.gdi` declaring more tracks than it holds, Genesis Plus GX's copy of a sheet path
+of 255 bytes — what follows is undefined, and the take is unestablished. PCSX ReARMed, PicoDrive, Opera and the other
+alternatives are issue #736.
 
 ## What would the frontend run? — `launch_command`
 

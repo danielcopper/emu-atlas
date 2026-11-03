@@ -9,14 +9,21 @@ underneath them, each against a fixture machine.
 
 from __future__ import annotations
 
+import ast
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
 import pytest
 
-from atlas import disc_opens, psx_disc
+from atlas import disc_opens, opens_codes, psx_disc
 from atlas.disc_opens import (
     BEETLE_PCFX,
     BEETLE_PSX,
     BEETLE_SATURN,
     DUCKSTATION,
+    FLYCAST,
+    GENESIS_PLUS_GX,
     HOW_NAME_DERIVED,
     HOW_NAMED,
     SWANSTATION,
@@ -24,6 +31,17 @@ from atlas.disc_opens import (
     PatchSetting,
 )
 from atlas.machine import FixtureMachine, RealMachine
+from atlas.opens_codes import (
+    CAVEAT_OPENS_FILE_MISSING,
+    CAVEAT_OPENS_PATH_TOO_LONG,
+    EFFECT_GOES_ON,
+    EFFECT_STOPS,
+    EFFECT_UNESTABLISHED,
+    OPENS_EFFECTS,
+    OPENS_FAILURE_CODES,
+)
+from atlas.placement import ENUMERATED_DATA, Caveat
+from tests.corpus import caveat_blocks, expected_blocks
 
 BIN = {"size": 2352}
 ROOT = "/roms/Game"
@@ -539,3 +557,608 @@ class TestARefusalAlwaysCarriesItsReason:
         reading = mednafen(SHEET + 'FILE "B.bin" BINARY\n')
         if reading.outcome == disc_opens.REFUSES:
             assert disc_opens.CAVEAT_OPENS_FILE_MISSING in codes(reading)
+
+
+WALK = disc_opens._Walk  # pyright: ignore[reportPrivateUsage]
+MODE = disc_opens._Mode  # pyright: ignore[reportPrivateUsage]
+GOES_ON = MODE(stops=False, decisive=True, goes_on="the load goes on")
+STOPS = MODE(stops=True, decisive=True)
+MISSING = "opens {file}, which is not there"
+
+
+def walk_at(launched: str) -> disc_opens._Walk:  # pyright: ignore[reportPrivateUsage]
+    return WALK(FixtureMachine({}), "Entry", "Emulator", at(launched))
+
+
+def effects(reading: disc_opens.OpensReading) -> list[tuple[str, object]]:
+    return [(caveat.code, caveat.data.get("effect")) for caveat in reading.caveats]
+
+
+def opens_answers(node: object) -> Iterator[dict[str, Any]]:
+    """Every launchable answer under *node* that carries the opens reading's list."""
+    if isinstance(node, dict):
+        if "verdict" in node and node.get("opens") is not None:
+            yield node
+        for value in node.values():
+            yield from opens_answers(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from opens_answers(value)
+
+
+class TestAFailureStatesWhetherTheOpenStops:
+    """Every failure of the open carries ``effect``: ``stops`` on the refusal, ``goes-on`` beside it (#750).
+
+    ``unestablished`` where what the emulator does at the file is not
+    established, which leaves the take unestablished rather than refused.
+    """
+
+    def test_every_site_naming_a_failure_code_states_an_effect(self):
+        # What this sees: each call in atlas/disc_opens.py that hands one of
+        # the six codes over by its constant or its spelling. It must be
+        # _Walk.fail, which states the effect by its mode, or pass effect=. A
+        # code carried in a variable — inside fail and caveat — is not seen.
+        tree = ast.parse(Path(disc_opens.__file__).read_text(encoding="utf-8"))
+        names = {name for name in vars(opens_codes) if name.startswith("CAVEAT_")}
+        names = {name for name in names if getattr(opens_codes, name) in OPENS_FAILURE_CODES}
+
+        def names_a_failure(arg: ast.expr) -> bool:
+            if isinstance(arg, ast.Name):
+                return arg.id in names
+            return isinstance(arg, ast.Constant) and arg.value in OPENS_FAILURE_CODES
+
+        sites = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and any(names_a_failure(arg) for arg in node.args)
+        ]
+        assert len(sites) > 40
+        bare = [
+            node.lineno
+            for node in sites
+            if not (isinstance(node.func, ast.Attribute) and node.func.attr == "fail")
+            and not any(keyword.arg == "effect" for keyword in node.keywords)
+        ]
+        assert bare == []
+
+    def test_a_stop_after_a_go_on_of_the_same_file_is_still_stated(self):
+        # Unreachable through a reader at the pinned builds: DuckStation,
+        # SwanStation and Flycast walk the launch before any disc switch and
+        # return at their first stop; a mednafen core states its loop stop
+        # before any disc is opened, and opens-playlist-refused never as a
+        # go-on; Genesis Plus GX's go-ons inside a launch are of another code
+        # than its stop. Held here so no reader can come to refuse without
+        # saying where it stopped (D2).
+        walk = walk_at("Game.m3u")
+        walk.fail(GOES_ON, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        walk.fail(STOPS, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        reading = walk.reading()
+        assert reading.outcome == disc_opens.REFUSES
+        assert effects(reading) == [
+            (CAVEAT_OPENS_FILE_MISSING, EFFECT_GOES_ON),
+            (CAVEAT_OPENS_FILE_MISSING, EFFECT_STOPS),
+        ]
+
+    def test_the_same_failure_of_the_same_file_is_stated_once(self):
+        walk = walk_at("Game.m3u")
+        for _ in range(2):
+            walk.fail(GOES_ON, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        assert effects(walk.reading()) == [(CAVEAT_OPENS_FILE_MISSING, EFFECT_GOES_ON)]
+
+    def test_a_sheet_path_genesis_cannot_build_from_is_unestablished_at_launch(self):
+        name = "n" * (255 - len(ROOT) - 1 - 4) + ".cue"
+        reading = read({name: SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, name)
+        assert reading.outcome == disc_opens.UNESTABLISHED
+        assert effects(reading) == [(CAVEAT_OPENS_PATH_TOO_LONG, EFFECT_UNESTABLISHED)]
+
+    def test_a_switch_to_such_a_sheet_goes_on(self):
+        name = "n" * (255 - len(ROOT) - 1 - 4) + ".cue"
+        files = {"List.m3u": f"Game.cue\n{name}\n", "Game.cue": SEGA, name: SEGA, **SEGA_FILES}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert reading.outcome == disc_opens.ACCEPTS
+        assert effects(reading) == [(CAVEAT_OPENS_PATH_TOO_LONG, EFFECT_GOES_ON)]
+
+    @pytest.mark.parametrize("code", OPENS_FAILURE_CODES)
+    def test_every_failure_code_closes_its_effect(self, code):
+        assert ENUMERATED_DATA[(code, "effect")] == OPENS_EFFECTS
+        with pytest.raises(ValueError, match="effect"):
+            Caveat(code, "a message", {"entry": "Entry", "file": "/a", "effect": "stopped"})
+
+    def test_every_failure_caveat_in_the_corpus_states_its_effect(self):
+        failures = [
+            (where, data)
+            for where, expected in expected_blocks()
+            for code, data in caveat_blocks(expected)
+            if code in OPENS_FAILURE_CODES
+        ]
+        assert failures, "the corpus holds no failure of the open"
+        assert [where for where, data in failures if data.get("effect") not in OPENS_EFFECTS] == []
+
+    def test_every_refusal_in_the_corpus_holds_a_stop_and_only_a_refusal_does(self):
+        answers = [
+            (f"{where}#{n}", answer)
+            for where, expected in expected_blocks()
+            for n, answer in enumerate(opens_answers(expected))
+        ]
+        refusals = {at for at, answer in answers if answer["verdict"] == "entry-not-accepted"}
+        stopped = {
+            at
+            for at, answer in answers
+            for code, data in caveat_blocks(answer["caveats"])
+            if code in OPENS_FAILURE_CODES and data.get("effect") == EFFECT_STOPS
+        }
+        assert refusals, "the corpus holds no refusal of the open"
+        assert refusals == stopped
+
+
+# ── Flycast ────────────────────────────────────────────────────────────────
+
+GDI = "3\n1 0 4 2352 track01.bin 0\n2 600 0 2352 \"track 02.raw\" 0\n3 45000 4 2352 track03.bin 0\n"
+GDI_TRACKS = {"track01.bin": BIN, "track 02.raw": BIN, "track03.bin": BIN}
+
+
+def dc_cue(*names: str, mode: str = "MODE1/2352", head: str = "") -> str:
+    """A Flycast cue sheet: one FILE, TRACK and INDEX 01 per name."""
+    body = "".join(
+        f'FILE "{name}" BINARY\n  TRACK {n:02d} {mode}\n    INDEX 01 00:00:00\n' for n, name in enumerate(names, 1)
+    )
+    return head + body
+
+
+THREE = dc_cue("T1.bin", "T2.bin", "T3.bin")
+THREE_FILES = {"T1.bin": BIN, "T2.bin": BIN, "T3.bin": BIN}
+
+
+class TestFlycastsGdi:
+    def test_every_track_with_a_sector_size_is_opened(self):
+        reading = read({"Game.gdi": GDI, **GDI_TRACKS}, FLYCAST, "Game.gdi")
+        assert listed(reading) == [(name, HOW_NAMED, True) for name in GDI_TRACKS]
+        assert reading.outcome == disc_opens.ACCEPTS
+
+    def test_a_track_of_sector_size_zero_is_not_opened(self):
+        gdi = "3\n1 0 4 2352 a.bin 0\n2 600 0 0 b.raw 0\n3 45000 4 -0 c.bin 0\n"
+        reading = read({"Game.gdi": gdi, "a.bin": BIN}, FLYCAST, "Game.gdi")
+        assert [path for path, _, _ in listed(reading)] == ["a.bin"]
+
+    def test_a_missing_track_stops_the_open(self):
+        reading = read({"Game.gdi": GDI, "track01.bin": BIN}, FLYCAST, "Game.gdi")
+        assert listed(reading)[-1] == ("track 02.raw", HOW_NAMED, False)
+        assert reading.outcome == disc_opens.REFUSES
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_FILE_MISSING]
+
+    def test_fewer_than_three_tracks_are_refused_after_they_opened(self):
+        reading = read({"Game.gdi": "2\n1 0 4 2352 a.bin 0\n2 600 0 2352 b.bin 0\n", "a.bin": BIN, "b.bin": BIN},
+                       FLYCAST, "Game.gdi")
+        assert [path for path, _, _ in listed(reading)] == ["a.bin", "b.bin"]
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_SHEET_REFUSED]
+
+    def test_a_sheet_of_8193_bytes_is_refused_by_its_size(self):
+        padded = GDI + " " * (8193 - len(GDI))
+        assert read({"Game.gdi": padded, **GDI_TRACKS}, FLYCAST, "Game.gdi").outcome == disc_opens.REFUSES
+        assert read({"Game.gdi": padded[:-1], **GDI_TRACKS}, FLYCAST, "Game.gdi").outcome == disc_opens.ACCEPTS
+
+    def test_an_absolute_name_is_joined_onto_the_sheets_directory(self):
+        gdi = "3\n1 0 4 0 aa 0\n2 0 0 0 bb 0\n3 0 4 2352 /abs/c.bin 0\n"
+        reading = read({"Game.gdi": gdi}, FLYCAST, "Game.gdi")
+        assert opened(reading)[0].path == at("/abs/c.bin")
+
+    def test_a_one_byte_name_takes_the_next_field_with_it(self):
+        reading = read({"Game.gdi": "3\n1 0 4 2352 a 0\n"}, FLYCAST, "Game.gdi")
+        assert opened(reading)[0].path == at("a0")
+
+    def test_a_count_past_the_tracks_listed_leaves_the_reading_undefined(self):
+        reading = read({"Game.gdi": "4\n" + GDI[2:], **GDI_TRACKS}, FLYCAST, "Game.gdi")
+        assert reading.outcome == disc_opens.UNESTABLISHED
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_CONTENT_UNREAD]
+
+    def test_a_field_that_is_no_number_leaves_the_reading_undefined(self):
+        reading = read({"Game.gdi": "3\n1 0 x 2352 a.bin 0\n"}, FLYCAST, "Game.gdi")
+        assert reading.outcome == disc_opens.UNESTABLISHED
+
+    def test_a_quote_no_quote_ends_is_refused(self):
+        reading = read({"Game.gdi": '3\n1 0 4 2352 "a.bin 0\n'}, FLYCAST, "Game.gdi")
+        assert reading.outcome == disc_opens.REFUSES
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_SHEET_REFUSED]
+
+    def test_no_track_count_is_refused(self):
+        reading = read({"Game.gdi": "tracks\n"}, FLYCAST, "Game.gdi")
+        assert reading.outcome == disc_opens.REFUSES
+        assert "declares no track" in reading.caveats[0].message
+
+
+class TestFlycastsCue:
+    def test_three_tracks_open_each_at_its_index(self):
+        reading = read({"Game.cue": THREE, **THREE_FILES}, FLYCAST)
+        assert [path for path, _, _ in listed(reading)] == ["T1.bin", "T2.bin", "T3.bin"]
+        assert reading.outcome == disc_opens.ACCEPTS
+
+    def test_two_tracks_without_a_session_are_refused(self):
+        reading = read({"Game.cue": dc_cue("T1.bin", "T2.bin"), **THREE_FILES}, FLYCAST)
+        assert reading.outcome == disc_opens.REFUSES
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_SHEET_REFUSED]
+
+    def test_a_session_line_lifts_the_three_track_floor(self):
+        sheet = dc_cue("T1.bin", head="REM SESSION 01\n")
+        assert read({"Game.cue": sheet, **THREE_FILES}, FLYCAST).outcome == disc_opens.ACCEPTS
+
+    def test_the_file_type_is_never_checked(self):
+        sheet = THREE.replace("BINARY", "WAVE")
+        assert read({"Game.cue": sheet, **THREE_FILES}, FLYCAST).outcome == disc_opens.ACCEPTS
+
+    def test_a_track_mode_without_a_sector_size_refuses_after_its_file_opened(self):
+        sheet = dc_cue("T1.bin", "T2.bin", "T3.bin").replace("TRACK 02 MODE1/2352", "TRACK 02 MODE9/1")
+        reading = read({"Game.cue": sheet, **THREE_FILES}, FLYCAST)
+        assert listed(reading)[-1] == ("T2.bin", HOW_NAMED, True)
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_TRACK_REFUSED]
+        assert reading.caveats[0].data["type"] == "MODE9/1"
+
+    def test_a_quoted_name_is_added_to_the_one_before_it(self):
+        sheet = 'FILE "A" BINARY\n' + THREE
+        reading = read({"Game.cue": sheet, "AT1.bin": BIN, "T2.bin": BIN, "T3.bin": BIN}, FLYCAST)
+        assert listed(reading)[0] == ("AT1.bin", HOW_NAMED, True)
+
+    def test_an_index_with_no_number_leaves_the_reading_undefined(self):
+        reading = read({"Game.cue": 'FILE "T1.bin" BINARY\n TRACK 01 MODE1/2352\n INDEX\n', **THREE_FILES}, FLYCAST)
+        assert reading.outcome == disc_opens.UNESTABLISHED
+
+    def test_a_nul_ends_the_sheet(self):
+        sheet = THREE + '\x00FILE "Gone.bin" BINARY\n  TRACK 04 MODE1/2352\n    INDEX 01 00:00:00\n'
+        assert read({"Game.cue": sheet, **THREE_FILES}, FLYCAST).outcome == disc_opens.ACCEPTS
+
+    def test_a_sheet_of_65536_bytes_is_refused_by_its_size(self):
+        sheet = THREE + " " * (65536 - len(THREE))
+        assert read({"Game.cue": sheet, **THREE_FILES}, FLYCAST).outcome == disc_opens.REFUSES
+        assert read({"Game.cue": sheet[:-1], **THREE_FILES}, FLYCAST).outcome == disc_opens.ACCEPTS
+
+
+class TestFlycastsPlaylist:
+    def test_a_name_past_127_bytes_is_no_playlist(self):
+        name = "n" * 124 + ".m3u"
+        reading = read({name: "Game.gdi\n"}, FLYCAST, name)
+        assert reading.outcome == disc_opens.REFUSES
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_FORMAT_REFUSED]
+        assert read({name[1:]: "Game.gdi\n", "Game.gdi": GDI, **GDI_TRACKS}, FLYCAST, name[1:]).outcome == "accepts"
+
+    @pytest.mark.parametrize(("suffix", "outcome"), [(".M3U", disc_opens.ACCEPTS), (".M3u", disc_opens.REFUSES)])
+    def test_the_suffix_is_matched_in_two_spellings(self, suffix, outcome):
+        reading = read({f"List{suffix}": "Game.gdi\n", "Game.gdi": GDI, **GDI_TRACKS}, FLYCAST, f"List{suffix}")
+        assert reading.outcome == outcome
+
+    def test_a_line_is_read_as_read_m3u_reads_it(self):
+        text = ' #x.gdi\r\n#Comment\n"/abs/Disc.gdi"\n'
+        reading = read({"List.m3u": text, " #x.gdi": GDI, **GDI_TRACKS}, FLYCAST, "List.m3u")
+        assert [o.path for o in opened(reading)][::4] == [at(" #x.gdi"), "/abs/Disc.gdi"]
+
+    def test_the_first_disc_stops_the_launch_and_a_later_one_does_not(self):
+        reading = read({"List.m3u": "Gone.gdi\n"}, FLYCAST, "List.m3u")
+        assert reading.outcome == disc_opens.REFUSES
+        files = {"List.m3u": "Game.gdi\nGone.gdi\n", "Game.gdi": GDI, **GDI_TRACKS}
+        later = read(files, FLYCAST, "List.m3u")
+        assert later.outcome == disc_opens.ACCEPTS
+        assert codes(later) == [disc_opens.CAVEAT_OPENS_FILE_MISSING]
+
+    def test_a_nested_playlist_is_no_disc(self):
+        files = {"List.m3u": "Inner.m3u\n", "Inner.m3u": "Game.gdi\n"}
+        assert codes(read(files, FLYCAST, "List.m3u")) == [disc_opens.CAVEAT_OPENS_FORMAT_REFUSED]
+        files = {"List.m3u": "Game.gdi\nInner.m3u\n", "Inner.m3u": "x\n", "Game.gdi": GDI, **GDI_TRACKS}
+        reading = read(files, FLYCAST, "List.m3u")
+        assert (reading.outcome, codes(reading)) == (disc_opens.ACCEPTS, [disc_opens.CAVEAT_OPENS_FORMAT_REFUSED])
+
+    def test_an_arcade_name_at_launch_is_not_followed(self):
+        reading = read({"List.m3u": "game.zip\n", "game.zip": BIN}, FLYCAST, "List.m3u")
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_FORMAT_UNREAD]
+
+    def test_an_empty_playlist_is_refused(self):
+        assert read({"List.m3u": "#\n\n\"\"\n"}, FLYCAST, "List.m3u").outcome == disc_opens.REFUSES
+
+    def test_a_relative_line_joins_the_directory_cut_to_1023_bytes(self):
+        deep = "/d" * 600
+        machine = FixtureMachine({f"{deep}/List.m3u": "Game.gdi\n"})
+        reading = disc_opens.read_opens(machine, FLYCAST, "Entry", f"{deep}/List.m3u")
+        assert reading is not None
+        kept = deep[:1023]
+        assert opened(reading)[0].path == kept[: kept.rfind("/")] + "/Game.gdi"
+
+    def test_a_disc_path_is_cut_to_4095_bytes(self):
+        reading = read({"List.m3u": "x" * 4090 + "\n"}, FLYCAST, "List.m3u")
+        assert opened(reading)[0].path == at("x" * (4095 - len(ROOT) - 1))
+
+    def test_a_launched_chd_is_not_read(self):
+        assert reading_of({"Game.chd": BIN}, FLYCAST, "Game.chd") is None
+
+
+class TestTheCppStream:
+    @pytest.mark.parametrize(
+        ("text", "value", "failed"),
+        [(b"-1", 4294967295, False), (b"+7", 7, False), (b"4294967296", 4294967295, True), (b"x", 0, True),
+         (b"9" * 5000, 4294967295, True), (b"007", 7, False)],
+    )
+    def test_an_unsigned_field_reads_as_libstdcxx_reads_it(self, text, value, failed):
+        stream = disc_opens._CppStream(text)  # pyright: ignore[reportPrivateUsage]
+        assert (stream.number(32, signed=False), stream.failed) == (value, failed)
+
+    def test_the_c_locale_spaces_part_the_fields(self):
+        stream = disc_opens._CppStream(b"\x0b\x0c7\r\x0bxy\x0cz \x00")  # pyright: ignore[reportPrivateUsage]
+        fields = (stream.number(32, signed=False), stream.word(), stream.char(), stream.word())
+        assert fields == (7, b"xy", b"z", b"\x00")
+
+    def test_a_stream_at_its_end_keeps_the_target(self):
+        stream = disc_opens._CppStream(b"  ")  # pyright: ignore[reportPrivateUsage]
+        assert stream.number(32, signed=False) is None
+
+
+# ── Genesis Plus GX ────────────────────────────────────────────────────────
+
+SEGA = (
+    'FILE "Game.bin" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n'
+    'FILE "Game (Track 2).bin" BINARY\n  TRACK 02 AUDIO\n    INDEX 00 00:00:00\n    INDEX 01 00:02:00\n'
+)
+SEGA_FILES = {"Game.bin": BIN, "Game (Track 2).bin": BIN}
+
+
+class TestGenesisPlusGxsCue:
+    def test_each_file_opens_and_the_sub_follows_the_last(self):
+        reading = read({"Game.cue": SEGA, **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert listed(reading) == [
+            ("Game.bin", HOW_NAMED, True),
+            ("Game (Track 2).bin", HOW_NAMED, True),
+            ("Game (Track 2).sub", HOW_NAME_DERIVED, False),
+        ]
+        assert reading.outcome == disc_opens.ACCEPTS
+
+    def test_a_missing_first_file_loads_the_sheet_as_a_cartridge(self):
+        reading = read({"Game.cue": SEGA, "Game (Track 2).bin": BIN}, GENESIS_PLUS_GX)
+        assert reading.outcome == disc_opens.REFUSES
+        assert "cartridge" in reading.caveats[0].message
+        assert listed(reading) == [("Game.bin", HOW_NAMED, False)]
+
+    def test_a_missing_later_file_ends_the_parse_and_the_disc_mounts(self):
+        reading = read({"Game.cue": SEGA, "Game.bin": BIN}, GENESIS_PLUS_GX)
+        assert reading.outcome == disc_opens.ACCEPTS
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_FILE_MISSING]
+        assert listed(reading)[-1] == ("Game (Track 2).sub", HOW_NAME_DERIVED, False)
+
+    def test_an_audio_type_is_decided_by_bytes(self):
+        sheet = SEGA.replace('2).bin" BINARY', '2).bin" WAVE')
+        reading = read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert (reading.outcome, codes(reading)) == (disc_opens.ACCEPTS, [disc_opens.CAVEAT_OPENS_CONTENT_UNREAD])
+        first = read({"Game.cue": SEGA.replace("Game.bin\" BINARY", "Game.bin\" OGG"), **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert first.outcome == disc_opens.UNESTABLISHED
+
+    def test_a_name_is_written_after_the_last_separator_of_the_path_before_it(self):
+        sheet = SEGA.replace('"Game.bin"', '"sub/Game.bin"')
+        reading = read({"Game.cue": sheet, "sub/Game.bin": BIN, "sub/Game (Track 2).bin": BIN}, GENESIS_PLUS_GX)
+        assert [path for path, _, _ in listed(reading)][:2] == ["sub/Game.bin", "sub/Game (Track 2).bin"]
+
+    def test_only_spaces_lead_a_line(self):
+        reading = read({"Game.cue": SEGA.replace("    INDEX", "\tINDEX"), **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_SHEET_REFUSED]
+
+    def test_a_built_path_is_cut_at_255_bytes(self):
+        deep = "/d" * 80
+        machine = FixtureMachine({f"{deep}/Game.cue": SEGA.replace("Game.bin", "n" * 100 + ".bin")})
+        reading = disc_opens.read_opens(machine, GENESIS_PLUS_GX, "Entry", f"{deep}/Game.cue")
+        assert reading is not None
+        assert opened(reading)[0].path == f"{deep}/" + "n" * (255 - len(deep) - 1)
+
+    def test_a_line_is_a_127_byte_piece(self):
+        long_name = "n" * 150 + ".bin"
+        reading = read({"Game.cue": SEGA.replace("Game.bin", long_name)}, GENESIS_PLUS_GX)
+        assert opened(reading)[0].path == at("n" * (127 - len('FILE "')))
+
+    def test_a_name_no_stop_ends_reads_its_type_past_the_line(self):
+        sheet = SEGA.replace('FILE "Game.bin" BINARY\n', "FILE Game.bin\n")
+        reading = read({"Game.cue": sheet, "Game.bin\n": BIN, **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert opened(reading)[0].path == at("Game.bin\n")
+        assert reading.outcome == disc_opens.UNESTABLISHED
+
+    def test_a_line_index_00_takes_ends_no_track(self):
+        sheet = SEGA.replace("INDEX 01 00:00:00", "INDEX 012:34:56").replace("INDEX 01 00:02:00", "INDEX 012:34:56")
+        assert codes(read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)) == ["opens-sheet-refused"]
+
+    def test_a_loop_command_on_the_line_takes_it(self):
+        sheet = SEGA.replace(":00\n", ":00 REM LOOP\n")
+        assert codes(read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)) == ["opens-sheet-refused"]
+
+    def test_no_file_is_opened_past_99_tracks(self):
+        tracks = "  TRACK 01 MODE1/2048\n  INDEX 01 00:00:00\n" * 99
+        sheet = 'FILE "Game.bin" BINARY\n' + tracks + 'FILE "Late.bin" BINARY\n'
+        reading = read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert "Late.bin" not in [path for path, _, _ in listed(reading)]
+
+    @pytest.mark.parametrize(
+        "sheet",
+        [
+            "TRACK 01 MODE1/2352\n  INDEX 01 00:00:00\n",
+            "TRACK 01 AUDIO\n  INDEX 01 00:00:00\n" + SEGA,
+            "REM x\n  TRACK 01 MODE1/2048\n" + SEGA,
+        ],
+    )
+    def test_a_first_track_no_file_opened_crashes_the_core(self, sheet):
+        reading = read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)
+        assert (reading.outcome, codes(reading)) == (disc_opens.REFUSES, [disc_opens.CAVEAT_OPENS_SHEET_REFUSED])
+        assert "crashes" in reading.caveats[0].message
+        assert listed(reading) == []
+
+    def test_an_audio_track_line_before_the_first_file_seeks_nothing(self):
+        sheet = "TRACK 01 AUDIO\n" + SEGA
+        assert read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX).outcome == disc_opens.ACCEPTS
+
+    def test_a_sheet_path_of_255_bytes_is_not_established(self):
+        name = "n" * (255 - len(ROOT) - 1 - 4) + ".cue"
+        reading = read({name: SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, name)
+        assert (reading.outcome, codes(reading)) == (disc_opens.UNESTABLISHED, [disc_opens.CAVEAT_OPENS_PATH_TOO_LONG])
+
+    def test_a_playlist_disc_of_256_bytes_is_not_established(self):
+        name = "n" * (256 - len(ROOT) - 1 - 4) + ".cue"
+        reading = read({"List.m3u": f"{name}\n", name: SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, "List.m3u")
+        assert (reading.outcome, codes(reading)) == (disc_opens.UNESTABLISHED, [disc_opens.CAVEAT_OPENS_PATH_TOO_LONG])
+
+    def test_a_launched_path_of_256_bytes_is_refused(self):
+        name = "n" * (256 - len(ROOT) - 1 - 4) + ".cue"
+        reading = read({name: SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, name)
+        assert (reading.outcome, codes(reading)) == (disc_opens.REFUSES, [disc_opens.CAVEAT_OPENS_PATH_TOO_LONG])
+
+
+class TestGenesisPlusGxsOtherFiles:
+    def test_a_bin_looks_for_its_cue_and_its_bytes_decide_the_rest(self):
+        reading = read({"Game.cue": SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, "Game.bin")
+        assert listed(reading) == [("Game.cue", HOW_NAME_DERIVED, True)]
+        assert (reading.outcome, codes(reading)) == (disc_opens.UNESTABLISHED, [disc_opens.CAVEAT_OPENS_CONTENT_UNREAD])
+
+    def test_without_a_cue_a_file_a_cartridge_may_be_loads_either_way(self):
+        reading = read({"Game.bin": {"size": 1 << 20}}, GENESIS_PLUS_GX, "Game.bin")
+        assert listed(reading) == [("Game.cue", HOW_NAME_DERIVED, False)]
+        assert (reading.outcome, codes(reading)) == (disc_opens.ACCEPTS, [disc_opens.CAVEAT_OPENS_CONTENT_UNREAD])
+
+    @pytest.mark.parametrize("size", [0, (10 << 20) + 1])
+    def test_without_a_cue_a_file_no_cartridge_load_takes_is_decided_by_its_bytes(self, size):
+        reading = read({"Game.bin": {"size": size}}, GENESIS_PLUS_GX, "Game.bin")
+        assert reading.outcome == disc_opens.UNESTABLISHED
+
+    def test_a_mixed_case_sheet_is_loaded_as_a_cartridge(self):
+        reading = read({"Game.Cue": SEGA, "Game.cue": SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, "Game.Cue")
+        assert listed(reading)[0] == ("Game.cue", HOW_NAME_DERIVED, True)
+        assert "Game.bin" in [path for path, _, _ in listed(reading)]
+        assert (reading.outcome, codes(reading)) == (disc_opens.REFUSES, [disc_opens.CAVEAT_OPENS_FORMAT_REFUSED])
+
+    def test_the_cue_of_a_cartridges_name_crashes_the_core_too(self):
+        crash = "TRACK 01 MODE1/2352\n  INDEX 01 00:00:00\n"
+        reading = read({"Game.Cue": SEGA, "Game.cue": crash, **SEGA_FILES}, GENESIS_PLUS_GX, "Game.Cue")
+        assert (reading.outcome, codes(reading)) == (disc_opens.REFUSES, [disc_opens.CAVEAT_OPENS_SHEET_REFUSED])
+        assert "crashes" in reading.caveats[0].message
+        assert listed(reading) == [("Game.cue", HOW_NAME_DERIVED, True)]
+
+    def test_the_cue_of_a_name_is_cut_at_a_dot_at_byte_251_or_before(self):
+        stem = disc_opens._gpgx_stem_cue  # pyright: ignore[reportPrivateUsage]
+        assert stem("/roms/a.b/Game") == "/roms/a.cue"
+        assert stem("/" + "x" * 250 + ".bin") == "/" + "x" * 250 + ".cue"
+        assert stem("/" + "x" * 252 + ".bin") == ".cue"
+
+    def test_a_launched_chd_is_not_read(self):
+        assert reading_of({"Game.chd": BIN}, GENESIS_PLUS_GX, "Game.chd") is None
+
+
+class TestGenesisPlusGxsPlaylist:
+    def test_past_four_discs_the_lines_are_ignored(self):
+        text = "".join(f"D{n}.cue\n" for n in range(1, 6))
+        reading = read({"List.m3u": text}, GENESIS_PLUS_GX, "List.m3u")
+        assert "D5.cue" not in [path for path, _, _ in listed(reading)]
+        assert disc_opens.CAVEAT_OPENS_ENTRY_IGNORED in codes(reading)
+
+    def test_the_ignored_lines_state_the_number_of_discs_the_reader_took(self):
+        # The limit is the constant the reader stops at, so it is the number
+        # of discs the walk followed, and the message's "four" is that
+        # number too (D1 of #754).
+        files = {"List.m3u": "".join(f"D{n}.cue\n" for n in range(1, 7)), **SEGA_FILES}
+        files |= {f"D{n}.cue": SEGA for n in range(1, 7)}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        [ignored] = [c for c in reading.caveats if c.code == disc_opens.CAVEAT_OPENS_ENTRY_IGNORED]
+        discs = [entry.path for entry in opened(reading) if entry.by == at("List.m3u")]
+        limit = disc_opens._GPGX_DISCS  # pyright: ignore[reportPrivateUsage]
+        assert ignored.data == {"entry": "Entry", "file": at("List.m3u"), "limit": str(limit)}
+        assert len(discs) == limit
+        assert limit == 4
+        assert "no more than four discs" in ignored.message
+
+    def test_the_limit_is_charged_to_the_answer(self):
+        bare, limited = walk_at("List.m3u"), walk_at("List.m3u")
+        bare.caveat(disc_opens.CAVEAT_OPENS_ENTRY_IGNORED, at("List.m3u"), "past {file}")
+        limited.caveat(disc_opens.CAVEAT_OPENS_ENTRY_IGNORED, at("List.m3u"), "past {file}", limit=1234)
+        assert limited.output - bare.output == len("1234")
+
+    def test_four_discs_leave_nothing_ignored(self):
+        text = "".join(f"D{n}.cue\n" for n in range(1, 5))
+        assert disc_opens.CAVEAT_OPENS_ENTRY_IGNORED not in codes(read({"List.m3u": text}, GENESIS_PLUS_GX, "List.m3u"))
+
+    def test_a_blank_line_is_a_disc_at_the_directory(self):
+        files = {"List.m3u": "Game.cue\n\r\n", "Game.cue": SEGA, **SEGA_FILES}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert opened(reading)[-1].path == ROOT + "/"
+
+    def test_every_line_joins_the_directory(self):
+        reading = read({"List.m3u": "/abs/Game.cue\n"}, GENESIS_PLUS_GX, "List.m3u")
+        assert opened(reading)[0].path == at("/abs/Game.cue")
+
+    def test_an_upper_case_suffix_is_a_playlist(self):
+        files = {"List.M3U": "Game.cue\n", "Game.cue": SEGA, **SEGA_FILES}
+        assert read(files, GENESIS_PLUS_GX, "List.M3U").outcome == disc_opens.ACCEPTS
+
+    def test_a_missing_first_disc_is_refused_and_a_later_one_is_not(self):
+        assert read({"List.m3u": "Gone.cue\n"}, GENESIS_PLUS_GX, "List.m3u").outcome == disc_opens.REFUSES
+        files = {"List.m3u": "Game.cue\nGone.cue\n", "Game.cue": SEGA, **SEGA_FILES}
+        assert read(files, GENESIS_PLUS_GX, "List.m3u").outcome == disc_opens.ACCEPTS
+
+    def test_a_nested_playlist_is_loaded_as_a_cartridge(self):
+        files = {"List.m3u": "Inner.m3u\n", "Inner.m3u": "Game.cue\n"}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_FORMAT_REFUSED]
+
+    def test_a_disc_switch_loads_no_cartridge(self):
+        files = {"List.m3u": "Game.cue\nOther.Cue\nDisc.bin\nGone.cue\n", "Game.cue": SEGA, "Other.Cue": SEGA,
+                 "Disc.bin": {"size": 1 << 20}, "Gone.cue": SEGA.replace("Game.bin", "Lost.bin"), **SEGA_FILES}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert reading.outcome == disc_opens.ACCEPTS
+        switched = [c.message for c in reading.caveats if c.data["file"] != at("Game (Track 2).sub")]
+        assert all("as a cartridge" not in message for message in switched)
+        assert sum("disc switch" in message for message in switched) == 3
+
+    def test_the_cue_of_a_switched_discs_name_loads_no_cartridge_either(self):
+        files = {"List.m3u": "Game.cue\nOther.Cue\nThird.Cue\n", "Game.cue": SEGA, "Other.Cue": SEGA,
+                 "Other.cue": SEGA.replace("Game.bin", "Lost.bin"), "Third.Cue": SEGA,
+                 "Third.cue": "TRACK 01 AUDIO\n  INDEX 01 00:00:00\n", **SEGA_FILES}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert reading.outcome == disc_opens.ACCEPTS
+        by_file = {c.data["file"]: c.message for c in reading.caveats}
+        assert "as a cartridge" not in by_file[at("Lost.bin")]
+        assert "crashes" in by_file[at("Third.cue")]
+        assert at("Third.Cue") not in by_file
+
+    def test_a_playlist_of_comments_is_refused(self):
+        assert read({"List.m3u": "#a\n#b\n"}, GENESIS_PLUS_GX, "List.m3u").outcome == disc_opens.REFUSES
+
+
+@pytest.mark.parametrize(
+    ("text", "fmt", "count"),
+    [
+        (b"INDEX 01 00:02:00", b"INDEX 01 %02d:%02d:%02d", 3),
+        (b"INDEX 01:02:03", b"INDEX 0 %02d:%02d:%02d", 3),
+        (b"INDEX 01 0:2", b"INDEX 01 %02d:%02d:%02d", 2),
+        (b"", b"INDEX 01 %02d:%02d:%02d", -1),
+        (b"INDEX 01 x", b"INDEX 01 %02d:%02d:%02d", 0),
+        (b"INDEX 01 123:00:00", b"INDEX 01 %02d:%02d:%02d", 1),
+    ],
+)
+def test_the_track_patterns_count_as_sscanf_counts(text, fmt, count):
+    assert disc_opens._scanf_count(text, fmt) == count  # pyright: ignore[reportPrivateUsage]
+
+
+class TestTheNewWalksAreBounded:
+    def test_a_flycast_sheet_past_the_track_bound_stops_short(self, monkeypatch):
+        monkeypatch.setattr(disc_opens, "MAX_TRACKS", 2)
+        reading = read({"Game.cue": THREE, **THREE_FILES}, FLYCAST)
+        assert codes(reading) == [disc_opens.CAVEAT_OPENS_BOUND_EXCEEDED]
+
+    def test_a_gdi_count_past_the_track_bound_stops_short(self, monkeypatch):
+        monkeypatch.setattr(disc_opens, "MAX_TRACKS", 2)
+        assert codes(read({"Game.gdi": GDI, **GDI_TRACKS}, FLYCAST, "Game.gdi")) == ["opens-bound-exceeded"]
+
+    def test_every_flycast_playlist_line_is_a_step(self):
+        text = "#\n" * disc_opens.MAX_STEPS + "Game.gdi\n"
+        assert codes(read({"List.m3u": text}, FLYCAST, "List.m3u")) == [disc_opens.CAVEAT_OPENS_BOUND_EXCEEDED]
+
+    def test_every_genesis_sheet_piece_is_a_step(self):
+        sheet = SEGA + "\n" * disc_opens.MAX_STEPS
+        assert codes(read({"Game.cue": sheet, **SEGA_FILES}, GENESIS_PLUS_GX)) == ["opens-bound-exceeded"]
+
+    def test_many_switch_discs_reach_the_listed_bound(self, monkeypatch):
+        monkeypatch.setattr(disc_opens, "MAX_LISTED", 50)
+        text = "Game.gdi\n" + "".join(f"D{n}.gdi\n" for n in range(100))
+        files = {"List.m3u": text, "Game.gdi": GDI, **GDI_TRACKS}
+        assert codes(read(files, FLYCAST, "List.m3u"))[-1] == disc_opens.CAVEAT_OPENS_BOUND_EXCEEDED
+
+    def test_many_genesis_files_reach_the_output_bound(self, monkeypatch):
+        monkeypatch.setattr(disc_opens, "MAX_OUTPUT", 2000)
+        sheet = "".join(f'FILE "{"n" * 100}{n}.bin" BINARY\n' for n in range(40))
+        files = {"Game.cue": sheet, **{f"{'n' * 100}{n}.bin": BIN for n in range(40)}}
+        assert codes(read(files, GENESIS_PLUS_GX))[-1] == disc_opens.CAVEAT_OPENS_BOUND_EXCEEDED
