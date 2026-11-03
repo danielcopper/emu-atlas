@@ -3447,8 +3447,9 @@ each at the build atlas pins for it (`atlas/disc_opens.py` carries every citatio
   is not established. A file atlas reads as text, such as a `.Cue` a playlist names, is no CD (`opens-format-refused`):
   at launch the core loads it as a cartridge. A playlist names at most four discs, each joined onto the content's
   directory with a `/` whatever it holds — a blank line too, which names the directory itself; the lines past the fourth
-  are never read (`opens-entry-ignored`). The first disc is loaded at launch, the others only on a disc switch, which
-  runs `cdd_load` alone: no cartridge loads there, and a disc that mounts no track fails the switch.
+  are never read (`opens-entry-ignored`, whose `data.limit` states that number, `"4"`). The first disc is loaded at
+  launch, the others only on a disc switch, which runs `cdd_load` alone: no cartridge loads there, and a disc that
+  mounts no track fails the switch.
 
 Where the emulator itself stops opening the set, the entry answers `entry-not-accepted` with the reason: a file that is
 not there (`opens-file-missing`), a track type its reader refuses (`opens-track-refused`), a sheet or playlist its

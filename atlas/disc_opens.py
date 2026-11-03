@@ -605,6 +605,7 @@ class _Walk:
         free: bool = False,
         key: str | None = None,
         effect: OpensEffect | None = None,
+        limit: int | None = None,
     ) -> None:
         """One caveat about *path*, once per code, file and effect; *kind* is the track type a refusal names (``type``).
 
@@ -614,7 +615,9 @@ class _Walk:
         walk stopped at a bound (*free*). A reading remembers which it stated
         by the path's :func:`_said_key`, or by *key* where only that is kept,
         and by its *effect*, so a stop is stated even where the same file went
-        on under the same code before it (D2 of #750).
+        on under the same code before it (D2 of #750). *limit* is the number
+        of entries the emulator reads from the file, stated in decimal
+        (``limit``, D1 of #754).
         """
         said = (code, key or _said_key(path))
         effects = self._said.setdefault(said, set())
@@ -622,15 +625,18 @@ class _Walk:
             return
         shown = _shown(path)
         message = message.replace("{file}", shown)
+        stated = "" if limit is None else str(limit)
         if not free:
             size = len(message) + len(shown) + len(self.label) + len(kind or "") + len(said[1]) + len(effect or "")
-            self.charge(path, size)
+            self.charge(path, size + len(stated))
         effects.add(effect)
         data: dict[str, str] = {"entry": self.label, "file": shown}
         if kind is not None:
             data["type"] = kind
         if effect is not None:
             data["effect"] = effect
+        if limit is not None:
+            data["limit"] = stated
         self.caveats.append(Caveat(code, message, data))
 
     def fail(
@@ -2225,6 +2231,7 @@ class _GpgxReader:
                 path,
                 f"{self.profile.name} reads no more than four discs from {{file}} (MAX_DISKS, libretro.c:2762, "
                 ":3571), so its lines past the fourth disc are never read",
+                limit=_GPGX_DISCS,
             )
         if not entries:
             self.walk.fail(_AT_LAUNCH, CAVEAT_OPENS_SHEET_REFUSED, path,

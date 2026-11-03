@@ -7144,7 +7144,7 @@
     },
     {
       "name": "opens-genesis-plus-gx-a-playlist-past-four-discs-ignores-the-rest",
-      "rationale": "The M3U reader stops at four discs (MAX_DISKS, libretro.c:2762, :3571), so the fifth line is never read. The first disc is loaded at launch and the others only on a disc switch.",
+      "rationale": "The M3U reader stops at four discs (MAX_DISKS, libretro.c:2762, :3571), so the fifth line is never read, and the caveat states that number as its limit. The first disc is loaded at launch and the others only on a disc switch.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -7365,7 +7365,8 @@
               "code": "opens-entry-ignored",
               "data": {
                 "entry": "Genesis Plus GX",
-                "file": "/mnt/sd/retrodeck/roms/segacd/Game/Game.m3u"
+                "file": "/mnt/sd/retrodeck/roms/segacd/Game/Game.m3u",
+                "limit": "4"
               }
             }
           ]

@@ -1046,6 +1046,27 @@ class TestGenesisPlusGxsPlaylist:
         assert "D5.cue" not in [path for path, _, _ in listed(reading)]
         assert disc_opens.CAVEAT_OPENS_ENTRY_IGNORED in codes(reading)
 
+    def test_the_ignored_lines_state_the_number_of_discs_the_reader_took(self):
+        # The limit is the constant the reader stops at, so it is the number
+        # of discs the walk followed, and the message's "four" is that
+        # number too (D1 of #754).
+        files = {"List.m3u": "".join(f"D{n}.cue\n" for n in range(1, 7)), **SEGA_FILES}
+        files |= {f"D{n}.cue": SEGA for n in range(1, 7)}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        [ignored] = [c for c in reading.caveats if c.code == disc_opens.CAVEAT_OPENS_ENTRY_IGNORED]
+        discs = [entry.path for entry in opened(reading) if entry.by == at("List.m3u")]
+        limit = disc_opens._GPGX_DISCS  # pyright: ignore[reportPrivateUsage]
+        assert ignored.data == {"entry": "Entry", "file": at("List.m3u"), "limit": str(limit)}
+        assert len(discs) == limit
+        assert limit == 4
+        assert "no more than four discs" in ignored.message
+
+    def test_the_limit_is_charged_to_the_answer(self):
+        bare, limited = walk_at("List.m3u"), walk_at("List.m3u")
+        bare.caveat(disc_opens.CAVEAT_OPENS_ENTRY_IGNORED, at("List.m3u"), "past {file}")
+        limited.caveat(disc_opens.CAVEAT_OPENS_ENTRY_IGNORED, at("List.m3u"), "past {file}", limit=1234)
+        assert limited.output - bare.output == len("1234")
+
     def test_four_discs_leave_nothing_ignored(self):
         text = "".join(f"D{n}.cue\n" for n in range(1, 5))
         assert disc_opens.CAVEAT_OPENS_ENTRY_IGNORED not in codes(read({"List.m3u": text}, GENESIS_PLUS_GX, "List.m3u"))
