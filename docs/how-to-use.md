@@ -3257,9 +3257,10 @@ not ES-DE's case-exact scan), and an emulator without a card earns `entry-format
 because an entry nobody read is not an entry known to refuse the file. Two routes stand beside the claims and the cards:
 an entry whose emulator's own boot atlas reads (RPCS3, for the command shapes below) and one whose emulator's open of a
 disc file atlas reads (DuckStation, SwanStation and the mednafen cores, see
-[what it opens](#is-this-file-launchable-here)) is judged by that reading. RPCS3 and DuckStation have no card and are
-read anyway; an entry of either in any other command shape, such as an RPCS3 entry without `--no-gui`, is an entry
-nobody read and keeps `entry-format-unestablished`.
+[what it opens](#is-this-file-launchable-here)) is judged by that reading, which answers before any card. RPCS3 has no
+card and is read anyway; an RPCS3 entry in any other command shape, such as one without `--no-gui`, is an entry nobody
+read and keeps `entry-format-unestablished`. A standalone loader that opens an archive itself answers a taken archive
+`launchable` with `archive-contents-unread`, the statement RetroArch's archive hands earn: what loads is inside it.
 
 **Dolphin and PrimeHack** have cards read at the builds RetroDECK ships, Dolphin f84df020 and PrimeHack 81bfb96 (issue
 #618), for every entry ES-DE's and RetroDECK's catalogues declare for them — gc, wii, triforce, primehack, and ES-DE's
@@ -3278,6 +3279,30 @@ Both cards answer for the command those catalogues give the emulator, `-b -e %RO
 `env NAME=value…` (RetroDECK's) or an `%INJECT%` of a per-game prefix file (ES-DE's own) in front of the token leaves
 those arguments as they are: the injected text is placed in front of the emulator, and atlas does not read it. An entry
 handing the emulator anything else keeps `entry-format-unestablished`.
+
+**PCSX2, PPSSPP and DuckStation** have cards read at the builds RetroDECK ships, PCSX2 v2.8.2, PPSSPP v1.20.4 and
+DuckStation 1f6de046b (issue #744). Each card names the build it was read at, one its save card pins, and where the
+emulator is deployed a test fails unless the binary carries that build's stamp. Every take reads the content after,
+which atlas does not, so a taken extension answers `launchable` with `entry-format-content-unread` — except an archive a
+loader opens itself, PPSSPP's `.zip`, which answers with `archive-contents-unread` instead.
+
+- **PCSX2** (ps2, `-batch %ROM%`) boots any file with no extension check and picks its reader by the extension. It takes
+  `.iso` `.bin` `.img` `.mdf` `.nrg` (and the list's `.ngr`) `.chd` `.cso` `.zso` `.gz` `.dump` and `.elf`. It refuses
+  what it never reads as a game: a `.zip`, `.7z`, `.ciso` or `.isz` goes to the flat reader unopened and boots the BIOS
+  with no game, and a `.cue`, `.m3u` or `.desktop` shortcut is too small to be an image, so the start fails.
+- **PPSSPP** (psp, `%ROM%`) identifies a file by its bytes. It takes `.chd` `.cso` `.iso` `.pbp` `.elf` and `.prx`, and
+  refuses `.7z`, an archive it identifies and never boots. It opens a `.zip` itself and boots the first image inside, so
+  a `.zip` answers `launchable` with `archive-contents-unread`.
+- **DuckStation** (psx, `-batch %ROM%`) answers only where the open reading above does not read the file: it takes
+  `.chd` `.ecm` `.pbp`, the executables `.exe` `.psexe` (and `.ps-exe` `.psx`) and the PSF files `.psf` `.minipsf`, and
+  refuses every extension its disc open does not know — `.toc` `.mdf` `.cbn` `.z` `.znx` `.7z` `.zip`. The upstream
+  build EmuDeck installs also opens a `.ccd` and boots a `.cpe` or `.elf`, so those answer
+  `entry-format-build-dependent`. A DuckStation entry handed a bare `%ROM%` keeps the open reading and answers
+  `entry-format-unestablished` for the card's formats.
+
+PCSX2's newest release and PPSSPP's Flathub build, the ones EmuDeck installs, decide no extension differently. The files
+those formats open in turn — a CHD's parent, `libps.exe`, a PSF's libraries, a PBP's per-disc SBI — and DuckStation's
+LibCrypt check are not read.
 
 **What it boots — `boots`.** For some entries atlas reads the emulator's own boot of the file rather than a loader card,
 and judges the file itself instead of its extension: whether the entry boots it, and what. A `launchable` verdict on

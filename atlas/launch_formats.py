@@ -22,7 +22,7 @@ from ._data import packaged_text
 
 _ROM = "%ROM%"
 
-FORMATS_SCHEMA = 3
+FORMATS_SCHEMA = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,7 +50,9 @@ class StandaloneLaunchCard:
     case-insensitively — the gate here is the emulator's loader, not ES-DE's
     case-exact scan. ``archives`` says whether the loader opens archive
     containers at all: a standalone gets the file itself, with no RetroArch
-    in front of it to pick a matching entry out of a zip.
+    in front of it to pick a matching entry out of a zip. Where it does, an
+    archive the card takes is one whose contents decide the launch, and the
+    take says atlas does not read them (issue #744).
 
     Three statements are optional (issue #618). ``arguments`` are the
     argument lists the card was read for — the words a command hands the
@@ -59,6 +61,11 @@ class StandaloneLaunchCard:
     extension has passed, which the card does not. ``build_dependent`` pairs
     each extension the builds the card serves disagree on with the citation
     naming them.
+
+    ``build`` is the revision the card was read at (issue #744): one of the
+    builds the emulator's save card pins, so the stamp that holds a pin
+    against the deployed binary keeps its one home there, and ``None`` where
+    the card pins none.
     """
 
     token: str
@@ -68,6 +75,7 @@ class StandaloneLaunchCard:
     arguments: tuple[tuple[str, ...], ...] | None = None
     content_checked: bool = False
     build_dependent: tuple[tuple[str, str], ...] = ()
+    build: str | None = None
 
     def takes(self, extension: str) -> bool:
         return extension.lower() in self.accepts
@@ -165,7 +173,7 @@ def load_standalone_launch(text: str | None = None) -> tuple[StandaloneLaunchCar
 
 
 _CARD_KEYS = frozenset({"accepts", "archives", "source"})
-_CARD_OPTIONAL_KEYS = frozenset({"arguments", "content_checked", "build_dependent"})
+_CARD_OPTIONAL_KEYS = frozenset({"arguments", "content_checked", "build_dependent", "build"})
 
 
 def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
@@ -173,7 +181,7 @@ def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
     if not isinstance(entry, dict) or not _CARD_KEYS <= set(entry) <= _CARD_KEYS | _CARD_OPTIONAL_KEYS:
         raise ValueError(
             f"{where}: a card names 'accepts', 'archives' and 'source', "
-            "and may also name 'arguments', 'content_checked' and 'build_dependent'"
+            "and may also name 'arguments', 'content_checked', 'build_dependent' and 'build'"
         )
     accepts = entry["accepts"]
     if not isinstance(accepts, list) or not accepts:
@@ -194,6 +202,7 @@ def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
         arguments=_arguments(entry["arguments"], where) if "arguments" in entry else None,
         content_checked=content_checked,
         build_dependent=build_dependent,
+        build=_build(entry["build"], where) if "build" in entry else None,
     )
 
 
@@ -224,6 +233,13 @@ def _arguments(value: Any, where: str) -> tuple[tuple[str, ...], ...]:
             raise ValueError(f"{where}: arguments[{shape!r}] is listed twice")
         shapes.append(tuple(shape))
     return tuple(shapes)
+
+
+def _build(value: Any, where: str) -> str:
+    """The revision a card was read at — a word, since it is matched against a save card's pinned revision."""
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise ValueError(f"{where}: build must be a non-blank revision with no surrounding space, got {value!r}")
+    return value
 
 
 def _build_dependent(value: Any, accepts: list[str], where: str) -> tuple[tuple[str, str], ...]:

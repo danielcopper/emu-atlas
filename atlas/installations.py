@@ -190,7 +190,7 @@ from .launcher_scripts import (
     step_runs,
 )
 from .frontend_path import frontend_search_path, frontend_working_directory
-from .launch_formats import lookup_install_first, lookup_standalone_launch
+from .launch_formats import StandaloneLaunchCard, lookup_install_first, lookup_standalone_launch
 from .firmware import firmware_for_core as _resolve_for_core
 from .firmware import firmware_for_system as _resolve_for_system
 from .firmware import firmware_inventory as _resolve_inventory
@@ -19523,6 +19523,9 @@ CAVEAT_ENTRY_FORMAT_UNESTABLISHED = "entry-format-unestablished"
 # an extension the builds a card serves disagree on is taken on one machine and
 # refused on the next, which is neither a refusal nor a take: unestablished,
 # under a code of its own that names the reason.
+# A standalone loader that opens archives itself (issue #744) loads what it
+# finds inside a taken one, so that take states archive-contents-unread, as
+# RetroArch's archive hands do, rather than the content statement.
 CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD = "entry-format-content-unread"
 CAVEAT_ENTRY_FORMAT_BUILD_DEPENDENT = "entry-format-build-dependent"
 
@@ -21945,7 +21948,7 @@ def _standalone_entry_reading(
         return (
             _ENTRY_ACCEPTS,
             (f"entry {entry.label!r}: its own loader reads {extension!r} — {card.source}",),
-            _content_unread(entry.label, extension) if card.content_checked else (),
+            _taken_unread(card, entry.label, extension),
         )
     archive_note = (
         " (an archive container, and this loader opens none — no RetroArch stands in front of "
@@ -21961,6 +21964,26 @@ def _standalone_entry_reading(
         ),
         (),
     )
+
+
+def _taken_unread(card: StandaloneLaunchCard, label: str, extension: str) -> tuple[Caveat, ...]:
+    """What a card's take of *extension* leaves unread: the archive's contents, or the file's content.
+
+    A loader that opens archives itself (issue #744) loads what it finds
+    inside one, which is where the take is decided and which atlas does not
+    read — the same statement RetroArch's archive hands earn a libretro
+    entry, made instead of the content statement rather than beside it.
+    """
+    if card.archives and is_compressed_extension(extension):
+        return (
+            Caveat(
+                CAVEAT_ARCHIVE_CONTENTS_UNREAD,
+                f"{extension!r} is an archive the own loader of {label!r} opens itself: what loads is the file "
+                "it finds inside, and whether one is in there is inside the archive, which atlas does not read",
+                {"entry": label, "extension": extension},
+            ),
+        )
+    return _content_unread(label, extension) if card.content_checked else ()
 
 
 def _content_unread(label: str, extension: str) -> tuple[Caveat, ...]:

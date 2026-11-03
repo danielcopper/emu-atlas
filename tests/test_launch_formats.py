@@ -1,18 +1,23 @@
 """The install-first formats table: packaged shape, and a loader that never coerces."""
 
+import dataclasses
 import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 
 from atlas.launch_formats import (
     FORMATS_SCHEMA,
+    StandaloneLaunchCard,
     load_launch_formats,
     load_standalone_launch,
     lookup_install_first,
     lookup_standalone_launch,
 )
+from atlas.standalone_saves import StandaloneSaveCard, load_standalone_saves
+from tests.test_standalone_build_tripwire import COMPONENTS, deployed_binaries, deployed_build
 
 
 def _table(extension, entry):
@@ -129,7 +134,7 @@ class TestTheStandaloneLaunchCards:
         with pytest.raises(ValueError, match="may also name"):
             load_standalone_launch(table)
 
-    def test_a_card_naming_a_key_outside_the_six_fails(self):
+    def test_a_card_naming_a_key_outside_the_seven_fails(self):
         table = _card_table({**CARD, "boots": True})
         with pytest.raises(ValueError, match="may also name"):
             load_standalone_launch(table)
@@ -306,3 +311,213 @@ class TestTheLoaderRefusesWhatItCannotState:
         # Nothing here installs it — still a record, never a refused load.
         (record,) = load_launch_formats(_table(".pkg", {**ENTRY, "installers": []}))
         assert record.installers == ()
+
+
+TAKES = "takes"
+REFUSES = "refuses"
+BUILD_DEPENDENT = "build-dependent"
+
+# Issue #744: how each card answers every token of the accept-list ES-DE and
+# RetroDECK deploy for its system (D1-D5, D9, D10), folded to lowercase as
+# the card matches, and of the formats the decisions name beyond that list
+# (PCSX2's .zip, .7z and .cue). A token the deployed list carries and this
+# table does not is a token nobody decided, which the deployed-list test
+# below turns red.
+CARD_ANSWERS = {
+    ("PCSX2", "ps2"): {
+        **dict.fromkeys(
+            [".iso", ".bin", ".img", ".mdf", ".nrg", ".ngr", ".chd", ".cso", ".zso", ".gz", ".dump", ".elf"], TAKES
+        ),
+        **dict.fromkeys([".zip", ".7z", ".ciso", ".isz", ".cue", ".m3u", ".desktop"], REFUSES),
+    },
+    ("PPSSPP", "psp"): {
+        **dict.fromkeys([".chd", ".cso", ".iso", ".pbp", ".elf", ".prx", ".zip"], TAKES),
+        ".7z": REFUSES,
+    },
+    ("DUCKSTATION", "psx"): {
+        **dict.fromkeys(
+            [".cue", ".bin", ".img", ".iso", ".mds", ".m3u", ".chd", ".ecm", ".pbp", ".exe", ".psexe"], TAKES
+        ),
+        **dict.fromkeys([".psf", ".minipsf"], TAKES),
+        **dict.fromkeys([".toc", ".mdf", ".cbn", ".z", ".znx", ".7z", ".zip"], REFUSES),
+        ".ccd": BUILD_DEPENDENT,
+    },
+}
+
+
+def _answer(token: str, extension: str) -> str:
+    card = lookup_standalone_launch(token)
+    assert card is not None, token
+    if card.build_note(extension) is not None:
+        return BUILD_DEPENDENT
+    return TAKES if card.takes(extension) else REFUSES
+
+
+class TestTheCardsOfIssue744:
+    """PCSX2, PPSSPP and DuckStation, read at the builds RetroDECK ships."""
+
+    @pytest.mark.parametrize(
+        ("token", "extension", "answer"),
+        [(token, ext, answer) for (token, _), table in CARD_ANSWERS.items() for ext, answer in table.items()],
+    )
+    def test_each_card_answers_its_lists_tokens_as_decided(self, token, extension, answer):
+        assert _answer(token, extension) == answer
+        assert _answer(token, extension.upper()) == answer
+
+    @pytest.mark.parametrize("token", ["PCSX2", "PPSSPP", "DUCKSTATION"])
+    def test_every_take_reads_the_content_after(self, token):
+        card = lookup_standalone_launch(token)
+        assert card is not None
+        assert card.content_checked
+
+    def test_only_ppsspp_opens_an_archive(self):
+        # D3: PPSSPP boots the image inside a .zip; PCSX2 and DuckStation open none.
+        assert [token for token in ("PCSX2", "PPSSPP", "DUCKSTATION") if _card(token).archives] == ["PPSSPP"]
+
+    @pytest.mark.parametrize("extension", [".ps-exe", ".psx"])
+    def test_duckstation_takes_the_executable_suffixes_no_list_carries(self, extension):
+        # D9: both builds boot them as executables.
+        assert _answer("DUCKSTATION", extension) == TAKES
+
+    @pytest.mark.parametrize(
+        ("extension", "builds"),
+        [(".ccd", ("1f6de046b", "2dd5cc3c")), (".cpe", ("1f6de046b", "2dd5cc3c")), (".elf", ("1f6de046b", "2dd5cc3c"))],
+    )
+    def test_duckstation_leaves_what_upstream_adds_to_the_build(self, extension, builds):
+        # D5: the upstream build EmuDeck installs takes these, RetroDECK's does not.
+        note = _card("DUCKSTATION").build_note(extension)
+        assert note is not None
+        assert all(build in note for build in builds)
+
+    @pytest.mark.parametrize(
+        ("token", "extension"),
+        [("DUCKSTATION", ".psxgpu"), ("DUCKSTATION", ".zst"), ("DUCKSTATION", ".xz"), ("PCSX2", ".gs")],
+    )
+    def test_a_gpu_dump_replay_is_refused_on_every_build(self, token, extension):
+        # D9: a replay starts no game, so it is no build-dependent take either.
+        assert _answer(token, extension) == REFUSES
+
+    @pytest.mark.parametrize("token", ["PCSX2", "PPSSPP"])
+    def test_the_build_emudeck_installs_decides_nothing_differently(self, token):
+        assert _card(token).build_dependent == ()
+
+    @pytest.mark.parametrize(
+        ("token", "arguments"),
+        [("PCSX2", ("-batch", "%ROM%")), ("PPSSPP", ("%ROM%",)), ("DUCKSTATION", ("-batch", "%ROM%"))],
+    )
+    def test_each_card_answers_for_the_command_it_was_read_for(self, token, arguments):
+        card = _card(token)
+        assert card.arguments == (arguments,)
+        assert not card.covers(None)
+
+    @pytest.mark.skipif(not DEPLOYED_SYSTEMS.is_file(), reason="RetroDECK is not deployed here")
+    @pytest.mark.parametrize(("token", "system"), list(CARD_ANSWERS))
+    def test_every_deployed_list_token_is_decided_and_every_command_is_covered(self, token, system):
+        from atlas.installations import (
+            _emulator_arguments,  # pyright: ignore[reportPrivateUsage] - the catalogue's commands are read as the answer reads them
+        )
+
+        text = DEPLOYED_SYSTEMS.read_text(encoding="utf-8")
+        block = re.search(rf"<name>{system}</name>.*?</system>", text, re.DOTALL)
+        assert block is not None, system
+        listed = re.search(r"<extension>([^<]*)</extension>", block.group(0))
+        assert listed is not None, system
+        undecided = {ext.lower() for ext in listed.group(1).split()} - set(CARD_ANSWERS[(token, system)])
+        assert undecided == set(), f"{system} lists {sorted(undecided)}, which no decision covers for {token}"
+        commands = re.findall(rf"<command[^>]*>([^<]*%EMULATOR_{token}%[^<]*)</command>", block.group(0))
+        assert commands, token
+        for command in commands:
+            assert _card(token).covers(_emulator_arguments(command)), command
+
+
+def _card(token: str):
+    card = lookup_standalone_launch(token)
+    assert card is not None, token
+    return card
+
+
+# The cards that pin no build: read before issue #744 gave a card its `build`,
+# their revisions stated in their source alone. A new card pins its build, or
+# joins this set on purpose.
+UNPINNED_CARDS = frozenset({"AZAHAR", "DOLPHIN", "PRIMEHACK"})
+
+
+def _pinned_cards() -> tuple[StandaloneLaunchCard, ...]:
+    return tuple(card for card in load_standalone_launch() if card.build is not None)
+
+
+def _save_cards() -> dict[str, StandaloneSaveCard]:
+    return {save.token: save for save in load_standalone_saves()}
+
+
+def deployed_build_disagreements(
+    cards: tuple[StandaloneLaunchCard, ...], binaries: Mapping[str, bytes]
+) -> list[str]:
+    """The pinned loader cards whose deployed binary runs another of the save card's builds.
+
+    *binaries* maps a token to its deployed binary's bytes, as the stamp
+    tripwire reads them. A binary that carries none of the save card's stamps
+    is not judged here: the stamp tripwire names it.
+    """
+    saves = _save_cards()
+    wrong: list[str] = []
+    for card in cards:
+        if card.token not in binaries or card.token not in saves:
+            continue
+        found = deployed_build(saves[card.token], binaries[card.token])
+        if found is not None and found.revision != card.build:
+            wrong.append(
+                f"{card.token}: the card was read at {card.build!r} and the deployed binary carries the "
+                f"stamp of {found.revision!r}"
+            )
+    return wrong
+
+
+class TestEveryPinnedCardNamesABuildItsSaveCardPins:
+    """D5: a card's build is one the save card holds against the deployed binary."""
+
+    def test_the_cards_with_no_build_are_exactly_the_listed_ones(self):
+        assert {card.token for card in load_standalone_launch() if card.build is None} == UNPINNED_CARDS
+
+    @pytest.mark.parametrize("card", _pinned_cards(), ids=lambda c: c.token)
+    def test_the_build_is_pinned_by_the_save_card_and_cited_by_the_source(self, card):
+        saves = _save_cards()
+        assert card.token in saves, f"{card.token} pins a build and has no save card holding it"
+        assert card.build in [build.revision for build in saves[card.token].builds], (
+            f"{card.token} names {card.build!r}, which its save card does not pin — the stamp test "
+            "holds the deployed binary against the save card's builds only"
+        )
+        assert card.build in card.source
+
+    @pytest.mark.parametrize("card", _pinned_cards(), ids=lambda c: c.token)
+    def test_a_binary_carrying_the_named_builds_stamp_passes(self, card):
+        stamp = next(build.stamp for build in _save_cards()[card.token].builds if build.revision == card.build)
+        assert deployed_build_disagreements((card,), {card.token: b"\x00" + stamp.encode() + b"\x00"}) == []
+
+    @pytest.mark.parametrize("card", _pinned_cards(), ids=lambda c: c.token)
+    def test_a_binary_carrying_another_pinned_builds_stamp_is_named(self, card):
+        # A save card pinning two builds — Vita3K's does — keeps a loader card
+        # naming the older one green on the list alone; the deployed binary
+        # says which of them runs.
+        other = dataclasses.replace(card, build="0ther0ne")
+        stamp = next(build.stamp for build in _save_cards()[card.token].builds if build.revision == card.build)
+        named = deployed_build_disagreements((other,), {card.token: b"\x00" + stamp.encode() + b"\x00"})
+        assert [entry.split(":")[0] for entry in named] == [card.token]
+
+    def test_every_deployed_emulator_runs_the_build_its_card_was_read_at(self):
+        if not COMPONENTS.is_dir():
+            pytest.skip(f"nothing is deployed at {COMPONENTS}")
+        binaries = deployed_binaries()
+        if not any(card.token in binaries for card in _pinned_cards()):
+            pytest.skip("no emulator a pinned loader card describes is deployed here")
+        assert deployed_build_disagreements(_pinned_cards(), binaries) == []
+
+    @pytest.mark.parametrize("build", ["", " ", " abc1234", 3, None])
+    def test_a_build_that_names_no_revision_fails_the_load(self, build):
+        table = _card_table({**CARD, "build": build})
+        with pytest.raises(ValueError, match="build must be"):
+            load_standalone_launch(table)
+
+    def test_a_build_loads(self):
+        (card,) = load_standalone_launch(_card_table({**CARD, "build": "abc1234"}))
+        assert card.build == "abc1234"
