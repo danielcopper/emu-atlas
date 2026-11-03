@@ -1610,6 +1610,12 @@ class TestTheDataRegistryReading:
             # this one from being cited as "an unnamed tuple" until the AST
             # reading learned to resolve the splat as well.
             ("emulator-config-unreadable", "reason"): "EMULATOR_CONFIG_UNREADABLE_REASONS",
+            ("opens-file-missing", "effect"): "OPENS_EFFECTS",
+            ("opens-track-refused", "effect"): "OPENS_EFFECTS",
+            ("opens-sheet-refused", "effect"): "OPENS_EFFECTS",
+            ("opens-format-refused", "effect"): "OPENS_EFFECTS",
+            ("opens-path-too-long", "effect"): "OPENS_EFFECTS",
+            ("opens-playlist-refused", "effect"): "OPENS_EFFECTS",
         }
 
     def test_contents_alone_do_not_identify_a_name(self) -> None:

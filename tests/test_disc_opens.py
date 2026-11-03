@@ -9,9 +9,14 @@ underneath them, each against a fixture machine.
 
 from __future__ import annotations
 
+import ast
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
 import pytest
 
-from atlas import disc_opens, psx_disc
+from atlas import disc_opens, opens_codes, psx_disc
 from atlas.disc_opens import (
     BEETLE_PCFX,
     BEETLE_PSX,
@@ -26,6 +31,17 @@ from atlas.disc_opens import (
     PatchSetting,
 )
 from atlas.machine import FixtureMachine, RealMachine
+from atlas.opens_codes import (
+    CAVEAT_OPENS_FILE_MISSING,
+    CAVEAT_OPENS_PATH_TOO_LONG,
+    EFFECT_GOES_ON,
+    EFFECT_STOPS,
+    EFFECT_UNESTABLISHED,
+    OPENS_EFFECTS,
+    OPENS_FAILURE_CODES,
+)
+from atlas.placement import ENUMERATED_DATA, Caveat
+from tests.corpus import caveat_blocks, expected_blocks
 
 BIN = {"size": 2352}
 ROOT = "/roms/Game"
@@ -541,6 +557,138 @@ class TestARefusalAlwaysCarriesItsReason:
         reading = mednafen(SHEET + 'FILE "B.bin" BINARY\n')
         if reading.outcome == disc_opens.REFUSES:
             assert disc_opens.CAVEAT_OPENS_FILE_MISSING in codes(reading)
+
+
+WALK = disc_opens._Walk  # pyright: ignore[reportPrivateUsage]
+MODE = disc_opens._Mode  # pyright: ignore[reportPrivateUsage]
+GOES_ON = MODE(stops=False, decisive=True, goes_on="the load goes on")
+STOPS = MODE(stops=True, decisive=True)
+MISSING = "opens {file}, which is not there"
+
+
+def walk_at(launched: str) -> disc_opens._Walk:  # pyright: ignore[reportPrivateUsage]
+    return WALK(FixtureMachine({}), "Entry", "Emulator", at(launched))
+
+
+def effects(reading: disc_opens.OpensReading) -> list[tuple[str, object]]:
+    return [(caveat.code, caveat.data.get("effect")) for caveat in reading.caveats]
+
+
+def opens_answers(node: object) -> Iterator[dict[str, Any]]:
+    """Every launchable answer under *node* that carries the opens reading's list."""
+    if isinstance(node, dict):
+        if "verdict" in node and node.get("opens") is not None:
+            yield node
+        for value in node.values():
+            yield from opens_answers(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from opens_answers(value)
+
+
+class TestAFailureStatesWhetherTheOpenStops:
+    """Every failure of the open carries ``effect``: ``stops`` on the refusal, ``goes-on`` beside it (#750).
+
+    ``unestablished`` where what the emulator does at the file is not
+    established, which leaves the take unestablished rather than refused.
+    """
+
+    def test_every_site_naming_a_failure_code_states_an_effect(self):
+        # What this sees: each call in atlas/disc_opens.py that hands one of
+        # the six codes over by its constant or its spelling. It must be
+        # _Walk.fail, which states the effect by its mode, or pass effect=. A
+        # code carried in a variable — inside fail and caveat — is not seen.
+        tree = ast.parse(Path(disc_opens.__file__).read_text(encoding="utf-8"))
+        names = {name for name in vars(opens_codes) if name.startswith("CAVEAT_")}
+        names = {name for name in names if getattr(opens_codes, name) in OPENS_FAILURE_CODES}
+
+        def names_a_failure(arg: ast.expr) -> bool:
+            if isinstance(arg, ast.Name):
+                return arg.id in names
+            return isinstance(arg, ast.Constant) and arg.value in OPENS_FAILURE_CODES
+
+        sites = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and any(names_a_failure(arg) for arg in node.args)
+        ]
+        assert len(sites) > 40
+        bare = [
+            node.lineno
+            for node in sites
+            if not (isinstance(node.func, ast.Attribute) and node.func.attr == "fail")
+            and not any(keyword.arg == "effect" for keyword in node.keywords)
+        ]
+        assert bare == []
+
+    def test_a_stop_after_a_go_on_of_the_same_file_is_still_stated(self):
+        # Unreachable through a reader at the pinned builds: DuckStation,
+        # SwanStation and Flycast walk the launch before any disc switch and
+        # return at their first stop; a mednafen core states its loop stop
+        # before any disc is opened, and opens-playlist-refused never as a
+        # go-on; Genesis Plus GX's go-ons inside a launch are of another code
+        # than its stop. Held here so no reader can come to refuse without
+        # saying where it stopped (D2).
+        walk = walk_at("Game.m3u")
+        walk.fail(GOES_ON, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        walk.fail(STOPS, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        reading = walk.reading()
+        assert reading.outcome == disc_opens.REFUSES
+        assert effects(reading) == [
+            (CAVEAT_OPENS_FILE_MISSING, EFFECT_GOES_ON),
+            (CAVEAT_OPENS_FILE_MISSING, EFFECT_STOPS),
+        ]
+
+    def test_the_same_failure_of_the_same_file_is_stated_once(self):
+        walk = walk_at("Game.m3u")
+        for _ in range(2):
+            walk.fail(GOES_ON, CAVEAT_OPENS_FILE_MISSING, at("A.cue"), MISSING)
+        assert effects(walk.reading()) == [(CAVEAT_OPENS_FILE_MISSING, EFFECT_GOES_ON)]
+
+    def test_a_sheet_path_genesis_cannot_build_from_is_unestablished_at_launch(self):
+        name = "n" * (255 - len(ROOT) - 1 - 4) + ".cue"
+        reading = read({name: SEGA, **SEGA_FILES}, GENESIS_PLUS_GX, name)
+        assert reading.outcome == disc_opens.UNESTABLISHED
+        assert effects(reading) == [(CAVEAT_OPENS_PATH_TOO_LONG, EFFECT_UNESTABLISHED)]
+
+    def test_a_switch_to_such_a_sheet_goes_on(self):
+        name = "n" * (255 - len(ROOT) - 1 - 4) + ".cue"
+        files = {"List.m3u": f"Game.cue\n{name}\n", "Game.cue": SEGA, name: SEGA, **SEGA_FILES}
+        reading = read(files, GENESIS_PLUS_GX, "List.m3u")
+        assert reading.outcome == disc_opens.ACCEPTS
+        assert effects(reading) == [(CAVEAT_OPENS_PATH_TOO_LONG, EFFECT_GOES_ON)]
+
+    @pytest.mark.parametrize("code", OPENS_FAILURE_CODES)
+    def test_every_failure_code_closes_its_effect(self, code):
+        assert ENUMERATED_DATA[(code, "effect")] == OPENS_EFFECTS
+        with pytest.raises(ValueError, match="effect"):
+            Caveat(code, "a message", {"entry": "Entry", "file": "/a", "effect": "stopped"})
+
+    def test_every_failure_caveat_in_the_corpus_states_its_effect(self):
+        failures = [
+            (where, data)
+            for where, expected in expected_blocks()
+            for code, data in caveat_blocks(expected)
+            if code in OPENS_FAILURE_CODES
+        ]
+        assert failures, "the corpus holds no failure of the open"
+        assert [where for where, data in failures if data.get("effect") not in OPENS_EFFECTS] == []
+
+    def test_every_refusal_in_the_corpus_holds_a_stop_and_only_a_refusal_does(self):
+        answers = [
+            (f"{where}#{n}", answer)
+            for where, expected in expected_blocks()
+            for n, answer in enumerate(opens_answers(expected))
+        ]
+        refusals = {at for at, answer in answers if answer["verdict"] == "entry-not-accepted"}
+        stopped = {
+            at
+            for at, answer in answers
+            for code, data in caveat_blocks(answer["caveats"])
+            if code in OPENS_FAILURE_CODES and data.get("effect") == EFFECT_STOPS
+        }
+        assert refusals, "the corpus holds no refusal of the open"
+        assert refusals == stopped
 
 
 # ── Flycast ────────────────────────────────────────────────────────────────

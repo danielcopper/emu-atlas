@@ -128,8 +128,15 @@ from .rpcs3_boot import (
 
 # What an entry's emulator opens through a launched disc file (issue #716):
 # each file it opens, how it came to be opened, and why a reading refuses or
-# stops short.
+# stops short — and, for a failure of the open, whether the emulator stops
+# there or goes on (issue #750).
 from .disc_opens import (
+    HOW_NAME_DERIVED,
+    HOW_NAMED,
+    OPENED_HOWS,
+    Opened,
+)
+from .opens_codes import (
     CAVEAT_OPENS_BOUND_EXCEEDED,
     CAVEAT_OPENS_CONTENT_UNREAD,
     CAVEAT_OPENS_ENTRY_IGNORED,
@@ -142,10 +149,10 @@ from .disc_opens import (
     CAVEAT_OPENS_SETTING_UNREAD,
     CAVEAT_OPENS_SHEET_REFUSED,
     CAVEAT_OPENS_TRACK_REFUSED,
-    HOW_NAME_DERIVED,
-    HOW_NAMED,
-    OPENED_HOWS,
-    Opened,
+    EFFECT_GOES_ON,
+    EFFECT_STOPS,
+    EFFECT_UNESTABLISHED,
+    OPENS_EFFECTS,
 )
 
 # --- The handles every question is asked of ----------------------------------
@@ -979,6 +986,11 @@ __all__ = [
     "CAVEAT_OPENS_BOUND_EXCEEDED",
     "CAVEAT_OPENS_PATH_TOO_LONG",
     "CAVEAT_OPENS_ENTRY_IGNORED",
+    # Vocabulary values — the `effect` a failure of the open states.
+    "OPENS_EFFECTS",
+    "EFFECT_STOPS",
+    "EFFECT_GOES_ON",
+    "EFFECT_UNESTABLISHED",
     "InstallFirstFormat",
     "StandaloneLaunchCard",
     "load_launch_formats",

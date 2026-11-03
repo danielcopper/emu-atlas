@@ -3444,6 +3444,15 @@ first. A playlist that reaches itself again through another stops every mednafen
 without end. Beetle PCE and PCE Fast never load an `.m3u` at all: their loader marks a load good only in its single-disc
 branch, so every playlist answers `entry-not-accepted` with `opens-playlist-refused`, after the discs it opened.
 
+Which of the two a caveat of these six codes is stands in its data key `effect` (`atlas.OPENS_EFFECTS`): `stops` where
+the emulator stops there, the refusal an `entry-not-accepted` answer of this reading always holds, and `goes-on` where
+it goes on without the file. A refusal can carry go-on caveats of the same codes ahead of its stop — Beetle PCE's
+playlist whose second disc is not there states that disc as `opens-file-missing` with `goes-on` before its
+`opens-playlist-refused` with `stops` — so neither the code nor the order tells the stop; `effect` does. A third word,
+`unestablished`, rides one caveat alone: Genesis Plus GX's `opens-path-too-long` at a sheet path of 255 bytes or more
+opened at launch, where what the core does next is not established (below), so the take is unestablished rather than
+refused; at a disc switch the same caveat goes on.
+
 What atlas does not read is stated rather than guessed and, where the emulator needs it to launch, leaves the take
 unestablished on a `launchable` verdict: a file whose bytes the emulator decides by — an audio track an audio reader
 opens, an `.mds` or `.ccd` descriptor, a patch DuckStation applies, an `.sbi` the newer mednafen cores check
@@ -3460,10 +3469,10 @@ is every line of a playlist read and of a cue sheet parsed or walked. A mednafen
 afresh on every visit; DuckStation and SwanStation read a nested playlist or a sheet once per spelling of its path and
 keep only its first entry, cut short where it is too long to open, or its tracks. Every read is charged to the byte
 bound, a read that comes back without text by the file's size up to its bound, and the bound is checked after each read,
-so a reading stops at most one read past it; a caveat is stated once per code and file. Past any bound the answer stops
-short (`opens-bound-exceeded`). `boots` stays `None` for these entries. Where an emulator's parser reads a value it
-never set — Flycast's at a `.gdi` declaring more tracks than it holds, Genesis Plus GX's copy of a sheet path of 255
-bytes — what follows is undefined, and the take is unestablished. PCSX ReARMed, PicoDrive, Opera and the other
+so a reading stops at most one read past it; a caveat is stated once per code, file and `effect`. Past any bound the
+answer stops short (`opens-bound-exceeded`). `boots` stays `None` for these entries. Where an emulator's parser reads a
+value it never set — Flycast's at a `.gdi` declaring more tracks than it holds, Genesis Plus GX's copy of a sheet path
+of 255 bytes — what follows is undefined, and the take is unestablished. PCSX ReARMed, PicoDrive, Opera and the other
 alternatives are issue #736.
 
 ## What would the frontend run? — `launch_command`
