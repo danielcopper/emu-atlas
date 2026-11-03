@@ -1179,16 +1179,17 @@ sigil's id and a hole's spelling part in other ways, for Flycast and for the oth
 [`sigil-territory.md`](research/sigil-territory.md). A RomM server from 5.3.0 on runs sigil over its library during a
 scan and serves what it read on every ROM whose scan read an id: `title_id`, `save_target` (sigil's `save_id`) and
 `save_target_layout` (its `usage`) — a second way to the `save_id` without opening the ROM, though not to sigil's
-`raw_serial`, which the Cemu hole needs (§5). sigil also resolves which files under a save root belong to a game; atlas
-answers that question itself (§3 there says why), so a client takes only the id from sigil. The one place atlas states
-the rule rather than the files is Dolphin's GCI folder, where a file is a game's by bytes inside it: atlas reads no save
-file's content, so it names the folder, the bytes and the value to compare, and the caller reads the files (the Dolphin
-section below). atlas's answer is not a claim about every file a core writes past the frontend. Of the cores sigil's
-table covers, three are where the two part on this: for Handy, SAME CDi and Nestopia on FDS, sigil's rows name files
-they attribute to the core itself, while atlas names only what the frontend writes — nothing for Handy and SAME CDi,
-`<stem>.srm` for Nestopia — and whether the core writes more is open (§2 there). Where no supplier knows the id, an
-unfilled template still tells you the shape, the count and the directory — enough to recognize the files once they
-exist.
+`raw_serial`, the one sigil field holding both words the Cemu hole takes (§5); a low word alone is matched against the
+title directories the Cemu answer lists instead (below). sigil also resolves which files under a save root belong to a
+game; atlas answers that question itself (§3 there says why), so a client takes only the id from sigil. The one place
+atlas states the rule rather than the files is Dolphin's GCI folder, where a file is a game's by bytes inside it: atlas
+reads no save file's content, so it names the folder, the bytes and the value to compare, and the caller reads the files
+(the Dolphin section below). atlas's answer is not a claim about every file a core writes past the frontend. Of the
+cores sigil's table covers, three are where the two part on this: for Handy, SAME CDi and Nestopia on FDS, sigil's rows
+name files they attribute to the core itself, while atlas names only what the frontend writes — nothing for Handy and
+SAME CDi, `<stem>.srm` for Nestopia — and whether the core writes more is open (§2 there). Where no supplier knows the
+id, an unfilled template still tells you the shape, the count and the directory — enough to recognize the files once
+they exist.
 
 **When there is no id, the names change — and atlas says so.** The emulator uses the id only if the content carries one:
 Flycast reads it from a Dreamcast disc header, and arcade content (or a disc that states none) is named after the ROM
@@ -1277,7 +1278,7 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `file-names-unestablished`                 | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                                                                |
 | `file-membership-by-header`                | a file of `data["dir"]` is the game's when its bytes at `offset`, `length` long, equal the `save_id` fill — Dolphin's GCI folder, below                          |
 | `redirect-outranked`                       | this machine's configuration outranks a stated redirect route, or makes it not apply (`data["argument"]`, `data["key"]`) — below                                 |
-| `save-id-candidates`                       | the title directories the NAND holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                                                          |
+| `save-id-candidates`                       | the title directories the NAND or MLC holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                                                   |
 | `file-set-claims-merged`                   | two parts of the answer named one file and disagreed; it is one group, `data` lists what each said                                                               |
 | `file-set-directories-unread`              | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                                                                 |
 | `file-set-across-systems`                  | no system was named; the set holds for every system in `data["systems"]` and for no other                                                                        |
@@ -1823,11 +1824,20 @@ Three more cards follow the same shapes. PPSSPP is one unnamed savedata director
 emulator resolves it (an `--mlc` launch flag outranks `settings.xml`, and the answer says so when it sees one) — with
 `needs: ('save_id',)`, granularity `per-game-directory`, and the caveat spelling the fill (the title id, high then low
 word, each 8 lowercase hex digits, as two path segments) with its citation. That unit is what a per-game sync client
-moves whole — the directory-based save shape rommapp/romm#3866 asks for. xemu is the boundary case: every game's save
-lives **inside** the emulated Xbox hard disk, so the answer names the image as one shared file and `save-inside-image`
-carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level client backs the
-image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and per-game sync is
-honestly not on offer from outside.
+moves whole — the directory-based save shape rommapp/romm#3866 asks for. Beside the hole rides `save-id-candidates`, the
+Wii answer's listing (above) over `usr/save`: every title directory the tree holds, spelled `"<hi>/<lo>"`. Cemu creates
+a title's `usr/save/<hi>/<lo>/` when the title initialises its save library, before its first save
+(`nn_save.cpp:305-336` at 2.6), under the base title's id — an update's or a DLC's resolves to it — so a game is
+`00050000`, a demo `00050002`, and the three `00050010` entries Cemu creates when it sets up the MLC are Mii Maker's. An
+executable launched bare, outside an installed title, runs under a placeholder id, high word `ffffffff` and low word a
+hash of the executable (`CafeSystem.cpp:830`), so it is listed as `fffffff3/<hash>`: the save library clears two bits of
+the high word (`nn_save.cpp:326`). A game whose low word equals that hash only leaves the answer ambiguous. A caller
+holding a Wii U title's low word alone — RomM's `save_target` does — matches it against `titles`: one entry fills the
+hole, two leave it ambiguous, none means no title of that word set up its save here. xemu is the boundary case: every
+game's save lives **inside** the emulated Xbox hard disk, so the answer names the image as one shared file and
+`save-inside-image` carries the inside layout machine-readably (`data["layout"]` is `UDATA/<title id>`) — a file-level
+client backs the image up whole or leaves it, a tool that parses FATX has the layout stated instead of rediscovered, and
+per-game sync is honestly not on offer from outside.
 
 Vita3K's tree hangs off one key, `pref-path`, with saves at `ux0/user/<user>/savedata` — the same per-user shape as
 RPCS3, and an empty `pref-path` is a refusal rather than a guess, because the emulator falls back to a default it

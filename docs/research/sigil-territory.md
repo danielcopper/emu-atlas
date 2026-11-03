@@ -1288,7 +1288,10 @@ name (`src/filename.c:183-189`, upper-cased by `match_hex_run`, `:50-56`). From 
 parentheses, `raw_serial` is the low word alone, like `title_id` (`:193-207`). sigil's README says the last eight digits
 "are what the save system keys on" (sigil's `README.md:502`) and shows Cemu's path with both words (`:46-49`). A client
 fills the hole from `raw_serial` only when it holds sixteen digits: the first and the last eight, in lower case, joined
-by `/`. From an eight-digit tag sigil gives no high word, and the hole stays the client's to fill.
+by `/`. From an eight-digit tag sigil gives no high word, and the hole stays the client's to fill. Past atlas's pin
+(`cfb5f0d`), #624 lists beside the hole the title directories below Cemu's `usr/save`, spelled `<hi>/<lo>`
+(`save-id-candidates`), so a client holding the low word reads the high word off the one entry that matches, and two
+matches leave the hole unfilled.
 
 **DuckStation (I3).** **[O]** The spelling DuckStation's game database gives the serial of a disc it knows, against
 sigil's `LLLL-DDDDD`; for a disc it does not know, the rewritten executable name is sigil's spelling.

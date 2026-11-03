@@ -453,13 +453,16 @@ CAVEAT_FILE_SET_SPANS_ROOTS = "file-set-spans-roots"
 # would be the failure this project exists to avoid. `data` carries `dir` and a
 # `citation` for the reading behind it.
 CAVEAT_FILE_NAMES_UNESTABLISHED = "file-names-unestablished"
-# The title directories an emulator's NAND holds, each spelled the way the
-# answer's ``save_id`` hole is filled (``"<hi>/<lo>"``), so a caller whose
-# source knows a game by part of its title id — a Wii disc's low word — can
-# match it here: one entry with that word fills the hole, two leave it
-# ambiguous, and none means no title of that word was ever started on this
-# machine. Dolphin creates a disc's ``title/<hi>/<lo>/data`` the moment it
-# boots the disc, so a started game is listed before it saves anything.
+# The title directories an emulator's NAND or MLC holds, each spelled the way
+# the answer's ``save_id`` hole is filled (``"<hi>/<lo>"``), so a caller whose
+# source knows a game by part of its title id — a Wii disc's or a Wii U
+# title's low word — can match it here: one entry with that word fills the
+# hole, two leave it ambiguous, and none means the emulator never created a
+# directory for a title of that word on this machine. Dolphin creates a disc's
+# ``title/<hi>/<lo>/data`` the moment it boots the disc, so a started game is
+# listed before it saves anything; Cemu creates a title's
+# ``usr/save/<hi>/<lo>`` when the title initialises its save library, before
+# its first save.
 # ``data`` carries the ``dir`` listed, the ``titles`` found there (only the
 # names of the shape the emulator creates, eight lowercase hex digits at both
 # levels), the ``citation`` for that creation, and ``unreadable``: where the
