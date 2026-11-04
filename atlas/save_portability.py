@@ -19,7 +19,9 @@ Beetle-saves switch, LRPS2's card mode, SwanStation's twenty slot
 combinations) arrives through the save answer, never through a reading of
 this module's own. A verdict built on a source holds only where the machine names the build
 the source was read at (D5); elsewhere the part answers ``unestablished`` and
-says why.
+says why. Where a part's layout differs by the kind of cartridge, which atlas
+does not read, the part answers ``unestablished`` and states the verdict for
+each kind (D15, D16).
 """
 
 from __future__ import annotations
@@ -45,7 +47,15 @@ from .portability_codes import (
     CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED,
     CAVEAT_SAVE_FORMAT_UNRECORDED,
     CAVEAT_SAVE_PART_UNESTABLISHED,
+    PART_NO_GAME_DATA,
+    PORTABILITY_CONVERTIBLE,
+    PORTABILITY_NOT_READABLE,
+    PORTABILITY_SAME_DATA,
+    PORTABILITY_SAME_FILES,
+    PORTABILITY_UNESTABLISHED,
+    PORTABILITY_VERDICTS,
     REASON_BUILD_UNREAD,
+    REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
     REASON_NO_CONVERSION_STATED,
     REASON_OTHER_BUILD,
     REASON_TARGET_FILE_UNNAMED,
@@ -53,7 +63,10 @@ from .portability_codes import (
     SIDE_TARGET,
 )
 from .save_formats import (
+    CARTRIDGE_KINDS,
+    CLOCK_CARTRIDGE_KINDS,
     CONVERSION_RULES,
+    MEMORY_CARTRIDGE_CLOCK,
     SAVE_MEMORIES,
     EmulatorFormats,
     PartRule,
@@ -61,7 +74,6 @@ from .save_formats import (
     SystemFormats,
     save_formats,
 )
-
 
 
 class PortabilityEntry(Protocol):
@@ -75,29 +87,6 @@ class PortabilityEntry(Protocol):
 
     @property
     def emulator(self) -> str | None: ...
-
-PortabilityVerdict = Literal["same-files", "same-data", "convertible", "unestablished", "not-readable"]
-PORTABILITY_SAME_FILES: PortabilityVerdict = "same-files"
-"""The target reads the source's files where they lie, under their names: nothing has to move."""
-PORTABILITY_SAME_DATA: PortabilityVerdict = "same-data"
-"""The target reads the same data once it is placed and named as the target's own save answer names it; ``moves``
-says what differs."""
-PORTABILITY_CONVERTIBLE: PortabilityVerdict = "convertible"
-"""The target reads the data only after a conversion a source states; ``conversion`` carries the rule where it is
-plain, and is ``null`` where a program performs it without one."""
-PORTABILITY_UNESTABLISHED: PortabilityVerdict = "unestablished"
-"""Nothing atlas read at a build it confirmed here settles whether the target reads it; the caveats say why."""
-PORTABILITY_NOT_READABLE: PortabilityVerdict = "not-readable"
-"""The target keeps no such part in its live mode, so this part of the save does not carry over."""
-# The verdicts a part and a pair take, from the mildest to the most severe —
-# the order the summary is taken in (#577 D9).
-PORTABILITY_VERDICTS = (
-    PORTABILITY_SAME_FILES,
-    PORTABILITY_SAME_DATA,
-    PORTABILITY_CONVERTIBLE,
-    PORTABILITY_UNESTABLISHED,
-    PORTABILITY_NOT_READABLE,
-)
 
 SaveMove = Literal["directory", "name", "granularity"]
 MOVE_DIRECTORY: SaveMove = "directory"
@@ -448,17 +437,193 @@ def _keeps(target: _Side, part: _Labelled) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class _Judgement:
-    """One part's verdict with what rides it: the moves, why it is unestablished, and the extra citation."""
+    """One part's verdict with what rides it: the moves, why it is unestablished, the verdict per cartridge kind where
+    that is why, and the extra citations."""
 
     verdict: str
     moves: tuple[SaveMove, ...] = ()
     unestablished: str | None = None
-    cited: str | None = None
+    cited: tuple[str, ...] = ()
+    cartridges: tuple[tuple[str, str], ...] = ()
+    other_cartridges: str | None = None
 
 
 def _compressed(side: _Side, part: _Labelled) -> bool:
     """Whether RetroArch wrote this part compressed: its file is RetroArch's and the save answer says it compresses."""
     return part.rule.frontend and any(c.code == CAVEAT_SAVE_FILES_COMPRESSED for c in side.placement.caveats)
+
+
+def _kinds_judged(part: PartRule, twin: PartRule | None, *sides: _Side) -> tuple[str | None, ...]:
+    """The cartridge kinds a part is judged for apart — those either rule names or either side does not run, every
+    clock kind for a clock — and ``None`` for every other kind."""
+    named = {
+        kind
+        for rule in (part, *((twin,) if twin is not None else ()))
+        for kind in (*(kind for kind, _ in rule.kinds), *(kind for group in rule.unread for kind in group.kinds))
+    }
+    named.update(
+        kind
+        for side in sides
+        if side.record is not None
+        for statement in side.record.not_run
+        for kind in statement.kinds
+    )
+    if part.memory == MEMORY_CARTRIDGE_CLOCK:
+        named.update(CLOCK_CARTRIDGE_KINDS)
+    return (*(kind for kind in CARTRIDGE_KINDS if kind in named), None)
+
+
+def _format_judgement(
+    part: _Labelled, twin: _Labelled | None, formats: tuple[str, str | None], *, source: _Side, table: SaveFormats
+) -> _Judgement:
+    """The verdict between the two formats one cartridge kind's part takes on each side."""
+    held, read = formats
+    if twin is None or read is None:
+        # The target keeps no such part, for this kind or at all (#577 D8).
+        return _Judgement(PORTABILITY_NOT_READABLE)
+    if held != read:
+        conversion = table.conversion(held, read)
+        if conversion is not None:
+            return _Judgement(PORTABILITY_CONVERTIBLE, cited=(conversion.citation,))
+        if twin.rule.frontend:
+            # RetroArch loads the file into the target's buffer byte for
+            # byte, so the target reads the source's layout as its own.
+            return _Judgement(PORTABILITY_NOT_READABLE, cited=(table.loads_raw,))
+        return _Judgement(PORTABILITY_UNESTABLISHED, unestablished=REASON_NO_CONVERSION_STATED)
+    if _compressed(source, part) and not twin.rule.frontend:
+        # RetroArch reads its own RZIP stream back and an uncompressed file
+        # too, so a core that RetroArch loads the part for reads it either
+        # way; an emulator that opens the file itself reads compressed bytes.
+        return _Judgement(PORTABILITY_CONVERTIBLE, cited=(table.compressed,))
+    moves = _moves(part.group, twin.group)
+    return _Judgement(PORTABILITY_SAME_DATA, moves) if moves else _Judgement(PORTABILITY_SAME_FILES)
+
+
+@dataclass(frozen=True, slots=True)
+class _KindVerdicts:
+    """A part's verdict for each cartridge kind it was judged for, and what was cited on the way.
+
+    ``empty`` are the kinds the part holds no game data for — no file of the
+    source's, or a clock file a cartridge without a clock still gets (#577
+    D16) — so nothing is lost with them.
+    """
+
+    judged: tuple[tuple[str | None, _Judgement], ...]
+    empty: tuple[str | None, ...]
+    cited: tuple[str, ...]
+
+
+def _by_kind(
+    part: _Labelled, twin: _Labelled | None, *, source: _Side, target: _Side, table: SaveFormats
+) -> _KindVerdicts:
+    """The part's verdict for each kind the source runs and keeps it for — not-readable where the target does not run
+    the kind, and against a target that keeps no such part at all where *twin* is ``None``."""
+    judged: list[tuple[str | None, _Judgement]] = []
+    empty: list[str | None] = []
+    cited: list[str] = []
+    for kind in _kinds_judged(part.rule, twin.rule if twin is not None else None, source, target):
+        unwritten = _not_run(source, kind)
+        if unwritten is not None:
+            # No game of this kind runs on the source's side, so no save of
+            # it exists there to carry.
+            cited.append(unwritten)
+            continue
+        held = part.rule.format_for(kind)
+        if held is None or (part.rule.memory == MEMORY_CARTRIDGE_CLOCK and kind not in CLOCK_CARTRIDGE_KINDS):
+            # The part holds no game data for this kind: the source keeps no
+            # such part for it, or a cartridge of it has no clock (#577 D16).
+            empty.append(kind)
+            continue
+        judged.append((kind, _kind_judgement(part, twin, kind, held, source=source, target=target, table=table)))
+    return _KindVerdicts(tuple(judged), tuple(empty), tuple(cited))
+
+
+def _kind_judgement(
+    part: _Labelled,
+    twin: _Labelled | None,
+    kind: str | None,
+    held: str,
+    *,
+    source: _Side,
+    target: _Side,
+    table: SaveFormats,
+) -> _Judgement:
+    """The verdict for one kind whose part the source holds game data in."""
+    refused = _not_run(target, kind)
+    if refused is not None:
+        # The target does not run such a cartridge, so it reads none of its
+        # save (#577 D15).
+        return _Judgement(PORTABILITY_NOT_READABLE, cited=(refused,))
+    read = twin.rule.format_for(kind) if twin is not None else None
+    unread = part.rule.unread_for(kind) or (twin.rule.unread_for(kind) if twin is not None else None)
+    if read is not None and unread is not None:
+        # No read establishes one side's layout for this kind, so no verdict
+        # is stated for it (#577 D15).
+        return _Judgement(PORTABILITY_UNESTABLISHED, cited=(unread,))
+    mirrors = _mirrors_apart(kind, source, target) if held == read else None
+    if mirrors is not None:
+        # The two keep a write through a mirror at different offsets, and a
+        # kind this small gives every game the chance to (#577 D18).
+        return _Judgement(PORTABILITY_UNESTABLISHED, cited=mirrors)
+    return _format_judgement(part, twin, (held, read), source=source, table=table)
+
+
+def _mirrors_apart(kind: str | None, source: _Side, target: _Side) -> tuple[str, str] | None:
+    """Both sides' mirror statements for *kind* where they handle a mirror write differently, else ``None``."""
+    if kind is None or source.record is None or target.record is None:
+        return None
+    held, read = source.record.mirrors_for(kind), target.record.mirrors_for(kind)
+    if held is None or read is None or held.handling == read.handling:
+        return None
+    return held.citation, read.citation
+
+
+def _not_run(side: _Side, kind: str | None) -> str | None:
+    """The citation saying the side's emulator does not run *kind*, or ``None``."""
+    if kind is None or side.record is None:
+        return None
+    refusal = side.record.does_not_run(kind)
+    return refusal.citation if refusal is not None else None
+
+
+def _over_kinds(verdicts: _KindVerdicts) -> _Judgement:
+    """One judgement for the part from its verdicts per kind (#577 D15, D16).
+
+    Where every kind the part holds game data for answers alike, that is the
+    part's verdict — kept also where some kinds hold none, so long as the files
+    still carry over for them; otherwise the part is unestablished, and what
+    holds per kind — its verdict, or that the part holds no game data for it —
+    rides its caveat.
+    """
+    distinct = {(j.verdict, j.moves, j.unestablished) for _, j in verdicts.judged}
+    cited = tuple(dict.fromkeys((*verdicts.cited, *(c for _, j in verdicts.judged for c in j.cited))))
+    if len(distinct) == 1:
+        first = verdicts.judged[0][1]
+        lossless = first.verdict in (PORTABILITY_SAME_FILES, PORTABILITY_SAME_DATA)
+        if lossless or not verdicts.empty:
+            return _Judgement(
+                first.verdict,
+                moves=first.moves,
+                unestablished=first.unestablished,
+                cited=cited,
+                cartridges=first.cartridges,
+                other_cartridges=first.other_cartridges,
+            )
+    stated = {
+        **{kind: judgement.verdict for kind, judgement in verdicts.judged},
+        **dict.fromkeys(verdicts.empty, PART_NO_GAME_DATA),
+    }
+    other = stated.get(None)
+    cartridges = tuple(
+        (kind, stated[kind]) for kind in CARTRIDGE_KINDS if kind in stated and stated[kind] != other
+    )
+    return _Judgement(
+        PORTABILITY_UNESTABLISHED,
+        unestablished=REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
+        cited=cited,
+        cartridges=cartridges,
+        other_cartridges=other,
+    )
 
 
 def _judged(
@@ -472,27 +637,20 @@ def _judged(
         # not established. Otherwise the target keeps none (#577 D8).
         if _keeps(target, part):
             return _Judgement(PORTABILITY_UNESTABLISHED, unestablished=REASON_TARGET_FILE_UNNAMED)
-        return _Judgement(PORTABILITY_NOT_READABLE)
-    if part.rule.format != twin.rule.format:
-        conversion = table.conversion(part.rule.format, twin.rule.format)
-        if conversion is None:
-            return _Judgement(PORTABILITY_UNESTABLISHED, unestablished=REASON_NO_CONVERSION_STATED)
-        return _Judgement(PORTABILITY_CONVERTIBLE, cited=conversion.citation)
-    if _compressed(source, part) and not twin.rule.frontend:
-        # RetroArch reads its own RZIP stream back and an uncompressed file
-        # too, so a core that RetroArch loads the part for reads it either
-        # way; an emulator that opens the file itself reads compressed bytes.
-        return _Judgement(PORTABILITY_CONVERTIBLE, cited=table.compressed)
-    moves = _moves(part.group, twin.group)
-    return _Judgement(PORTABILITY_SAME_DATA, moves) if moves else _Judgement(PORTABILITY_SAME_FILES)
+    return _over_kinds(_by_kind(part, twin, source=source, target=target, table=table))
 
 
-def _part_unestablished(part: _Labelled, reason: str) -> Caveat:
+def _part_unestablished(part: _Labelled, judgement: _Judgement) -> Caveat:
+    reason = judgement.unestablished or ""
     data: dict[str, DataValue] = {"memory": part.rule.memory}
     slot = part.rule.slot
     if slot is not None:
         data["slot"] = slot
     data["reason"] = reason
+    if reason == REASON_LAYOUT_DIFFERS_BY_CARTRIDGE:
+        data["cartridges"] = dict(judgement.cartridges)
+        if judgement.other_cartridges is not None:
+            data["other_cartridges"] = judgement.other_cartridges
     return Caveat(
         CAVEAT_SAVE_PART_UNESTABLISHED,
         f"whether the target reads the source's {part.rule.memory}{f' {slot}' if slot else ''} is not established "
@@ -514,8 +672,8 @@ def _part(
     else:
         # The build caveat or the unrecorded one already says why.
         judgement = _Judgement(PORTABILITY_UNESTABLISHED)
-    cited = (part.rule.citation, *((twin.rule.citation,) if twin is not None else ()), judgement.cited or "")
-    raised = None if judgement.unestablished is None else _part_unestablished(part, judgement.unestablished)
+    cited = (part.rule.citation, *((twin.rule.citation,) if twin is not None else ()), *judgement.cited)
+    raised = None if judgement.unestablished is None else _part_unestablished(part, judgement)
     return (
         SavePart(
             memory=part.rule.memory,

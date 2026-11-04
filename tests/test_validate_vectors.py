@@ -2935,9 +2935,10 @@ class TestTheSavePortabilityShape:
         with pytest.raises(VectorError, match="moves stand exactly"):
             validate_machines_vector(vector)
 
-    def test_a_not_readable_part_with_a_target_group_is_refused(self):
+    def test_a_not_readable_part_may_name_the_targets_group(self):
+        # A part RetroArch loads as it lies into a layout of the target's own
+        # is lost although the target keeps a file for it, which its group names.
         vector = _portability_vector(self.LOST_CARD)
         parts = vector["expected"]["save_portability"]["parts"]
         parts[1]["target_group"] = parts[0]["target_group"]
-        with pytest.raises(VectorError, match="keeps no group for"):
-            validate_machines_vector(vector)
+        validate_machines_vector(vector)

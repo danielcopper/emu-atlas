@@ -39,8 +39,31 @@ carries its citation, and the answer states it among its sources wherever it set
 silently.
 
 **Two formats.** Where the two records name different formats, a conversion a source states makes the part
-`convertible`; with none stated the part is `unestablished`, with `save-part-unestablished` (`reason`
-`no-conversion-stated`). No unestablished part is left without the caveat that says why.
+`convertible`. With none stated, a target that RetroArch loads the file for (a `frontend` rule) reads it `not-readable`:
+RetroArch copies the file byte for byte into the core's buffer (`save.c:492-541`), so the target reads the source's
+layout as its own. A target that opens the file itself may recognise a layout of another's, so with no conversion stated
+its part is `unestablished`, with `save-part-unestablished` (`reason` `no-conversion-stated`). No unestablished part is
+left without the caveat that says why.
+
+**The cartridge's kind (D15, D16).** atlas reads no cartridge, and on the Game Boy a part's layout can differ by the
+cartridge's kind (`CARTRIDGE_KINDS`, from the header byte 0x147): mGBA packs MBC2 RAM two cells to a byte and appends
+MBC6 flash, SameBoy stores MBC7 EEPROM words low byte first, VBA-M keeps HuC3 and TAMA5 clocks in layouts of its own. A
+record says so per rule (`kinds`: the format for a kind, or `null` where the emulator runs the cartridge and keeps no
+such part), per rule which kinds it runs whose layout no read establishes (`unread`, each with its citation saying why),
+and per system which kinds the emulator does not run at all (`not_run`, each with its citation). In a record that tells
+kinds apart, every kind has exactly one of these statements, and `tests/test_save_formats.py` fails on one that falls
+back to the base format unnamed. A part is judged for every kind either rule names or either side does not run, and for
+every other kind together. An unread kind is `unestablished` for that kind, never folded into the others'. A kind the
+source does not run is skipped, since no save of it exists there to carry; a kind the target does not run is
+`not-readable`, since a verdict that holds for the other games would not hold for that one; either way its citation
+rides the sources. A kind the source keeps no such part for holds no game data there. A cartridge clock exists only on
+the kinds in `CLOCK_CARTRIDGE_KINDS`, so a clock part holds no game data for every other kind either: SameBoy writes its
+clock section for every battery cartridge and TGB Dual and DoubleCherryGB theirs for every game, and Gambatte, Gearboy,
+mGBA and VBA-M write theirs for clock kinds alone, and in both cases nothing of a clockless game is lost (D16). Where
+every kind that holds game data answers alike, and the files carry over or no kind is empty, that is the part's verdict;
+otherwise the part is `unestablished`, and `save-part-unestablished` (`reason` `layout-differs-by-cartridge`) states
+what holds per kind, a word of `CARTRIDGE_STATEMENTS` each — a verdict, or `no-game-data` — in `cartridges`, keyed by
+every kind whose word differs, and in `other_cartridges` for every other kind. Nothing is stated by leaving a key out.
 
 **A file RetroArch compressed.** With `save_file_compression` on, RetroArch writes a file it saves for a core as an RZIP
 stream (`save.c:644-657`), and the save answer says so (`save-files-compressed`). RetroArch reads its own stream back,
@@ -59,14 +82,15 @@ match exactly; elsewhere it answers `unestablished` with `save-format-build-unco
 
 - **A libretro core** — the `library_version` the core probe reads (`Machine.read_core`), the same comparison the
   save-memory records make (`unverified-version`). The pins are the builds `tests/data/core_registrations.json`
-  captured, and `tests/test_save_formats.py` holds them equal.
+  captured, or, for a core whose registration was never captured, the `verified_core` `atlas/data/save_memory.json` pins
+  for each system the record covers; `tests/test_save_formats.py` holds them equal.
 - **A standalone emulator** — the `component_version` RetroDECK's deploy writes beside the binary, which is the
   `release` a save card's pinned build states. EmuDeck and a bare RetroArch deploy no such record, so a standalone
   emulator there is `build-unread`.
 
-A pin that names a release rather than a commit (PCEE2's `v2.9.78`, shared by several of its commits) or a channel
-(DuckStation's `preview`) is confirmed by its string alone, and the answer's sources say so. Searching the deployed
-binary for its stamp at runtime is a question of its own.
+A pin that names a release rather than a commit (PCEE2's `v2.9.78`, shared by several of its commits; Mesen-S's `0.4.0`)
+or a channel (DuckStation's `preview`) is confirmed by its string alone, and the answer's sources say so. Searching the
+deployed binary for its stamp at runtime is a question of its own.
 
 RetroArch's own load of a frontend-written file is cited at a79435a, as every save answer cites it (D7): the file's
 bytes are copied into the core's buffer for that memory id, cut to the buffer where the file is longer
@@ -98,11 +122,49 @@ Beetle-saves switch on. Beetle's `.smpc` is no part: it holds the console's cloc
 which each emulator keeps its own way, so losing it costs no game progress (D13); the record sets it aside with that
 citation, and the answer's sources say so.
 
+## Evidence — Game Boy, Game Boy Color
+
+Every core here hands its save to RetroArch through `RETRO_MEMORY_SAVE_RAM` (`<rom_stem>.srm`) and `RETRO_MEMORY_RTC`
+(`<rom_stem>.rtc`), so every rule is a `frontend` one. A Game Boy Color cartridge is laid out as a Game Boy one, so each
+record states `gbc` as the same as `gb`. The cartridge RAM is one format, `gb-cartridge-ram`, in every record — each
+address one byte at its offset, an MBC2 cell a byte, an MBC7 word high byte first — except where a kind is named; each
+core sizes the image its own way (Gambatte and TGB Dual give a 2 KiB cartridge 8 KiB, Gearboy every MBC3 cartridge 32
+KiB), and RetroArch's load copies what fits (`save.c:523-533`), so the data a game holds carries over. A TAMA5
+cartridge's memory is mGBA's own 32 bytes in its `.srm` (`gb/mbc.c:438-445`, `tama5.c:205-215`); VBA-M keeps it apart
+from any memory id (`gbMemory.cpp:1390-1396`), and TGB Dual's and DoubleCherryGB's TAMA5 writes are empty stubs, so
+their saves hold none of it.
+
+| emulator       | pin                      | cartridge RAM                                                                                                                                                                                                                                                                                                                  | clock                                                                                                                      | does not run                                    |
+| -------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Gambatte       | `v0.5.0-netlink 6924c76` | `rambankdata`, mapped straight onto the window (`cartridge_libretro.cpp:43-56`, `cartridge.cpp:589-607`)                                                                                                                                                                                                                       | 8-byte base time, MBC3 timer and HuC3 only (`cartridge_libretro.cpp:30-41`, `:58-80`)                                      | MMM01, MBC6, MBC7, TPP1, Pocket Camera, TAMA5   |
+| SameBoy        | `1.0.2 be2c352`          | `mbc_ram`, MBC2 mirrored (`mbc.c:207-235`, `memory.c:454`, `:1293`); MBC7 words low byte first (`memory.c:1142`, `:1159-1203`)                                                                                                                                                                                                 | its `rtc` section, every battery cartridge (`libretro.c:1690-1693`, `:1763-1766`, `gb.h:554-559`)                          | MBC6, TAMA5                                     |
+| Gearboy        | `3.7.4-8-g37c21f7`       | the rule's RAM banks (`MBC1MemoryRule.cpp:246-249`, `MBC2MemoryRule.cpp:120-140`, `MBC3MemoryRule.cpp:374-377`, `MBC5MemoryRule.cpp:189-192`); a Pocket Camera as an MBC3, its first four banks alone (`Cartridge.cpp:362-365`, `MBC3MemoryRule.cpp:165-176`); MBC3 banks 0-3 only, so no MBC30 (`MBC3MemoryRule.cpp:172-181`) | VBA-M's MBC3 layout with a 32-bit time and a zeroed pad (`MBC3MemoryRule.h:25-39`, `.cpp:40-64`)                           | MMM01, MBC6, MBC7, TPP1, TAMA5, HuC3            |
+| TGB Dual       | `v0.8.3 933707c`         | `sram` (`rom.cpp:53-57`, `cpu.cpp:141`, `:184`); MBC7 words high byte first (`mbc.cpp:230-231`)                                                                                                                                                                                                                                | a 4-byte dword, every game (`libretro.cpp:493-496`, `dmy_renderer.h:40`)                                                   | MBC6, TPP1, Pocket Camera                       |
+| DoubleCherryGB | `v0.17.0 5dbc8c9`        | TGB Dual's (`cpu.cpp:168`, `:216`, `mbc.cpp:255-256`)                                                                                                                                                                                                                                                                          | TGB Dual's, every game (`libretro.cpp:434-436`, `dmy_renderer.h:237`)                                                      | MBC6, TPP1, Pocket Camera                       |
+| Mesen-S        | `0.4.0` (9e4fdeb)        | the cartridge's RAM, MBC2 mirrored (`GameboyHeader.h:29-45`, `GbMbc2.h:34`, `:54`); MBC3 RAM bank n at byte offset n, so banks past the first overlap (`GbMbc3.h:36`, `GbMemoryManager.cpp:107-117`)                                                                                                                           | none                                                                                                                       | every kind but plain, MBC1, MBC2, MBC3 and MBC5 |
+| mGBA           | `0.11-dev c758314`       | `sramSize` (`gb/mbc.c:277-304`); MBC2 packed two cells to a byte (`gb/mbc/mbc.c:123-174`), MBC6 flash appended (`gb/mbc.c:414-421`)                                                                                                                                                                                            | VBA-M's MBC3 layout, MBC3 timer only, none for HuC3 and TAMA5 (`libretro.c:2357-2366`, `mbc.h:34-46`)                      | TPP1                                            |
+| VBA-M          | `2.2.3 d0787ae`          | `gbRam` (`gbCartData.cpp:446-465`, `gbMemory.cpp:258-267`); MBC7 words high byte first (`gbMemory.cpp:701-702`); no Pocket Camera RAM, which gets no battery (`gbCartData.cpp:380-382`), and no TAMA5 memory                                                                                                                   | MBC3: ten registers and a 64-bit time; TAMA5 and HuC3 in layouts of its own (`libretro.cpp:166-216`, `gbMemory.h:206-208`) | MBC6, TPP1                                      |
+
+What follows for the pairs: the cartridge RAM carries over in place between two of these cores for MBC1, MBC2 and MBC5
+cartridges, except toward or from mGBA for MBC2 and between two cores that keep a mirror write differently (D18), for
+MBC3 cartridges between the cores that bank them alike (all but Gearboy, which stops at bank 3 where an MBC30 goes to 7,
+and Mesen-S, which maps bank n at byte offset n), and for a cartridge with RAM and no mapper where both records read it;
+it does not toward or from mGBA for an MBC6 or TAMA5 cartridge, toward or from Gearboy for a Pocket Camera, or between
+SameBoy and the cores that store MBC7 words high byte first for an MBC7 one; a kind the source runs and the target does
+not is not readable for it; and a kind either record runs without a read of its layout — HuC1 and HuC3 on every core
+that runs them, MMM01 on SameBoy, mGBA, VBA-M, TGB Dual and DoubleCherryGB, MBC5 with rumble on Gambatte, Gearboy,
+Mesen-S and mGBA, and the rest each record's `unread` names — is unestablished. Gearboy, mGBA and VBA-M share the MBC3
+clock; TGB Dual and DoubleCherryGB share theirs; every other pair of clocks does not carry over for a clock cartridge
+and holds nothing for the rest (D16). Those parts answer `unestablished` with each kind's word stated, so nearly every
+Game Boy pair does until the cartridge's kind is read.
+
 ## Known limits
 
-- **Kronos's cartridge on a declared answer.** With the Beetle-saves switch on, Kronos always puts a 4 Mbit cartridge in
-  at `<stem>.bcr` (`libretro.c:1301-1305`), and its card lists that file only as an observation candidate. Before the
-  file exists the part is `unestablished`; once it is on disk it is judged.
+- **Kronos's cartridge on a declared answer.** With the Beetle-saves switch on, Kronos names a 4 Mbit cartridge at
+  `<stem>.bcr` (`libretro.c:1301-1305`), but the emulator's own game table replaces the cartridge for the discs it lists
+  (`DBLookup`, `ctrl/src/yabause.c:392-393`, `utils/src/db.c:14-47` and `:57-79` at 6709c1d), and atlas reads no disc.
+  So the card keeps the file an observation candidate: before it exists the cartridge part is `unestablished`, and once
+  it is on disk it is judged.
 - **PCEE2's folder cards.** PCEE2's build opens a directory at a slot's path as a folder card (`FileMcd_SetType`,
   `pcsx2/SIO/Memcard/MemoryCardFile.cpp:584-604` at 340ce04), and its save answer names that path as a file card, so its
   record has no folder rule; a folder card toward PCEE2 answers by the file card its answer names, `convertible` (D14).
@@ -110,5 +172,31 @@ citation, and the answer's sources say so.
 - **What a save answer cannot label.** PCSX2's multitap slots and PCEE2's card folder that cannot be listed (or that a
   standalone `PCSX2.ini` governs) state groups no record names, and the pair says `save-format-unrecorded` rather than
   guessing.
-- **Coverage.** The records cover psx, ps2, saturn and saturnjp. Every other pair answers `unestablished` with
-  `save-format-unrecorded` until its records land: Game Boy next, then the Nintendo DS, GameCube and Wii.
+- **The kinds no read establishes.** MBC1 and MBC5 cartridges are the plain bank image every record's citation
+  describes, at bank n × 0x2000, and no record names them. Every kind of the vocabulary a record's emulator runs has a
+  cited statement, and every Game Boy record is held to it; where it is `unread` — HuC1 and HuC3 on every core that runs
+  them, MMM01 on SameBoy, mGBA, VBA-M, TGB Dual and DoubleCherryGB (the last two run it for one title the code names), a
+  cartridge with RAM and no mapper on Gambatte, mGBA and VBA-M, an MBC5 cartridge with rumble on Gambatte, Gearboy,
+  Mesen-S and mGBA (whose bank select can keep the motor bit), MBC3 with and without a clock on Gearboy (no MBC30 banks)
+  and Mesen-S (banks past the first overlap), the Pocket Camera on SameBoy and mGBA and TPP1 on SameBoy — the kind is
+  `unestablished` until its banking is read and compared.
+- **A write through a mirror.** A small cartridge RAM is mirrored over the RAM window, and a game that writes through a
+  mirror leaves its byte at a different offset depending on the core: SameBoy and Mesen-S fold it onto the RAM, and mGBA
+  for MBC2 only, Gambatte, TGB Dual and DoubleCherryGB keep it at its window offset, Gearboy and VBA-M drop it for MBC2
+  (and Gearboy keeps it past a 2 KiB RAM's end). Every MBC2 cartridge is that small, so each record states its `mirrors`
+  handling and `mbc2` is `unestablished` between two that differ (D18). A 2 KiB RAM on another mapper is told only by
+  the header's RAM size byte (0x149), which the issue that reads the cartridge's kind reads too; until then it is the
+  one stated exception to D15 among these limits: the non-folding cores for it (Gambatte, TGB Dual, DoubleCherryGB,
+  Gearboy, VBA-M, and mGBA, which keeps a 2 KiB RAM in an 8 KiB image written at `address & 0x1FFF`, `gb/mbc.c:293-296`
+  and `gb/memory.c:386`) and the folding ones are answered alike for it, and no game is known to write through such a
+  mirror.
+- **RetroArch-written saves are always declared.** D10 reads the parts off the save answer, and for a core RetroArch
+  writes the save for, that answer names the files its memory ids give whether or not they are on disk: it states no
+  observed set to tell a game with a `.rtc` from one without. So a Game Boy pair always lists the clock part, and states
+  for the kinds without a clock that it holds no game data (D16).
+- **bsnes.** bsnes runs a Game Boy cartridge through its Super Game Boy and writes `<rom_stem>.srm` itself, the
+  cartridge RAM with a 48-byte clock after it for a clock cartridge, by the SameBoy copy it carries. Its pin names the
+  release `115` alone, and the revision its card was read at is not the one these lines were read at, so no record
+  states it yet and its pairs say `save-format-unrecorded`.
+- **Coverage.** The records cover psx, ps2, saturn, saturnjp, gb and gbc. Every other pair answers `unestablished` with
+  `save-format-unrecorded` until its records land: the Nintendo DS, GameCube and Wii next.

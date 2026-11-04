@@ -1880,14 +1880,24 @@ and the evidence behind every record are in `docs/research/save-portability.md`.
   card spells for it (holes match whatever filled them), optionally the `modes` it speaks for (a pattern over the save
   answer's live mode), a `reading` whose value names the file where the answer states one, and `folder` for a card kept
   as a directory, and `frontend` for a file RetroArch writes for the core through a memory id — the files RetroArch's
-  `save_file_compression` turns into RZIP streams, whose citation `retroarch.compressed` states once. Its `citation`
-  names the revision it was read at, and the loader refuses one that does not. `ignore` sets aside what of the save
-  answer is no part of a game's save on the system — a directory (`dir_suffix`) or files by name (`names`), exactly one
-  of the two — with its citation, which the answer states among its sources.
+  `save_file_compression` turns into RZIP streams, whose citation `retroarch.compressed` states once, and that RetroArch
+  loads byte for byte into the core's buffer, which `retroarch.loads_raw` cites. Its `citation` names the revision it
+  was read at, and the loader refuses one that does not. Where the part is kept differently for some kinds of cartridge
+  (closed: `CARTRIDGE_KINDS`), `kinds` maps each such kind to its format, or to `null` where the emulator runs the
+  cartridge and keeps no such part; `format` is then the format for every other kind, and `null` where the part exists
+  for the named kinds alone. A clock part names only kinds in `CLOCK_CARTRIDGE_KINDS`. `ignore` sets aside what of the
+  save answer is no part of a game's save on the system — a directory (`dir_suffix`) or files by name (`names`), exactly
+  one of the two — with its citation, which the answer states among its sources. `unread` names, with a citation saying
+  why, the kinds the emulator runs whose layout for the part no read establishes; the answer judges them unestablished.
+  `not_run` names the cartridge kinds the emulator does not run at all, each list with its citation: as the source it
+  has no save of them to carry, as the target it reads none. `mirrors` states, per list of kinds with its citation, how
+  the emulator keeps a write through a mirror of a small RAM (`folds`, `stores-unfolded` or `drops`); two records that
+  differ leave those kinds unestablished.
 
-`tests/test_save_formats.py` holds each core's pins to the build `tests/data/core_registrations.json` captured and each
-standalone emulator's to its save card's pinned release, and holds every file a covered core's card spells to a rule
-that claims it — so a recaptured core or an edited card fails until its record is read again.
+`tests/test_save_formats.py` holds each core's pins to the build `tests/data/core_registrations.json` captured — or, for
+a core whose registration was never captured, to the `verified_core` `save_memory.json` pins — and each standalone
+emulator's to its save card's pinned release, and holds every file a covered core's card spells, or its memory ids give,
+to a rule that claims it — so a recaptured core or an edited card fails until its record is read again.
 
 ## `core_declarations.json` — the declaration of a core shipped without its `.info`
 

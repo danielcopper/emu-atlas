@@ -254,7 +254,8 @@ from .oddities import (
     lookup_card,
 )
 from .save_memory import SaveMemoryRecord, SystemMemory, lookup_save_memory
-from .save_portability import PORTABILITY_VERDICTS, SavePart, portability_answer
+from .portability_codes import PORTABILITY_VERDICTS
+from .save_portability import SavePart, portability_answer
 from .squashfs import zstd_provider
 from .textures import (
     XDG_CONFIG,

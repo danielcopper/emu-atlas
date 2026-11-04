@@ -1622,6 +1622,8 @@ class TestTheDataRegistryReading:
             ("entry-label-unknown", "side"): "PORTABILITY_SIDES",
             ("save-format-build-unconfirmed", "reason"): "BUILD_UNCONFIRMED_REASONS",
             ("save-part-unestablished", "reason"): "PART_UNESTABLISHED_REASONS",
+            ("save-part-unestablished", "cartridges"): "CARTRIDGE_STATEMENTS",
+            ("save-part-unestablished", "other_cartridges"): "CARTRIDGE_STATEMENTS",
         }
 
     def test_contents_alone_do_not_identify_a_name(self) -> None:

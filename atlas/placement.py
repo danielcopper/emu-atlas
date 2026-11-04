@@ -79,10 +79,12 @@ from .portability_codes import (
     CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED,
     CAVEAT_SAVE_FORMAT_UNRECORDED,
     CAVEAT_SAVE_PART_UNESTABLISHED,
+    CARTRIDGE_STATEMENTS,
     PART_UNESTABLISHED_REASONS,
     PORTABILITY_SIDES,
 )
 from .retroarch_cfg import CFG_LAYER_KINDS, CFG_LAYER_OVERRIDE_KINDS, RetroArchCfg
+from .save_formats import CARTRIDGE_KINDS
 from .standalone_saves import REDIRECT_VIAS, SaveRedirect
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
@@ -2310,7 +2312,20 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         },
         (CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED, "reason"): BUILD_UNCONFIRMED_REASONS,
         (CAVEAT_SAVE_PART_UNESTABLISHED, "reason"): PART_UNESTABLISHED_REASONS,
+        # What holds per cartridge kind where a part's layout differs by it
+        # (#577 D15, D16): a mapping keyed by the kind, whose mapped words are
+        # a verdict or that the part holds no game data for it.
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "cartridges"): CARTRIDGE_STATEMENTS,
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "other_cartridges"): CARTRIDGE_STATEMENTS,
     }
+)
+
+
+# The ``(code, key)`` pairs whose value is a mapping keyed by a closed
+# vocabulary, and that vocabulary: there the KEYS are words too, checked at
+# construction beside the mapped words :data:`ENUMERATED_DATA` closes.
+ENUMERATED_DATA_KEYS: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
+    {(CAVEAT_SAVE_PART_UNESTABLISHED, "cartridges"): CARTRIDGE_KINDS}
 )
 
 
@@ -2325,6 +2340,7 @@ def _check_enumerations(what: str, code: str, data: "Mapping[str, DataValue]") -
     are said about and are left alone.
     """
     for key, value in data.items():
+        _check_enumerated_keys(what, code, key, value)
         allowed = ENUMERATED_DATA.get((code, key))
         if allowed is None:
             continue
@@ -2333,6 +2349,16 @@ def _check_enumerations(what: str, code: str, data: "Mapping[str, DataValue]") -
                 raise ValueError(
                     f"{what}: {code}.{key} must be one of {list(allowed)}, got {stated!r}"
                 )
+
+
+def _check_enumerated_keys(what: str, code: str, key: str, value: "DataValue") -> None:
+    """Refuse a mapping key outside the vocabulary :data:`ENUMERATED_DATA_KEYS` names for its ``(code, key)``."""
+    subjects = ENUMERATED_DATA_KEYS.get((code, key))
+    if subjects is None or not isinstance(value, Mapping):
+        return
+    stray = next((subject for subject in value if subject not in subjects), None)
+    if stray is not None:
+        raise ValueError(f"{what}: {code}.{key} keys must be drawn from {list(subjects)}, got {stray!r}")
 
 
 def _stated_words(value: "DataValue") -> tuple[str, ...]:

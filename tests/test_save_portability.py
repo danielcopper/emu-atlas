@@ -24,6 +24,7 @@ from atlas.placement import (
     GRANULARITY_PER_GAME_FILE,
     GRANULARITY_PER_GAME_FILES,
     GRANULARITY_SHARED_CARD,
+    ROLE_BATTERY,
     ROLE_MEMORY_CARD,
     ROLE_UNKNOWN,
     ROOT_SAVEFILE_DIRECTORY,
@@ -35,6 +36,7 @@ from atlas.placement import (
     Unresolved,
 )
 from atlas.portability_codes import (
+    PART_NO_GAME_DATA,
     CAVEAT_ENTRY_LABEL_UNKNOWN,
     CAVEAT_SAVE_PART_UNESTABLISHED,
     CAVEAT_SAVE_ANSWER_UNRESOLVED,
@@ -68,14 +70,20 @@ class _Entry:
     emulator: str | None
 
 
-def _rule(memory: str, slot: str | None, fmt: str, names: list[str], **extra: object) -> dict[str, object]:
+def _rule(memory: str, slot: str | None, fmt: str | None, names: list[str], **extra: object) -> dict[str, object]:
     return {"memory": memory, "slot": slot, "format": fmt, "names": names, "citation": "[V] x.c:1 at abc1234", **extra}
 
 
-def _record(kind: str, parts: list[dict[str, object]], *, names: str = "commit", ignore=None) -> dict[str, object]:
+def _record(
+    kind: str, parts: list[dict[str, object]], *, names: str = "commit", ignore=None, not_run=None, mirrors=None
+) -> dict[str, object]:
     system: dict[str, object] = {"parts": parts}
     if ignore:
         system["ignore"] = ignore
+    if not_run:
+        system["not_run"] = not_run
+    if mirrors:
+        system["mirrors"] = [{"kinds": ["mbc2"], "handling": mirrors, "citation": f"[V] {mirrors}.c:1"}]
     return {
         "kind": kind,
         "build": {"pins": ["1.0 abc1234"], "names": names, "revision": "abc1234", "citation": "c"},
@@ -89,10 +97,16 @@ def _table(emulators: dict[str, object], conversions=()) -> SaveFormats:
             {
                 "schema": 1,
                 "spec": "s",
-                "formats": {"card": "a card", "folder": "a folder card", "other": "another layout"},
+                "formats": {
+                    "card": "a card",
+                    "folder": "a folder card",
+                    "other": "another layout",
+                    "clock": "a clock",
+                    "own-clock": "another clock",
+                },
                 "conversions": list(conversions),
                 "emulators": emulators,
-                "retroarch": {"compressed": "[V] save.c:644-657 at a79435a"},
+                "retroarch": {"compressed": "[V] save.c:644-657 at a79435a", "loads_raw": "[V] save.c:492-541 at a79435a"},
             }
         )
     )
@@ -236,6 +250,280 @@ class TestFormats:
         assert answer.parts[0].verdict == PORTABILITY_UNESTABLISHED
         assert [(c.code, dict(c.data)) for c in answer.caveats] == [
             (CAVEAT_SAVE_PART_UNESTABLISHED, {"memory": "memory-card", "slot": "1", "reason": "no-conversion-stated"})
+        ]
+
+
+    def test_another_format_retroarch_loads_as_it_lies_is_not_readable(self):
+        # RetroArch copies a file it keeps for a core into the core's buffer
+        # byte for byte, so the target reads another layout as its own.
+        other = [_rule("memory-card", "1", "other", ["<rom_stem>.srm"], frontend=True)]
+        card = [_rule("memory-card", "1", "card", ["<rom_stem>.srm"], frontend=True)]
+        table = _table({"src": _record("libretro", other), "dst": _record("libretro", card)})
+        answer = _answer(_placement(_group("Game.srm")), _placement(_group("Game.srm")), table)
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_NOT_READABLE, ())
+        assert "[V] save.c:492-541 at a79435a" in answer.sources
+
+
+RAM = "cartridge-ram"
+CLOCK = "cartridge-clock"
+PACKED = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True, kinds={"mbc2": "other"})]
+PLAIN = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True)]
+
+
+def _cartridge_caveats(answer) -> list[dict[str, object]]:
+    return [
+        {key: dict(value) if key == "cartridges" else value for key, value in c.data.items()}
+        for c in answer.caveats
+        if c.code == CAVEAT_SAVE_PART_UNESTABLISHED
+    ]
+
+
+def _games(
+    source_rules,
+    target_rules,
+    *,
+    source_not_run=None,
+    target_not_run=None,
+    target_files=("Game.srm",),
+    mirrors=(None, None),
+):
+    """A Game Boy-like pair: the source wrote what its rules name, the target's answer names *target_files*."""
+    table = _table(
+        {
+            "src": _record("libretro", source_rules, not_run=source_not_run, mirrors=mirrors[0]),
+            "dst": _record("libretro", target_rules, not_run=target_not_run, mirrors=mirrors[1]),
+        }
+    )
+    written = ("Game.srm", "Game.rtc") if any(rule["memory"] == CLOCK for rule in source_rules) else ("Game.srm",)
+    source = _placement(*(_group(name, role=ROLE_BATTERY) for name in written))
+    target = _placement(*(_group(name, role=ROLE_BATTERY) for name in target_files))
+    return _answer(source, target, table)
+
+
+class TestAPartWhoseLayoutDiffersByTheCartridgesKind:
+    """#577 D15: atlas reads no cartridge, so a verdict that depends on its kind is stated per kind."""
+
+    def test_a_kind_laid_out_another_way_leaves_the_part_unestablished_with_each_kinds_verdict(self):
+        answer = _games(PACKED, PLAIN)
+        assert answer.parts[0].verdict == PORTABILITY_UNESTABLISHED
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": RAM,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc2": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PORTABILITY_SAME_FILES,
+            }
+        ]
+
+    def test_two_records_that_lay_every_kind_out_alike_keep_the_plain_verdict(self):
+        answer = _games(PACKED, PACKED)
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_SAME_FILES, ())
+
+    def test_a_kind_the_target_does_not_run_is_not_readable_and_its_citation_rides_the_sources(self):
+        # A same-files verdict would not hold for a game of that kind, which the
+        # target does not run (#577 D15) — even where the two layouts agree.
+        refused = [{"kinds": ["mbc7"], "citation": "[V] loader.c:9 at abc1234"}]
+        answer = _games(PLAIN, PLAIN, target_not_run=refused)
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": RAM,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc7": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PORTABILITY_SAME_FILES,
+            }
+        ]
+        assert "[V] loader.c:9 at abc1234" in answer.sources
+
+    def test_a_kind_whose_verdict_is_every_other_kinds_is_not_listed_apart(self):
+        named = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True, kinds={"mbc2": "other", "mbc7": "card"})]
+        assert _cartridge_caveats(_games(named, PLAIN))[0]["cartridges"] == {"mbc2": PORTABILITY_NOT_READABLE}
+
+    def test_a_kind_the_source_keeps_no_such_part_for_holds_no_game_data(self):
+        # VBA-M's TAMA5 memory rides no memory id, so its .srm holds none of it:
+        # nothing of such a game is lost, and beside a kind that differs the
+        # answer says so (#577 D16).
+        none_for_tama5 = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True, kinds={"tama5": None})]
+        assert _cartridge_caveats(_games(none_for_tama5, PACKED)) == [
+            {
+                "memory": RAM,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc2": PORTABILITY_NOT_READABLE, "tama5": PART_NO_GAME_DATA},
+                "other_cartridges": PORTABILITY_SAME_FILES,
+            }
+        ]
+
+    def test_a_kind_that_holds_no_game_data_keeps_a_verdict_that_carries_the_rest_over(self):
+        none_for_tama5 = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True, kinds={"tama5": None})]
+        answer = _games(none_for_tama5, PLAIN)
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_SAME_FILES, ())
+
+    def test_a_cartridge_kind_outside_the_vocabulary_is_refused_at_construction(self):
+        with pytest.raises(ValueError, match="keys must be drawn from"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"cartridges": {"mbc4": PORTABILITY_SAME_FILES}})
+
+    def test_a_word_per_kind_outside_the_statements_is_refused_at_construction(self):
+        with pytest.raises(ValueError, match="must be one of"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"cartridges": {"mbc2": "lost"}})
+        with pytest.raises(ValueError, match="must be one of"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"other_cartridges": "lost"})
+
+    def test_a_kind_whose_layout_no_read_establishes_is_unestablished_for_it(self):
+        # Never folded into every other kind's verdict (#577 D15): the plain
+        # image of the other kinds says nothing about one nobody read.
+        unread = [{**PLAIN[0], "unread": [{"kinds": ["huc1"], "citation": "[O] mapper.c at abc1234"}]}]
+        answer = _games(PLAIN, unread)
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": RAM,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"huc1": PORTABILITY_UNESTABLISHED},
+                "other_cartridges": PORTABILITY_SAME_FILES,
+            }
+        ]
+        assert "[O] mapper.c at abc1234" in answer.sources
+
+    def test_two_records_that_keep_a_mirror_write_apart_leave_the_small_kind_unestablished(self):
+        # The same layout, but a game writing through a mirror of MBC2's 512
+        # cells lands elsewhere in each file (#577 D18).
+        named = [{**PLAIN[0], "kinds": {"mbc2": "card"}}]
+        answer = _games(named, named, mirrors=("folds", "stores-unfolded"))
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": RAM,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc2": PORTABILITY_UNESTABLISHED},
+                "other_cartridges": PORTABILITY_SAME_FILES,
+            }
+        ]
+        assert {"[V] folds.c:1", "[V] stores-unfolded.c:1"} <= set(answer.sources)
+
+    def test_two_records_that_keep_a_mirror_write_alike_keep_the_plain_verdict(self):
+        named = [{**PLAIN[0], "kinds": {"mbc2": "card"}}]
+        answer = _games(named, named, mirrors=("drops", "drops"))
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_SAME_FILES, ())
+
+    def test_a_layout_that_differs_anyway_is_not_readable_whatever_the_mirrors(self):
+        answer = _games(PACKED, PLAIN, mirrors=("folds", "drops"))
+        assert _cartridge_caveats(answer)[0]["cartridges"] == {"mbc2": PORTABILITY_NOT_READABLE}
+
+    def test_a_kind_the_source_does_not_run_is_skipped(self):
+        # No save of that kind exists on the source's side to carry.
+        refused = [{"kinds": ["mbc2"], "citation": "[V] loader.c:9 at abc1234"}]
+        answer = _games(PLAIN, PACKED, source_not_run=refused)
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_SAME_FILES, ())
+        assert "[V] loader.c:9 at abc1234" in answer.sources
+
+
+EVERY_GAME_CLOCK = _rule(CLOCK, None, "clock", ["<rom_stem>.rtc"], frontend=True)
+TIMER_CLOCK = _rule(CLOCK, None, None, ["<rom_stem>.rtc"], frontend=True, kinds={"mbc3-timer": "clock"})
+OWN_TIMER_CLOCK = _rule(CLOCK, None, None, ["<rom_stem>.rtc"], frontend=True, kinds={"mbc3-timer": "own-clock"})
+NO_OTHER_CLOCK_KIND = [{"kinds": ["huc3", "tama5", "tpp1"], "citation": "[V] loader.c:9 at abc1234"}]
+
+
+class TestAClockOnlySomeCartridgesHave:
+    """#577 D16: a clock file a cartridge without a clock still gets holds no game data, so nothing is lost with it."""
+
+    def test_a_clock_written_for_every_game_and_lost_for_clock_cartridges_is_unestablished(self):
+        answer = _games(
+            [*PLAIN, EVERY_GAME_CLOCK],
+            [*PLAIN, OWN_TIMER_CLOCK],
+            source_not_run=NO_OTHER_CLOCK_KIND,
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert [p.verdict for p in answer.parts] == [PORTABILITY_SAME_FILES, PORTABILITY_UNESTABLISHED]
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": CLOCK,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc3-timer": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PART_NO_GAME_DATA,
+            }
+        ]
+
+    def test_a_clock_written_for_every_game_that_carries_over_where_it_matters_is_the_same_files(self):
+        answer = _games(
+            [*PLAIN, EVERY_GAME_CLOCK],
+            [*PLAIN, EVERY_GAME_CLOCK],
+            source_not_run=NO_OTHER_CLOCK_KIND,
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert ([p.verdict for p in answer.parts], answer.caveats) == ([PORTABILITY_SAME_FILES] * 2, ())
+
+    def test_a_clock_written_for_clock_cartridges_alone_holds_nothing_for_the_rest(self):
+        # The source writes no clock for a cartridge without one, so for those
+        # games nothing is lost and the lost clock is not every game's (#577 D16).
+        answer = _games(
+            [*PLAIN, TIMER_CLOCK],
+            [*PLAIN, OWN_TIMER_CLOCK],
+            source_not_run=NO_OTHER_CLOCK_KIND,
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert [p.verdict for p in answer.parts] == [PORTABILITY_SAME_FILES, PORTABILITY_UNESTABLISHED]
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": CLOCK,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc3-timer": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PART_NO_GAME_DATA,
+            }
+        ]
+
+    def test_a_target_with_no_clock_at_all_loses_only_the_clock_cartridges_clock(self):
+        answer = _games([*PLAIN, EVERY_GAME_CLOCK], PLAIN, source_not_run=NO_OTHER_CLOCK_KIND)
+        assert answer.parts[1].target_group is None
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": CLOCK,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc3-timer": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PART_NO_GAME_DATA,
+            }
+        ]
+
+    def test_two_clocks_written_for_every_game_are_judged_for_each_clock_kind(self):
+        # Neither rule names a kind, and the clock kinds are still told apart
+        # from every other kind, whose file holds no game data.
+        own = {**EVERY_GAME_CLOCK, "format": "own-clock"}
+        answer = _games(
+            [*PLAIN, EVERY_GAME_CLOCK],
+            [*PLAIN, own],
+            source_not_run=NO_OTHER_CLOCK_KIND,
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert _cartridge_caveats(answer)[0]["cartridges"] == {"mbc3-timer": PORTABILITY_NOT_READABLE}
+
+    def test_a_target_that_opens_its_file_and_keeps_no_clock_for_a_kind_does_not_read_it(self):
+        # No clock kept for the kind is not a layout the target might still
+        # recognise: it is no part to read, whoever opens the file.
+        timer_only = {**TIMER_CLOCK, "kinds": {"mbc3-timer": "clock", "huc3": None}, "frontend": False}
+        both = _rule(CLOCK, None, None, ["<rom_stem>.rtc"], frontend=True, kinds={"mbc3-timer": "clock", "huc3": "clock"})
+        answer = _games(
+            [*PLAIN, both],
+            [*PLAIN, timer_only],
+            source_not_run=[{"kinds": ["tama5", "tpp1"], "citation": "c"}],
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert _cartridge_caveats(answer)[0]["cartridges"] == {
+            "mbc3-timer": PORTABILITY_SAME_FILES,
+            "huc3": PORTABILITY_NOT_READABLE,
+        }
+
+    def test_a_kind_the_target_runs_and_keeps_no_clock_for_is_not_readable_for_that_kind(self):
+        both = _rule(CLOCK, None, None, ["<rom_stem>.rtc"], frontend=True, kinds={"mbc3-timer": "clock", "huc3": "clock"})
+        timer_only = {**TIMER_CLOCK, "kinds": {"mbc3-timer": "clock", "huc3": None}}
+        answer = _games(
+            [*PLAIN, both],
+            [*PLAIN, timer_only],
+            source_not_run=[{"kinds": ["tama5", "tpp1"], "citation": "c"}],
+            target_files=("Game.srm", "Game.rtc"),
+        )
+        assert _cartridge_caveats(answer) == [
+            {
+                "memory": CLOCK,
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {"mbc3-timer": PORTABILITY_SAME_FILES, "huc3": PORTABILITY_NOT_READABLE},
+                "other_cartridges": PART_NO_GAME_DATA,
+            }
         ]
 
 
