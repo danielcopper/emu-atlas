@@ -1624,6 +1624,8 @@ class TestTheDataRegistryReading:
             ("save-part-unestablished", "reason"): "PART_UNESTABLISHED_REASONS",
             ("save-part-unestablished", "cartridges"): "CARTRIDGE_STATEMENTS",
             ("save-part-unestablished", "other_cartridges"): "CARTRIDGE_STATEMENTS",
+            ("save-part-unestablished", "source_length"): "SAVE_LENGTH_RULES",
+            ("save-part-unestablished", "target_length"): "SAVE_LENGTH_RULES",
         }
 
     def test_contents_alone_do_not_identify_a_name(self) -> None:

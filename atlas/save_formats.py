@@ -46,7 +46,8 @@ MEMORY_INTERNAL_BACKUP_RAM: SaveMemory = "internal-backup-ram"
 MEMORY_CARTRIDGE_BACKUP_RAM: SaveMemory = "cartridge-backup-ram"
 """A backup memory cartridge plugged into the console beside the game, such as a Saturn backup cartridge."""
 MEMORY_CARTRIDGE_RAM: SaveMemory = "cartridge-ram"
-"""The game cartridge's own battery-backed save memory, such as a Game Boy cartridge's RAM or EEPROM."""
+"""The game cartridge's own save memory, such as a Game Boy cartridge's battery-backed RAM or EEPROM, or the EEPROM,
+FRAM or flash on a DS game card."""
 MEMORY_CARTRIDGE_CLOCK: SaveMemory = "cartridge-clock"
 """The game cartridge's real-time clock. Only a cartridge of a kind in :data:`CLOCK_CARTRIDGE_KINDS` has one; for
 every other kind a clock part holds no game data, so nothing of the game is lost with it (#577 D16)."""
@@ -130,6 +131,19 @@ MIRRORS_DROPPED: MirrorHandling = "drops"
 # of which is that small is not established between them.
 MIRROR_HANDLINGS = (MIRRORS_FOLD, MIRRORS_STORED_UNFOLDED, MIRRORS_DROPPED)
 
+SaveLengthRule = Literal["rom-list", "written-extent"]
+LENGTH_ROM_LIST: SaveLengthRule = "rom-list"
+"""The save is as long as the save type a ROM list built into the emulator gives the game's code, as a melonDS build
+sizes a DS card's save; the list differs between builds, so the build's revision is stated beside it."""
+LENGTH_WRITTEN_EXTENT: SaveLengthRule = "written-extent"
+"""The save grows as far as the game writes, padded to the emulator's next size, and the file states its own length,
+as DeSmuME keeps a DS card's save in its .dsv."""
+# What decides how long an emulator keeps a part per game (#577 D19), the
+# vocabulary of a record's ``length.rule`` and of the ``source_length`` and
+# ``target_length`` a part's caveat states. It grows only with rules a record
+# names.
+SAVE_LENGTH_RULES = (LENGTH_ROM_LIST, LENGTH_WRITTEN_EXTENT)
+
 # The kinds that can carry a clock. A cartridge-clock part holds game data for
 # these alone (#577 D16).
 CLOCK_CARTRIDGE_KINDS = (CARTRIDGE_MBC3_TIMER, CARTRIDGE_TPP1, CARTRIDGE_TAMA5, CARTRIDGE_HUC3)
@@ -137,7 +151,9 @@ CLOCK_CARTRIDGE_KINDS = (CARTRIDGE_MBC3_TIMER, CARTRIDGE_TPP1, CARTRIDGE_TAMA5, 
 # The rules a conversion can be stated by as data (#577 D4), where a source
 # pins one as plain as a length. None does yet: every conversion the records
 # carry is one a program performs without a rule a client could apply, so it
-# is stated as convertible with its citation and no rule.
+# is stated as convertible with its citation and no rule. DeSmuME's 122-byte
+# .dsv footer is one a source pins, and it becomes a rule once a verdict uses
+# it, which waits for the game code to be read (#577 D19).
 CONVERSION_RULES: tuple[str, ...] = ()
 
 # What a pinned build string names, which the answer's sources say beside a
@@ -167,6 +183,29 @@ class FormatBuild:
     names: str
     revision: str
     citation: str
+
+
+@dataclass(frozen=True, slots=True)
+class SaveLength:
+    """What decides how long an emulator keeps a part, and the citation that says so (#577 D19).
+
+    A DS game card's save is as long as the emulator sizes the card's chip,
+    and each emulator decides that per game its own way: a melonDS build by a
+    ROM list of its own (:data:`LENGTH_ROM_LIST`, at the ``revision`` whose
+    list it is), DeSmuME by how far the game writes
+    (:data:`LENGTH_WRITTEN_EXTENT`, with no revision). Two lengths whose rule
+    and revision agree size every game's save alike; any other two may size one
+    game differently, which atlas cannot tell without the game code, so the
+    part answers ``unestablished``.
+    """
+
+    rule: str
+    revision: str | None
+    citation: str
+
+    def agrees_with(self, other: SaveLength) -> bool:
+        """Whether *other* sizes every game's save as this one does."""
+        return (self.rule, self.revision) == (other.rule, other.revision)
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,6 +255,9 @@ class PartRule:
     kinds: tuple[tuple[str, str | None], ...] = ()
     unread: tuple[UnreadKinds, ...] = ()
     """The kinds whose layout for this part no read establishes, each list with its citation."""
+    length: SaveLength | None = None
+    """What decides the part's length per game, where that differs between emulators of the system; ``None`` where
+    the records of the system state none."""
 
     def unread_for(self, kind: str | None) -> str | None:
         """The citation saying the layout for *kind* is not read, or ``None`` where it is."""
@@ -413,7 +455,7 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
     entry = _exact(
         entry,
         {"memory", "slot", "format", "names", "citation"},
-        {"modes", "reading", "folder", "frontend", "kinds", "unread"},
+        {"modes", "reading", "folder", "frontend", "kinds", "unread", "length"},
         where,
     )
     if entry["memory"] not in SAVE_MEMORIES:
@@ -460,7 +502,28 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
         frontend=frontend,
         kinds=kinds,
         unread=unread,
+        length=_length(f"{where}.length", entry.get("length"), revision=revision),
     )
+
+
+def _length(where: str, entry: Any, *, revision: str) -> SaveLength | None:
+    """A rule's length, or ``None`` where it states none."""
+    if entry is None:
+        return None
+    entry = _exact(entry, {"rule", "citation"}, {"revision"}, where)
+    rule = entry["rule"]
+    if rule not in SAVE_LENGTH_RULES:
+        raise ValueError(f"{where}: rule must be one of {SAVE_LENGTH_RULES}, got {rule!r}")
+    # A ROM list differs between builds, so a length by one names the revision
+    # whose list it is, and two agree only where the revision does too.
+    if ("revision" in entry) != (rule == LENGTH_ROM_LIST):
+        raise ValueError(f"{where}: a revision stands exactly where the rule is {LENGTH_ROM_LIST!r}")
+    citation = _expect_str(entry["citation"], f"{where}.citation")
+    length_revision = None if "revision" not in entry else _expect_str(entry["revision"], f"{where}.revision")
+    for named in (revision, length_revision):
+        if named is not None and named not in citation:
+            raise ValueError(f"{where}: the citation does not name the revision {named!r} it was read at")
+    return SaveLength(rule=rule, revision=length_revision, citation=citation)
 
 
 def _unread(where: str, entry: Any, *, memory: str, revision: str) -> UnreadKinds:

@@ -84,7 +84,7 @@ from .portability_codes import (
     PORTABILITY_SIDES,
 )
 from .retroarch_cfg import CFG_LAYER_KINDS, CFG_LAYER_OVERRIDE_KINDS, RetroArchCfg
-from .save_formats import CARTRIDGE_KINDS
+from .save_formats import CARTRIDGE_KINDS, SAVE_LENGTH_RULES
 from .standalone_saves import REDIRECT_VIAS, SaveRedirect
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
@@ -2317,6 +2317,10 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # a verdict or that the part holds no game data for it.
         (CAVEAT_SAVE_PART_UNESTABLISHED, "cartridges"): CARTRIDGE_STATEMENTS,
         (CAVEAT_SAVE_PART_UNESTABLISHED, "other_cartridges"): CARTRIDGE_STATEMENTS,
+        # What decides each side's length where the two size a save per game
+        # in different ways (#577 D19).
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "source_length"): SAVE_LENGTH_RULES,
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "target_length"): SAVE_LENGTH_RULES,
     }
 )
 

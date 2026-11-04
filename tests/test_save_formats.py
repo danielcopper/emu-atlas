@@ -40,6 +40,11 @@ _CLAIMED_BY_READING = {("pcee2", "<memory_card_file>")}
 # one of them is held to a cited statement per kind.
 _GAME_BOY_SYSTEMS = {"gb", "gbc"}
 
+# The systems whose emulators size a game's save per game, each its own way:
+# every rule of every record covering one of them states what decides it
+# (#577 D19).
+_LENGTH_SYSTEMS = {"nds"}
+
 
 def _card_templates(mode: Any, rules: Any) -> tuple[str, ...]:
     """Every file name a card mode spells, outside what the record sets aside by directory or by name."""
@@ -249,6 +254,56 @@ class TestTheLoaderFailsClosed:
             None,
             None,
         )
+
+    def test_a_length_is_found_with_its_rule_revision_and_citation(self):
+        listed = {"rule": "rom-list", "revision": "def5678", "citation": "[V] list.c:1 at abc1234, list def5678"}
+        written = {"rule": "written-extent", "citation": "[V] mc.c:1 at abc1234"}
+        rule = load_save_formats(_with_part(length=listed)).emulators["demo"].systems["psx"].parts[0]
+        grown = load_save_formats(_with_part(length=written)).emulators["demo"].systems["psx"].parts[0]
+        assert rule.length is not None
+        assert grown.length is not None
+        assert (rule.length.rule, rule.length.revision, rule.length.citation) == (
+            "rom-list",
+            "def5678",
+            "[V] list.c:1 at abc1234, list def5678",
+        )
+        assert (grown.length.rule, grown.length.revision) == ("written-extent", None)
+        assert load_save_formats(_with_part()).emulators["demo"].systems["psx"].parts[0].length is None
+
+    def test_a_length_rule_outside_the_vocabulary_is_refused(self):
+        text = _with_part(length={"rule": "rom-list-abc1234", "citation": "[V] list.c:1 at abc1234"})
+        with pytest.raises(ValueError, match="rule must be one of"):
+            load_save_formats(text)
+
+    def test_a_rom_list_length_without_its_revision_is_refused(self):
+        text = _with_part(length={"rule": "rom-list", "citation": "[V] list.c:1 at abc1234"})
+        with pytest.raises(ValueError, match="a revision stands exactly where"):
+            load_save_formats(text)
+
+    def test_a_written_extent_length_with_a_revision_is_refused(self):
+        text = _with_part(length={"rule": "written-extent", "revision": "abc1234", "citation": "[V] mc.c:1 at abc1234"})
+        with pytest.raises(ValueError, match="a revision stands exactly where"):
+            load_save_formats(text)
+
+    def test_a_length_whose_citation_names_not_the_records_revision_is_refused(self):
+        text = _with_part(length={"rule": "rom-list", "revision": "def5678", "citation": "[V] list.c:1 at def5678"})
+        with pytest.raises(ValueError, match="does not name the revision 'abc1234'"):
+            load_save_formats(text)
+
+    def test_a_length_whose_citation_names_not_its_own_revision_is_refused(self):
+        text = _with_part(length={"rule": "rom-list", "revision": "def5678", "citation": "[V] list.c:1 at abc1234"})
+        with pytest.raises(ValueError, match="does not name the revision 'def5678'"):
+            load_save_formats(text)
+
+    def test_a_blank_length_revision_is_refused(self):
+        text = _with_part(length={"rule": "rom-list", "revision": " ", "citation": "[V] list.c:1 at abc1234"})
+        with pytest.raises(ValueError, match="expected a non-blank string"):
+            load_save_formats(text)
+
+    def test_a_length_with_a_key_outside_its_own_is_refused(self):
+        text = _with_part(length={"rule": "written-extent", "citation": "[V] mc.c:1 at abc1234", "size": 512})
+        with pytest.raises(ValueError, match="expected keys"):
+            load_save_formats(text)
 
     def test_a_mirror_handling_outside_the_vocabulary_is_refused(self):
         table = _table()
@@ -581,3 +636,32 @@ class TestEveryCartridgeKindIsAccountedFor:
     def test_the_sweep_holds_records(self):
         held = {record.key for record in save_formats().emulators.values() if set(record.systems) & _GAME_BOY_SYSTEMS}
         assert len(held) >= 8
+
+
+class TestEveryLengthIsStatedForItsWholeSystem:
+    """Where a system's emulators size a game's save each their own way, every rule of the system says how (#577 D19).
+
+    A rule that stated none would be judged on its format alone, and two
+    formats that match would claim a verdict a game whose length differs
+    breaks. So on a system in :data:`_LENGTH_SYSTEMS` every rule of every record
+    states its ``length``, and on every other system none does, so a length
+    never meets a rule without one.
+    """
+
+    def test_a_system_states_a_length_on_every_rule_or_on_none(self):
+        stated = [
+            (system, record.key, rule.length is not None)
+            for record in save_formats().emulators.values()
+            for system, rules in record.systems.items()
+            for rule in rules.parts
+        ]
+        wrong = [
+            f"{key} {system}: {'states' if has else 'lacks'} a length"
+            for system, key, has in stated
+            if has != (system in _LENGTH_SYSTEMS)
+        ]
+        assert wrong == []
+
+    def test_the_sweep_holds_records(self):
+        held = {record.key for record in save_formats().emulators.values() if set(record.systems) & _LENGTH_SYSTEMS}
+        assert len(held) >= 5

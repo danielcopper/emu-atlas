@@ -41,7 +41,13 @@ CAVEAT_ENTRY_LABEL_UNKNOWN: Final = "entry-label-unknown"
 # whose word differs from every other kind's to its word, and
 # ``other_cartridges`` is the word for every other kind — ``no-game-data``
 # where the part holds nothing of a game for them, as a clock does for a
-# cartridge without one (#577 D16).
+# cartridge without one (#577 D16). Where the reason is that the two entries
+# size the part per game in different ways (#577 D19), ``source_length`` and
+# ``target_length`` name what decides the length on each side, one word of
+# :data:`~atlas.save_formats.SAVE_LENGTH_RULES` each, and
+# ``source_length_revision`` and ``target_length_revision`` the build whose
+# list it is, where the rule is one a build's list decides (absent
+# otherwise); the citations that say so ride the answer's sources.
 CAVEAT_SAVE_PART_UNESTABLISHED: Final = "save-part-unestablished"
 
 PortabilityVerdict = Literal["same-files", "same-data", "convertible", "unestablished", "not-readable"]
@@ -116,7 +122,9 @@ record of its build."""
 # Why a build was not confirmed, the vocabulary of ``reason``.
 BUILD_UNCONFIRMED_REASONS = (REASON_OTHER_BUILD, REASON_BUILD_UNREAD)
 
-PartUnestablishedReason = Literal["target-file-unnamed", "no-conversion-stated", "layout-differs-by-cartridge"]
+PartUnestablishedReason = Literal[
+    "target-file-unnamed", "no-conversion-stated", "layout-differs-by-cartridge", "save-length-differs-by-game"
+]
 REASON_TARGET_FILE_UNNAMED: PartUnestablishedReason = "target-file-unnamed"
 """The target's live mode keeps such a part, and its save answer names no file for it: a card that lists the file only
 as an observation candidate, or an observed directory the file is not written to yet."""
@@ -126,10 +134,16 @@ states a conversion between them."""
 REASON_LAYOUT_DIFFERS_BY_CARTRIDGE: PartUnestablishedReason = "layout-differs-by-cartridge"
 """The verdict depends on the cartridge's kind, which atlas does not read (#577 D15): the caveat's ``cartridges`` and
 ``other_cartridges`` state what holds for each kind."""
+REASON_SAVE_LENGTH_DIFFERS_BY_GAME: PartUnestablishedReason = "save-length-differs-by-game"
+"""The two entries decide the part's length per game in different ways, so a game's save may be cut or padded on the
+way, and atlas reads no game code to tell which games (#577 D19): the caveat's ``source_length`` and
+``target_length`` name each side's way, and ``source_length_revision`` and ``target_length_revision`` the build whose
+list it is."""
 # Why a part with both builds confirmed is still unestablished, the vocabulary
 # of ``save-part-unestablished``'s ``reason``.
 PART_UNESTABLISHED_REASONS = (
     REASON_TARGET_FILE_UNNAMED,
     REASON_NO_CONVERSION_STATED,
     REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
+    REASON_SAVE_LENGTH_DIFFERS_BY_GAME,
 )

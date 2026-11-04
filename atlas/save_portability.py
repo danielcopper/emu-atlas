@@ -21,7 +21,9 @@ this module's own. A verdict built on a source holds only where the machine name
 the source was read at (D5); elsewhere the part answers ``unestablished`` and
 says why. Where a part's layout differs by the kind of cartridge, which atlas
 does not read, the part answers ``unestablished`` and states the verdict for
-each kind (D15, D16).
+each kind (D15, D16); where the two entries size the part per game in
+different ways, which atlas cannot tell apart without the game code, it
+answers ``unestablished`` and names each side's way (D19).
 """
 
 from __future__ import annotations
@@ -58,6 +60,7 @@ from .portability_codes import (
     REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
     REASON_NO_CONVERSION_STATED,
     REASON_OTHER_BUILD,
+    REASON_SAVE_LENGTH_DIFFERS_BY_GAME,
     REASON_TARGET_FILE_UNNAMED,
     SIDE_SOURCE,
     SIDE_TARGET,
@@ -71,6 +74,7 @@ from .save_formats import (
     EmulatorFormats,
     PartRule,
     SaveFormats,
+    SaveLength,
     SystemFormats,
     save_formats,
 )
@@ -437,8 +441,8 @@ def _keeps(target: _Side, part: _Labelled) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class _Judgement:
-    """One part's verdict with what rides it: the moves, why it is unestablished, the verdict per cartridge kind where
-    that is why, and the extra citations."""
+    """One part's verdict with what rides it: the moves, why it is unestablished, the verdict per cartridge kind or
+    each side's length where that is why, and the extra citations."""
 
     verdict: str
     moves: tuple[SaveMove, ...] = ()
@@ -446,6 +450,7 @@ class _Judgement:
     cited: tuple[str, ...] = ()
     cartridges: tuple[tuple[str, str], ...] = ()
     other_cartridges: str | None = None
+    lengths: tuple[SaveLength, SaveLength] | None = None
 
 
 def _compressed(side: _Side, part: _Labelled) -> bool:
@@ -481,6 +486,12 @@ def _format_judgement(
     if twin is None or read is None:
         # The target keeps no such part, for this kind or at all (#577 D8).
         return _Judgement(PORTABILITY_NOT_READABLE)
+    sized_apart = _lengths_apart(part.rule, twin.rule)
+    if sized_apart is not None:
+        # The two size one game's save each their own way, so it may be cut or
+        # padded on the way whatever its layout, for games atlas cannot name
+        # without the game code (#577 D19).
+        return sized_apart
     if held != read:
         conversion = table.conversion(held, read)
         if conversion is not None:
@@ -568,6 +579,18 @@ def _kind_judgement(
     return _format_judgement(part, twin, (held, read), source=source, table=table)
 
 
+def _lengths_apart(source: PartRule, target: PartRule) -> _Judgement | None:
+    """The unestablished judgement where both rules state what decides the length and it differs, else ``None``."""
+    if source.length is None or target.length is None or source.length.agrees_with(target.length):
+        return None
+    return _Judgement(
+        PORTABILITY_UNESTABLISHED,
+        unestablished=REASON_SAVE_LENGTH_DIFFERS_BY_GAME,
+        cited=(source.length.citation, target.length.citation),
+        lengths=(source.length, target.length),
+    )
+
+
 def _mirrors_apart(kind: str | None, source: _Side, target: _Side) -> tuple[str, str] | None:
     """Both sides' mirror statements for *kind* where they handle a mirror write differently, else ``None``."""
     if kind is None or source.record is None or target.record is None:
@@ -595,7 +618,7 @@ def _over_kinds(verdicts: _KindVerdicts) -> _Judgement:
     holds per kind — its verdict, or that the part holds no game data for it —
     rides its caveat.
     """
-    distinct = {(j.verdict, j.moves, j.unestablished) for _, j in verdicts.judged}
+    distinct = {(j.verdict, j.moves, j.unestablished, j.lengths) for _, j in verdicts.judged}
     cited = tuple(dict.fromkeys((*verdicts.cited, *(c for _, j in verdicts.judged for c in j.cited))))
     if len(distinct) == 1:
         first = verdicts.judged[0][1]
@@ -608,6 +631,7 @@ def _over_kinds(verdicts: _KindVerdicts) -> _Judgement:
                 cited=cited,
                 cartridges=first.cartridges,
                 other_cartridges=first.other_cartridges,
+                lengths=first.lengths,
             )
     stated = {
         **{kind: judgement.verdict for kind, judgement in verdicts.judged},
@@ -651,6 +675,14 @@ def _part_unestablished(part: _Labelled, judgement: _Judgement) -> Caveat:
         data["cartridges"] = dict(judgement.cartridges)
         if judgement.other_cartridges is not None:
             data["other_cartridges"] = judgement.other_cartridges
+    if reason == REASON_SAVE_LENGTH_DIFFERS_BY_GAME and judgement.lengths is not None:
+        held, read = judgement.lengths
+        data["source_length"] = held.rule
+        if held.revision is not None:
+            data["source_length_revision"] = held.revision
+        data["target_length"] = read.rule
+        if read.revision is not None:
+            data["target_length_revision"] = read.revision
     return Caveat(
         CAVEAT_SAVE_PART_UNESTABLISHED,
         f"whether the target reads the source's {part.rule.memory}{f' {slot}' if slot else ''} is not established "
