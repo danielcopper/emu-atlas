@@ -2255,9 +2255,24 @@ caveat.data["other_cartridges"]  # 'same-files' — every kind the mapping does 
 ```
 
 A cartridge clock exists only on the kinds in `atlas.CLOCK_CARTRIDGE_KINDS`, so a clock part's caveat says
-`no-game-data` for every other kind: there is no clock there, and nothing of the game is lost with it. The records cover
-the PlayStation, PlayStation 2, Saturn, Game Boy and Game Boy Color entries so far; every other pair answers
-`unestablished` with `save-format-unrecorded`. The evidence is in `docs/research/save-portability.md`.
+`no-game-data` for every other kind: there is no clock there, and nothing of the game is lost with it.
+
+On the Nintendo DS each emulator sizes a game's save its own way — a melonDS build by the save type its ROM list gives
+the game's code, DeSmuME by how far the game writes — and atlas reads no game code, so two entries that size it apart
+leave the part `unestablished`, with `save-part-unestablished` (`reason` `save-length-differs-by-game`) naming each
+side's way — two lengths agree only where the rule and the revision do:
+
+```python
+answer = install.save_portability("nds", source="melonDS", target="melonDS DS", content_path=rom)
+caveat = next(c for c in answer.caveats if c.code == atlas.CAVEAT_SAVE_PART_UNESTABLISHED)
+caveat.data["source_length"]           # 'rom-list' — a word of atlas.SAVE_LENGTH_RULES
+caveat.data["source_length_revision"]  # '7a3c11f' — melonDS 0.9.3's list
+caveat.data["target_length_revision"]  # 'f6692df' — the list of the melonDS that melonDS DS builds
+```
+
+The two DeSmuME builds size it alike and keep the same `.dsv`, so between them the save is `same-data`. The records
+cover the PlayStation, PlayStation 2, Saturn, Game Boy, Game Boy Color and Nintendo DS entries so far; every other pair
+answers `unestablished` with `save-format-unrecorded`. The evidence is in `docs/research/save-portability.md`.
 
 ## Where do texture packs go?
 

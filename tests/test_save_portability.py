@@ -264,6 +264,90 @@ class TestFormats:
         assert "[V] save.c:492-541 at a79435a" in answer.sources
 
 
+def _sized(fmt: str, rule: str, revision: str | None = None, **extra: object) -> list[dict[str, object]]:
+    """One cartridge-ram rule whose length *rule* (at *revision*, for a ROM list) decides, with its own citation."""
+    length: dict[str, object] = {"rule": rule, "citation": f"[V] {rule}.c:1 at abc1234, list {revision}"}
+    if revision is not None:
+        length["revision"] = revision
+    return [_rule("cartridge-ram", None, fmt, ["<rom_stem>.sav"], length=length, **extra)]
+
+
+class TestAPartSizedPerGameInDifferentWays:
+    """Two emulators that size one game's save each their own way may cut or pad it, for games atlas cannot name (D19)."""
+
+    @staticmethod
+    def _sized_answer(source: list[dict[str, object]], target: list[dict[str, object]]):
+        table = _table({"src": _record("libretro", source), "dst": _record("libretro", target)})
+        group = _group("Game.sav", role=ROLE_BATTERY)
+        return _answer(_placement(group), _placement(group), table)
+
+    def test_two_ways_of_sizing_leave_the_part_unestablished_naming_each(self):
+        answer = self._sized_answer(_sized("card", "rom-list", "def5678"), _sized("card", "written-extent"))
+        assert (answer.verdict, answer.parts[0].verdict) == (PORTABILITY_UNESTABLISHED, PORTABILITY_UNESTABLISHED)
+        assert [(c.code, dict(c.data)) for c in answer.caveats] == [
+            (
+                CAVEAT_SAVE_PART_UNESTABLISHED,
+                {
+                    "memory": "cartridge-ram",
+                    "reason": "save-length-differs-by-game",
+                    "source_length": "rom-list",
+                    "source_length_revision": "def5678",
+                    "target_length": "written-extent",
+                },
+            )
+        ]
+
+    def test_two_rom_lists_at_different_revisions_stay_unestablished(self):
+        answer = self._sized_answer(_sized("card", "rom-list", "def5678"), _sized("card", "rom-list", "fed8765"))
+        assert answer.parts[0].verdict == PORTABILITY_UNESTABLISHED
+        assert [dict(c.data) for c in answer.caveats] == [
+            {
+                "memory": "cartridge-ram",
+                "reason": "save-length-differs-by-game",
+                "source_length": "rom-list",
+                "source_length_revision": "def5678",
+                "target_length": "rom-list",
+                "target_length_revision": "fed8765",
+            }
+        ]
+
+    def test_each_sides_length_citation_rides_the_sources(self):
+        answer = self._sized_answer(_sized("card", "rom-list", "def5678"), _sized("card", "written-extent"))
+        assert {"[V] rom-list.c:1 at abc1234, list def5678", "[V] written-extent.c:1 at abc1234, list None"} <= set(
+            answer.sources
+        )
+
+    def test_one_way_of_sizing_keeps_the_plain_verdict(self):
+        listed = self._sized_answer(_sized("card", "rom-list", "def5678"), _sized("card", "rom-list", "def5678"))
+        grown = self._sized_answer(_sized("card", "written-extent"), _sized("card", "written-extent"))
+        assert (listed.verdict, listed.caveats, grown.verdict, grown.caveats) == (
+            PORTABILITY_SAME_FILES,
+            (),
+            PORTABILITY_SAME_FILES,
+            (),
+        )
+
+    def test_the_sizes_are_judged_before_the_formats(self):
+        # Another layout toward a part RetroArch loads byte for byte would be
+        # not-readable; a save cut or padded on the way is the earlier doubt,
+        # since whether the bytes land at all is what the lengths decide.
+        answer = self._sized_answer(_sized("other", "written-extent"), _sized("card", "rom-list", "def5678", frontend=True))
+        assert answer.parts[0].verdict == PORTABILITY_UNESTABLISHED
+        assert [c.data["reason"] for c in answer.caveats] == ["save-length-differs-by-game"]
+
+    def test_a_target_that_keeps_no_such_part_still_does_not_read_it(self):
+        table = _table(
+            {"src": _record("libretro", _sized("card", "written-extent")), "dst": _record("libretro", CARD_RULES)}
+        )
+        answer = _answer(_placement(_group("Game.sav", role=ROLE_BATTERY)), _placement(_group("Game.srm")), table)
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_NOT_READABLE, ())
+
+    def test_a_length_word_outside_the_rules_is_refused_at_construction(self):
+        with pytest.raises(ValueError, match="must be one of"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"source_length": "rom-list-def5678"})
+        with pytest.raises(ValueError, match="must be one of"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"target_length": "the-game"})
+
 RAM = "cartridge-ram"
 CLOCK = "cartridge-clock"
 PACKED = [_rule(RAM, None, "card", ["<rom_stem>.srm"], frontend=True, kinds={"mbc2": "other"})]

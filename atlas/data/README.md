@@ -1892,7 +1892,12 @@ and the evidence behind every record are in `docs/research/save-portability.md`.
   `not_run` names the cartridge kinds the emulator does not run at all, each list with its citation: as the source it
   has no save of them to carry, as the target it reads none. `mirrors` states, per list of kinds with its citation, how
   the emulator keeps a write through a mirror of a small RAM (`folds`, `stores-unfolded` or `drops`); two records that
-  differ leave those kinds unestablished.
+  differ leave those kinds unestablished. `length` states, with its citation, what decides how long the emulator keeps
+  the part per game: `rule` (closed: `SAVE_LENGTH_RULES` — `rom-list` for a melonDS build's ROM list, `written-extent`
+  for DeSmuME's growth as far as the game writes) and, for `rom-list` alone and then required, the `revision` whose list
+  it is, which the citation must name; two lengths whose rule or revision differ leave the part unestablished, since
+  atlas reads no game code to tell which games they size apart. On a system whose records state a length, every rule
+  states one.
 
 `tests/test_save_formats.py` holds each core's pins to the build `tests/data/core_registrations.json` captured — or, for
 a core whose registration was never captured, to the `verified_core` `save_memory.json` pins — and each standalone

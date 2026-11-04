@@ -21,7 +21,9 @@
     "gb-clock-tgbdual": "TGB Dual's clock: one 32-bit time the core keeps for every game, 4 bytes.",
     "gb-clock-vba-mbc3": "An MBC3 clock as VBA-M lays it out: ten 32-bit registers (seconds, minutes, hours, days and control, then the same five latched) and a 64-bit time, 48 bytes. Gearboy keeps the time as 32 bits followed by a word it sets to zero, the same bytes while the time fits in 32 bits.",
     "gb-clock-vbam-huc3": "VBA-M's HuC3 clock: the time it last read the clock at, as one time_t.",
-    "gb-clock-vbam-tama5": "VBA-M's TAMA5 clock: fourteen 32-bit clock registers and a 64-bit time."
+    "gb-clock-vbam-tama5": "VBA-M's TAMA5 clock: fourteen 32-bit clock registers and a 64-bit time.",
+    "nds-card-raw": "A DS game card's save memory, such as its EEPROM, FRAM, flash or NAND, as one raw image from its first address, one byte per byte of the chip, as long as the emulator sizes the card's chip.",
+    "nds-dsv": "DeSmuME's .dsv: the card's save memory as one raw image from its first address, padded with 0xFF to the next size of DeSmuME's table at or above the highest address the game wrote, followed by a 122-byte footer: an 82-byte line of text, six little-endian 32-bit fields (the size written, the padded size, the save type, the address size, the memory size and the version, 0) and the 16-byte cookie |-DESMUME SAVE-|."
   },
   "retroarch": {
     "compressed": "[V] save.c:644-657 at RetroArch a79435a — with save_file_compression on, RetroArch writes a file it saves through a core's memory id as an RZIP stream (rzipstream_write_file), and reads every such file back through rzipstream_read_file, which reads an uncompressed file as well (save.c:511-518). An emulator that does not load the file through RetroArch reads the compressed bytes, so the file has to be decompressed first, by no rule a client applies itself.",
@@ -1073,6 +1075,146 @@
         },
         "gbc": {
           "same_as": "gb"
+        }
+      }
+    },
+    "desmume": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["git 7f05a8d"],
+        "names": "commit",
+        "revision": "7f05a8d",
+        "citation": "The shipped binary names 'git 7f05a8d' in its library_version (atlas/data/core_oddities.json, desmume's provenance)."
+      },
+      "systems": {
+        "nds": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "nds-dsv",
+              "names": ["<rom_stem>.dsv"],
+              "length": {
+                "rule": "written-extent",
+                "citation": "[V] desmume/src/mc.cpp:935-972, :1409-1424 and :77-90 at DeSmuME 7f05a8d — the file grows as the game writes, to the next size of saveSizes at or above the highest address written, and the footer states that padded size; a .dsv is read back at its own footer's size (:336-347, :414-457), whatever the game, so how long a save is follows from how far the game wrote, not from a list of games. A raw <rom_stem>.sav is imported only while no .dsv exists, and given its footer only where its length is exactly one of the save_types sizes, which name no 128 KiB chip (:94-109, :270-325, :641-649); otherwise the footer is missing and the data is not used (:341-347). That import is DeSmuME's own and is not counted as reading another emulator's format (#577 D19)."
+              },
+              "citation": "[V] desmume/src/mc.cpp:232-235, :935-972 and :414-457 at DeSmuME 7f05a8d — the core keeps the card's save memory in <rom_stem>.dsv, written in place at each address the game writes, padded with uninitializedValue (0xFF, :228) and closed by the footer DESMUME_BACKUP_FOOTER_TXT (:74), the five BackupDeviceFileInfo fields, the version 0 and the cookie (:75), 82 + 24 + 16 = 122 bytes (GetDSVFooterSize, :1702-1705; desmume/src/mc.h:55-70); on load the footer is read and its length set aside (:336-347)."
+            }
+          ]
+        }
+      }
+    },
+    "desmume2015": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["git af397ff"],
+        "names": "commit",
+        "revision": "af397ff",
+        "citation": "The shipped binary names 'git af397ff' in its library_version (atlas/data/core_oddities.json, desmume2015's provenance)."
+      },
+      "systems": {
+        "nds": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "nds-dsv",
+              "names": ["<rom_stem>.dsv"],
+              "length": {
+                "rule": "written-extent",
+                "citation": "[V] desmume/src/mc.cpp:893-930, :1360-1375 and :73-86 at DeSmuME 2015 af397ff — the file grows as the game writes, to the next size of saveSizes (the same table as DeSmuME 7f05a8d's) at or above the highest address written, and the footer states that padded size; a .dsv is read back at its own footer's size (:318-332, :397-434), whatever the game. A raw <rom_stem>.sav is imported only while no .dsv exists, with its trailing 0xFF rows trimmed first, and given its footer only where its length is exactly one of the save_types sizes (:270-315); that import is DeSmuME's own and is not counted as reading another emulator's format (#577 D19)."
+              },
+              "citation": "[V] desmume/src/mc.cpp:236-240, :893-930 and :397-434 at DeSmuME 2015 af397ff — the core keeps the card's save memory in <rom_stem>.dsv, written in place at each address the game writes, padded with uninitializedValue (0xFF, :233) and closed by the same footer as DeSmuME 7f05a8d's: the text (:70), the five BackupDeviceFileInfo fields, the version 0 and the cookie (:71); on load the footer is read and strlen(cookie) + strlen(text) + 24 = 122 bytes set aside (:318-332). The load path reads the same fields in the same order as 7f05a8d's (:397-434 against 7f05a8d :414-457)."
+            }
+          ],
+          "ignore": [
+            {
+              "names": ["<rom_stem>.dsv.bak"],
+              "citation": "[V] desmume/src/mc.cpp:246-266 at DeSmuME 2015 af397ff — the .dsv.bak is a copy of the .dsv taken at load only where CommonSettings.backupSave is set, which defaults to false (desmume/src/NDSSystem.h:515) and which nothing in the tree sets; no code reads the copy back, so it is no part of the save another emulator would read."
+            }
+          ]
+        }
+      }
+    },
+    "melonds": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["0.9.3 7a3c11f"],
+        "names": "commit",
+        "revision": "7a3c11f",
+        "citation": "The shipped binary names '0.9.3 7a3c11f' in its library_version (atlas/data/core_oddities.json, melonds's provenance)."
+      },
+      "systems": {
+        "nds": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "nds-card-raw",
+              "names": ["<rom_stem>.sav"],
+              "length": {
+                "rule": "rom-list",
+                "revision": "7a3c11f",
+                "citation": "[V] src/NDSCart.cpp:446-454 and :1554-1565 at melonDS 7a3c11f — the save is as long as the save type the ROM list gives the game's code (src/ROMList.h:30), 0, 512, 8 KiB, 64 KiB, 128 KiB, 256 KiB, 512 KiB, 1 MiB, 8 MiB, 16 MiB or 64 MiB, and 8 KiB, a 64 kbit EEPROM's, for a code the list lacks; the ROM lists of melonDS 1.1 (b86390e4) and of the melonDS that melonDS DS 1.2.0 builds (f6692df) give some game codes another type (#577 D19)."
+              },
+              "citation": "[V] src/libretro/libretro.cpp:887-895, src/NDSCart.cpp:438-472 and src/NDSCart_SRAMManager.cpp:76-94, :153-180 at melonDS 7a3c11f — the core keeps the card's save memory raw in <save dir>/<rom_stem>.sav: the file is read into SRAM from its first byte up to SRAMLength over a 0xFF fill and handed to the SRAM manager at that length (NDSCart.cpp:472), and every flush the core asks for at the end of a frame (libretro.cpp:769) writes the whole buffer, SRAMLength bytes (NDSCart_SRAMManager.cpp:173)."
+            }
+          ]
+        }
+      }
+    },
+    "melondsds": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["1.2.0"],
+        "names": "release",
+        "revision": "33c4826",
+        "citation": "The shipped binary names the release '1.2.0' in its library_version, the verified_core atlas/data/save_memory.json pins for nds; the reads are at JesseTG/melonds-ds v1.2.0, commit 33c4826, which builds JesseTG/melonDS f6692df (cmake/FetchDependencies.cmake:44)."
+      },
+      "systems": {
+        "nds": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "nds-card-raw",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "length": {
+                "rule": "rom-list",
+                "revision": "f6692df",
+                "citation": "[V] src/libretro/sram.cpp:118-127 at melonDS DS 33c4826, and src/NDSCart.cpp:387-413 and :1616-1628 at JesseTG/melonDS f6692df, the melonDS it builds — the save buffer is as long as the cartridge's GetSaveMemoryLength, the save type the ROM list gives the game's code (src/ROMList.cpp:23) or 8 KiB, a 64 kbit EEPROM's, for a code the list lacks; that list gives some game codes another type than melonDS 0.9.3's (7a3c11f) and melonDS 1.1's (b86390e4) (#577 D19)."
+              },
+              "citation": "[V] src/libretro/core/core.cpp:361-371 and :937-960, src/libretro/sram.cpp:52-55 and :75-96 at melonDS DS 33c4826 — RETRO_MEMORY_SAVE_RAM is the card's save memory, raw from its first address and SramLength() long, which RetroArch writes as <rom_stem>.srm. The buffer is allocated zeroed, and RetroArch loads the file into it from its first byte, a shorter file leaving the rest 0x00 and a longer one cut at the buffer (save.c:492-541, :523-533 at RetroArch a79435a); the first frame installs the whole buffer in the card (core.cpp:367-370, CartRetail::SetSaveMemory at JesseTG/melonDS f6692df src/NDSCart.cpp:476-482)."
+            }
+          ]
+        }
+      }
+    },
+    "MELONDS": {
+      "kind": "standalone",
+      "build": {
+        "pins": ["9c8ac146f909e365673fdf2eb711f588c0fdf72fce11fc05c9db698a88d269ba"],
+        "names": "release",
+        "revision": "b86390e4",
+        "citation": "RetroDECK's melonDS component names its build by the Flathub commit 9c8ac146f909e365673fdf2eb711f588c0fdf72fce11fc05c9db698a88d269ba in component_version, the card's pinned build of melonDS 1.1 at b86390e4 (atlas/data/standalone_saves.json, MELONDS's builds)."
+      },
+      "systems": {
+        "nds": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "nds-card-raw",
+              "names": ["<rom_stem>.sav"],
+              "length": {
+                "rule": "rom-list",
+                "revision": "b86390e4",
+                "citation": "[V] src/NDSCart.cpp:402-428 and :1633-1645 at melonDS b86390e4 — the save is as long as the save type the ROM list gives the game's code (src/ROMList.cpp:23) or 8 KiB, a 64 kbit EEPROM's, for a code the list lacks; that list gives some game codes another type than melonDS 0.9.3's (7a3c11f) and than the melonDS that melonDS DS 1.2.0 builds (f6692df) (#577 D19)."
+              },
+              "citation": "[V] src/frontend/qt_sdl/EmuInstance.cpp:1889-1915, src/NDSCart.cpp:402-428 and src/frontend/qt_sdl/SaveManager.cpp:97-122 and :166-193 at melonDS b86390e4 — the emulator reads <rom_stem>.sav whole, the card copies it from its first byte up to SRAMLength over a 0xFF fill, and every flush writes the whole save raw."
+            }
+          ]
         }
       }
     }

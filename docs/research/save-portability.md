@@ -65,6 +65,17 @@ otherwise the part is `unestablished`, and `save-part-unestablished` (`reason` `
 what holds per kind, a word of `CARTRIDGE_STATEMENTS` each — a verdict, or `no-game-data` — in `cartridges`, keyed by
 every kind whose word differs, and in `other_cartridges` for every other kind. Nothing is stated by leaving a key out.
 
+**A save sized per game (D19).** A DS game card's save is as long as the emulator sizes the card's chip, and each
+emulator decides that per game its own way: a melonDS build by the save type its own ROM list gives the game's code,
+DeSmuME by how far the game writes. A record names its way per rule (`length`): a word of `SAVE_LENGTH_RULES`
+(`rom-list` or `written-extent`), for `rom-list` the revision whose list it is, and its citation. Two lengths size every
+game alike only where the rule and the revision agree. Otherwise a game's save may be cut or padded on the way for games
+atlas cannot name without reading the game code, so the part is `unestablished`, with `save-part-unestablished`
+(`reason` `save-length-differs-by-game`) naming each side's rule in `source_length` and `target_length` and the
+revision, where there is one, in `source_length_revision` and `target_length_revision`; the lengths are judged before
+the formats, since whether the bytes land at all is what they decide. On a system whose records state a length, every
+rule states one, and on every other system none does (`tests/test_save_formats.py`).
+
 **A file RetroArch compressed.** With `save_file_compression` on, RetroArch writes a file it saves for a core as an RZIP
 stream (`save.c:644-657`), and the save answer says so (`save-files-compressed`). RetroArch reads its own stream back,
 and a plain file too (`save.c:511-518`), so between two parts RetroArch loads — the record's `frontend` rules — nothing
@@ -158,6 +169,48 @@ clock; TGB Dual and DoubleCherryGB share theirs; every other pair of clocks does
 and holds nothing for the rest (D16). Those parts answer `unestablished` with each kind's word stated, so nearly every
 Game Boy pair does until the cartridge's kind is read.
 
+## Evidence — Nintendo DS
+
+Every entry keeps one part, the card's save memory (`cartridge-ram`). melonDS and DeSmuME write their own file; melonDS
+DS hands the save to RetroArch through `RETRO_MEMORY_SAVE_RAM`, so its rule is a `frontend` one.
+
+| emulator             | pin                                | what the source states                                                                                                                                                                                                                                                                       | format         | length                 |
+| -------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------- |
+| DeSmuME              | `git 7f05a8d`                      | `<rom_stem>.dsv`, written in place at each address the game writes, padded with 0xFF to the next size of `saveSizes` at or above the highest address written, then the footer (`mc.cpp:232-235`, `:935-972`, `:1409-1424`); read back at the size the footer states (`:336-347`, `:414-457`) | `nds-dsv`      | `written-extent`       |
+| DeSmuME 2015         | `git af397ff`                      | the same file, footer and table (`mc.cpp:236-240`, `:73-86`, `:893-930`, `:318-332`, `:397-434`); its `.dsv.bak` is a copy taken only where `backupSave` is set, which defaults to false and nothing sets (`mc.cpp:246-266`, `NDSSystem.h:515`), so the record sets it aside                 | `nds-dsv`      | `written-extent`       |
+| melonDS              | `0.9.3 7a3c11f`                    | `<save dir>/<rom_stem>.sav`, raw, read up to the save's length over a 0xFF fill, and every flush the core asks for at the end of a frame writes the whole buffer (`libretro.cpp:769`, `:887-895`, `NDSCart.cpp:438-472`, `NDSCart_SRAMManager.cpp:76-94`, `:153-180`)                        | `nds-card-raw` | `rom-list` at 7a3c11f  |
+| melonDS DS           | `1.2.0` (33c4826, melonDS f6692df) | `SAVE_RAM` is the card's save memory, raw and `SramLength()` long, which RetroArch writes as `<rom_stem>.srm` and loads back into the zeroed buffer before the first frame installs it whole (`core.cpp:361-371`, `:937-960`, `sram.cpp:52-55`, `:75-96`, `:118-127`)                        | `nds-card-raw` | `rom-list` at f6692df  |
+| melonDS (standalone) | Flathub build of 1.1 (b86390e4)    | `<rom_stem>.sav`, read whole, copied up to the save's length over a 0xFF fill, every flush written whole (`EmuInstance.cpp:1889-1915`, `NDSCart.cpp:402-428`, `SaveManager.cpp:97-122`, `:166-193`)                                                                                          | `nds-card-raw` | `rom-list` at b86390e4 |
+
+**The `.dsv` footer.** Both DeSmuME builds close the file with the same 122 bytes: the 82-byte line
+`DESMUME_BACKUP_FOOTER_TXT`, six little-endian 32-bit fields (the size written, the padded size, the save type, the
+address size, the memory size, the version 0) and the 16-byte cookie `|-DESMUME SAVE-|` (`mc.cpp:74-75`, `:961-970`,
+`GetDSVFooterSize` at `:1702-1705`, `mc.h:55-70` at 7f05a8d; `mc.cpp:70-71`, `:325-326` at af397ff, which sets aside
+`strlen(cookie) + strlen(text) + 24`). Cutting it off leaves the raw image a melonDS build reads, padded to DeSmuME's
+own size. The strip is a rule a client could apply, and it becomes a conversion rule once a verdict uses it, which waits
+for the game code (D19): until then the length decides first.
+
+**How long a save is.** Each melonDS build sizes a game's save by the save type its ROM list gives the game's code — 0,
+512 bytes, 8, 64, 128, 256 or 512 KiB, 1, 8, 16 or 64 MiB — and 8 KiB, a 64 kbit EEPROM's, for a code the list lacks
+(none for homebrew) (`NDSCart.cpp:446-454`, `:1554-1565` at 7a3c11f; `:402-428`, `:1633-1645` at b86390e4; `:387-413`,
+`:1616-1628` at f6692df). The three lists differ: compared by game code, 0.9.3 and 1.1 give two codes another type and
+1.1 has one code 0.9.3 lacks (both types are later fixes, 2179ca2 and 9f96ac6), and f6692df, which carries the first fix
+and predates the second, differs from 1.1 in one code. A file of another length is cut to the save's length where it is
+longer; where it is shorter, melonDS 0.9.3 and 1.1 fill the rest with 0xFF (`NDSCart.cpp:459-466` at 7a3c11f, `:420-427`
+at b86390e4), and melonDS DS leaves it 0x00: its buffer is allocated zeroed (`sram.cpp:52-55` at 33c4826), RetroArch
+copies a shorter `.srm` into its start and cuts a longer one (`save.c:523-533` at a79435a), and the whole buffer is
+installed in the card (`NDSCart.cpp:476-482` at f6692df). DeSmuME sizes the file by how far the game writes, from its
+own table of sizes, and reads a `.dsv` back at the length its footer states. It imports a raw `<rom_stem>.sav` beside it
+only while no `.dsv` exists, and gives it a footer only where its length is exactly one of its `save_types` sizes, which
+name no 128 KiB chip (`mc.cpp:94-109`, `:270-325`, `:641-649` at 7f05a8d); a file of another length is left without one
+and its data unused (`:341-347`). The import is DeSmuME's own and is not counted as the target reading melonDS's format
+(D19).
+
+What follows for the pairs: DeSmuME and DeSmuME 2015 keep the same `.dsv`, which moves between DeSmuME 2015's working
+directory and DeSmuME's save directory. Every other pair sizes a game's save in two ways, so it answers `unestablished`
+with `save-length-differs-by-game` until the game code is read. NooDS, its standalone build, DeSmuME's standalone build
+and SkyEmu have no record yet, so their pairs say `save-format-unrecorded`.
+
 ## Known limits
 
 - **Kronos's cartridge on a declared answer.** With the Beetle-saves switch on, Kronos names a 4 Mbit cartridge at
@@ -198,5 +251,9 @@ Game Boy pair does until the cartridge's kind is read.
   cartridge RAM with a 48-byte clock after it for a clock cartridge, by the SameBoy copy it carries. Its pin names the
   release `115` alone, and the revision its card was read at is not the one these lines were read at, so no record
   states it yet and its pairs say `save-format-unrecorded`.
-- **Coverage.** The records cover psx, ps2, saturn, saturnjp, gb and gbc. Every other pair answers `unestablished` with
-  `save-format-unrecorded` until its records land: the Nintendo DS, GameCube and Wii next.
+- **The game code.** On the Nintendo DS whether a save survives depends on how each side sizes that game's save, which
+  differs between the melonDS builds for a few game codes and is decided another way by DeSmuME than by any melonDS
+  build, and atlas reads no game code (D19). Reading it from the launched file, as the issue that reads the Game Boy
+  cartridge's kind does for its header, would let a pair whose lengths agree for that game carry its plain verdict.
+- **Coverage.** The records cover psx, ps2, saturn, saturnjp, gb, gbc and nds. Every other pair answers `unestablished`
+  with `save-format-unrecorded` until its records land: the GameCube and Wii next.

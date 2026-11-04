@@ -7896,6 +7896,636 @@
           ]
         }
       }
+    },
+    {
+      "name": "nds-desmume-2015-to-desmume-moves-the-dsv",
+      "rationale": "Both DeSmuME builds keep a DS card's save in <stem>.dsv: the raw save memory, padded with 0xFF as far as the game wrote, and the same 122-byte footer, which each reads back at the size the footer states. The .dsv moves from DeSmuME 2015's working directory to the save directory; the .dsv.bak DeSmuME 2015's card lists is a copy this build never writes or reads, so it is set aside with its citation.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME 2015\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume2015_libretro.so %ROM%</command>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume2015_libretro.so": {
+            "library_name": "DeSmuME 2015",
+            "library_version": "git af397ff"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          }
+        },
+        "save_portability_query": {
+          "system": "nds",
+          "source": "DeSmuME 2015",
+          "target": "DeSmuME",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds",
+          "cwd": "/home/deck"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "same-data",
+          "source": {
+            "system": "nds",
+            "label": "DeSmuME 2015",
+            "kind": "libretro",
+            "core_so": "desmume2015_libretro.so",
+            "emulator": "desmume2015_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "nds",
+            "label": "DeSmuME",
+            "kind": "libretro",
+            "core_so": "desmume_libretro.so",
+            "emulator": "desmume_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "same-data",
+              "source_group": {
+                "dir": "/home/deck",
+                "files": [
+                  "Example Game (USA).dsv"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).dsv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "moves": [
+                "directory"
+              ],
+              "conversion": null
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "nds-melonds-to-melonds-ds-sizes-the-save-per-game-apart",
+      "rationale": "melonDS 0.9.3 and melonDS DS keep the same raw save memory, but each sizes it by the save type its own ROM list gives the game's code, and the two lists differ for some codes, so a game's save may be cut or padded on the way. atlas reads no game code, so the part is unestablished and names each side's list (#577 D19).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n    <command label=\"melonDS DS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melondsds_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melondsds_libretro.so": {
+            "library_name": "melonDS DS",
+            "library_version": "1.2.0"
+          }
+        },
+        "save_portability_query": {
+          "system": "nds",
+          "source": "melonDS",
+          "target": "melonDS DS",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "nds",
+            "label": "melonDS",
+            "kind": "libretro",
+            "core_so": "melonds_libretro.so",
+            "emulator": "melonds_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "nds",
+            "label": "melonDS DS",
+            "kind": "libretro",
+            "core_so": "melondsds_libretro.so",
+            "emulator": "melondsds_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "save-length-differs-by-game",
+                "source_length": "rom-list",
+                "source_length_revision": "7a3c11f",
+                "target_length": "rom-list",
+                "target_length_revision": "f6692df"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "nds-desmume-to-melonds-standalone-sizes-the-save-per-game-apart",
+      "rationale": "DeSmuME's .dsv is as long as the game wrote, padded to its own table and followed by a footer; melonDS 1.1 sizes the save by its ROM list and reads a file up to that length. Whether a game's save survives depends on how the two lengths meet for that game, which atlas cannot tell without the game code, so the part is unestablished for that reason rather than for the footer, which the research records (#577 D19).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n    <command label=\"melonDS (Standalone)\">%EMULATOR_MELONDS% -f %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds": "rom",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/melonds/component_version": "9c8ac146f909e365673fdf2eb711f588c0fdf72fce11fc05c9db698a88d269ba\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          }
+        },
+        "save_portability_query": {
+          "system": "nds",
+          "source": "DeSmuME",
+          "target": "melonDS (Standalone)",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "nds",
+            "label": "DeSmuME",
+            "kind": "libretro",
+            "core_so": "desmume_libretro.so",
+            "emulator": "desmume_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "nds",
+            "label": "melonDS (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "MELONDS",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).dsv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/roms/nds",
+                "files": [
+                  "Example Game (USA).sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "save-length-differs-by-game",
+                "source_length": "written-extent",
+                "target_length": "rom-list",
+                "target_length_revision": "b86390e4"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "nds-melonds-to-desmume-does-not-count-desmume-s-own-import",
+      "rationale": "DeSmuME imports a raw <stem>.sav only while no .dsv exists and only at a size its own table names, which has no 128 KiB chip; that import is the target's own and not counted as reading melonDS's format, so the part is unestablished with each side's length named (#577 D19).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n    <command label=\"DeSmuME\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/desmume_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/desmume_libretro.so": {
+            "library_name": "DeSmuME",
+            "library_version": "git 7f05a8d"
+          }
+        },
+        "save_portability_query": {
+          "system": "nds",
+          "source": "melonDS",
+          "target": "DeSmuME",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "nds",
+            "label": "melonDS",
+            "kind": "libretro",
+            "core_so": "melonds_libretro.so",
+            "emulator": "melonds_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "nds",
+            "label": "DeSmuME",
+            "kind": "libretro",
+            "core_so": "desmume_libretro.so",
+            "emulator": "desmume_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).dsv"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "save-length-differs-by-game",
+                "source_length": "rom-list",
+                "source_length_revision": "7a3c11f",
+                "target_length": "written-extent"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "nds-noods-has-no-record",
+      "rationale": "NooDS keeps its own <stem>.sav, and no packaged record states what that file holds, so the pair says so and is unestablished.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n    <command label=\"melonDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/melonds_libretro.so %ROM%</command>\n    <command label=\"NooDS\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/noods_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/melonds_libretro.so": {
+            "library_name": "melonDS",
+            "library_version": "0.9.3 7a3c11f"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/noods_libretro.so": {
+            "library_name": "NooDS",
+            "library_version": "b0f658c"
+          }
+        },
+        "save_portability_query": {
+          "system": "nds",
+          "source": "melonDS",
+          "target": "NooDS",
+          "content_path": "/mnt/sd/retrodeck/roms/nds/Example Game (USA).nds"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "nds",
+            "label": "melonDS",
+            "kind": "libretro",
+            "core_so": "melonds_libretro.so",
+            "emulator": "melonds_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "nds",
+            "label": "NooDS",
+            "kind": "libretro",
+            "core_so": "noods_libretro.so",
+            "emulator": "noods_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).sav"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": null
+              },
+              "target_group": null,
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-format-unrecorded",
+              "data": {
+                "side": "target",
+                "core": "noods",
+                "mode": "always"
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }
