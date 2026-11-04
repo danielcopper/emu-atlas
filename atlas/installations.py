@@ -4113,7 +4113,8 @@ def _apply_rule_card(
             f"the rule for card {card.key!r} selected mode {choice.mode!r}, which the card does "
             "not state — the rule and the card shipped out of step"
         )
-    mode = _fill_rule_templates(card.key, choice.mode, mode, choice.fills)
+    mode = _fill_rule_templates(card.key, choice.mode, mode, choice.fills, choice.fill_slots)
+    mode = _fill_unnamed_slots(mode, choice.unnamed_slots)
     card = _fill_rule_sizes(card, choice.fills)
     unknown = [name for name, _ in choice.alternatives if name not in card.modes]
     if unknown:
@@ -4159,7 +4160,11 @@ def _apply_rule_card(
 
 
 def _fill_rule_templates(
-    card_key: str, mode_name: str, mode: SaveMode, fills: Mapping[str, tuple[str, ...]]
+    card_key: str,
+    mode_name: str,
+    mode: SaveMode,
+    fills: Mapping[str, tuple[str, ...]],
+    fill_slots: Mapping[str, Mapping[str, tuple[str, ...]]] = MappingProxyType({}),
 ) -> SaveMode:
     """Substitute the templates the card's own rule fills, once, before anything reads the mode.
 
@@ -4171,7 +4176,19 @@ def _fill_rule_templates(
     if not any(_carries_rule_template(group) for group in mode.groups):
         return mode
     where = f"card {card_key!r} mode {mode_name!r}"
-    groups = tuple(_fill_rule_group(where, group, fills) for group in mode.groups)
+    groups = tuple(_fill_rule_group(where, group, fills, fill_slots) for group in mode.groups)
+    return cast(SaveMode, _dc_replace(mode, groups=groups))
+
+
+def _fill_unnamed_slots(mode: SaveMode, slots: tuple[str, ...] | None) -> SaveMode:
+    """The mode with the slots its rule read stated on each ``unnamed`` group, whose cards no name follows for:
+    ``None`` where the rule cannot establish them (#577 D24)."""
+    if slots == ():
+        return mode
+    groups = tuple(
+        cast(SaveGroup, _dc_replace(group, unnamed_slots=slots)) if group.unnamed is not None else group
+        for group in mode.groups
+    )
     return cast(SaveMode, _dc_replace(mode, groups=groups))
 
 
@@ -4209,7 +4226,10 @@ def _carries_rule_template(group: SaveGroup) -> bool:
 
 
 def _fill_rule_group(
-    where: str, group: SaveGroup, fills: Mapping[str, tuple[str, ...]]
+    where: str,
+    group: SaveGroup,
+    fills: Mapping[str, tuple[str, ...]],
+    fill_slots: Mapping[str, Mapping[str, tuple[str, ...]]] = MappingProxyType({}),
 ) -> SaveGroup:
     return cast(
         SaveGroup,
@@ -4218,8 +4238,29 @@ def _fill_rule_group(
             subdir=_fill_rule_subdir(where, group.subdir, fills),
             files=_fill_rule_names(where, group.files, fills),
             observe=_fill_rule_names(where, group.observe, fills),
+            slots=_fill_rule_slots(group, fills, fill_slots),
         ),
     )
+
+
+def _fill_rule_slots(
+    group: SaveGroup,
+    fills: Mapping[str, tuple[str, ...]],
+    fill_slots: Mapping[str, Mapping[str, tuple[str, ...]]],
+) -> Mapping[str, tuple[str, ...]]:
+    """The slots of each name once the rule's templates are filled: a filled name is read by the slots the rule
+    says read its value, and otherwise by its template's (#577 D23)."""
+    slots = dict(group.slots)
+    for name in (*(group.files or ()), *(group.observe or ())):
+        carried = [token for token in RULE_FILLED_TEMPLATES if token in name]
+        if len(carried) != 1:
+            continue
+        token = carried[0]
+        for value in fills.get(token, ()):
+            read_by = fill_slots.get(token, {}).get(value) or group.slots.get(name, ())
+            if read_by:
+                slots[name.replace(token, value)] = read_by
+    return MappingProxyType(slots)
 
 
 def _fill_rule_subdir(
@@ -4775,15 +4816,7 @@ def _cross_root_parts(
         directory = os.path.join(base.base, *[seg for seg in (group.subdir or "").split("/") if seg])
         filled = _card_files(group.files or (), content.rom_stem)
         names = filled if filled is not None else group.files or ()
-        groups_out.append(
-            FileGroup(
-                dir=directory,
-                files=names,
-                granularity=group.granularity,
-                role=group.role,
-                size_fixed=_card_group_size(group, card.sizes),
-            )
-        )
+        groups_out.extend(_slotted_file_groups(group, names, directory=directory, sizes=card.sizes))
         holes.extend(base.needs)
         caveats.append(
             Caveat(
@@ -5218,16 +5251,47 @@ def _declared_groups(
         subdir, _ = _fill_subdir(
             group.subdir or "", rom_stem=rom_stem or None, content_dir_name=content_dir_name
         )
-        groups.append(
-            FileGroup(
-                dir=os.path.join(base, *[s for s in subdir.split("/") if s]),
-                files=names,
-                granularity=group.granularity,
-                role=group.role,
-                size_fixed=_card_group_size(group, sizes),
-            )
-        )
+        directory_of_group = os.path.join(base, *[s for s in subdir.split("/") if s])
+        groups.extend(_slotted_file_groups(group, names, directory=directory_of_group, sizes=sizes))
     return tuple(groups)
+
+
+def _slot_buckets(
+    group: SaveGroup, names: tuple[str, ...] | None, templates: tuple[str, ...]
+) -> tuple[tuple[tuple[str, ...] | None, tuple[str, ...] | None, tuple[str, ...]], ...]:
+    """A card group's names split by the slots that read them: ``(slots, names, templates)`` per bucket.
+
+    A group whose names different slots read is stated as one group per slot
+    (#577 D23); a group the card states no slots for is one bucket with none.
+    *templates* are the card's spellings of *names*, one for one.
+    """
+    if names is None:
+        return ((group.unnamed_slots, names, templates),)
+    if not group.slots:
+        return (((), names, templates),)
+    buckets: dict[tuple[str, ...], tuple[list[str], list[str]]] = {}
+    for name, template in zip(names, templates):
+        bucket = buckets.setdefault(group.slots.get(template, ()), ([], []))
+        bucket[0].append(name)
+        bucket[1].append(template)
+    return tuple((slots, tuple(named), tuple(spelled)) for slots, (named, spelled) in buckets.items())
+
+
+def _slotted_file_groups(
+    group: SaveGroup, names: tuple[str, ...] | None, *, directory: str, sizes: Mapping[str, SizeFact]
+) -> list[FileGroup]:
+    """A declared card group as the answer states it: one group per set of slots its names are read by (#577 D23)."""
+    return [
+        FileGroup(
+            dir=directory,
+            files=named,
+            granularity=group.granularity,
+            role=group.role,
+            size_fixed=_card_group_size(group, sizes, spelled if slots else None),
+            slots=slots,
+        )
+        for slots, named, spelled in _slot_buckets(group, names, group.files or ())
+    ]
 
 
 def _card_group_size(
@@ -5249,6 +5313,13 @@ def _card_group_size(
     if not named:
         return None
     return _one_claim([sizes.get(name) for name in named])
+
+
+def _observed_templates_of(group: SaveGroup, names: Sequence[str], rom_stem: str | None) -> tuple[str, ...]:
+    """The template of *group* each of the observed *names* resolves from, one for one."""
+    candidates = group.observe if group.observe is not None else group.files or ()
+    spelled = {(_card_files((template,), rom_stem) or ("",))[0]: template for template in candidates}
+    return tuple(spelled.get(name, name) for name in names)
 
 
 def _observed_templates(group: SaveGroup, names: Sequence[str], rom_stem: str | None) -> tuple[str, ...]:
@@ -5307,6 +5378,13 @@ def _one_entry_per_file(
     return tuple(merged), tuple(caveats)
 
 
+def _merged_slots(claims: Sequence[FileGroup]) -> tuple[str, ...] | None:
+    """Every slot the claims on one file name, or ``None`` where one of them leaves its slots unestablished."""
+    if any(claim.slots is None for claim in claims):
+        return None
+    return tuple(dict.fromkeys(slot for claim in claims for slot in claim.slots or ()))
+
+
 def _merged_entry(claims: Sequence[FileGroup]) -> tuple[FileGroup, tuple[Caveat, ...]]:
     """One entry for the claims that met on one file, and a caveat per file where they disagreed.
 
@@ -5322,14 +5400,19 @@ def _merged_entry(claims: Sequence[FileGroup]) -> tuple[FileGroup, tuple[Caveat,
     roles = tuple(dict.fromkeys(claim.role for claim in claims))
     granularities = tuple(dict.fromkeys(claim.granularity for claim in claims))
     sizes = tuple(dict.fromkeys(claim.size_fixed for claim in claims))
+    # Two slots set to one file are one group read by both (#577 D23); where
+    # one claim cannot say which slots read the file, neither can the entry
+    # (#577 D24).
+    slots = _merged_slots(claims)
     if len(roles) == len(granularities) == len(sizes) == 1:
-        return first, ()
+        return (first if slots == first.slots else _dc_replace(first, slots=slots)), ()
     entry = FileGroup(
         dir=first.dir,
         files=first.files,
         granularity=granularities[0] if len(granularities) == 1 else GRANULARITY_SHARED_FILE,
         role=roles[0] if len(roles) == 1 else ROLE_UNKNOWN,
         size_fixed=sizes[0] if len(sizes) == 1 else None,
+        slots=slots,
     )
     size_words = tuple(_SIZE_FIXED_WORDS[size] for size in sizes)
     return entry, tuple(
@@ -5519,15 +5602,20 @@ def _observed_groups(
         if not mine:
             continue
         claimed.update(mine)
-        groups.append(
-            FileGroup(
-                dir=directory,
-                files=mine,
-                granularity=group.granularity,
-                role=group.role,
-                size_fixed=_card_group_size(group, sizes, _observed_templates(group, mine, rom_stem)),
+        spelled = _observed_templates_of(group, mine, rom_stem)
+        for slots, named, templates in _slot_buckets(group, mine, spelled):
+            groups.append(
+                FileGroup(
+                    dir=directory,
+                    files=named,
+                    granularity=group.granularity,
+                    role=group.role,
+                    size_fixed=_card_group_size(
+                        group, sizes, templates if slots else _observed_templates(group, mine, rom_stem)
+                    ),
+                    slots=slots,
+                )
             )
-        )
     unclaimed = [name for name in observed if name not in claimed]
     catchall = _unnamed_here(mode) if unclaimed else None
     if catchall is not None:
@@ -5538,6 +5626,7 @@ def _observed_groups(
                 granularity=catchall.granularity,
                 role=catchall.role,
                 size_fixed=_card_group_size(catchall, sizes),
+                slots=catchall.unnamed_slots,
             )
         )
         unclaimed = []
@@ -8540,6 +8629,11 @@ _DOLPHIN_FAMILY = frozenset({"DOLPHIN", "PRIMEHACK"})
 # The Dolphin build the cards cite, the same string as their
 # ``citations.build``.
 _DOLPHIN_BUILD = "dolphin 2609"
+# The PrimeHack builds the cards cite, the same strings as their
+# ``citations.build``: the revision RetroDECK's component master-230724.27 is
+# built from, and the one the Flathub flatpak ships.
+_PRIMEHACK_BUILD = "shiiion/dolphin 81bfb96"
+_PRIMEHACK_FLATHUB_BUILD = "shiiion/dolphin 53f53e0"
 
 # The libretro Dolphin core RetroDECK deploys: libretro/dolphin at
 # fd1aca3af7db75504ed7512406d8a4cf4187110a, the revision the shipped
@@ -8563,10 +8657,10 @@ _DOLPHIN_GAME_LAYERS: dict[tuple[str, str | None], _DolphinGameLayer] = {
         name="Dolphin", build=_DOLPHIN_BUILD, **_DOLPHIN_2609_LINES
     ),
     ("PRIMEHACK", None): _DolphinGameLayer(
-        name="PrimeHack", build="shiiion/dolphin 81bfb96", **_DOLPHIN_FORK_LINES
+        name="PrimeHack", build=_PRIMEHACK_BUILD, **_DOLPHIN_FORK_LINES
     ),
     ("PRIMEHACK", "io.github.shiiion.primehack"): _DolphinGameLayer(
-        name="PrimeHack", build="shiiion/dolphin 53f53e0", **_DOLPHIN_REBASED_FORK_LINES
+        name="PrimeHack", build=_PRIMEHACK_FLATHUB_BUILD, **_DOLPHIN_REBASED_FORK_LINES
     ),
 }
 
@@ -8780,16 +8874,40 @@ class _DolphinTree:
     readable: bool = True
 
 
+# The region codes a build cuts from the end of a configured raw card's name
+# before it puts the running disc's there, by the card's ``build`` citation:
+# GetMemcardPath tries ".USA", ".JAP", ".EUR" and, in Dolphin 2609 and the
+# Flathub PrimeHack, ".DEV" (MainSettings.cpp:805-808 at f84df020, :807-810 at
+# shiiion/dolphin 53f53e0); the PrimeHack revision RetroDECK builds has no
+# ".DEV" (:664-666 at 81bfb96), and neither does the core
+# (_DOLPHIN_CORE_CARD_SPELLINGS). No build cuts ".JPN" from a card's name.
+_DOLPHIN_CARD_SPELLINGS: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        _DOLPHIN_BUILD: ("USA", "JAP", "EUR", "DEV"),
+        _PRIMEHACK_FLATHUB_BUILD: ("USA", "JAP", "EUR", "DEV"),
+        _PRIMEHACK_BUILD: ("USA", "JAP", "EUR"),
+    }
+)
+
+
 def _standalone_dolphin_tree(card: StandaloneSaveCard, homes: _XdgHomes) -> _DolphinTree:
     """The tree a standalone Dolphin-family launch reads: the emulator's own XDG data tree."""
     user = homes.emulator_root(XDG_DATA, card.token)
+    cite = _cites(card, homes)
+    spellings = _DOLPHIN_CARD_SPELLINGS.get(cite("build"))
+    if spellings is None:
+        raise ValueError(
+            f"{cite('build')!r} is a build the card-name table states nothing for — which region codes "
+            "it cuts from a configured card's name is unread, and the cards and the code shipped out of step"
+        )
     return _DolphinTree(
         token=card.token,
         label=f"standalone save card '{card.token}'",
         provenance=card.provenance,
-        cite=_cites(card, homes),
+        cite=cite,
         gc_root=os.path.join(user, "GC"),
         nand_root=os.path.join(user, "Wii"),
+        card_spellings=spellings,
     )
 
 
@@ -9025,6 +9143,7 @@ def _dolphin_raw_slot(
                 granularity=GRANULARITY_SHARED_FILE,
                 role=ROLE_MEMORY_CARD,
                 size_fixed=True,
+                slots=(letter,),
             )
             for name in names
         ),
@@ -9089,6 +9208,7 @@ def _dolphin_folder_slot(
                 granularity=GRANULARITY_PER_GAME_FILES,
                 role=ROLE_MEMORY_CARD,
                 size_fixed=False,
+                slots=(letter,),
             )
             for d in dirs
         ),
@@ -9110,8 +9230,8 @@ def _dolphin_folder_slot(
 # table does: a default would state one build's behaviour for another's answer.
 _DOLPHIN_AGP_WRITES_UNSET_CARTRIDGE = {
     _DOLPHIN_BUILD: False,
-    "shiiion/dolphin 53f53e0": False,
-    "shiiion/dolphin 81bfb96": True,
+    _PRIMEHACK_FLATHUB_BUILD: False,
+    _PRIMEHACK_BUILD: True,
     # The core writes it only for a non-empty stem too (EXI_DeviceAGP.cpp:44-45).
     _DOLPHIN_CORE_BUILD: False,
 }
@@ -9281,6 +9401,7 @@ def _dolphin_agp_slot(
                 granularity=GRANULARITY_SHARED_FILE,
                 role=ROLE_BATTERY,
                 size_fixed=True,
+                slots=(letter,),
             ),
         ),
         readings=readings,
@@ -11548,6 +11669,7 @@ def _duckstation_shared_slot(
             granularity=GRANULARITY_SHARED_CARD,
             role=ROLE_MEMORY_CARD,
             size_fixed=True,
+            slots=(str(slot + 1),),
         ),
         readings=(type_reading, path_reading),
     )
@@ -11646,6 +11768,7 @@ def _duckstation_per_game_slot(
             granularity=GRANULARITY_PER_GAME_FILE,
             role=ROLE_MEMORY_CARD,
             size_fixed=True,
+            slots=(str(slot + 1),),
         ),
         readings=tuple(readings),
         caveats=(caveat,),
@@ -12117,6 +12240,19 @@ def _pcsx2_multitap_ports(
     return ports
 
 
+def _pcsx2_slot_word(filename_key: str) -> str:
+    """The slot a ``[MemoryCards]`` filename key belongs to, in PCSX2's own words.
+
+    ``Slot1_Filename`` and ``Slot2_Filename`` are the console's ports ``1`` and
+    ``2``; a multitap's ``Multitap<port>_Slot<n>_Filename`` is the port's slot
+    ``B`` to ``D`` (``1B`` … ``2D``), slot ``A`` being the port's own card.
+    """
+    if filename_key.startswith("Multitap"):
+        port, slot = filename_key.removeprefix("Multitap").removesuffix("_Filename").split("_Slot")
+        return f"{port}{chr(ord('A') + int(slot) - 1)}"
+    return filename_key.removeprefix("Slot").removesuffix("_Filename")
+
+
 def _pcsx2_slot_group(
     machine: Machine,
     values: Mapping[tuple[str, str], str],
@@ -12147,6 +12283,7 @@ def _pcsx2_slot_group(
     for the second.
     """
     enable_key, filename_key, default_name, enabled_default, _port = slot
+    slot_word = _pcsx2_slot_word(filename_key)
     raw_enable, enable_spelled = _simpleini_value(values, "MemoryCards", enable_key)
     parsed_enable = qt_ini.from_chars_bool(raw_enable)
     enabled = parsed_enable if parsed_enable is not None else enabled_default
@@ -12223,6 +12360,7 @@ def _pcsx2_slot_group(
             granularity=GRANULARITY_PER_GAME_FILES,
             role=ROLE_MEMORY_CARD,
             size_fixed=False,
+            slots=(slot_word,),
         )
         return "folder", group, tuple(readings), (caveat,)
     group = FileGroup(
@@ -12231,6 +12369,7 @@ def _pcsx2_slot_group(
         granularity=GRANULARITY_SHARED_CARD,
         role=ROLE_MEMORY_CARD,
         size_fixed=True,
+        slots=(slot_word,),
     )
     return "file", group, tuple(readings), ()
 
@@ -14029,6 +14168,10 @@ def _rpcs3_savefile_placement(
                 files=None,
                 granularity=GRANULARITY_PER_GAME_FILE,
                 role=ROLE_MEMORY_CARD,
+                # A classic's card is put in a slot by a per-game setting
+                # atlas does not read, so which slot reads it is not
+                # established (#577 D24).
+                slots=None,
             ),
         ),
         trailing_caveats=(
@@ -23198,6 +23341,7 @@ class _CatalogueQueries:
             running=self._portability_build,
             token=lambda entry: self.standalone_firmware_token(entry.command),
             caveats=catalogue.caveats,
+            content_path=content_path,
         )
         answer = SavePortabilityAnswer(
             verdict=outcome.verdict,

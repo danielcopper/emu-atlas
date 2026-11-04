@@ -36,6 +36,12 @@ _REGISTRATIONS = Path(__file__).resolve().parent / "data" / "core_registrations.
 # rather than by a name the card spells.
 _CLAIMED_BY_READING = {("pcee2", "<memory_card_file>")}
 
+# Cores whose card names no file of the tree its record labels, with the
+# reason. The Dolphin core's card leaves the tree below User to the code that
+# reads its Dolphin.ini (installations.py, _dolphin_tree_answer), so its
+# record's names are held to that code's answer, not to the card.
+_NAMED_BY_THE_CODE = {"dolphin"}
+
 # The systems whose records tell cartridge kinds apart: every record covering
 # one of them is held to a cited statement per kind.
 _GAME_BOY_SYSTEMS = {"gb", "gbc"}
@@ -305,6 +311,40 @@ class TestTheLoaderFailsClosed:
         with pytest.raises(ValueError, match="expected keys"):
             load_save_formats(text)
 
+    def test_regionless_content_is_found_by_its_extension_in_any_case(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["regionless"] = {
+            "extensions": [".dol", ".elf"],
+            "citation": "[V] Boot.cpp:1 at abc1234",
+        }
+        regionless = load_save_formats(json.dumps(table)).emulators["demo"].systems["psx"].regionless
+        assert regionless is not None
+        assert [regionless.covers(path) for path in ("/g/Game.DOL", "/g/Game.elf", "/g/Game.iso", None)] == [
+            True,
+            True,
+            False,
+            False,
+        ]
+
+    def test_regionless_extensions_are_lowercase_with_their_dot(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["regionless"] = {"extensions": ["DOL"], "citation": "c at abc1234"}
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="lowercase '.ext' strings"):
+            load_save_formats(text)
+
+    def test_a_regionless_citation_that_names_no_revision_is_refused(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["regionless"] = {"extensions": [".dol"], "citation": "Boot.cpp:1"}
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="does not name the revision"):
+            load_save_formats(text)
+
+    def test_a_name_that_spells_the_region_hole_twice_is_refused(self):
+        text = _with_part(names=["<region>/<region>.raw"])
+        with pytest.raises(ValueError, match="hole once at most"):
+            load_save_formats(text)
+
     def test_a_mirror_handling_outside_the_vocabulary_is_refused(self):
         table = _table()
         table["emulators"]["demo"]["systems"]["psx"]["mirrors"] = [{"kinds": ["mbc2"], "handling": "wraps", "citation": "c"}]
@@ -375,6 +415,42 @@ class TestARuleMatchesTheNamesItsAnswerStates:
         assert not rule.applies("card1-shared+card2-none")
         assert not rule.applies(None)
         assert self._rule().applies(None)
+
+
+class TestARegionAndAFolderAreReadOffTheName:
+    """A ``<region>`` hole matches a word of SAVE_REGIONS alone and names it; a folder rule reads trailing segments (D21)."""
+
+    @staticmethod
+    def _rule(**changes: Any):
+        return load_save_formats(_with_part(**changes)).emulators["demo"].systems["psx"].parts[0]
+
+    def test_a_region_hole_matches_a_region_word_and_names_it(self):
+        rule = self._rule(names=["MemoryCardA.<region>.raw"])
+        assert rule.claim("MemoryCardA.EUR.raw", {}) == (len("MemoryCardA..raw"), "EUR")
+
+    def test_a_region_hole_matches_no_other_word(self):
+        rule = self._rule(names=["MemoryCardA.<region>.raw"])
+        assert rule.claim("MemoryCardA.USA.251.raw", {}) is None
+        assert rule.claim("MemoryCardA.KOR.raw", {}) is None
+
+    def test_a_name_without_a_region_hole_names_no_region(self):
+        assert self._rule().claim("Example Game (USA).srm", {}) == (len(".srm"), None)
+
+    def test_a_folder_rule_reads_the_directorys_trailing_segments(self):
+        rule = self._rule(names=["<region>/Card A"], folder=True)
+        assert rule.claim("/saves/dolphin-emu/GC/JAP/Card A", {}) == (len("/Card A"), "JAP")
+        assert rule.claim("/saves/dolphin-emu/GC/JAP/Card B", {}) is None
+        assert rule.claim("/saves/dolphin-emu/GC/USA/Card A/", {}) == (len("/Card A"), "USA")
+
+    def test_a_folder_rule_matches_at_a_segment_boundary(self):
+        rule = self._rule(names=["data"], folder=True)
+        assert rule.claim("/nand/title/00010000/52534245/data", {}) is not None
+        assert rule.claim("/nand/title/00010000/52534245/userdata", {}) is None
+
+    def test_a_hole_in_a_folder_name_spans_the_segments_that_fill_it(self):
+        rule = self._rule(names=["title/<save_id>/data"], folder=True)
+        assert rule.claim("/nand/title/00010000/52534245/data", {}) == (len("title//data"), None)
+        assert rule.claim("/nand/title/<save_id>/data", {}) == (len("title//data"), None)
 
 
 class TestThePackagedTable:
@@ -516,7 +592,7 @@ class TestEveryCardFileIsAPart:
         invented: list[str] = []
         for record in save_formats().emulators.values():
             card = cards.get(record.key)
-            if card is None:
+            if card is None or record.key in _NAMED_BY_THE_CODE:
                 continue
             spelled = {
                 template

@@ -84,7 +84,7 @@ from .portability_codes import (
     PORTABILITY_SIDES,
 )
 from .retroarch_cfg import CFG_LAYER_KINDS, CFG_LAYER_OVERRIDE_KINDS, RetroArchCfg
-from .save_formats import CARTRIDGE_KINDS, SAVE_LENGTH_RULES
+from .save_formats import CARTRIDGE_KINDS, SAVE_LENGTH_RULES, SAVE_REGIONS
 from .standalone_saves import REDIRECT_VIAS, SaveRedirect
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
 from .yaml_scalars import REFUSAL_CODES
@@ -1588,8 +1588,18 @@ class FileGroup:
     ``save-files-compressed`` says it compresses them. ``null`` where it
     was not established — never a claim that the size varies.
     """
+    slots: tuple[str, ...] | None = ()
+    """The slots of the console that read this group's files, in the emulator's own words (Dolphin's ``A`` and ``B``,
+    a PlayStation's ``1`` and ``2``), from the path the emulator resolves for each slot; two slots set to one file make
+    one group read by both (#577 D23). Empty where the emulator keeps no slots, and ``None`` where which slots read the
+    group is not established (#577 D24): RPCS3's virtual memory cards, whose slot is a per-game setting atlas does not
+    read, or PCEE2's card folder under a PCSX2 ini, whose multitap cards an unread setting may add."""
 
     def __post_init__(self) -> None:
+        if self.slots is not None and (
+            any(not slot.strip() for slot in self.slots) or len(set(self.slots)) != len(self.slots)
+        ):
+            raise ValueError(f"FileGroup: slots must be distinct non-blank strings, got {self.slots!r}")
         # Typed, and still checked: a truthy string or a 1 would otherwise be
         # serialized as a claim nobody made.
         if self.size_fixed is not None and type(self.size_fixed) is not bool:
@@ -2321,6 +2331,8 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # in different ways (#577 D19).
         (CAVEAT_SAVE_PART_UNESTABLISHED, "source_length"): SAVE_LENGTH_RULES,
         (CAVEAT_SAVE_PART_UNESTABLISHED, "target_length"): SAVE_LENGTH_RULES,
+        # The region a part is kept apart for (#577 D21).
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "region"): SAVE_REGIONS,
     }
 )
 

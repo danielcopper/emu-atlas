@@ -23,7 +23,10 @@
     "gb-clock-vbam-huc3": "VBA-M's HuC3 clock: the time it last read the clock at, as one time_t.",
     "gb-clock-vbam-tama5": "VBA-M's TAMA5 clock: fourteen 32-bit clock registers and a 64-bit time.",
     "nds-card-raw": "A DS game card's save memory, such as its EEPROM, FRAM, flash or NAND, as one raw image from its first address, one byte per byte of the chip, as long as the emulator sizes the card's chip.",
-    "nds-dsv": "DeSmuME's .dsv: the card's save memory as one raw image from its first address, padded with 0xFF to the next size of DeSmuME's table at or above the highest address the game wrote, followed by a 122-byte footer: an 82-byte line of text, six little-endian 32-bit fields (the size written, the padded size, the save type, the address size, the memory size and the version, 0) and the 16-byte cookie |-DESMUME SAVE-|."
+    "nds-dsv": "DeSmuME's .dsv: the card's save memory as one raw image from its first address, padded with 0xFF to the next size of DeSmuME's table at or above the highest address the game wrote, followed by a 122-byte footer: an 82-byte line of text, six little-endian 32-bit fields (the size written, the padded size, the save type, the address size, the memory size and the version, 0) and the 16-byte cookie |-DESMUME SAVE-|.",
+    "gc-card-raw": "A GameCube memory card as one raw image of the card's 8 KiB blocks, its header, directory and block maps first, as long as the card's size.",
+    "gc-gci-folder": "Dolphin's GCI folder: a directory standing for one card, each save a .gci file of its 64-byte directory entry followed by its 8 KiB blocks.",
+    "wii-nand-title-data": "A Wii title's save as Dolphin keeps it in its NAND tree: the files of the title's data directory, one host file per NAND file. The NAND's own record of each file's owner and modes (fst.bin) is no part of it; a file it does not list is given read and write for everyone."
   },
   "retroarch": {
     "compressed": "[V] save.c:644-657 at RetroArch a79435a — with save_file_compression on, RetroArch writes a file it saves through a core's memory id as an RZIP stream (rzipstream_write_file), and reads every such file back through rzipstream_read_file, which reads an uncompressed file as well (save.c:511-518). An emulator that does not load the file through RetroArch reads the compressed bytes, so the file has to be decompressed first, by no rule a client applies itself.",
@@ -41,6 +44,18 @@
       "to": "ps2-folder-card",
       "rule": null,
       "citation": "[V] pcsx2-qt/Settings/MemoryCardConvertWorker.cpp:102-167 at PCSX2 v2.8.2 (fd9d310c) — ConvertToFolder reads a file card into memory and saves it page by page into a new folder card."
+    },
+    {
+      "from": "gc-card-raw",
+      "to": "gc-gci-folder",
+      "rule": null,
+      "citation": "[V] Source/Core/DolphinQt/GCMemcardManager.cpp:331-350 and :407-501 at Dolphin f84df020 — the memory card manager opens a raw card and exports its saves as .gci files, each its directory entry and its blocks (Memcard::WriteSavefile); a GCI folder loads such files as they are, re-signing the copy-protected saves to its own card (Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:110-114)."
+    },
+    {
+      "from": "gc-gci-folder",
+      "to": "gc-card-raw",
+      "rule": null,
+      "citation": "[V] Source/Core/DolphinQt/GCMemcardManager.cpp:503-575 and :577-619 at Dolphin f84df020 — the memory card manager reads .gci files and imports each into an open raw card, which it then saves; the import re-signs the copy-protected saves to that card (Source/Core/Core/HW/GCMemcard/GCMemcard.cpp:713-784, :757-758)."
     }
   ],
   "emulators": {
@@ -1213,6 +1228,201 @@
                 "citation": "[V] src/NDSCart.cpp:402-428 and :1633-1645 at melonDS b86390e4 — the save is as long as the save type the ROM list gives the game's code (src/ROMList.cpp:23) or 8 KiB, a 64 kbit EEPROM's, for a code the list lacks; that list gives some game codes another type than melonDS 0.9.3's (7a3c11f) and than the melonDS that melonDS DS 1.2.0 builds (f6692df) (#577 D19)."
               },
               "citation": "[V] src/frontend/qt_sdl/EmuInstance.cpp:1889-1915, src/NDSCart.cpp:402-428 and src/frontend/qt_sdl/SaveManager.cpp:97-122 and :166-193 at melonDS b86390e4 — the emulator reads <rom_stem>.sav whole, the card copies it from its first byte up to SRAMLength over a 0xFF fill, and every flush writes the whole save raw."
+            }
+          ]
+        }
+      }
+    },
+    "dolphin": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["fd1aca3a"],
+        "names": "commit",
+        "revision": "fd1aca3a",
+        "citation": "The shipped binary names 'fd1aca3a' in its library_version (atlas/data/core_oddities.json, dolphin's provenance)."
+      },
+      "systems": {
+        "gc": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card A"],
+              "folder": true,
+              "modes": "^folder\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:181-260, :65-124, :621-718 and GCIFile.cpp:13-67 at libretro/dolphin fd1aca3a — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:663-665); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card B"],
+              "folder": true,
+              "modes": "\\+folder$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:181-260, :65-124, :621-718 and GCIFile.cpp:13-67 at libretro/dolphin fd1aca3a — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:663-665); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "^card\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-83 at libretro/dolphin fd1aca3a — a raw card is read whole at the file's own size and written back whole by its flush thread (:95-163); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardAPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:668-722), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "\\+card$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-83 at libretro/dolphin fd1aca3a — a raw card is read whole at the file's own size and written back whole by its flush thread (:95-163); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardBPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:668-722), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            }
+          ],
+          "regionless": {
+            "extensions": [".dol", ".elf"],
+            "citation": "[V] Source/Core/Core/Boot/Boot.cpp:251-275 and Source/Core/Core/ConfigManager.cpp:360-365, :456-457 at libretro/dolphin fd1aca3a — a .dol or .elf, the extension compared lowercased, that does not open as a disc image boots as an executable, whose region is Unknown, and an Unknown region becomes [Core] FallbackRegion, by default the region of the system's locale (Source/Core/Core/Config/MainSettings.cpp:268-269); atlas reads neither, so which region's card such content uses is not established."
+          }
+        },
+        "wii": {
+          "parts": [
+            {
+              "memory": "internal-storage",
+              "slot": null,
+              "format": "wii-nand-title-data",
+              "names": ["title/<save_id>/data"],
+              "folder": true,
+              "citation": "[V] Source/Core/Common/NandPaths.cpp:63-72 and Source/Core/Core/IOS/FS/HostBackend/FS.cpp:33-53, :236-280 at libretro/dolphin fd1aca3a — a title's save is its data directory below the NAND root, title/<hi>/<lo>/data, each NAND file a host file at the same path; a file the NAND's fst.bin does not list is given read and write for owner, group and others, \"to avoid breaking existing filesystems\", so a data directory copied in from another NAND is read as it lies."
+            }
+          ]
+        }
+      }
+    },
+    "DOLPHIN": {
+      "kind": "standalone",
+      "build": {
+        "pins": ["594afeb78ede945c8fe0e774649443cf12b0706188ce03bb3cd49e3004659e5b"],
+        "names": "release",
+        "revision": "f84df020",
+        "citation": "RetroDECK's Dolphin component names its build by the Flathub commit 594afeb78ede945c8fe0e774649443cf12b0706188ce03bb3cd49e3004659e5b in component_version, the card's pinned build of Dolphin 2609 at f84df020 (atlas/data/standalone_saves.json, DOLPHIN's builds)."
+      },
+      "systems": {
+        "gc": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card A"],
+              "folder": true,
+              "modes": "^folder\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:180-259, :64-123, :626-723 and GCIFile.cpp:13-67 at Dolphin f84df020 — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:668-670); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card B"],
+              "folder": true,
+              "modes": "\\+folder$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:180-259, :64-123, :626-723 and GCIFile.cpp:13-67 at Dolphin f84df020 — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:668-670); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "^card\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-82 at Dolphin f84df020 — a raw card is read whole at the file's own size and written back whole by its flush thread (:94-162); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardAPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:776-836), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "\\+card$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-82 at Dolphin f84df020 — a raw card is read whole at the file's own size and written back whole by its flush thread (:94-162); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardBPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:776-836), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            }
+          ],
+          "regionless": {
+            "extensions": [".dol", ".elf"],
+            "citation": "[V] Source/Core/Core/Boot/Boot.cpp:243-267 and Source/Core/Core/ConfigManager.cpp:382-387, :489-490 at Dolphin f84df020 — a .dol or .elf, the extension compared lowercased, that does not open as a disc image boots as an executable, whose region is Unknown, and an Unknown region becomes [Core] FallbackRegion, by default the region of the system's locale (Source/Core/Core/Config/MainSettings.cpp:280-281, Source/Core/Core/Config/DefaultLocale.cpp:188-192); atlas reads neither, so which region's card such content uses is not established."
+          }
+        },
+        "wii": {
+          "parts": [
+            {
+              "memory": "internal-storage",
+              "slot": null,
+              "format": "wii-nand-title-data",
+              "names": ["title/<save_id>/data"],
+              "folder": true,
+              "citation": "[V] Source/Core/Common/NandPaths.cpp:63-72 and Source/Core/Core/IOS/FS/HostBackend/FS.cpp:32-52, :234-278 at Dolphin f84df020 — a title's save is its data directory below the NAND root, title/<hi>/<lo>/data, each NAND file a host file at the same path; a file the NAND's fst.bin does not list is given read and write for owner, group and others, \"to avoid breaking existing filesystems\", so a data directory copied in from another NAND is read as it lies."
+            }
+          ]
+        }
+      }
+    },
+    "PRIMEHACK": {
+      "kind": "standalone",
+      "build": {
+        "pins": ["master-230724.27"],
+        "names": "release",
+        "revision": "81bfb96",
+        "citation": "RetroDECK's PrimeHack component names its build 'master-230724.27' in component_version, the card's pinned build of shiiion/dolphin at 81bfb96 (atlas/data/standalone_saves.json, PRIMEHACK's builds)."
+      },
+      "systems": {
+        "gc": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card A"],
+              "folder": true,
+              "modes": "^folder\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:181-260, :65-124, :621-718 and GCIFile.cpp:13-67 at shiiion/dolphin 81bfb96 — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:663-665); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-gci-folder",
+              "names": ["<region>/Card B"],
+              "folder": true,
+              "modes": "\\+folder$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp:181-260, :65-124, :621-718 and GCIFile.cpp:13-67 at shiiion/dolphin 81bfb96 — a GCI folder is a directory standing for one card of one region: each save is a .gci of its directory entry, DENTRY_SIZE 0x40 bytes, followed by its blocks of BLOCK_SIZE 0x2000 (GCMemcard.h:104, :89), read in whole at load and written back the same way (GCMemcardDirectory.cpp:663-665); the default folder is <GC user>/<region>/Card <slot>."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "A",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "^card\\+",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-83 at shiiion/dolphin 81bfb96 — a raw card is read whole at the file's own size and written back whole by its flush thread (:95-163); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardAPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:635-689), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "B",
+              "format": "gc-card-raw",
+              "names": ["<card>.<region>.<ext>"],
+              "modes": "\\+card$",
+              "citation": "[V] Source/Core/Core/HW/GCMemcard/GCMemcardRaw.cpp:38-83 at shiiion/dolphin 81bfb96 — a raw card is read whole at the file's own size and written back whole by its flush thread (:95-163); the default card is <GC user>/MemoryCard<slot>.<region>.raw, one card per region; a configured MemcardBPath names the slot's card under any name, the running disc's region in place of its region word or before its extension (GetMemcardPath, Source/Core/Core/Config/MainSettings.cpp:635-689), and the save answer states which slot reads each card, so the rule claims a card by that slot and reads only the region word off its name."
+            }
+          ],
+          "regionless": {
+            "extensions": [".dol", ".elf"],
+            "citation": "[V] Source/Core/Core/Boot/Boot.cpp:234-257 and Source/Core/Core/ConfigManager.cpp:245-250, :340-341 at shiiion/dolphin 81bfb96 — a .dol or .elf, the extension compared lowercased, that does not open as a disc image boots as an executable, whose region is Unknown, and an Unknown region becomes [Core] FallbackRegion, by default the region of the system's locale (Source/Core/Core/Config/MainSettings.cpp:252-253); atlas reads neither, so which region's card such content uses is not established."
+          }
+        },
+        "wii": {
+          "parts": [
+            {
+              "memory": "internal-storage",
+              "slot": null,
+              "format": "wii-nand-title-data",
+              "names": ["title/<save_id>/data"],
+              "folder": true,
+              "citation": "[V] Source/Core/Common/NandPaths.cpp:49-58 and Source/Core/Core/IOS/FS/HostBackend/FS.cpp:32-50, :238-283 at shiiion/dolphin 81bfb96 — a title's save is its data directory below the NAND root, title/<hi>/<lo>/data, each NAND file a host file at the same path; a file the NAND's fst.bin does not list is given read and write for owner, group and others, \"to avoid breaking existing filesystems\", so a data directory copied in from another NAND is read as it lies."
             }
           ]
         }

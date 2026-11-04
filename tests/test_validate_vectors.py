@@ -97,6 +97,7 @@ def _group(**overrides) -> Vector:
         "files": ["a.srm"],
         "granularity": "per-game-file",
         "role": "battery",
+        "slots": [],
         **overrides,
     }
 
@@ -1093,6 +1094,12 @@ PLACEMENT_CASES = [
     case(_base_placement(file_set=_file_set(state="observed", files=["a.srm"],
                                             groups=[_group(role="unaudited", size_fixed=None)])),
          "file group role must be one of", id="file-group-role"),
+    case(_base_placement(file_set=_file_set(state="observed", files=["a.srm"],
+                                            groups=[_group(slots="1", size_fixed=None)])),
+         "file group slots must be a list", id="file-group-slots-not-a-list"),
+    case(_base_placement(file_set=_file_set(state="observed", files=["a.srm"],
+                                            groups=[_group(slots=["1", "1"], size_fixed=None)])),
+         "file group slots must be a list of distinct", id="file-group-slots-repeated"),
     case(_base_placement(redirects={}),
          "savefile_location.redirects must be null or a list", id="redirects-not-a-list"),
     case(_base_placement(redirects=[{**_redirect(), "citation": "prose"}]),
@@ -2021,6 +2028,14 @@ def test_the_validator_refuses(vector, message):
         validate_machines_vector(vector)
 
 
+def test_a_group_whose_slots_are_not_established_passes():
+    # null is "which slots read it is not established" (#577 D24), not a
+    # malformed list.
+    validate_machines_vector(
+        _base_placement(file_set=_file_set(state="observed", files=["a.srm"], groups=[_group(slots=None, size_fixed=None)]))
+    )
+
+
 class TestTheFileLevelRules:
     """The rules that are about a vector FILE, not about one vector.
 
@@ -2546,6 +2561,9 @@ class TestTheVocabularyIsOneVocabulary:
         assert validate_vectors.KNOWN_SAVE_MOVES == list(atlas.SAVE_MOVES)
         assert validate_vectors.KNOWN_SAVE_MEMORIES == set(atlas.SAVE_MEMORIES)
 
+    def test_the_save_region_vocabulary_matches(self):
+        assert validate_vectors.KNOWN_SAVE_REGIONS == set(atlas.SAVE_REGIONS)
+
     def test_the_role_vocabulary_itself_is_pinned(self):
         """A role is consumer surface, so growing the set is a deliberate edit.
 
@@ -2933,6 +2951,12 @@ class TestTheSavePortabilityShape:
         vector = _portability_vector(self.LOST_CARD)
         vector["expected"]["save_portability"]["parts"][0]["moves"] = ["name"]
         with pytest.raises(VectorError, match="moves stand exactly"):
+            validate_machines_vector(vector)
+
+    def test_a_part_region_outside_the_vocabulary_is_refused(self):
+        vector = _portability_vector(self.LOST_CARD)
+        vector["expected"]["save_portability"]["parts"][0]["region"] = "KOR"
+        with pytest.raises(VectorError, match="region must be null or one of"):
             validate_machines_vector(vector)
 
     def test_a_not_readable_part_may_name_the_targets_group(self):

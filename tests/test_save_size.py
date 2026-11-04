@@ -265,6 +265,29 @@ def _frontend_group(files: list[str], memory: str = "save_ram") -> dict[str, Any
     }
 
 
+class TestACardGroupsSlots:
+    """A card group's ``slots`` name the one slot that reads each of its files, every one of them (#577 D23)."""
+
+    def test_each_file_has_its_slot(self):
+        group = {"files": ["a.mcd", "b.mcd"], "granularity": "shared-card", "role": "memory-card",
+                 "slots": {"a.mcd": "1", "b.mcd": "2"}}
+        (card,) = load_oddities(_card_table(group))
+        assert dict(card.modes["always"].groups[0].slots) == {"a.mcd": ("1",), "b.mcd": ("2",)}
+
+    def test_a_file_without_its_slot_is_refused(self):
+        group = {"files": ["a.mcd", "b.mcd"], "granularity": "shared-card", "role": "memory-card",
+                 "slots": {"a.mcd": "1"}}
+        text = _card_table(group)
+        with pytest.raises(ValueError, match="slots must map exactly the group's file names"):
+            load_oddities(text)
+
+    def test_a_blank_slot_is_refused(self):
+        group = {"files": ["a.mcd"], "granularity": "shared-card", "role": "memory-card", "slots": {"a.mcd": " "}}
+        text = _card_table(group)
+        with pytest.raises(ValueError, match="slots"):
+            load_oddities(text)
+
+
 class TestTheCardBlock:
     def test_the_frontends_own_name_is_accepted(self):
         (card,) = load_oddities(_card_table(_frontend_group(["<rom_stem>.srm"])))

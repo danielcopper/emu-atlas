@@ -12,6 +12,8 @@ builds, and the two card routes no shipped card collides on.
 
 from __future__ import annotations
 
+from types import MappingProxyType
+
 import pytest
 
 from atlas.installations import (
@@ -64,6 +66,23 @@ def _group(
 
 def _unnamed(directory: str = "/saves") -> FileGroup:
     return FileGroup(dir=directory, files=None, granularity="per-game-files", role=ROLE_BATTERY)
+
+
+class TestAGroupsSlots:
+    """A group's ``slots`` are distinct non-blank words, empty where the emulator keeps none (#577 D23)."""
+
+    @pytest.mark.parametrize("slots", [("",), (" ",), ("1", "1")])
+    def test_blank_or_repeated_slots_are_refused(self, slots):
+        with pytest.raises(ValueError, match="slots must be distinct non-blank strings"):
+            FileGroup(dir="/saves", files=("a.mcd",), granularity=GRANULARITY_SHARED_CARD,
+                      role=ROLE_MEMORY_CARD, slots=slots)
+
+    def test_slots_may_be_left_unestablished(self):
+        group = FileGroup(dir="/d", files=("a",), granularity=GRANULARITY_SHARED_CARD, role=ROLE_MEMORY_CARD, slots=None)
+        assert group.slots is None
+
+    def test_a_group_keeps_no_slots_by_default(self):
+        assert _group("a.srm").slots == ()
 
 
 class TestTheTypeRefusesARepeat:
@@ -132,6 +151,33 @@ class TestTheMergedClaimsVocabulary:
 
 class TestTheMerge:
     """``_one_entry_per_file``: D1 for what disagrees, D2 for naming it, D3 for what agrees."""
+
+    def test_two_slots_on_one_file_are_one_entry_read_by_both(self):
+        # Two slots set to one card (#577 D23): one group, both slots.
+        slot_1 = FileGroup(dir="/cards", files=("x.mcd",), granularity=GRANULARITY_SHARED_CARD,
+                           role=ROLE_MEMORY_CARD, size_fixed=True, slots=("1",))
+        slot_2 = FileGroup(dir="/cards", files=("x.mcd",), granularity=GRANULARITY_SHARED_CARD,
+                           role=ROLE_MEMORY_CARD, size_fixed=True, slots=("2",))
+        groups, caveats = _one_entry_per_file([slot_1, slot_2])
+        assert ([g.slots for g in groups], caveats) == ([("1", "2")], ())
+
+    def test_slots_are_kept_where_the_claims_disagree_too(self):
+        card = FileGroup(dir="/saves", files=("x.sav",), granularity=GRANULARITY_SHARED_FILE,
+                         role=ROLE_MEMORY_CARD, slots=("A",))
+        other = FileGroup(dir="/saves", files=("x.sav",), granularity=GRANULARITY_SHARED_FILE,
+                          role=ROLE_BATTERY, slots=("B",))
+        groups, _ = _one_entry_per_file([card, other])
+        assert [g.slots for g in groups] == [("A", "B")]
+
+    def test_a_claim_that_cannot_say_its_slots_leaves_the_entrys_unestablished(self):
+        # One claim names slot 1, the other cannot say which slot reads the
+        # file: the entry cannot either (#577 D24).
+        named = FileGroup(dir="/cards", files=("x.mcd",), granularity=GRANULARITY_SHARED_CARD,
+                          role=ROLE_MEMORY_CARD, slots=("1",))
+        unknown = FileGroup(dir="/cards", files=("x.mcd",), granularity=GRANULARITY_SHARED_CARD,
+                            role=ROLE_MEMORY_CARD, slots=None)
+        groups, caveats = _one_entry_per_file([named, unknown])
+        assert ([g.slots for g in groups], caveats) == ([None], ())
 
     def test_claims_that_disagree_are_one_entry_keeping_only_what_they_share(self):
         card = _group("x.sav", role=ROLE_MEMORY_CARD, size_fixed=True)
@@ -248,6 +294,42 @@ COLLIDING = SaveMode(
         SaveGroup(subdir="core", files=("shared.brm",), granularity="shared-file", role="battery"),
     ),
 )
+
+
+# A mode whose one group holds two slots' cards (#577 D23).
+TWO_SLOTS = SaveMode(
+    root="system_directory",
+    groups=(
+        SaveGroup(
+            subdir="cards",
+            files=("card1.mcd", "card2.mcd"),
+            granularity="shared-card",
+            role="memory-card",
+            slots=MappingProxyType({"card1.mcd": ("1",), "card2.mcd": ("2",)}),
+        ),
+    ),
+)
+
+
+class TestAGroupOfTwoSlotsIsStatedPerSlot:
+    """A card group holding different slots' files reaches the answer as one group per slot (#577 D23)."""
+
+    def test_a_declared_set_states_a_group_per_slot(self):
+        file_set, _ = _card_file_set(
+            FixtureMachine({}),
+            card=load_oddities()[0],
+            mode=TWO_SLOTS,
+            directory="/sys/cards",
+            rom_stem="game",
+            content_dir_name=None,
+            observable=False,
+        )
+        assert [(g.files, g.slots) for g in file_set.groups] == [(("card1.mcd",), ("1",)), (("card2.mcd",), ("2",))]
+        assert file_set.files == ("card1.mcd", "card2.mcd")
+
+    def test_an_observed_set_states_a_group_per_slot_it_found(self):
+        groups = _observed_groups(("card2.mcd",), directory="/sys/cards", rom_stem="game", mode=TWO_SLOTS)
+        assert [(g.files, g.slots) for g in groups] == [(("card2.mcd",), ("2",))]
 
 
 class TestTheCardRoutes:

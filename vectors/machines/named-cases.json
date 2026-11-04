@@ -56,7 +56,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -123,7 +124,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -327,7 +329,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -576,7 +579,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -756,7 +760,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1247,7 +1252,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1442,7 +1448,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1451,7 +1460,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1577,18 +1587,46 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
                 "files": [
-                  "vmu_save_B1.bin",
-                  "vmu_save_C1.bin",
+                  "vmu_save_B1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_C1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1597,7 +1635,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1751,14 +1790,50 @@
               {
                 "dir": "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u",
                 "files": [
-                  "<save_id>.A1.bin",
-                  "<save_id>.B1.bin",
-                  "<save_id>.C1.bin",
+                  "<save_id>.A1.bin"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u",
+                "files": [
+                  "<save_id>.B1.bin"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u",
+                "files": [
+                  "<save_id>.C1.bin"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves/Multi Disc Game (Europe).m3u",
+                "files": [
                   "<save_id>.D1.bin"
                 ],
                 "granularity": "per-game-files",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -1767,7 +1842,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1908,7 +1984,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -1917,7 +1996,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2042,14 +2122,50 @@
               {
                 "dir": "<content_dir>/dc",
                 "files": [
-                  "vmu_save_A1.bin",
-                  "vmu_save_B1.bin",
-                  "vmu_save_C1.bin",
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
+              },
+              {
+                "dir": "<content_dir>/dc",
+                "files": [
+                  "vmu_save_B1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "<content_dir>/dc",
+                "files": [
+                  "vmu_save_C1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "<content_dir>/dc",
+                "files": [
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "<content_dir>/dc",
@@ -2058,7 +2174,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2185,7 +2302,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -2194,7 +2314,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2321,7 +2442,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system/dc",
@@ -2330,7 +2454,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2454,14 +2579,50 @@
               {
                 "dir": "/var/db/bios/dc",
                 "files": [
-                  "vmu_save_A1.bin",
-                  "vmu_save_B1.bin",
-                  "vmu_save_C1.bin",
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
+              },
+              {
+                "dir": "/var/db/bios/dc",
+                "files": [
+                  "vmu_save_B1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "/var/db/bios/dc",
+                "files": [
+                  "vmu_save_C1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "/var/db/bios/dc",
+                "files": [
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "/var/db/bios/dc",
@@ -2470,7 +2631,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2604,18 +2766,46 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
                 "files": [
-                  "vmu_save_B1.bin",
-                  "vmu_save_C1.bin",
+                  "vmu_save_B1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
+                  "vmu_save_C1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
+                "files": [
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/dreamcast/dc",
@@ -2624,7 +2814,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -3286,7 +3477,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
               }
             ]
           },
@@ -3519,7 +3713,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -3956,7 +4151,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4201,12 +4397,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -4306,12 +4516,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -4698,7 +4922,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -4917,7 +5142,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -5136,7 +5362,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -5416,7 +5643,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               }
             ]
           },
@@ -5628,7 +5858,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -5805,7 +6036,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -5814,7 +6046,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -5823,7 +6056,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -6423,7 +6657,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -6432,7 +6667,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn",
@@ -6441,7 +6677,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -6638,7 +6875,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -7328,7 +7566,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               }
             ]
           },
@@ -7686,7 +7927,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -7755,7 +7997,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -7823,7 +8066,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -7951,7 +8195,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -8079,7 +8324,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -8152,7 +8398,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -8287,7 +8534,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -8416,7 +8664,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -8553,7 +8802,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -9015,7 +9265,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -9059,7 +9310,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -9237,7 +9489,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -9358,7 +9611,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -9403,7 +9657,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -9560,7 +9815,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "battery",
-                    "size_fixed": true
+                    "size_fixed": true,
+                    "slots": []
                   }
                 ]
               },
@@ -9614,7 +9870,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -9718,7 +9975,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -9813,7 +10071,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -9927,7 +10186,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -10019,7 +10279,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -10111,7 +10372,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -10221,7 +10483,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -10322,7 +10585,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -11208,7 +11472,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               }
             ]
           },
@@ -11518,7 +11785,8 @@
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -12634,7 +12902,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -12782,7 +13051,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -12872,7 +13142,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -12961,7 +13232,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -13056,7 +13328,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -14338,7 +14611,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -14993,7 +15267,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -15168,7 +15443,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -15245,7 +15521,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -15329,7 +15606,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -15420,7 +15698,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -15464,7 +15743,8 @@
                     ],
                     "granularity": "per-game-file",
                     "role": "unknown",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -15781,7 +16061,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -15867,7 +16148,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -16013,7 +16295,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -16022,7 +16307,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -16190,12 +16476,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
                 "files": [
-                  "vmu_save_A1.bin",
+                  "vmu_save_A1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
                   "vmu_save_A2.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A2"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -16204,7 +16504,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -16796,7 +17097,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
               }
             ]
           },
@@ -22281,7 +22585,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               }
             ]
           },
@@ -23025,7 +23332,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn/kronos/stv",
@@ -23034,7 +23342,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/saturn/kronos/stv",
@@ -23043,7 +23352,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -23159,18 +23469,46 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
                 "files": [
-                  "vmu_save_B1.bin",
-                  "vmu_save_C1.bin",
+                  "vmu_save_B1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "B1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
+                  "vmu_save_C1.bin"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "C1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/dc",
+                "files": [
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "D1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/bios/dc",
@@ -23179,7 +23517,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -23347,12 +23686,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -23520,12 +23873,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Custom.ps2",
+                  "Custom.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -23690,12 +24057,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -23871,7 +24252,10 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
               }
             ]
           },
@@ -24171,12 +24555,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -24330,7 +24728,11 @@
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1",
+                  "2"
+                ]
               }
             ]
           },
@@ -24492,12 +24894,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -24662,12 +25078,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -24820,12 +25250,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -24979,7 +25423,11 @@
                 "files": null,
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": [
+                  "1",
+                  "2"
+                ]
               }
             ]
           },
@@ -25121,7 +25569,8 @@
                 "files": null,
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": null
               }
             ]
           },
@@ -25263,12 +25712,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -25407,12 +25870,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -25533,12 +26010,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -25676,7 +26167,10 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
               }
             ]
           },
@@ -25811,12 +26305,26 @@
               {
                 "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
                 "files": [
-                  "Mcd001.ps2",
+                  "Mcd001.ps2"
+                ],
+                "granularity": "shared-card",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/bios/pcsx2/memcards",
+                "files": [
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -25925,21 +26433,30 @@
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "memory-card",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": [
+                  "A"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/gc/User/GC/EUR/Card A",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "memory-card",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": [
+                  "A"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/gc/User/GC/JAP/Card A",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "memory-card",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": [
+                  "A"
+                ]
               }
             ]
           },
@@ -26143,7 +26660,10 @@
                 ],
                 "granularity": "shared-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/gc/User/GC",
@@ -26152,7 +26672,10 @@
                 ],
                 "granularity": "shared-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/gc/User/GC",
@@ -26161,7 +26684,10 @@
                 ],
                 "granularity": "shared-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "A"
+                ]
               }
             ]
           },
@@ -26276,7 +26802,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -26399,7 +26926,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -26512,7 +27040,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },

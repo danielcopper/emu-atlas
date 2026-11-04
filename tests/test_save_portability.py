@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 
@@ -75,9 +76,18 @@ def _rule(memory: str, slot: str | None, fmt: str | None, names: list[str], **ex
 
 
 def _record(
-    kind: str, parts: list[dict[str, object]], *, names: str = "commit", ignore=None, not_run=None, mirrors=None
+    kind: str,
+    parts: list[dict[str, object]],
+    *,
+    names: str = "commit",
+    ignore=None,
+    not_run=None,
+    mirrors=None,
+    regionless: dict[str, object] | None = None,
 ) -> dict[str, object]:
     system: dict[str, object] = {"parts": parts}
+    if regionless:
+        system["regionless"] = regionless
     if ignore:
         system["ignore"] = ignore
     if not_run:
@@ -347,6 +357,214 @@ class TestAPartSizedPerGameInDifferentWays:
             Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"source_length": "rom-list-def5678"})
         with pytest.raises(ValueError, match="must be one of"):
             Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"target_length": "the-game"})
+
+REGION_CARD_RULES = [
+    _rule("memory-card", "A", "folder", ["<region>/Card A"], folder=True),
+    _rule("memory-card", "B", "folder", ["<region>/Card B"], folder=True),
+]
+
+
+def _region_folder(root: str, region: str, slot: str = "A") -> FileGroup:
+    return FileGroup(
+        dir=f"{root}/GC/{region}/Card {slot}", files=None, granularity=GRANULARITY_PER_GAME_FILES, role=ROLE_MEMORY_CARD
+    )
+
+
+class TestAMemoryKeptPerRegion:
+    """One part per slot and region, each paired with the target's memory of the same region (#577 D21)."""
+
+    TABLE = _table({"src": _record("libretro", REGION_CARD_RULES), "dst": _record("libretro", REGION_CARD_RULES)})
+
+    def test_each_region_is_a_part_paired_with_the_targets_same_region(self):
+        regions = ("USA", "EUR", "JAP")
+        source = _placement(*(_region_folder("/a", region) for region in regions))
+        target = _placement(*(_region_folder("/b", region) for region in reversed(regions)))
+        answer = _answer(source, target, self.TABLE)
+        assert [(p.slot, p.region, p.verdict, p.moves) for p in answer.parts] == [
+            ("A", region, PORTABILITY_SAME_DATA, (MOVE_DIRECTORY,)) for region in regions
+        ]
+        assert [(p.source_group.dir, p.target_group.dir if p.target_group else None) for p in answer.parts] == [
+            (f"/a/GC/{region}/Card A", f"/b/GC/{region}/Card A") for region in regions
+        ]
+
+    def test_a_region_the_target_keeps_no_memory_for_does_not_carry_over(self):
+        source = _placement(_region_folder("/a", "USA"), _region_folder("/a", "JAP"))
+        answer = _answer(source, _placement(_region_folder("/b", "USA")), self.TABLE)
+        assert [(p.region, p.verdict) for p in answer.parts] == [
+            ("USA", PORTABILITY_SAME_DATA),
+            ("JAP", PORTABILITY_UNESTABLISHED),
+        ]
+
+    def test_two_slots_of_one_region_stay_apart(self):
+        source = _placement(_region_folder("/a", "EUR", "B"))
+        target = _placement(_region_folder("/b", "EUR", "A"), _region_folder("/b", "EUR", "B"))
+        answer = _answer(source, target, self.TABLE)
+        assert [(p.slot, p.region) for p in answer.parts] == [("B", "EUR")]
+        assert answer.parts[0].target_group is not None
+        assert answer.parts[0].target_group.dir == "/b/GC/EUR/Card B"
+
+    @staticmethod
+    def _regionless_table(*, target_rules=REGION_CARD_RULES) -> SaveFormats:
+        record = _record(
+            "libretro",
+            REGION_CARD_RULES,
+            regionless={"extensions": [".dol", ".elf"], "citation": "[V] Boot.cpp:1 at abc1234"},
+        )
+        return _table({"src": record, "dst": _record("libretro", target_rules)})
+
+    def test_content_with_no_region_leaves_each_region_s_part_unestablished(self):
+        source = _placement(_region_folder("/a", "USA"), _region_folder("/a", "EUR"))
+        target = _placement(_region_folder("/b", "USA"), _region_folder("/b", "EUR"))
+        answer = portability_answer(
+            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=self._regionless_table(),
+            content_path="/roms/gc/Homebrew.DOL",
+        )
+        assert [(p.region, p.verdict, p.moves) for p in answer.parts] == [
+            ("USA", PORTABILITY_UNESTABLISHED, ()),
+            ("EUR", PORTABILITY_UNESTABLISHED, ()),
+        ]
+        assert [c.data["reason"] for c in answer.caveats] == ["region-not-in-content", "region-not-in-content"]
+        assert "[V] Boot.cpp:1 at abc1234" in answer.sources
+
+    def test_the_targets_statement_alone_leaves_the_part_unestablished(self):
+        target_record = _record(
+            "libretro", REGION_CARD_RULES, regionless={"extensions": [".dol"], "citation": "[V] Dst.cpp:1 at abc1234"}
+        )
+        table = _table({"src": _record("libretro", REGION_CARD_RULES), "dst": target_record})
+        source, target = _placement(_region_folder("/a", "JAP")), _placement(_region_folder("/b", "JAP"))
+        answer = portability_answer(
+            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
+            content_path="/roms/gc/Homebrew.dol",
+        )
+        assert (answer.parts[0].verdict, "[V] Dst.cpp:1 at abc1234" in answer.sources) == (PORTABILITY_UNESTABLISHED, True)
+
+    def test_a_memory_kept_for_every_region_is_untouched_by_content_with_no_region(self):
+        record = _record(
+            "libretro", CARD_RULES, regionless={"extensions": [".dol"], "citation": "[V] Boot.cpp:1 at abc1234"}
+        )
+        table = _table({"src": record, "dst": _record("libretro", CARD_RULES)})
+        source, target = _placement(_group("Game.srm")), _placement(_group("Game.srm"))
+        answer = portability_answer(
+            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
+            content_path="/roms/gc/Homebrew.dol",
+        )
+        assert (answer.verdict, answer.caveats) == (PORTABILITY_SAME_FILES, ())
+
+    def test_a_disc_keeps_its_verdict(self):
+        source = _placement(_region_folder("/a", "USA"))
+        target = _placement(_region_folder("/b", "USA"))
+        answer = portability_answer(
+            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=self._regionless_table(),
+            content_path="/roms/gc/Game.iso",
+        )
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_SAME_DATA, ())
+
+    def test_a_slot_the_target_keeps_nothing_in_is_lost_whatever_the_region(self):
+        source = _placement(_region_folder("/a", "USA", "B"))
+        table = self._regionless_table(target_rules=REGION_CARD_RULES[:1])
+        answer = portability_answer(
+            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, _placement(_region_folder("/b", "USA"))),
+            running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
+            content_path="/roms/gc/Homebrew.elf",
+        )
+        assert (answer.parts[0].verdict, answer.caveats) == (PORTABILITY_NOT_READABLE, ())
+
+    RAW = [_rule("memory-card", letter, "card", ["<card>.<region>.<ext>"]) for letter in ("A", "B")]
+
+    @staticmethod
+    def _card(name: str, directory: str, *slots: str) -> FileGroup:
+        return FileGroup(
+            dir=directory, files=(name,), granularity=GRANULARITY_SHARED_CARD, role=ROLE_MEMORY_CARD, slots=slots
+        )
+
+    def _raw_answer(self, *source_groups: FileGroup, target_rules=None):
+        table = _table({"src": _record("libretro", self.RAW), "dst": _record("libretro", target_rules or self.RAW[:1])})
+        target = _placement(self._card("MemoryCardA.USA.raw", "/t", "A"))
+        return _answer(_placement(*source_groups), target, table)
+
+    def test_a_card_is_the_part_of_the_slot_the_answer_says_reads_it(self):
+        # Slot A reads a file called MemoryCardB; slot B its default card; the
+        # target keeps nothing in slot B.
+        answer = self._raw_answer(
+            self._card("MemoryCardB.USA.raw", "/cards", "A"), self._card("MemoryCardB.USA.raw", "/gc", "B")
+        )
+        assert [(p.slot, p.region, p.source_group.dir, p.verdict) for p in answer.parts] == [
+            ("A", "USA", "/cards", PORTABILITY_SAME_DATA),
+            ("B", "USA", "/gc", PORTABILITY_NOT_READABLE),
+        ]
+
+    def test_two_cards_of_one_name_are_each_their_own_slots(self):
+        answer = self._raw_answer(self._card("Mine.USA.raw", "/a", "A"), self._card("Mine.USA.raw", "/b", "B"))
+        assert [(p.slot, p.source_group.dir) for p in answer.parts] == [("A", "/a"), ("B", "/b")]
+
+    def test_one_file_two_slots_read_is_a_part_of_each(self):
+        answer = self._raw_answer(self._card("Mine.USA.raw", "/cards", "A", "B"), target_rules=self.RAW)
+        assert [(p.slot, p.source_group.dir) for p in answer.parts] == [("A", "/cards"), ("B", "/cards")]
+
+    def test_each_slot_takes_its_own_closest_rule(self):
+        # Slot A's rule spells the default name more literally than slot B's;
+        # a file both slots read is still a part of each.
+        rules = [
+            _rule("memory-card", "A", "card", ["MemoryCardA.<region>.raw"]),
+            _rule("memory-card", "B", "card", ["<card>.<region>.<ext>"]),
+        ]
+        table = _table({"src": _record("libretro", rules), "dst": _record("libretro", rules)})
+        source = _placement(self._card("MemoryCardA.USA.raw", "/gc", "A", "B"))
+        target = _placement(self._card("MemoryCardA.USA.raw", "/t", "A"), self._card("MemoryCardB.USA.raw", "/t", "B"))
+        answer = _answer(source, target, table)
+        assert [p.slot for p in answer.parts] == ["A", "B"]
+
+    def test_a_group_without_slots_is_claimed_by_name_alone(self):
+        answer = self._raw_answer(self._card("Mine.USA.raw", "/cards"), target_rules=self.RAW)
+        assert [p.slot for p in answer.parts] == ["A", "B"]
+
+    @staticmethod
+    def _unslotted(name: str, directory: str) -> FileGroup:
+        return FileGroup(
+            dir=directory, files=(name,), granularity=GRANULARITY_SHARED_CARD, role=ROLE_MEMORY_CARD, slots=None
+        )
+
+    def test_a_card_whose_slots_are_not_established_is_unestablished_for_each_slot(self):
+        # Which slot reads the card is not established on the source side, so
+        # neither is which of the target's slots it pairs with (#577 D24).
+        answer = self._raw_answer(self._unslotted("MemoryCardA.USA.raw", "/cards"), target_rules=self.RAW)
+        assert [(p.slot, p.verdict) for p in answer.parts] == [
+            ("A", PORTABILITY_UNESTABLISHED),
+            ("B", PORTABILITY_UNESTABLISHED),
+        ]
+        reasons = [c.data["reason"] for c in answer.caveats if c.code == atlas.CAVEAT_SAVE_PART_UNESTABLISHED]
+        assert reasons == [atlas.REASON_SLOTS_UNESTABLISHED] * 2
+
+    def test_a_target_card_whose_slots_are_not_established_leaves_the_pair_unestablished(self):
+        table = _table({"src": _record("libretro", self.RAW[:1]), "dst": _record("libretro", self.RAW[:1])})
+        source = _placement(self._card("MemoryCardA.USA.raw", "/gc", "A"))
+        target = _placement(self._unslotted("MemoryCardA.USA.raw", "/t"))
+        (part,) = _answer(source, target, table).parts
+        assert (part.slot, part.verdict) == ("A", PORTABILITY_UNESTABLISHED)
+
+    def test_a_memory_kept_for_every_region_has_no_region(self):
+        answer = _answer(_placement(_group("Game.srm")), _placement(_group("Game.srm")), TWO_CORES)
+        assert [(p.region, p.verdict) for p in answer.parts] == [(None, PORTABILITY_SAME_FILES)]
+
+    def test_an_unestablished_part_names_its_region(self):
+        other = [_rule("memory-card", "A", "other", ["<region>/Card A"], folder=True)]
+        table = _table({"src": _record("libretro", other), "dst": _record("libretro", REGION_CARD_RULES)})
+        answer = _answer(_placement(_region_folder("/a", "JAP")), _placement(_region_folder("/b", "JAP")), table)
+        assert [dict(c.data) for c in answer.caveats] == [
+            {"memory": "memory-card", "slot": "A", "region": "JAP", "reason": "no-conversion-stated"}
+        ]
+
+    def test_a_region_outside_the_vocabulary_is_refused_at_construction(self):
+        group = _region_folder("/a", "USA")
+        with pytest.raises(ValueError, match="region must be None or one of"):
+            SavePart("memory-card", "A", PORTABILITY_SAME_FILES, group, group, region="KOR")
+        with pytest.raises(ValueError, match="must be one of"):
+            Caveat(CAVEAT_SAVE_PART_UNESTABLISHED, "m", {"region": "KOR"})
+
 
 RAM = "cartridge-ram"
 CLOCK = "cartridge-clock"
@@ -858,3 +1076,85 @@ class TestTheQuestionOnAnInstallation:
         direct = installs[0].save_portability("psx", source="A", target="B")
         assert labelled.installation is installs[0]
         assert atlas.save_portability_contract(labelled.answer) == atlas.save_portability_contract(direct)
+
+
+# The systems whose consoles read memory cards by slot: every card group a save
+# answer states for one of them names the slots that read it (#577 D23).
+_SLOTTED_SYSTEMS = {"psx", "ps2", "gc", "dreamcast"}
+# Flycast keeps no save-format record yet, so the table below cannot name its
+# system; every other core's systems are the ones its record states.
+_SYSTEMS_WITHOUT_A_RECORD = {"flycast": ("dreamcast",)}
+
+
+def _systems_asked(query: dict[str, Any]) -> set[str]:
+    """The systems a vector's save question is about: its own, or the systems of the core it names."""
+    if "system" in query:
+        return {query["system"]}
+    core = str(query.get("core_so", "")).removesuffix("_libretro.so")
+    record = load_save_formats().emulators.get(core)
+    return set(record.systems if record is not None else _SYSTEMS_WITHOUT_A_RECORD.get(core, ()))
+_SAVE_QUESTIONS = (
+    ("savefile_location", "savefile_query"),
+    ("entry_savefile_location", "entry_savefile_query"),
+    ("save_portability", "save_portability_query"),
+)
+
+
+def _card_groups(node: object):
+    if isinstance(node, dict):
+        if {"dir", "files", "granularity", "role", "slots"} <= set(node) and node["role"] == ROLE_MEMORY_CARD:
+            yield node
+        for value in node.values():
+            yield from _card_groups(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _card_groups(value)
+
+
+class TestEverySlotBoundCardStatesItsSlots:
+    """A sweep of the vector corpus: no card a save answer states for a slotted console leaves its slots out (#577 D23)."""
+
+    @staticmethod
+    def _answers():
+        # Each answer as the code gives it now, asked the way the vector asks it,
+        # so a resolver or a card that drops a slot fails here, not only once a
+        # vector is regenerated.
+        from tests.test_machine_vectors import QUESTIONS, fixture_machine, load_vectors
+
+        for param in load_vectors():
+            vector: dict[str, Any] = param.values[0]  # pyright: ignore[reportAssignmentType] - one vector per param
+            asked = [
+                (key, query)
+                for key, query in _SAVE_QUESTIONS
+                if key in vector["expected"] and _systems_asked(vector["input"][query]) & _SLOTTED_SYSTEMS
+            ]
+            if not asked:
+                continue
+            installs = atlas.detect(vector["input"]["home"], fixture_machine(vector["input"]))
+            for key, query in asked:
+                yield vector["name"], QUESTIONS[key][1](installs, vector["input"][query], vector["name"])
+
+    def _groups(self):
+        for name, answer in self._answers():
+            for group in _card_groups(answer):
+                yield name, group
+
+    def test_every_card_names_its_slots(self):
+        # A list names the slots, null says they are not established (#577
+        # D24); only an empty list, "this emulator keeps no slots", is wrong
+        # on a console that reads its cards by slot.
+        unslotted = [f"{name}: {group['dir']} {group['files']}" for name, group in self._groups() if group["slots"] == []]
+        assert unslotted == []
+
+    def test_the_sweep_holds_cards(self):
+        assert sum(1 for _ in self._groups()) >= 100
+
+
+class TestAPcsx2SlotWord:
+    """PCSX2's ``[MemoryCards]`` filename keys name the console's ports and a multitap's slots (#577 D23)."""
+
+    def test_the_ports_and_the_multitap_slots_are_named_as_pcsx2_names_them(self):
+        from atlas.installations import _pcsx2_slot_word  # pyright: ignore[reportPrivateUsage]
+
+        keys = ("Slot1_Filename", "Slot2_Filename", "Multitap1_Slot2_Filename", "Multitap2_Slot4_Filename")
+        assert [_pcsx2_slot_word(key) for key in keys] == ["1", "2", "1B", "2D"]

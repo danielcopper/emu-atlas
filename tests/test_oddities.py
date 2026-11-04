@@ -1102,8 +1102,9 @@ class TestFlycastResolution:
     def test_one_directory_is_split_into_what_it_is_and_whose_it_is(self):
         # Flycast's shared mode keeps four memory cards and the console's own
         # flash under one directory. They are not the same kind of thing, so
-        # they are two groups — and the flat list a client already read is
-        # their concatenation, unchanged by the split.
+        # they are separate groups, and each card is its own group read by
+        # the port and slot its name carries (#577 D23) — and the flat list a
+        # client already read is their concatenation, unchanged by the split.
         p = _flycast_query(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -1112,8 +1113,9 @@ class TestFlycastResolution:
             }
         )
         groups = p.file_set.groups
-        assert [g.role for g in groups] == [atlas.ROLE_MEMORY_CARD, atlas.ROLE_BATTERY]
-        assert groups[1].files == ("dc_nvmem.bin",)
+        assert [g.role for g in groups] == [atlas.ROLE_MEMORY_CARD] * 4 + [atlas.ROLE_BATTERY]
+        assert [g.slots for g in groups] == [("A1",), ("B1",), ("C1",), ("D1",), ()]
+        assert groups[-1].files == ("dc_nvmem.bin",)
         assert {g.dir for g in groups} == {"/mnt/sd/retrodeck/bios/dc"}
         assert tuple(name for g in groups for name in g.files or ()) == p.file_set.files
 
@@ -1155,7 +1157,8 @@ class TestFlycastResolution:
         # A candidate the card knows only as an observation name is still that
         # group's data: the slot-2 VMU is a memory card of the same grouping as
         # the slot-1 card declared beside it, and confirming a declaration is
-        # not a reason to stop stating what it says.
+        # not a reason to stop stating what it says. Each is its own slot's
+        # card, so each is its own group (#577 D23).
         p = _flycast_query(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -1167,13 +1170,10 @@ class TestFlycastResolution:
             }
         )
         assert p.file_set.state == "observed"
-        assert [(g.files, g.granularity, g.role) for g in p.file_set.groups] == [
-            (
-                ("vmu_save_A1.bin", "vmu_save_A2.bin"),
-                GRANULARITY_SHARED_CARD,
-                atlas.ROLE_MEMORY_CARD,
-            ),
-            (("dc_nvmem.bin",), GRANULARITY_SHARED_CARD, atlas.ROLE_BATTERY),
+        assert [(g.files, g.granularity, g.role, g.slots) for g in p.file_set.groups] == [
+            (("vmu_save_A1.bin",), GRANULARITY_SHARED_CARD, atlas.ROLE_MEMORY_CARD, ("A1",)),
+            (("vmu_save_A2.bin",), GRANULARITY_SHARED_CARD, atlas.ROLE_MEMORY_CARD, ("A2",)),
+            (("dc_nvmem.bin",), GRANULARITY_SHARED_CARD, atlas.ROLE_BATTERY, ()),
         ]
 
     def test_per_game_mode_switches_root_and_granularity(self):
@@ -1197,15 +1197,12 @@ class TestFlycastResolution:
         assert p.file_set.state == "declared"
         assert p.file_set.files == ("<save_id>.A1.bin",)
         assert p.needs == ("save_id",)
-        assert [(g.dir, g.files, g.granularity, g.role) for g in p.file_set.groups] == [
-            ("/mnt/sd/retrodeck/saves/dreamcast", ("<save_id>.A1.bin",), "per-game-file", "memory-card"),
-            (
-                "/mnt/sd/retrodeck/bios/dc",
-                ("vmu_save_B1.bin", "vmu_save_C1.bin", "vmu_save_D1.bin"),
-                "shared-card",
-                "memory-card",
-            ),
-            ("/mnt/sd/retrodeck/bios/dc", ("dc_nvmem.bin",), "shared-card", "battery"),
+        assert [(g.dir, g.files, g.granularity, g.role, g.slots) for g in p.file_set.groups] == [
+            ("/mnt/sd/retrodeck/saves/dreamcast", ("<save_id>.A1.bin",), "per-game-file", "memory-card", ("A1",)),
+            ("/mnt/sd/retrodeck/bios/dc", ("vmu_save_B1.bin",), "shared-card", "memory-card", ("B1",)),
+            ("/mnt/sd/retrodeck/bios/dc", ("vmu_save_C1.bin",), "shared-card", "memory-card", ("C1",)),
+            ("/mnt/sd/retrodeck/bios/dc", ("vmu_save_D1.bin",), "shared-card", "memory-card", ("D1",)),
+            ("/mnt/sd/retrodeck/bios/dc", ("dc_nvmem.bin",), "shared-card", "battery", ()),
         ]
         assert not any(c.code == atlas.CAVEAT_FILENAMES_UNVERIFIED for c in p.caveats)
         spans = [c for c in p.caveats if c.code == atlas.CAVEAT_FILE_SET_SPANS_ROOTS]
@@ -3033,13 +3030,15 @@ PCEE2_CORE = {"library_name": "PCEE2", "options": PCEE2_REGISTERED}
 LRPS2_CORE = {"library_name": "LRPS2"}
 PS2_ROM = "/mnt/sd/retrodeck/roms/ps2/Example Game (USA).iso"
 PCEE2_CARDS = "/mnt/sd/retrodeck/bios/pcsx2/memcards"
+PCEE2_INI = "/mnt/sd/retrodeck/bios/pcsx2/inis/PCSX2.ini"
 
 
-def _pcee2_query(files, *, cores=None, dirs=None):
+def _pcee2_query(files, *, cores=None, dirs=None, unlistable=None):
     rd = _retrodeck(
         {RETRODECK_JSON: RD_JSON, RETRODECK_CFG: CFG, PS2_ROM: "", SAVES_KEEP: "", **files},
         cores=cores or {f"{DEPLOY}/pcee2_libretro.so": PCEE2_CORE},
         dirs=dirs,
+        unlistable=unlistable,
     )
     return placed(rd.savefile_location(content_path=PS2_ROM, core_so="pcee2_libretro.so"))
 
@@ -3070,6 +3069,26 @@ class TestPcee2MemoryCards:
         assert p.file_set.files == ("Mcd001.ps2", "Mcd002.ps2")
         passed_over = [c.data["value"] for c in p.caveats if c.code == atlas.CAVEAT_UNKNOWN_OPTION_VALUE]
         assert passed_over == ["Folder.ps2", "notes.txt"]
+
+    @pytest.mark.parametrize(
+        ("options", "slots"),
+        [("", ("1", "2")), ('pcsx2_memcard_slot2_enable = "disabled"\n', ("1",))],
+    )
+    def test_a_folder_it_cannot_list_is_read_by_the_slots_switched_on(self, options, slots):
+        # No card's name follows where the folder cannot be listed, but which
+        # slots open a card there does: the switches the rule reads (#577 D23).
+        p = _pcee2_query({OPTIONS_CFG: options}, dirs=[PCEE2_CARDS], unlistable=[PCEE2_CARDS])
+        assert p.granularity is not None
+        assert p.granularity.mode == "folder-unlisted"
+        assert [(g.files, g.slots) for g in p.file_set.groups] == [(None, slots)]
+
+    def test_a_folder_under_a_pcsx2_ini_leaves_its_slots_unestablished(self):
+        # The main slots follow the switches, but the ini's multitap entries
+        # may open cards beside them, and atlas reads neither (#577 D24).
+        p = _pcee2_query({PCEE2_INI: "[MemoryCards]\n"}, dirs=[PCEE2_CARDS])
+        assert p.granularity is not None
+        assert p.granularity.mode == "standalone-ini"
+        assert [(g.files, g.slots) for g in p.file_set.groups] == [(None, None)]
 
     def test_the_offer_stops_at_127_cards(self):
         # 128 value slots, one of them the terminator (Libretro.cpp:750): the
