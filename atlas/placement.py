@@ -72,6 +72,16 @@ from .find_rules import (
 )
 from .machine import CORE_UNANSWERED_STATUSES
 from .opens_codes import OPENS_EFFECTS, OPENS_FAILURE_CODES
+from .portability_codes import (
+    BUILD_UNCONFIRMED_REASONS,
+    CAVEAT_ENTRY_LABEL_UNKNOWN,
+    CAVEAT_SAVE_ANSWER_UNRESOLVED,
+    CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED,
+    CAVEAT_SAVE_FORMAT_UNRECORDED,
+    CAVEAT_SAVE_PART_UNESTABLISHED,
+    PART_UNESTABLISHED_REASONS,
+    PORTABILITY_SIDES,
+)
 from .retroarch_cfg import CFG_LAYER_KINDS, CFG_LAYER_OVERRIDE_KINDS, RetroArchCfg
 from .standalone_saves import REDIRECT_VIAS, SaveRedirect
 from .system_firmware import CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, STATED_EVIDENCE_WORDS
@@ -2286,6 +2296,20 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # without the file, on every code a failure is stated under: the words
         # are decided in atlas/opens_codes.py beside the codes they ride.
         **{(code, "effect"): OPENS_EFFECTS for code in OPENS_FAILURE_CODES},
+        # Which of the two entries a save-portability caveat is about, and why
+        # a build was not confirmed: the words are decided in
+        # atlas/portability_codes.py beside the codes they ride.
+        **{
+            (code, "side"): PORTABILITY_SIDES
+            for code in (
+                CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED,
+                CAVEAT_SAVE_FORMAT_UNRECORDED,
+                CAVEAT_SAVE_ANSWER_UNRESOLVED,
+                CAVEAT_ENTRY_LABEL_UNKNOWN,
+            )
+        },
+        (CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED, "reason"): BUILD_UNCONFIRMED_REASONS,
+        (CAVEAT_SAVE_PART_UNESTABLISHED, "reason"): PART_UNESTABLISHED_REASONS,
     }
 )
 

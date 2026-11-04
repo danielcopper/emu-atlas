@@ -29,6 +29,7 @@ import importlib
 import json
 import pkgutil
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -2376,6 +2377,10 @@ class TestTheQueryRegistryIsWhatTheValidatorAccepts:
         "verify": True,
         "size": 1,
         "vocabulary": "igdb",
+        # The two entries a save-portability query compares are two labels,
+        # and one entry named twice is refused on its own.
+        "source": "Source",
+        "target": "Target",
     }
 
     def _query(self, fields: Any) -> Vector:
@@ -2533,6 +2538,13 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_role_vocabularies_match(self):
         assert validate_vectors.KNOWN_ROLES == set(atlas.ROLES)
+
+    def test_the_save_portability_vocabularies_match(self):
+        # The verdicts in order too: the summary is the most severe of the
+        # parts, and severity is the position in this list.
+        assert validate_vectors.KNOWN_PORTABILITY_VERDICTS == list(atlas.PORTABILITY_VERDICTS)
+        assert validate_vectors.KNOWN_SAVE_MOVES == list(atlas.SAVE_MOVES)
+        assert validate_vectors.KNOWN_SAVE_MEMORIES == set(atlas.SAVE_MEMORIES)
 
     def test_the_role_vocabulary_itself_is_pinned(self):
         """A role is consumer surface, so growing the set is a deliberate edit.
@@ -2890,3 +2902,42 @@ class TestTheLaunchAnswerIsValidated:
         wrong_fields = self.entry(launcher={"path": "/x"})
         with pytest.raises(validate_vectors.VectorError, match="launcher must be exactly the fields"):
             _validate_emulator("v", wrong_fields)
+
+
+def _portability_vector(name: str) -> dict[str, Any]:
+    """One vector of the save-portability corpus, as a fresh copy to break."""
+    path = Path(__file__).resolve().parents[1] / "vectors" / "machines" / "save-portability.json"
+    vectors = json.loads(path.read_text(encoding="utf-8"))["vectors"]
+    return json.loads(json.dumps(next(v for v in vectors if v["name"] == name)))
+
+
+class TestTheSavePortabilityShape:
+    LOST_CARD = "psx-a-second-card-the-target-keeps-none-of-does-not-carry-over"
+
+    def test_the_corpus_vector_passes(self):
+        validate_machines_vector(_portability_vector(self.LOST_CARD))
+
+    def test_a_query_naming_one_entry_twice_is_refused(self):
+        vector = _portability_vector(self.LOST_CARD)
+        vector["input"]["save_portability_query"]["target"] = vector["input"]["save_portability_query"]["source"]
+        with pytest.raises(VectorError, match="names one entry twice"):
+            validate_machines_vector(vector)
+
+    def test_a_summary_milder_than_a_part_is_refused(self):
+        vector = _portability_vector(self.LOST_CARD)
+        vector["expected"]["save_portability"]["verdict"] = "same-files"
+        with pytest.raises(VectorError, match="milder than one of its parts"):
+            validate_machines_vector(vector)
+
+    def test_moves_on_a_part_that_is_not_same_data_are_refused(self):
+        vector = _portability_vector(self.LOST_CARD)
+        vector["expected"]["save_portability"]["parts"][0]["moves"] = ["name"]
+        with pytest.raises(VectorError, match="moves stand exactly"):
+            validate_machines_vector(vector)
+
+    def test_a_not_readable_part_with_a_target_group_is_refused(self):
+        vector = _portability_vector(self.LOST_CARD)
+        parts = vector["expected"]["save_portability"]["parts"]
+        parts[1]["target_group"] = parts[0]["target_group"]
+        with pytest.raises(VectorError, match="keeps no group for"):
+            validate_machines_vector(vector)

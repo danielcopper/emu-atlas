@@ -253,6 +253,7 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `rom_location_query`     | `rom_location`                | where do this system's ROMs live                            |
 | `rom_locations_query`    | `rom_locations`               | where do the ROMs of every listed system live               |
 | `launch_command_query`   | `launch_command`              | the command the frontend would run for this file            |
+| `save_portability_query` | `save_portability`            | whether one entry reads the save another entry wrote        |
 | `roots_query`            | `roots`                       | where each root folder is, and what decided it              |
 | `firmware_query`         | `firmware`                    | `kind` is `core`, `system` or `inventory`                   |
 | `identify_query`         | `identification`              | what is this content, by `md5` / `sha1` / `size`            |
@@ -263,6 +264,11 @@ question's subject — the patch files are named after it — so a vector asking
 
 `launch_command_query` carries `system` and an absolute `content_path`, as the question requires, and may name the
 catalogue entry by its `label`; without one the frontend's own choice answers.
+
+`save_portability_query` carries `system` and the two entries it compares by their catalogue labels, `source` (the entry
+that wrote the save) and `target` (the entry that would read it) — two different labels, because the library refuses one
+entry named twice at the call. It may carry `content_path`, `cwd` and `appendconfig`, which are handed to both entries'
+own save questions exactly as the entry families take them.
 
 `rom_location_query` carries `system` and no path: content plays no part in where a system's ROMs live.
 
@@ -302,16 +308,16 @@ numeric id is written as its decimal string, never as a JSON number. `platform_i
 carries `system` alone.
 
 `cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
-on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `firmware_query`, and an
-`aggregate_query` whose `question` is `savefile_location` or `savestate_location`. Another family carrying one, or a
-value that is not absolute, is refused: the first would state an input no answer reflects, the second is one the library
-refuses at the call.
+on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `save_portability_query`,
+`firmware_query`, and an `aggregate_query` whose `question` is `savefile_location` or `savestate_location`. Another
+family carrying one, or a value that is not absolute, is refused: the first would state an input no answer reflects, the
+second is one the library refuses at the call.
 
 `appendconfig` — the files the launch appends to RetroArch's configuration, spelled as RetroArch's own `--appendconfig`
 value: one string, absolute paths joined by `|` — may ride the questions that take `cwd` but `firmware_query`:
-`savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, and an `aggregate_query` whose
-`question` is `savefile_location` or `savestate_location`. Another family carrying one is refused, and so is a value
-that names no path or a relative one.
+`savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `save_portability_query`, and an
+`aggregate_query` whose `question` is `savefile_location` or `savestate_location`. Another family carrying one is
+refused, and so is a value that names no path or a relative one.
 
 Every single-question family may name `installation` (a handle kind) to choose which detected installation answers;
 without it the first one does. `roots_query` must name it, as `retrodeck` or `emudeck`: no other arrangement answers

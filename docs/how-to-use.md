@@ -2204,6 +2204,44 @@ and the entry's catalogue-status and `per-game-override` caveats, because a game
 emulator for this game is a statement about emulator identity — "Cemu has no savestates" needs the rider that Cemu may
 not be what runs.
 
+## Does the save carry over to another emulator? — `save_portability`
+
+The save questions say where one entry keeps a game's save. When a game moves from one entry of a system to another, the
+question is whether the second reads what the first wrote. Ask it of the two entries by their catalogue labels — the
+`source` wrote the save, the `target` would read it:
+
+```python
+answer = install.save_portability("psx", source="Beetle PSX", target="SwanStation", content_path=rom)
+answer.verdict         # 'not-readable' — the most severe of the parts
+for part in answer.parts:
+    part.memory, part.slot   # ('memory-card', '1'), then ('memory-card', '2')
+    part.verdict             # 'same-files', then 'not-readable'
+    part.source_group        # the source's file group for this part, as its save answer states it
+    part.target_group        # the target's, or None where the target keeps no such part
+    part.moves               # on 'same-data': which of 'directory', 'name', 'granularity' differ
+```
+
+One verdict per part, because a save has parts that do not travel alike: Beetle PSX's first card is the same
+`<rom_stem>.srm` SwanStation reads, and its second card has nowhere to go while SwanStation keeps no second card. The
+summary is the most severe part, so it never says the save carries over whole when a part is lost. The verdicts, from
+the mildest:
+
+- `same-files` — the target reads the source's files where they lie, under their names.
+- `same-data` — the same data, once placed or named as the target's own save answer names it; `moves` says what differs.
+  `granularity` among them means one side keeps the part shared by every game and the other per game: copying one game's
+  card over a shared one overwrites every other game's saves in it.
+- `convertible` — the target reads it only after a conversion a source states: PCSX2's folder card into a file card, or
+  a card RetroArch wrote compressed (`save_file_compression`) toward an emulator that opens the file itself.
+- `unestablished` — nothing atlas read at a build it confirmed here settles it; the caveats say why.
+- `not-readable` — the target keeps no such part in its live mode.
+
+Both entries' save questions are asked with the `content_path`, `cwd` and `appendconfig` you pass, so the live mode each
+one reads — Kronos's Beetle-saves switch, LRPS2's card mode, DuckStation's card types — decides the parts. A verdict
+holds only where the machine names the build the emulators' sources were read at; elsewhere the part is `unestablished`
+with `save-format-build-unconfirmed`, and its groups are still stated. The records cover the PlayStation, PlayStation 2
+and Saturn entries so far; every other pair answers `unestablished` with `save-format-unrecorded`. The evidence is in
+`docs/research/save-portability.md`.
+
 ## Where do texture packs go?
 
 `texture_pack_location` answers where one emulator, configured as it is, reads replacement textures from — the directory

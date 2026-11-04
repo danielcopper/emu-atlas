@@ -324,6 +324,9 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "launchable": tuple(c.code for c in handle.launchable(SYSTEM, "/roms/gb/Game.gb").caveats),
         "launch_command": tuple(c.code for c in handle.launch_command(SYSTEM, "/roms/gb/Game.gb").caveats),
+        "save_portability": tuple(
+            c.code for c in handle.save_portability(SYSTEM, source="Gambatte", target="mGBA").caveats
+        ),
         "rom_location": tuple(c.code for c in handle.rom_location(SYSTEM).caveats),
         "rom_locations": tuple(c.code for c in handle.rom_locations().caveats),
         "firmware_for_core": tuple(c.code for c in handle.firmware_for_core(core_so=CORE_SO).caveats),

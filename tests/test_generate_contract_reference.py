@@ -1616,6 +1616,12 @@ class TestTheDataRegistryReading:
             ("opens-format-refused", "effect"): "OPENS_EFFECTS",
             ("opens-path-too-long", "effect"): "OPENS_EFFECTS",
             ("opens-playlist-refused", "effect"): "OPENS_EFFECTS",
+            ("save-format-build-unconfirmed", "side"): "PORTABILITY_SIDES",
+            ("save-format-unrecorded", "side"): "PORTABILITY_SIDES",
+            ("save-answer-unresolved", "side"): "PORTABILITY_SIDES",
+            ("entry-label-unknown", "side"): "PORTABILITY_SIDES",
+            ("save-format-build-unconfirmed", "reason"): "BUILD_UNCONFIRMED_REASONS",
+            ("save-part-unestablished", "reason"): "PART_UNESTABLISHED_REASONS",
         }
 
     def test_contents_alone_do_not_identify_a_name(self) -> None:

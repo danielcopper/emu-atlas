@@ -1,0 +1,476 @@
+{
+  "schema": 1,
+  "spec": "docs/research/save-portability.md",
+  "formats": {
+    "psx-card-raw": "A PlayStation memory card as one raw image of the card's 128 KiB (sixteen 8 KiB blocks of 128-byte frames), with no header before it.",
+    "ps2-file-card": "A PlayStation 2 memory card as one file: the card's pages of 512 data bytes each followed by their 16 bytes of ECC, the card's size read off the file's length.",
+    "ps2-folder-card": "PCSX2's folder memory card: a directory standing for one card, its saves kept as the files and folders the card's file system holds.",
+    "saturn-backup-ram": "The Saturn's internal backup RAM: the 32 KiB that sit on the odd bytes of its bus window, stored packed and raw.",
+    "saturn-backup-cartridge-4mbit": "A 4 Mbit Saturn backup cartridge: the 512 KiB on the odd bytes of its bus window, stored packed and raw.",
+    "saturn-backup-cartridge-8mbit": "An 8 Mbit Saturn backup cartridge as Kronos keeps it: 1 MiB on the odd bytes of its bus window, stored packed and raw.",
+    "saturn-backup-cartridge-16mbit": "A 16 Mbit Saturn backup cartridge as Kronos keeps it: 2 MiB on the odd bytes of its bus window, stored packed and raw.",
+    "saturn-backup-cartridge-32mbit": "A 32 Mbit Saturn backup cartridge as Kronos keeps it: 4 MiB on the odd bytes of its bus window, stored packed and raw."
+  },
+  "retroarch": {
+    "compressed": "[V] save.c:644-657 at RetroArch a79435a — with save_file_compression on, RetroArch writes a file it saves through a core's memory id as an RZIP stream (rzipstream_write_file), and reads every such file back through rzipstream_read_file, which reads an uncompressed file as well (save.c:511-518). An emulator that does not load the file through RetroArch reads the compressed bytes, so the file has to be decompressed first, by no rule a client applies itself."
+  },
+  "conversions": [
+    {
+      "from": "ps2-folder-card",
+      "to": "ps2-file-card",
+      "rule": null,
+      "citation": "[V] pcsx2-qt/Settings/MemoryCardConvertWorker.cpp:36-100 at PCSX2 v2.8.2 (fd9d310c) — ConvertToFile opens the folder card and reads it page by page, ECC included, into a new file card."
+    },
+    {
+      "from": "ps2-file-card",
+      "to": "ps2-folder-card",
+      "rule": null,
+      "citation": "[V] pcsx2-qt/Settings/MemoryCardConvertWorker.cpp:102-167 at PCSX2 v2.8.2 (fd9d310c) — ConvertToFolder reads a file card into memory and saves it page by page into a new folder card."
+    }
+  ],
+  "emulators": {
+    "swanstation": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["1.0.0 4d309c0"],
+        "names": "commit",
+        "revision": "4d309c0",
+        "citation": "src/libretro/libretro_host_interface.cpp:72 at 4d309c0 sets library_version to \"1.0.0 \" GIT_VERSION, the core's own short hash (atlas/data/core_firmware.json, swanstation's build block)."
+      },
+      "systems": {
+        "psx": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "modes": "^card1-libretro\\+",
+              "citation": "[V] src/libretro/libretro_host_interface.cpp:754-762 and :778-784 at 4d309c0 — in the Libretro card type slot 1's RETRO_MEMORY_SAVE_RAM is the card's own data array, 128 KiB long, so RetroArch writes that array as the .srm and loads the file back into it, truncated where longer (save.c:492-541 at RetroArch a79435a); the array is MemoryCardImage::DataArray, 128 KiB with no header (src/core/memory_card_image.h:12-16)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["duckstation_shared_card_1.mcd", "<save_id>_1.mcd", "<rom_stem>_1.mcd"],
+              "modes": "^card1-(shared|per-code|per-title)\\+",
+              "citation": "[V] src/core/memory_card_image.cpp:36-49 and :51-64 at 4d309c0 — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:12-16)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["duckstation_shared_card_2.mcd", "<save_id>_2.mcd", "<rom_stem>_2.mcd"],
+              "modes": "\\+card2-(shared|per-code|per-title)$",
+              "citation": "[V] src/core/memory_card_image.cpp:36-49 and :51-64 at 4d309c0 — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:12-16)."
+            }
+          ]
+        }
+      }
+    },
+    "mednafen_psx": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["0.9.44.1 d6383bf"],
+        "names": "commit",
+        "revision": "d6383bf",
+        "citation": "The build RetroDECK deploys answers library_version '0.9.44.1 d6383bf' (atlas/data/core_firmware.json, mednafen_psx's build block)."
+      },
+      "systems": {
+        "psx": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "modes": "^srm",
+              "citation": "[V] libretro.cpp:5137-5139 and :5153-5155 at beetle-psx-libretro d6383bf — RETRO_MEMORY_SAVE_RAM is card 0's card_data, 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57, :478-480), so RetroArch writes it as the .srm and loads the file back into it, truncated where longer (save.c:492-541 at RetroArch a79435a)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.0.mcr", "mednafen_psx_libretro_shared.0.mcr"],
+              "modes": "^mcr",
+              "citation": "[V] mednafen/psx/frontio.cpp:950-977 and :991-1011 at beetle-psx-libretro d6383bf — a card file is read and written as the card's raw 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.1.mcr", "mednafen_psx_libretro_shared.1.mcr"],
+              "modes": "\\+second-card",
+              "citation": "[V] mednafen/psx/frontio.cpp:950-977 and :991-1011 at beetle-psx-libretro d6383bf — a card file is read and written as the card's raw 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57)."
+            }
+          ]
+        }
+      }
+    },
+    "mednafen_psx_hw": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["0.9.44.1 d6383bf"],
+        "names": "commit",
+        "revision": "d6383bf",
+        "citation": "The build RetroDECK deploys answers library_version '0.9.44.1 d6383bf' (atlas/data/core_firmware.json, mednafen_psx_hw's build block) — one implementation with mednafen_psx at one revision."
+      },
+      "systems": {
+        "psx": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "modes": "^srm",
+              "citation": "[V] libretro.cpp:5137-5139 and :5153-5155 at beetle-psx-libretro d6383bf — RETRO_MEMORY_SAVE_RAM is card 0's card_data, 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57, :478-480), so RetroArch writes it as the .srm and loads the file back into it, truncated where longer (save.c:492-541 at RetroArch a79435a)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.0.mcr", "mednafen_psx_libretro_shared.0.mcr"],
+              "modes": "^mcr",
+              "citation": "[V] mednafen/psx/frontio.cpp:950-977 and :991-1011 at beetle-psx-libretro d6383bf — a card file is read and written as the card's raw 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.1.mcr", "mednafen_psx_libretro_shared.1.mcr"],
+              "modes": "\\+second-card",
+              "citation": "[V] mednafen/psx/frontio.cpp:950-977 and :991-1011 at beetle-psx-libretro d6383bf — a card file is read and written as the card's raw 1 << 17 bytes (mednafen/psx/input/memcard.cpp:57)."
+            }
+          ]
+        }
+      }
+    },
+    "pcsx_rearmed": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["r25 228c14e"],
+        "names": "commit",
+        "revision": "228c14e",
+        "citation": "The shipped binary names 'r25 228c14e' in its library_version (atlas/data/core_oddities.json, pcsx_rearmed's provenance)."
+      },
+      "systems": {
+        "psx": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] frontend/libretro.c:2052-2053 and :2062-2063 at pcsx_rearmed 228c14e — RETRO_MEMORY_SAVE_RAM is Mcd1Data, MCD_SIZE = 128 KiB (libpcsxcore/sio.h:34-36), so RetroArch writes it as the .srm and loads the file back into it, truncated where longer (save.c:492-541 at RetroArch a79435a)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["pcsx-card2.mcd"],
+              "modes": "^enabled$",
+              "citation": "[V] libpcsxcore/sio.c:335-407, :414-447 and :450-470 at pcsx_rearmed 228c14e — card 2 is read as MCD_SIZE raw bytes, past a 64- or 3904-byte header only where the file is that much longer, written back in place, and created raw for a name that is not a .gme (frontend/libretro.c:3487-3516 names it pcsx-card2.mcd)."
+            }
+          ]
+        }
+      }
+    },
+    "DUCKSTATION": {
+      "kind": "standalone",
+      "build": {
+        "pins": ["preview"],
+        "names": "channel",
+        "revision": "1f6de046b",
+        "citation": "RetroDECK's DuckStation component names its build 'preview' in component_version, and the card's pinned build is RetroDECK/Duckstation at 1f6de046b (atlas/data/standalone_saves.json, DUCKSTATION's builds)."
+      },
+      "systems": {
+        "psx": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["shared_card_1.mcd"],
+              "reading": "Card1Path",
+              "modes": "^Shared\\+",
+              "citation": "[V] src/core/memory_card_image.cpp:99-122 and :124-136 at RetroDECK/Duckstation 1f6de046b — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:17)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "psx-card-raw",
+              "names": ["<save_id>_1.mcd"],
+              "modes": "^PerGame[A-Za-z]*\\+",
+              "citation": "[V] src/core/memory_card_image.cpp:99-122 and :124-136 at RetroDECK/Duckstation 1f6de046b — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:17)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["shared_card_2.mcd"],
+              "reading": "Card2Path",
+              "modes": "\\+Shared$",
+              "citation": "[V] src/core/memory_card_image.cpp:99-122 and :124-136 at RetroDECK/Duckstation 1f6de046b — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:17)."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "psx-card-raw",
+              "names": ["<save_id>_2.mcd"],
+              "modes": "\\+PerGame[A-Za-z]*$",
+              "citation": "[V] src/core/memory_card_image.cpp:99-122 and :124-136 at RetroDECK/Duckstation 1f6de046b — a card file is loaded only where it is exactly DATA_SIZE (128 KiB) long and saved as the whole raw array (src/core/memory_card_image.h:17)."
+            }
+          ]
+        }
+      }
+    },
+    "pcsx2": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["14d19f8"],
+        "names": "commit",
+        "revision": "14d19f8",
+        "citation": "LRPS2 reports its own short hash as library_version, '14d19f8' on the build RetroDECK deploys (atlas/data/core_firmware.json, pcsx2's build block)."
+      },
+      "systems": {
+        "ps2": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "ps2-file-card",
+              "names": ["Mcd001.ps2"],
+              "modes": "^enabled$",
+              "citation": "[V] pcsx2/MemoryCardFile.cpp:274-345, :382-401, :408-415 and :428-484 at libretro/ps2 14d19f8 — a file card is opened read-write and addressed by byte, its size taken from the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :35), and a missing one is created at 8 such megabytes."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "ps2-file-card",
+              "names": ["Mcd002.ps2"],
+              "modes": "^enabled$",
+              "citation": "[V] pcsx2/MemoryCardFile.cpp:274-345, :382-401, :408-415 and :428-484 at libretro/ps2 14d19f8 — a file card is opened read-write and addressed by byte, its size taken from the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :35), and a missing one is created at 8 such megabytes."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "ps2-file-card",
+              "names": ["<rom_stem>.ps2"],
+              "modes": "^disabled$",
+              "citation": "[V] pcsx2/MemoryCardFile.cpp:274-345, :382-401, :408-415 and :428-484 at libretro/ps2 14d19f8 — the per-content card is a file card like the shared ones: opened read-write and addressed by byte, sized by the file in pages of 512 data bytes and 16 ECC bytes."
+            }
+          ]
+        }
+      }
+    },
+    "pcee2": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v2.9.78"],
+        "names": "release",
+        "revision": "340ce04",
+        "citation": "PCEE2 reports the upstream PCSX2 release it is merged up to, v2.9.78, as its library_version, the same across several of its own commits (atlas/data/core_firmware.json, pcee2's build block); its citations here are read at 340ce04."
+      },
+      "systems": {
+        "ps2": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "ps2-file-card",
+              "names": ["Mcd001.ps2"],
+              "reading": "pcsx2_memcard_slot1_file",
+              "modes": "^(both-slots|slot-1)$",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:262-345, :379-398, :405-413 and :426-508 at pcee2-libretro 340ce04 — the same file card as PCSX2's: opened read-write and addressed by byte, sized by the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :31), created at 8 such megabytes."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "ps2-file-card",
+              "names": ["Mcd002.ps2"],
+              "reading": "pcsx2_memcard_slot2_file",
+              "modes": "^(both-slots|slot-2)$",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:262-345, :379-398, :405-413 and :426-508 at pcee2-libretro 340ce04 — the same file card as PCSX2's: opened read-write and addressed by byte, sized by the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :31), created at 8 such megabytes."
+            }
+          ]
+        }
+      }
+    },
+    "PCSX2": {
+      "kind": "standalone",
+      "build": {
+        "pins": ["v2.8.2"],
+        "names": "release",
+        "revision": "fd9d310c",
+        "citation": "RetroDECK's PCSX2 component names its build 'v2.8.2' in component_version, the card's pinned build at fd9d310c (atlas/data/standalone_saves.json, PCSX2's builds)."
+      },
+      "systems": {
+        "ps2": {
+          "parts": [
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "ps2-file-card",
+              "names": ["Mcd001.ps2"],
+              "reading": "Slot1_Filename",
+              "modes": "^file\\+",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:262-345, :379-398, :405-413 and :426-508 at PCSX2 v2.8.2 (fd9d310c) — a file card is opened read-write and addressed by byte, sized by the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :31), created at 8 such megabytes."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "1",
+              "format": "ps2-folder-card",
+              "names": ["Mcd001.ps2"],
+              "reading": "Slot1_Filename",
+              "folder": true,
+              "modes": "^folder\\+",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:584-604 at PCSX2 v2.8.2 (fd9d310c) — FileMcd_SetType makes a slot whose path is a directory a MemoryCardType::Folder card, the FolderMemoryCard that keeps the card's file system as files rather than as one image."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "ps2-file-card",
+              "names": ["Mcd002.ps2"],
+              "reading": "Slot2_Filename",
+              "modes": "^[^+]+\\+file",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:262-345, :379-398, :405-413 and :426-508 at PCSX2 v2.8.2 (fd9d310c) — a file card is opened read-write and addressed by byte, sized by the file in pages of 512 data bytes and 16 ECC bytes (MC2_MBSIZE, :31), created at 8 such megabytes."
+            },
+            {
+              "memory": "memory-card",
+              "slot": "2",
+              "format": "ps2-folder-card",
+              "names": ["Mcd002.ps2"],
+              "reading": "Slot2_Filename",
+              "folder": true,
+              "modes": "^[^+]+\\+folder",
+              "citation": "[V] pcsx2/SIO/Memcard/MemoryCardFile.cpp:584-604 at PCSX2 v2.8.2 (fd9d310c) — FileMcd_SetType makes a slot whose path is a directory a MemoryCardType::Folder card, the FolderMemoryCard that keeps the card's file system as files rather than as one image."
+            }
+          ]
+        }
+      }
+    },
+    "mednafen_saturn": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v1.29.0 ccba526"],
+        "names": "commit",
+        "revision": "ccba526",
+        "citation": "The shipped binary names 'v1.29.0 ccba526' in its library_version (atlas/data/core_audit.json, mednafen_saturn's RetroDECK verification)."
+      },
+      "systems": {
+        "saturn": {
+          "parts": [
+            {
+              "memory": "internal-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-ram",
+              "names": ["<rom_stem>.bkr", "mednafen_saturn_libretro_shared.bkr"],
+              "citation": "[V] mednafen/ss/ss.cpp:98, :244-249, :1037-1044 and :1046-1057 at beetle-saturn-libretro ccba526 — BackupRAM holds the byte of each odd bus address at (A >> 1) & 0x7FFF, 32768 bytes, written and read raw as the .bkr."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-4mbit",
+              "names": ["<rom_stem>.bcr", "mednafen_saturn_libretro_shared.bcr"],
+              "citation": "[V] mednafen/ss/cart/backup.cpp:25, :30-48 and :60-66 at beetle-saturn-libretro ccba526 — the backup cartridge holds the byte of each odd bus address at (A >> 1) & 0x7FFFF, 512 KiB, which ss.cpp:1077-1111 and :1113-1138 read and write raw as the .bcr (nv16 false)."
+            }
+          ],
+          "ignore": [
+            {
+              "names": ["<rom_stem>.smpc", "mednafen_saturn_libretro_shared.smpc"],
+              "citation": "[V] mednafen/ss/ss.cpp:1140-1153 and mednafen/ss/smpc.cpp:357-369 at beetle-saturn-libretro ccba526 — the .smpc is SMPC_SaveNV's validity byte, the console clock's raw registers and the SMPC's save memory (its language setting): the console's own state, which each emulator keeps its own way, not a game's progress, so losing it costs none (#577 D13)."
+            }
+          ]
+        },
+        "saturnjp": {
+          "same_as": "saturn"
+        }
+      }
+    },
+    "kronos": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v2.7.0 6709c1d"],
+        "names": "commit",
+        "revision": "6709c1d",
+        "citation": "The shipped binary names 'v2.7.0 6709c1d' in its library_version (atlas/data/core_oddities.json, kronos's provenance)."
+      },
+      "systems": {
+        "saturn": {
+          "parts": [
+            {
+              "memory": "internal-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-ram",
+              "names": ["<rom_stem>.bkr"],
+              "modes": "^enabled$",
+              "citation": "[V] yabause/src/sys/memory/src/memory.c:507-531, :549-570 and :1282-1325 at Kronos 6709c1d — BupRam is 0x8000 bytes holding the byte of each odd bus address at addr >> 1, loaded and saved byte for byte (T123Load and T123Save with type 1, sys/memory/include/memory.h:219-354); with kronos_use_beetle_saves enabled the file is <save dir>/<stem>.bkr (yabause/src/libretro/libretro.c:1709-1712). A file of the extended size switches the build to its extended layout (memory.c:1283-1298), which the libretro port never asks for (libretro.c:1587)."
+            },
+            {
+              "memory": "internal-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-ram",
+              "names": ["<rom_stem>.ram"],
+              "modes": "^disabled$",
+              "citation": "[V] yabause/src/sys/memory/src/memory.c:507-531, :549-570 and :1282-1325 at Kronos 6709c1d — BupRam is 0x8000 bytes holding the byte of each odd bus address at addr >> 1, loaded and saved byte for byte (T123Load and T123Save with type 1, sys/memory/include/memory.h:219-354); with kronos_use_beetle_saves disabled the file is kronos/saturn/<stem>.ram (yabause/src/libretro/libretro.c:1709-1712). A file of the extended size switches the build to its extended layout (memory.c:1283-1298), which the libretro port never asks for (libretro.c:1587)."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-4mbit",
+              "names": ["<rom_stem>.bcr"],
+              "modes": "^enabled$",
+              "citation": "[V] yabause/src/sys/memory/src/cs0.c:892-900, :920-927 and :1393-1411 at Kronos 6709c1d — the 4 Mbit backup cartridge is CART_BUP4MBIT_SIZE (0x80000, sys/memory/include/cs0.h:46) bytes holding each odd bus address's byte at addr >> 1, loaded and saved byte for byte; with kronos_use_beetle_saves enabled the core puts that cartridge in at <save dir>/<stem>.bcr (yabause/src/libretro/libretro.c:1299-1305)."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-4mbit",
+              "names": ["<rom_stem>-ext512K.ram"],
+              "modes": "^disabled$",
+              "citation": "[V] yabause/src/sys/memory/src/cs0.c:892-900, :920-927 and :1393-1411 at Kronos 6709c1d — the 4 Mbit backup cartridge is 0x80000 bytes holding each odd bus address's byte at addr >> 1, loaded and saved byte for byte; with kronos_use_beetle_saves disabled and kronos_addon_cartridge selecting it the file is kronos/saturn/<stem>-ext512K.ram (yabause/src/libretro/libretro.c:1306-1309, :926-945)."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-8mbit",
+              "names": ["<rom_stem>-ext1M.ram"],
+              "modes": "^disabled$",
+              "citation": "[V] yabause/src/sys/memory/src/cs0.c:947-952, :975-980 and :1413-1431 at Kronos 6709c1d — the 8 Mbit backup cartridge holds 1 MiB the same way; kronos_addon_cartridge selects it and the file is kronos/saturn/<stem>-ext1M.ram (yabause/src/libretro/libretro.c:1310-1311)."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-16mbit",
+              "names": ["<rom_stem>-ext2M.ram"],
+              "modes": "^disabled$",
+              "citation": "[V] yabause/src/sys/memory/src/cs0.c:1433-1451 at Kronos 6709c1d — the 16 Mbit backup cartridge holds 2 MiB the same way; kronos_addon_cartridge selects it and the file is kronos/saturn/<stem>-ext2M.ram (yabause/src/libretro/libretro.c:1312-1313)."
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "format": "saturn-backup-cartridge-32mbit",
+              "names": ["<rom_stem>-ext4M.ram"],
+              "modes": "^disabled$",
+              "citation": "[V] yabause/src/sys/memory/src/cs0.c:1453-1469 at Kronos 6709c1d — the 32 Mbit backup cartridge holds 4 MiB the same way; kronos_addon_cartridge selects it and the file is kronos/saturn/<stem>-ext4M.ram (yabause/src/libretro/libretro.c:1314-1315)."
+            }
+          ],
+          "ignore": [
+            {
+              "dir_suffix": "kronos/stv",
+              "citation": "[V] yabause/src/libretro/libretro.c:1645-1690 at Kronos 6709c1d — the kronos/stv files are written only where the content is an ST-V romset (stv_mode), never for a Saturn disc."
+            }
+          ]
+        },
+        "saturnjp": {
+          "same_as": "saturn"
+        }
+      }
+    }
+  }
+}

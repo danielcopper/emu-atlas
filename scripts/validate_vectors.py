@@ -52,6 +52,7 @@ INPUT_FIELDS_OPTIONAL = {
     "systems_query",
     "launchable_query",
     "launch_command_query",
+    "save_portability_query",
     "rom_location_query",
     "rom_locations_query",
     "entry_savefile_query",
@@ -118,6 +119,12 @@ QUERY_FAMILY_FIELDS: dict[str, frozenset[str]] = {
     # system's content, optionally of the entry a label names; the file is the
     # frontend's spelling and absolute, as the question requires.
     "launch_command_query": frozenset({"installation", "system", "content_path", "label"}),
+    # Whether one entry reads the save another wrote (issue #577) is asked of
+    # two catalogue entries of one system, named by their labels, and takes
+    # every argument the entry's own save question takes, which it asks of
+    # both.
+    "save_portability_query": frozenset({"installation", "system", "source", "target", "content_path"})
+    | _LAUNCH_QUERY_FIELDS,
     # ROM placement is asked of one system; content plays no part in where a
     # system's ROMs live, so unlike the catalogue query this one takes no path.
     "rom_location_query": frozenset({"installation", "system"}),
@@ -154,6 +161,15 @@ AGGREGATE_QUESTION_FIELDS = {
     "emulators_for": ({"question", "system"}, {"content_path"}),
 }
 AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
+# The save-portability vocabularies, mirrored from atlas.save_portability and
+# atlas.save_formats: a part's and a pair's verdict, mildest first (the order
+# the pair's summary is the most severe of), what differs on a same-data part,
+# and the memory a part holds.
+KNOWN_PORTABILITY_VERDICTS = ["same-files", "same-data", "convertible", "unestablished", "not-readable"]
+KNOWN_SAVE_MOVES = ["directory", "name", "granularity"]
+KNOWN_SAVE_MEMORIES = {"memory-card", "internal-backup-ram", "cartridge-backup-ram"}
+SAVE_PORTABILITY_FIELDS = {"verdict", "source", "target", "parts", "caveats"}
+SAVE_PART_FIELDS = {"memory", "slot", "verdict", "source_group", "target_group", "moves", "conversion"}
 # The launchability verdicts — the vocabulary expected.launchable.verdict draws
 # from, mirrored from atlas.installations.LAUNCH_VERDICTS.
 KNOWN_LAUNCH_VERDICTS = {
@@ -711,6 +727,11 @@ KNOWN_CAVEAT_CODES = {
     "savestate-inside-image",
     "savestate-support-machine-dependent",
     "save-writes-discarded",
+    "save-format-build-unconfirmed",
+    "save-format-unrecorded",
+    "save-answer-unresolved",
+    "entry-label-unknown",
+    "save-part-unestablished",
     "save-files-compressed",
     "redirect-outranked",
     "save-files-shared-with-core",
@@ -1009,6 +1030,27 @@ def _validate_launch_command_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "launch_command_query", query)
 
 
+def _validate_save_portability_query(name: str, query: Any) -> None:
+    # The system and the two labels are the question's subject; the rest are
+    # the save question's own arguments, held to its rules.
+    if not isinstance(query, dict):
+        fail(f"{name}: input.save_portability_query must be an object")
+    keys = set(query)
+    if not {"system", "source", "target"} <= keys or not keys <= QUERY_FAMILY_FIELDS["save_portability_query"]:
+        fail(
+            f"{name}: input.save_portability_query must carry 'system', 'source' and 'target' plus "
+            "optional 'content_path', 'cwd', 'appendconfig' and 'installation'"
+        )
+    for key in keys:
+        if not isinstance(query[key], str) or not query[key]:
+            fail(f"{name}: input.save_portability_query.{key} must be a non-empty string")
+    if query["source"] == query["target"]:
+        fail(f"{name}: input.save_portability_query names one entry twice, which the library refuses at the call")
+    _validate_cwd(name, "save_portability_query", query)
+    _validate_appendconfig(name, "save_portability_query", query)
+    _validate_handle_selector(name, "save_portability_query", query)
+
+
 def _validate_launchable_query(name: str, query: Any) -> None:
     # Both halves are the question's subject: a verdict without a file has
     # nothing to derive an extension from, and one without a system has no
@@ -1295,6 +1337,7 @@ _OWN_QUERY_VALIDATORS = {
     "systems_query": _validate_systems_query,
     "launchable_query": _validate_launchable_query,
     "launch_command_query": _validate_launch_command_query,
+    "save_portability_query": _validate_save_portability_query,
     "rom_location_query": _validate_rom_location_query,
     "rom_locations_query": _validate_rom_locations_query,
     "firmware_query": _validate_firmware_query,
@@ -3936,6 +3979,55 @@ def _validate_launch_command(name: str, answer: Any) -> None:
     _validate_command_body(name, command)
 
 
+def _validate_save_part(name: str, part: Any) -> None:
+    """One part of a pair: its memory and slot, its verdict, both groups, and what rides only one verdict."""
+    _require_exact(name, part, SAVE_PART_FIELDS, "each save portability part")
+    if part["memory"] not in KNOWN_SAVE_MEMORIES:
+        fail(f"{name}: a part's memory must be one of {sorted(KNOWN_SAVE_MEMORIES)}")
+    if part["slot"] is not None and (not isinstance(part["slot"], str) or not part["slot"]):
+        fail(f"{name}: a part's slot must be null or a non-empty string")
+    if part["verdict"] not in KNOWN_PORTABILITY_VERDICTS:
+        fail(f"{name}: a part's verdict must be one of {KNOWN_PORTABILITY_VERDICTS}")
+    _validate_one_file_group(name, part["source_group"])
+    if part["target_group"] is not None:
+        _validate_one_file_group(name, part["target_group"])
+    moves = part["moves"]
+    if not isinstance(moves, list) or not set(moves) <= set(KNOWN_SAVE_MOVES):
+        fail(f"{name}: a part's moves must be a list drawn from {KNOWN_SAVE_MOVES}")
+    if moves != sorted(set(moves), key=KNOWN_SAVE_MOVES.index):
+        fail(f"{name}: a part's moves name each value once, in {KNOWN_SAVE_MOVES} order")
+    if bool(moves) != (part["verdict"] == "same-data"):
+        fail(f"{name}: a part's moves stand exactly where its verdict is same-data")
+    if part["verdict"] == "not-readable" and part["target_group"] is not None:
+        fail(f"{name}: a not-readable part is one the target keeps no group for")
+    conversion = part["conversion"]
+    if conversion is not None:
+        _require_exact(name, conversion, {"rule", "length"}, "a part's conversion")
+        if part["verdict"] != "convertible":
+            fail(f"{name}: a conversion stands only on a convertible part")
+
+
+def _validate_save_portability(name: str, answer: Any) -> None:
+    """A pair: the two entries, one verdict per part, and a summary no milder than its most severe part."""
+    _require_exact(name, answer, SAVE_PORTABILITY_FIELDS, "expected.save_portability")
+    for side in ("source", "target"):
+        if answer[side] is not None:
+            _validate_emulator(name, answer[side])
+    if answer["verdict"] not in KNOWN_PORTABILITY_VERDICTS:
+        fail(f"{name}: expected.save_portability.verdict must be one of {KNOWN_PORTABILITY_VERDICTS}")
+    parts = answer["parts"]
+    if not isinstance(parts, list):
+        fail(f"{name}: expected.save_portability.parts must be a list")
+    for part in parts:
+        _validate_save_part(name, part)
+    _validate_caveats(name, answer["caveats"])
+    severity = KNOWN_PORTABILITY_VERDICTS.index
+    if any(severity(part["verdict"]) > severity(answer["verdict"]) for part in parts):
+        fail(f"{name}: expected.save_portability.verdict is milder than one of its parts")
+    if not parts and answer["verdict"] != "unestablished":
+        fail(f"{name}: a pair with no part to judge answers unestablished")
+
+
 def _validate_command_body(name: str, command: Any) -> None:
     """One command taken apart: the program by its variant, plain-string arguments, the environment, the folder."""
     _require_exact(name, command, LAUNCH_COMMAND_FIELDS, "expected.launch_command.command")
@@ -4133,6 +4225,7 @@ _EXPECTED_KEYS = {
     "systems",
     "launchable",
     "launch_command",
+    "save_portability",
     "rom_location",
     "rom_locations",
     "entry_savefile_location",
@@ -4162,6 +4255,7 @@ _EXPECTATION_PAIRINGS = (
     ("roots", "roots_query"),
     ("launchable", "launchable_query"),
     ("launch_command", "launch_command_query"),
+    ("save_portability", "save_portability_query"),
     ("rom_location", "rom_location_query"),
     ("rom_locations", "rom_locations_query"),
     ("savefile_location", "savefile_query"),
@@ -4200,6 +4294,7 @@ _RESOLVER_EXPECTATIONS = {
     "rom_locations",
     "launchable",
     "launch_command",
+    "save_portability",
     "firmware",
     "identification",
     "systems_for_platform",
@@ -4260,6 +4355,7 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         _BlockCheck("roots", _validate_roots),
         _BlockCheck("launchable", _validate_launchable),
         _BlockCheck("launch_command", _validate_launch_command),
+        _BlockCheck("save_portability", _validate_save_portability),
         _BlockCheck("savestate_location", _validate_savestate_outcome),
         _BlockCheck("screenshot_location", _validate_screenshot_outcome),
         _BlockCheck(
